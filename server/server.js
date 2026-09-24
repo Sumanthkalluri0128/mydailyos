@@ -117,10 +117,10 @@ mongoose
 
     app.listen(
       PORT,
-      "127.0.0.1",
+      "0.0.0.0",
       () => {
         console.log(
-          `MyDailyOS server running on http://127.0.0.1:${PORT}`
+          `MyDailyOS server running on port ${PORT}`
         );
       }
     );
