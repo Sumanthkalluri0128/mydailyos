@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { API_URL } from "./config";
+import { API_URL } from "../config";
 function FoodPage() {
   const [foods, setFoods] = useState([]);
 const [showForm, setShowForm] = useState(false);

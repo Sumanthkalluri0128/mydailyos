@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { API_URL } from "./config";
+import { API_URL } from "../config";
 
 
 const MEALS = [
