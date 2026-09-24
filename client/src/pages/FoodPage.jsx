@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-
+import { API_URL } from "./config";
 function FoodPage() {
   const [foods, setFoods] = useState([]);
 const [showForm, setShowForm] = useState(false);
@@ -37,7 +37,7 @@ const [editingFood, setEditingFood] = useState(null);
       params.append("favorites", "true");
     }
 
-    const url = `http://127.0.0.1:5001/api/foods?${params.toString()}`;
+    const url = `${API_URL}/api/foods?${params.toString()}`;
 
     const response = await fetch(url);
 
@@ -86,8 +86,8 @@ const [editingFood, setEditingFood] = useState(null);
     const isEditing = Boolean(editingFood);
 
     const url = isEditing
-      ? `http://127.0.0.1:5001/api/foods/${editingFood._id}`
-      : "http://127.0.0.1:5001/api/foods";
+      ? `${API_URL}/api/foods/${editingFood._id}`
+      : "${API_URL}/api/foods";
 
     const response = await fetch(url, {
       method: isEditing ? "PUT" : "POST",
@@ -443,7 +443,7 @@ const [editingFood, setEditingFood] = useState(null);
       onClick={async () => {
         try {
           const response = await fetch(
-            `http://127.0.0.1:5001/api/foods/${food._id}/favorite`,
+            `${API_URL}/api/foods/${food._id}/favorite`,
             {
               method: "PATCH",
             }
@@ -484,7 +484,7 @@ const [editingFood, setEditingFood] = useState(null);
 
         try {
           const response = await fetch(
-            `http://127.0.0.1:5001/api/foods/${food._id}`,
+            `${API_URL}/api/foods/${food._id}`,
             {
               method: "DELETE",
             }

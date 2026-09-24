@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { getLocalDate } from "../utils/date";
+import { API_URL } from "./config";
 
-const API_URL = "http://127.0.0.1:5001";
 
 function ExercisePage({ onBack }) {
   const today = getLocalDate();
