@@ -608,17 +608,25 @@ function App() {
 
         <BrandHome onHome={() => setCurrentPage("dashboard")} />
 
-        <div className="profile">
-
+        <div className="topbar-actions">
           <button
-            className="profile-avatar"
-            onClick={() =>
-              setCurrentPage("profile")
-            }
+            className={`topbar-progress ${currentPage === "progress" ? "active" : ""}`}
+            onClick={() => setCurrentPage("progress")}
+            aria-label="Open Progress and History"
           >
-            S
+            <span>📈</span>
+            <span>Progress</span>
           </button>
 
+          <div className="profile">
+            <button
+              className="profile-avatar"
+              onClick={() => setCurrentPage("profile")}
+              aria-label="Open profile"
+            >
+              S
+            </button>
+          </div>
         </div>
 
       </header>

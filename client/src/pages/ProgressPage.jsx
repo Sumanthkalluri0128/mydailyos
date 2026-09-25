@@ -4,54 +4,110 @@ import { apiFetch } from "../config/api";
 import { getLocalDate } from "../utils/date";
 import { notify } from "../utils/notify";
 
-const MS_DAY = 24 * 60 * 60 * 1000;
-
-function formatDate(date) {
-  return date.toISOString().slice(0, 10);
+function parseDate(value) {
+  const [y, m, d] = String(value).split("-").map(Number);
+  if (!y || !m || !d) return null;
+  return new Date(y, m - 1, d);
 }
 
-function shiftDate(dateString, days) {
-  const d = new Date(`${dateString}T00:00:00`);
-  d.setDate(d.getDate() + days);
+function formatDate(date) {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+}
+
+function addDays(value, amount) {
+  const d = parseDate(value);
+  if (!d) return value;
+  d.setDate(d.getDate() + amount);
+  return formatDate(d);
+}
+
+function startOfWeek(value) {
+  const d = parseDate(value);
+  if (!d) return value;
+  const day = d.getDay();
+  d.setDate(d.getDate() - (day === 0 ? 6 : day - 1));
+  return formatDate(d);
+}
+
+function endOfWeek(value) {
+  return addDays(startOfWeek(value), 6);
+}
+
+function startOfMonth(value) {
+  const d = parseDate(value);
+  if (!d) return value;
+  d.setDate(1);
+  return formatDate(d);
+}
+
+function endOfMonth(value) {
+  const d = parseDate(value);
+  if (!d) return value;
+  d.setMonth(d.getMonth() + 1, 0);
+  return formatDate(d);
+}
+
+function startOfYear(value) {
+  const d = parseDate(value);
+  if (!d) return value;
+  d.setMonth(0, 1);
+  return formatDate(d);
+}
+
+function endOfYear(value) {
+  const d = parseDate(value);
+  if (!d) return value;
+  d.setMonth(11, 31);
+  return formatDate(d);
+}
+
+function getPeriodRange(mode, anchor) {
+  if (mode === "day") return { from: anchor, to: anchor };
+  if (mode === "week") return { from: startOfWeek(anchor), to: endOfWeek(anchor) };
+  if (mode === "month") return { from: startOfMonth(anchor), to: endOfMonth(anchor) };
+  if (mode === "year") return { from: startOfYear(anchor), to: endOfYear(anchor) };
+  return { from: anchor, to: anchor };
+}
+
+function shiftPeriod(mode, anchor, direction) {
+  const d = parseDate(anchor);
+  if (!d) return anchor;
+  if (mode === "day") d.setDate(d.getDate() + direction);
+  if (mode === "week") d.setDate(d.getDate() + direction * 7);
+  if (mode === "month") d.setMonth(d.getMonth() + direction);
+  if (mode === "year") d.setFullYear(d.getFullYear() + direction);
   return formatDate(d);
 }
 
 function shortDate(value) {
-  return new Date(`${value}T00:00:00`).toLocaleDateString("en-IN", {
-    day: "numeric",
-    month: "short",
-  });
+  return parseDate(value)?.toLocaleDateString("en-IN", { day: "numeric", month: "short" }) || value;
 }
 
-function niceDate(value) {
-  return new Date(`${value}T00:00:00`).toLocaleDateString("en-IN", {
-    weekday: "short",
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-  });
+function fullDate(value) {
+  return parseDate(value)?.toLocaleDateString("en-IN", { weekday: "short", day: "numeric", month: "short", year: "numeric" }) || value;
 }
 
-function rangeForPreset(today, preset) {
-  const days = preset === "week" ? 7 : preset === "month" ? 30 : preset === "90" ? 90 : 365;
-  return { from: shiftDate(today, -(days - 1)), to: today };
+function rangeLabel(mode, from, to) {
+  if (mode === "day") return fullDate(from);
+  if (mode === "week") return `${shortDate(from)} – ${shortDate(to)}`;
+  if (mode === "month") return parseDate(from)?.toLocaleDateString("en-IN", { month: "long", year: "numeric" }) || "Month";
+  if (mode === "year") return parseDate(from)?.getFullYear()?.toString() || "Year";
+  return `${fullDate(from)} – ${fullDate(to)}`;
 }
 
-function TrendChart({ data, metric, label, unit = "", colorClass = "" }) {
+function TrendChart({ data, metric, label, unit = "", decimals = 0 }) {
   const points = data.filter((d) => Number.isFinite(Number(d[metric])));
-  if (!points.length) {
-    return <div className="progress-empty">No data recorded for this period.</div>;
-  }
+  if (!points.length) return <div className="trend-chart"><div className="progress-empty">No {label.toLowerCase()} recorded for this period.</div></div>;
 
   const width = 900;
   const height = 290;
-  const pad = { left: 54, right: 20, top: 22, bottom: 42 };
+  const pad = { left: 56, right: 20, top: 24, bottom: 42 };
   const values = points.map((p) => Number(p[metric]));
   const min = Math.min(...values);
   const max = Math.max(...values);
-  const spread = max - min || Math.max(Math.abs(max) * 0.08, 1);
-  const low = Math.max(0, min - spread * 0.12);
-  const high = max + spread * 0.12;
+  const spread = max - min || Math.max(Math.abs(max) * 0.08, metric === "weightKg" ? 0.5 : 10);
+  const low = Math.max(0, min - spread * 0.15);
+  const high = max + spread * 0.15;
   const innerW = width - pad.left - pad.right;
   const innerH = height - pad.top - pad.bottom;
   const x = (i) => pad.left + (points.length === 1 ? innerW / 2 : (i / (points.length - 1)) * innerW);
@@ -62,19 +118,19 @@ function TrendChart({ data, metric, label, unit = "", colorClass = "" }) {
   const labelEvery = Math.max(1, Math.ceil(points.length / 7));
 
   return (
-    <div className={`trend-chart ${colorClass}`}>
+    <div className="trend-chart">
       <div className="trend-chart-header">
-        <div><strong>{label}</strong><span>{points.length} recorded day{points.length === 1 ? "" : "s"}</span></div>
-        <span>{values[values.length - 1].toFixed(metric === "weightKg" ? 1 : 0)}{unit}</span>
+        <div><strong>{label}</strong><span>{points.length} day{points.length === 1 ? "" : "s"} in view</span></div>
+        <span>{values[values.length - 1].toFixed(decimals)}{unit}</span>
       </div>
       <svg viewBox={`0 0 ${width} ${height}`} role="img" aria-label={`${label} trend chart`} className="trend-svg">
         {grid.map((value, i) => {
           const yy = y(value);
-          return <g key={i}><line x1={pad.left} x2={width - pad.right} y1={yy} y2={yy} className="chart-grid" /><text x={pad.left - 9} y={yy + 4} textAnchor="end" className="chart-y-label">{value.toFixed(metric === "weightKg" ? 1 : 0)}</text></g>;
+          return <g key={i}><line x1={pad.left} x2={width - pad.right} y1={yy} y2={yy} className="chart-grid" /><text x={pad.left - 9} y={yy + 4} textAnchor="end" className="chart-y-label">{value.toFixed(decimals)}</text></g>;
         })}
         <path d={area} className="chart-area" />
         <path d={path} className="chart-line" />
-        {points.map((p, i) => <circle key={`${p.date}-${i}`} cx={x(i)} cy={y(Number(p[metric]))} r="4.5" className="chart-dot"><title>{niceDate(p.date)}: {Number(p[metric]).toFixed(metric === "weightKg" ? 1 : 0)}{unit}</title></circle>)}
+        {points.map((p, i) => <circle key={`${p.date}-${i}`} cx={x(i)} cy={y(Number(p[metric]))} r="4.5" className="chart-dot"><title>{fullDate(p.date)}: {Number(p[metric]).toFixed(decimals)}{unit}</title></circle>)}
         {points.map((p, i) => i % labelEvery === 0 || i === points.length - 1 ? <text key={`x-${p.date}-${i}`} x={x(i)} y={height - 14} textAnchor="middle" className="chart-x-label">{shortDate(p.date)}</text> : null)}
       </svg>
     </div>
@@ -83,28 +139,48 @@ function TrendChart({ data, metric, label, unit = "", colorClass = "" }) {
 
 function ProgressPage({ onBack }) {
   const today = getLocalDate();
-  const [preset, setPreset] = useState("week");
-  const [from, setFrom] = useState(shiftDate(today, -6));
-  const [to, setTo] = useState(today);
+  const [mode, setMode] = useState("week");
+  const [anchor, setAnchor] = useState(today);
+  const initial = getPeriodRange("week", today);
+  const [from, setFrom] = useState(initial.from);
+  const [to, setTo] = useState(initial.to);
   const [data, setData] = useState(null);
   const [selectedDate, setSelectedDate] = useState(today);
   const [details, setDetails] = useState(null);
   const [loading, setLoading] = useState(true);
   const [detailsLoading, setDetailsLoading] = useState(false);
 
-  const loadHistory = async (start, end) => {
+  const loadHistory = async (start, end, preferredDate = null) => {
     setLoading(true);
     try {
       const response = await apiFetch(`${API_URL}/api/progress/history?from=${start}&to=${end}`);
       const json = await response.json();
       if (!response.ok || !json.success) throw new Error(json.message || "Unable to load progress");
       setData(json);
-      if (!json.days.some((d) => d.date === selectedDate)) setSelectedDate(end);
+      const candidate = preferredDate || anchor;
+      setSelectedDate(json.days.some((d) => d.date === candidate) ? candidate : end);
     } catch (error) {
       console.error(error);
       notify(error.message || "Unable to load progress history.", "error");
-    } finally { setLoading(false); }
+    } finally {
+      setLoading(false);
+    }
   };
+
+  useEffect(() => {
+    const range = getPeriodRange(mode, anchor);
+    setFrom(range.from);
+    setTo(range.to);
+    loadHistory(range.from, range.to, anchor);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mode, anchor]);
+
+  useEffect(() => {
+    if (selectedDate) {
+      loadDetails(selectedDate);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedDate]);
 
   const loadDetails = async (date) => {
     setDetailsLoading(true);
@@ -126,11 +202,39 @@ function ProgressPage({ onBack }) {
     } catch (error) {
       console.error(error);
       notify("Could not load the selected day's history.", "error");
-    } finally { setDetailsLoading(false); }
+    } finally {
+      setDetailsLoading(false);
+    }
   };
 
-  useEffect(() => { loadHistory(from, to); }, []);
-  useEffect(() => { loadDetails(selectedDate); }, [selectedDate]);
+  const applyCustom = () => {
+    if (!from || !to || from > to) {
+      notify("Please select a valid date range.", "error");
+      return;
+    }
+    setMode("custom");
+    setAnchor(from);
+    loadHistory(from, to, from);
+  };
+
+  const selectMode = (nextMode) => {
+    setMode(nextMode);
+    if (nextMode !== "custom") {
+      const range = getPeriodRange(nextMode, anchor);
+      setFrom(range.from);
+      setTo(range.to);
+    }
+  };
+
+  const navigatePeriod = (direction) => {
+    if (mode === "custom") return;
+    setAnchor(shiftPeriod(mode, anchor, direction));
+  };
+
+  const goToday = () => {
+    setMode(mode === "custom" ? "day" : mode);
+    setAnchor(today);
+  };
 
   const days = data?.days || [];
   const selectedDay = days.find((d) => d.date === selectedDate);
@@ -138,23 +242,12 @@ function ProgressPage({ onBack }) {
   const averages = useMemo(() => {
     const n = days.length || 1;
     return {
-      calories: totals.calories / n,
-      protein: totals.protein / n,
-      water: totals.waterMl / n,
-      exercise: totals.exerciseMinutes / n,
+      calories: Number(totals.calories || 0) / n,
+      protein: Number(totals.protein || 0) / n,
+      water: Number(totals.waterMl || 0) / n,
+      exercise: Number(totals.exerciseMinutes || 0) / n,
     };
-  }, [days.length, totals]);
-
-  const applyPreset = (value) => {
-    setPreset(value);
-    const range = rangeForPreset(today, value);
-    setFrom(range.from); setTo(range.to); loadHistory(range.from, range.to);
-  };
-
-  const applyCustom = () => {
-    if (!from || !to || from > to) { notify("Please select a valid date range.", "error"); return; }
-    setPreset("custom"); loadHistory(from, to);
-  };
+  }, [days, totals]);
 
   const mealCalories = details?.food?.logs || [];
   const activities = details?.activity?.logs || [];
@@ -166,48 +259,80 @@ function ProgressPage({ onBack }) {
   return (
     <div className="progress-page">
       <div className="page-heading-row">
-        <div><p className="eyebrow">Progress & history</p><h2>See your journey clearly 📈</h2><p>Every food, workout, water, task, habit and weight entry stays connected to the same daily timeline.</p></div>
+        <div>
+          <p className="eyebrow">Progress & history</p>
+          <h2>See your journey clearly 📈</h2>
+          <p>Choose Day, Week, Month or Year. The date range automatically follows your selection.</p>
+        </div>
         <button className="secondary-button" onClick={onBack}>← Dashboard</button>
       </div>
 
       <section className="progress-toolbar card">
-        <div className="progress-presets">
-          {[['week','7 days'],['month','30 days'],['90','90 days'],['year','1 year'],['custom','Custom']].map(([key, text]) => <button key={key} className={`filter-chip ${preset === key ? 'active' : ''}`} onClick={() => key === 'custom' ? setPreset('custom') : applyPreset(key)}>{text}</button>)}
+        <div className="period-mode-row">
+          {[['day', 'Day'], ['week', 'Week'], ['month', 'Month'], ['year', 'Year'], ['custom', 'Custom']].map(([key, text]) => (
+            <button key={key} className={`period-mode ${mode === key ? 'active' : ''}`} onClick={() => selectMode(key)}>{text}</button>
+          ))}
         </div>
-        <div className="date-range-controls">
-          <label>From<input type="date" value={from} onChange={(e) => setFrom(e.target.value)} /></label>
-          <label>To<input type="date" value={to} onChange={(e) => setTo(e.target.value)} /></label>
-          <button className="primary-button" onClick={applyCustom}>Apply</button>
+
+        <div className="period-navigation">
+          <button className="period-nav-button" disabled={mode === 'custom'} onClick={() => navigatePeriod(-1)} aria-label="Previous period">‹</button>
+          <div className="period-current">
+            <button className="period-today-button" onClick={goToday}>Today</button>
+            <strong>{rangeLabel(mode, from, to)}</strong>
+          </div>
+          <button className="period-nav-button" disabled={mode === 'custom'} onClick={() => navigatePeriod(1)} aria-label="Next period">›</button>
         </div>
+
+        {mode === "custom" ? (
+          <div className="date-range-controls">
+            <label>From<input type="date" value={from} onChange={(e) => setFrom(e.target.value)} /></label>
+            <label>To<input type="date" value={to} onChange={(e) => setTo(e.target.value)} /></label>
+            <button className="primary-button" onClick={applyCustom}>Apply range</button>
+          </div>
+        ) : (
+          <div className="selected-period-info">
+            <span>Selected date</span>
+            <input aria-label="Anchor date" type="date" value={anchor} onChange={(e) => setAnchor(e.target.value)} />
+            <span className="muted-pill">{from} → {to}</span>
+          </div>
+        )}
       </section>
 
       {loading ? <div className="card progress-empty">Loading your complete history…</div> : (
         <>
           <section className="stats-grid progress-summary-grid">
-            <div className="card"><span className="card-icon">⚖️</span><p>Latest weight</p><h3>{selectedDay?.weightKg != null ? Number(selectedDay.weightKg).toFixed(1) : "—"}<small> kg</small></h3><div className="card-description">Trend is carried forward between recorded weigh-ins.</div></div>
-            <div className="card"><span className="card-icon">🍽️</span><p>Avg calories/day</p><h3>{Math.round(averages.calories)}<small> kcal</small></h3><div className="card-description">{Math.round(totals.calories)} kcal across the range.</div></div>
-            <div className="card"><span className="card-icon">💧</span><p>Avg water/day</p><h3>{(averages.water / 1000).toFixed(1)}<small> L</small></h3><div className="card-description">{(totals.waterMl / 1000).toFixed(1)} L recorded.</div></div>
-            <div className="card"><span className="card-icon">🏃</span><p>Exercise</p><h3>{Math.round(totals.exerciseMinutes)}<small> min</small></h3><div className="card-description">{Math.round(totals.caloriesBurned || 0)} kcal burned.</div></div>
+            <div className="card"><span className="card-icon">⚖️</span><p>Weight</p><h3>{selectedDay?.weightKg != null ? Number(selectedDay.weightKg).toFixed(1) : "—"}<small> kg</small></h3><div className="card-description">Latest recorded weight for the selected date.</div></div>
+            <div className="card"><span className="card-icon">🍽️</span><p>Avg calories/day</p><h3>{Math.round(averages.calories)}<small> kcal</small></h3><div className="card-description">{Math.round(totals.calories || 0)} kcal across this period.</div></div>
+            <div className="card"><span className="card-icon">💧</span><p>Avg water/day</p><h3>{(averages.water / 1000).toFixed(1)}<small> L</small></h3><div className="card-description">{((totals.waterMl || 0) / 1000).toFixed(1)} L recorded.</div></div>
+            <div className="card"><span className="card-icon">🏃</span><p>Exercise</p><h3>{Math.round(totals.exerciseMinutes || 0)}<small> min</small></h3><div className="card-description">{Math.round(totals.caloriesBurned || 0)} kcal burned.</div></div>
           </section>
 
           <section className="progress-charts-grid">
-            <TrendChart data={days} metric="weightKg" label="Weight trend" unit=" kg" colorClass="weight-chart" />
-            <TrendChart data={days} metric="calories" label="Calories eaten" unit=" kcal" colorClass="calorie-chart" />
-            <TrendChart data={days} metric="protein" label="Protein intake" unit=" g" colorClass="protein-chart" />
-            <TrendChart data={days} metric="waterMl" label="Water intake" unit=" ml" colorClass="water-chart" />
+            <TrendChart data={days} metric="weightKg" label="Weight trend" unit=" kg" decimals={1} />
+            <TrendChart data={days} metric="calories" label="Calories eaten" unit=" kcal" />
+            <TrendChart data={days} metric="protein" label="Protein intake" unit=" g" decimals={1} />
+            <TrendChart data={days} metric="waterMl" label="Water intake" unit=" ml" />
           </section>
 
           <section className="card daily-timeline-card">
-            <div className="section-heading"><div><h3>Daily tracking</h3><p>Select any date to inspect everything recorded that day.</p></div><span className="muted-pill">{days.length} days</span></div>
+            <div className="section-heading"><div><h3>Daily tracking</h3><p>Tap a day to see every food, exercise, water, weight, task and habit entry.</p></div><span className="muted-pill">{days.length} days</span></div>
+            <div className="daily-day-picker">
+              {days.map((day) => (
+                <button key={day.date} className={`daily-day-chip ${selectedDate === day.date ? "active" : ""}`} onClick={() => { setSelectedDate(day.date); setAnchor(day.date); }}>
+                  <strong>{shortDate(day.date)}</strong>
+                  <span>{Math.round(day.calories)} kcal</span>
+                </button>
+              ))}
+            </div>
             <div className="daily-table-wrap">
               <table className="daily-table"><thead><tr><th>Date</th><th>Weight</th><th>Calories</th><th>Protein</th><th>Water</th><th>Exercise</th><th>Tasks</th><th>Habits</th></tr></thead>
-                <tbody>{days.slice().reverse().map((day) => <tr key={day.date} className={selectedDate === day.date ? 'selected' : ''} onClick={() => setSelectedDate(day.date)}><td>{niceDate(day.date)}</td><td>{day.weightKg == null ? '—' : `${Number(day.weightKg).toFixed(1)} kg`}</td><td>{Math.round(day.calories)} kcal</td><td>{Number(day.protein).toFixed(1)} g</td><td>{(day.waterMl / 1000).toFixed(1)} L</td><td>{Math.round(day.exerciseMinutes)} min</td><td>{day.tasksCompleted}/{day.tasksTotal}</td><td>{day.habitsCompleted}</td></tr>)}</tbody>
+                <tbody>{days.slice().reverse().map((day) => <tr key={day.date} className={selectedDate === day.date ? 'selected' : ''} onClick={() => { setSelectedDate(day.date); setAnchor(day.date); }}><td>{fullDate(day.date)}</td><td>{day.weightKg == null ? '—' : `${Number(day.weightKg).toFixed(1)} kg`}</td><td>{Math.round(day.calories)} kcal</td><td>{Number(day.protein).toFixed(1)} g</td><td>{(day.waterMl / 1000).toFixed(1)} L</td><td>{Math.round(day.exerciseMinutes)} min</td><td>{day.tasksCompleted}/{day.tasksTotal}</td><td>{day.habitsCompleted}</td></tr>)}</tbody>
               </table>
             </div>
           </section>
 
           <section className="card history-details-card">
-            <div className="section-heading"><div><h3>Full day history</h3><p>{niceDate(selectedDate)}</p></div>{detailsLoading && <span className="loading-label">Loading…</span>}</div>
+            <div className="section-heading"><div><h3>Full history for {fullDate(selectedDate)}</h3><p>Everything recorded on this exact day.</p></div>{detailsLoading && <span className="loading-label">Loading…</span>}</div>
             <div className="history-detail-grid">
               <div className="history-detail-block"><h4>🍽️ Food & calories</h4>{mealCalories.length ? mealCalories.map((log) => <div className="history-row" key={log._id}><div><strong>{log.foodName}</strong><span>{log.mealType} · {log.consumedQuantity} {log.servingUnit}</span></div><b>{Math.round(log.nutritionTotal?.calories || 0)} kcal</b></div>) : <p className="muted">No food logged.</p>}</div>
               <div className="history-detail-block"><h4>🏃 Exercise</h4>{activities.length ? activities.map((log) => <div className="history-row" key={log._id}><div><strong>{log.activityName}</strong><span>{log.durationMinutes} min · {log.category}</span></div><b>{Math.round(log.caloriesBurned || 0)} kcal</b></div>) : <p className="muted">No exercise logged.</p>}</div>

@@ -41,11 +41,12 @@ router.get('/history', async (req, res) => {
     const end = new Date(`${to}T23:59:59.999`);
     const userId = req.user.id;
 
-    const [foods, activities, water, weights, tasks, habits] = await Promise.all([
+    const [foods, activities, water, weights, priorWeight, tasks, habits] = await Promise.all([
       FoodLog.find({ userId, date: { $gte: from, $lte: to } }).lean(),
       ActivityLog.find({ userId, date: { $gte: from, $lte: to } }).lean(),
       WaterLog.find({ userId, date: { $gte: from, $lte: to } }).lean(),
       WeightLog.find({ userId, date: { $gte: from, $lte: to } }).sort({ date: 1, createdAt: 1 }).lean(),
+      WeightLog.findOne({ userId, date: { $lt: from } }).sort({ date: -1, createdAt: -1 }).lean(),
       Task.find({ userId, date: { $gte: from, $lte: to } }).lean(),
       HabitLog.find({ userId, date: { $gte: from, $lte: to } }).lean(),
     ]);
@@ -102,8 +103,9 @@ router.get('/history', async (req, res) => {
     const weightByDate = new Map();
     for (const weight of weights) weightByDate.set(weight.date, Number(weight.weightKg));
 
-    // Carry the most recent known weight forward so the weight trend is continuous.
-    let lastWeight = null;
+    // Carry the most recent known weight forward so the weight trend is continuous,
+    // including a weigh-in that happened before the selected period.
+    let lastWeight = priorWeight ? Number(priorWeight.weightKg) : null;
     for (const date of dates) {
       if (weightByDate.has(date)) lastWeight = weightByDate.get(date);
       if (lastWeight !== null) weightByDate.set(date, lastWeight);
