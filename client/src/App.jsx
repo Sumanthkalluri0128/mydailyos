@@ -96,6 +96,8 @@ function App() {
   // WATER
   // ============================================================
 
+  const [stepSummary, setStepSummary] = useState({ steps: 0, source: '' });
+
   const [waterSummary, setWaterSummary] =
     useState({
       totalMl: 0,
@@ -208,6 +210,22 @@ function App() {
           setHabitLogs(
             habitLogData.logs
           );
+        }
+
+        // ======================================================
+        // STEPS — synced from Samsung Health / Health Connect
+        // ======================================================
+
+        const stepsResponse = await apiFetch(
+          `${API_URL}/api/steps?from=${today}&to=${today}`
+        );
+        const stepsData = await stepsResponse.json();
+        if (stepsData.success) {
+          const latest = stepsData.logs?.[0] || {};
+          setStepSummary({
+            steps: Number(latest.steps || 0),
+            source: latest.source || '',
+          });
         }
 
         // ======================================================
@@ -826,7 +844,7 @@ function App() {
             </p>
 
             <h3>
-              0{" "}
+              {stepSummary.steps.toLocaleString()}{" "}
 
               <small>
                 /{" "}
@@ -839,8 +857,12 @@ function App() {
 
             <div className="progress">
 
-              <div className="progress-fill steps"></div>
+              <div className="progress-fill steps" style={{ width: `${Math.min((stepSummary.steps / (profile?.goals?.stepsTarget ?? 10000)) * 100, 100)}%` }}></div>
 
+            </div>
+
+            <div className="card-description">
+              {stepSummary.steps > 0 ? (stepSummary.source || 'Samsung Health / Health Connect') : 'Connect Samsung Health in the MyDailyOS mobile app'}
             </div>
 
           </div>

@@ -6,6 +6,7 @@ const WaterLog = require('../models/WaterLog');
 const WeightLog = require('../models/WeightLog');
 const Task = require('../models/Task');
 const HabitLog = require('../models/HabitLog');
+const StepLog = require('../models/StepLog');
 
 const router = express.Router();
 router.use(requireAuth);
@@ -57,12 +58,13 @@ function emptyDay(date) {
     tasksTotal: 0,
     tasksCompleted: 0,
     habitsCompleted: 0,
+    steps: 0,
   };
 }
 
 async function buildHistory(userId, from, to) {
   const dates = enumerateDates(from, to);
-  const [foods, activities, water, weights, priorWeight, tasks, habits] = await Promise.all([
+  const [foods, activities, water, weights, priorWeight, tasks, habits, steps] = await Promise.all([
     FoodLog.find({ userId, date: { $gte: from, $lte: to } }).sort({ createdAt: 1 }).lean(),
     ActivityLog.find({ userId, date: { $gte: from, $lte: to } }).sort({ createdAt: 1 }).lean(),
     WaterLog.find({ userId, date: { $gte: from, $lte: to } }).sort({ createdAt: 1 }).lean(),
@@ -70,6 +72,7 @@ async function buildHistory(userId, from, to) {
     WeightLog.findOne({ userId, date: { $lt: from } }).sort({ date: -1, createdAt: -1 }).lean(),
     Task.find({ userId, date: { $gte: from, $lte: to } }).sort({ date: 1, createdAt: 1 }).lean(),
     HabitLog.find({ userId, date: { $gte: from, $lte: to } }).sort({ date: 1, createdAt: 1 }).lean(),
+    StepLog.find({ userId, date: { $gte: from, $lte: to } }).sort({ date: 1 }).lean(),
   ]);
 
   const dayMap = new Map(dates.map((date) => [date, emptyDay(date)]));
@@ -110,6 +113,11 @@ async function buildHistory(userId, from, to) {
     if (day && habit.completed) day.habitsCompleted += 1;
   }
 
+  for (const step of steps) {
+    const day = dayMap.get(step.date);
+    if (day) day.steps = Number(step.steps || 0);
+  }
+
   const weightByDate = new Map();
   for (const weight of weights) {
     weightByDate.set(weight.date, Number(weight.weightKg));
@@ -136,6 +144,7 @@ async function buildHistory(userId, from, to) {
       acc.tasksCompleted += day.tasksCompleted;
       acc.tasksTotal += day.tasksTotal;
       acc.habitsCompleted += day.habitsCompleted;
+      acc.steps += day.steps;
       return acc;
     },
     {
@@ -147,6 +156,7 @@ async function buildHistory(userId, from, to) {
       tasksCompleted: 0,
       tasksTotal: 0,
       habitsCompleted: 0,
+      steps: 0,
     }
   );
 
@@ -154,13 +164,14 @@ async function buildHistory(userId, from, to) {
 }
 
 async function getDayDetails(userId, date) {
-  const [food, exercise, water, weight, tasks, habits] = await Promise.all([
+  const [food, exercise, water, weight, tasks, habits, steps] = await Promise.all([
     FoodLog.find({ userId, date }).sort({ createdAt: -1 }).lean(),
     ActivityLog.find({ userId, date }).sort({ createdAt: -1 }).lean(),
     WaterLog.find({ userId, date }).sort({ createdAt: -1 }).lean(),
     WeightLog.find({ userId, date }).sort({ createdAt: -1 }).lean(),
     Task.find({ userId, date }).sort({ completed: 1, priority: -1, time: 1, createdAt: 1 }).lean(),
     HabitLog.find({ userId, date }).sort({ createdAt: -1 }).lean(),
+    StepLog.find({ userId, date }).sort({ syncedAt: -1 }).lean(),
   ]);
 
   return {
@@ -171,6 +182,7 @@ async function getDayDetails(userId, date) {
     weight,
     tasks,
     habits,
+    steps: steps.length ? Number(steps[0].steps || 0) : 0,
     summary: {
       calories: food.reduce((sum, x) => sum + Number(x.nutritionTotal?.calories || 0), 0),
       protein: food.reduce((sum, x) => sum + Number(x.nutritionTotal?.protein || 0), 0),
@@ -178,6 +190,7 @@ async function getDayDetails(userId, date) {
       exerciseMinutes: exercise.reduce((sum, x) => sum + Number(x.durationMinutes || 0), 0),
       caloriesBurned: exercise.reduce((sum, x) => sum + Number(x.caloriesBurned || 0), 0),
       weightKg: weight.length ? Number(weight[0].weightKg) : null,
+      steps: steps.length ? Number(steps[0].steps || 0) : 0,
     },
   };
 }

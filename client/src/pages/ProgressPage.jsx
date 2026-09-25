@@ -305,6 +305,7 @@ function ProgressPage({ onBack }) {
             <div className="card"><span className="card-icon">🍽️</span><p>Avg calories/day</p><h3>{Math.round(averages.calories)}<small> kcal</small></h3><div className="card-description">{Math.round(totals.calories || 0)} kcal across this period.</div></div>
             <div className="card"><span className="card-icon">💧</span><p>Avg water/day</p><h3>{(averages.water / 1000).toFixed(1)}<small> L</small></h3><div className="card-description">{((totals.waterMl || 0) / 1000).toFixed(1)} L recorded.</div></div>
             <div className="card"><span className="card-icon">🏃</span><p>Exercise</p><h3>{Math.round(totals.exerciseMinutes || 0)}<small> min</small></h3><div className="card-description">{Math.round(totals.caloriesBurned || 0)} kcal burned.</div></div>
+            <div className="card"><span className="card-icon">🚶</span><p>Steps</p><h3>{Math.round(totals.steps || 0).toLocaleString()}</h3><div className="card-description">Synced from Samsung Health when available.</div></div>
           </section>
 
           <section className="progress-charts-grid">
@@ -312,6 +313,7 @@ function ProgressPage({ onBack }) {
             <TrendChart data={days} metric="calories" label="Calories eaten" unit=" kcal" />
             <TrendChart data={days} metric="protein" label="Protein intake" unit=" g" decimals={1} />
             <TrendChart data={days} metric="waterMl" label="Water intake" unit=" ml" />
+            <TrendChart data={days} metric="steps" label="Steps" unit=" steps" />
           </section>
 
           <section className="card daily-timeline-card">
@@ -325,8 +327,8 @@ function ProgressPage({ onBack }) {
               ))}
             </div>
             <div className="daily-table-wrap">
-              <table className="daily-table"><thead><tr><th>Date</th><th>Weight</th><th>Calories</th><th>Protein</th><th>Water</th><th>Exercise</th><th>Tasks</th><th>Habits</th></tr></thead>
-                <tbody>{days.slice().reverse().map((day) => <tr key={day.date} className={selectedDate === day.date ? 'selected' : ''} onClick={() => { setSelectedDate(day.date); setAnchor(day.date); }}><td>{fullDate(day.date)}</td><td>{day.weightKg == null ? '—' : `${Number(day.weightKg).toFixed(1)} kg`}</td><td>{Math.round(day.calories)} kcal</td><td>{Number(day.protein).toFixed(1)} g</td><td>{(day.waterMl / 1000).toFixed(1)} L</td><td>{Math.round(day.exerciseMinutes)} min</td><td>{day.tasksCompleted}/{day.tasksTotal}</td><td>{day.habitsCompleted}</td></tr>)}</tbody>
+              <table className="daily-table"><thead><tr><th>Date</th><th>Weight</th><th>Calories</th><th>Protein</th><th>Water</th><th>Exercise</th><th>Steps</th><th>Tasks</th><th>Habits</th></tr></thead>
+                <tbody>{days.slice().reverse().map((day) => <tr key={day.date} className={selectedDate === day.date ? 'selected' : ''} onClick={() => { setSelectedDate(day.date); setAnchor(day.date); }}><td>{fullDate(day.date)}</td><td>{day.weightKg == null ? '—' : `${Number(day.weightKg).toFixed(1)} kg`}</td><td>{Math.round(day.calories)} kcal</td><td>{Number(day.protein).toFixed(1)} g</td><td>{(day.waterMl / 1000).toFixed(1)} L</td><td>{Math.round(day.exerciseMinutes)} min</td><td>{Math.round(day.steps || 0).toLocaleString()}</td><td>{day.tasksCompleted}/{day.tasksTotal}</td><td>{day.habitsCompleted}</td></tr>)}</tbody>
               </table>
             </div>
           </section>
@@ -336,6 +338,7 @@ function ProgressPage({ onBack }) {
             <div className="history-detail-grid">
               <div className="history-detail-block"><h4>🍽️ Food & calories</h4>{mealCalories.length ? mealCalories.map((log) => <div className="history-row" key={log._id}><div><strong>{log.foodName}</strong><span>{log.mealType} · {log.consumedQuantity} {log.servingUnit}</span></div><b>{Math.round(log.nutritionTotal?.calories || 0)} kcal</b></div>) : <p className="muted">No food logged.</p>}</div>
               <div className="history-detail-block"><h4>🏃 Exercise</h4>{activities.length ? activities.map((log) => <div className="history-row" key={log._id}><div><strong>{log.activityName}</strong><span>{log.durationMinutes} min · {log.category}</span></div><b>{Math.round(log.caloriesBurned || 0)} kcal</b></div>) : <p className="muted">No exercise logged.</p>}</div>
+              <div className="history-detail-block"><h4>🚶 Steps</h4><div className="history-row"><div><strong>{Math.round(details?.steps || details?.summary?.steps || 0).toLocaleString()} steps</strong><span>Samsung Health / Health Connect</span></div></div></div>
               <div className="history-detail-block"><h4>💧 Water</h4>{waterLogs.length ? waterLogs.map((log) => <div className="history-row" key={log._id}><div><strong>{log.amountMl} ml</strong><span>{log.notes || 'Water intake'}</span></div></div>) : <p className="muted">No water logged.</p>}</div>
               <div className="history-detail-block"><h4>⚖️ Weight</h4>{weights.length ? weights.map((log) => <div className="history-row" key={log._id}><div><strong>{Number(log.weightKg).toFixed(1)} kg</strong><span>{log.notes || 'Weight entry'}</span></div></div>) : <p className="muted">No weight entry.</p>}</div>
               <div className="history-detail-block"><h4>✅ Tasks</h4>{tasks.length ? tasks.map((task) => <div className="history-row" key={task._id}><div><strong>{task.title}</strong><span>{task.priority} · {task.time || 'No time'}</span></div><b>{task.completed ? 'Done' : 'Open'}</b></div>) : <p className="muted">No tasks.</p>}</div>

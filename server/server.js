@@ -14,6 +14,7 @@ const habitRoutes = require('./routes/habitRoutes');
 const waterRoutes = require('./routes/waterRoutes');
 const weightRoutes = require('./routes/weightRoutes');
 const progressRoutes = require('./routes/progressRoutes');
+const stepRoutes = require('./routes/stepRoutes');
 
 const app = express();
 const PORT = Number(process.env.PORT) || 5001;
@@ -51,7 +52,7 @@ app.get('/api/health', (req, res) => {
 app.get('/api/version', (req, res) => {
   res.status(200).json({
     success: true,
-    version: '2.3.1-fast-swipe-quotes',
+    version: '2.4.0-samsung-health-steps',
     service: 'MyDailyOS API',
   });
 });
@@ -67,6 +68,7 @@ app.use('/api/habits', habitRoutes);
 app.use('/api/water', waterRoutes);
 app.use('/api/weight', weightRoutes);
 app.use('/api/progress', progressRoutes);
+app.use('/api/steps', stepRoutes);
 // Backward-compatible history namespace for older web/mobile builds.
 app.use('/api/history', progressRoutes);
 
