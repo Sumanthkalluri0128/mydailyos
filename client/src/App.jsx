@@ -272,7 +272,7 @@ function App() {
         <header className="topbar">
           <button
   className="brand-button"
-  onClick={() => setCurrentPage("home")}
+  onClick={() => setCurrentPage("dashboard")}
   aria-label="Go to Home"
 >
   <div className="brand-icon">✦</div>
@@ -307,13 +307,20 @@ function App() {
       <div className="app">
 
         <header className="topbar">
-          <div>
-            <h1>MyDailyOS</h1>
-
-            <p>
-              Your daily health & productivity tracker
-            </p>
-          </div>
+          <button
+            type="button"
+            className="brand-button"
+            onClick={() => setCurrentPage("dashboard")}
+            aria-label="Go to Home"
+          >
+            <div className="brand-icon">✦</div>
+            <div>
+              <div className="brand-title">MyDailyOS</div>
+              <div className="brand-subtitle">
+                Your daily health & productivity tracker
+              </div>
+            </div>
+          </button>
         </header>
 
         <main className="dashboard">
@@ -337,13 +344,20 @@ function App() {
       <div className="app">
 
         <header className="topbar">
-          <div>
-            <h1>MyDailyOS</h1>
-
-            <p>
-              Your daily health & productivity tracker
-            </p>
-          </div>
+          <button
+            type="button"
+            className="brand-button"
+            onClick={() => setCurrentPage("dashboard")}
+            aria-label="Go to Home"
+          >
+            <div className="brand-icon">✦</div>
+            <div>
+              <div className="brand-title">MyDailyOS</div>
+              <div className="brand-subtitle">
+                Your daily health & productivity tracker
+              </div>
+            </div>
+          </button>
         </header>
 
         <main className="dashboard">
@@ -367,13 +381,20 @@ function App() {
       <div className="app">
 
         <header className="topbar">
-          <div>
-            <h1>MyDailyOS</h1>
-
-            <p>
-              Your daily health & productivity tracker
-            </p>
-          </div>
+          <button
+            type="button"
+            className="brand-button"
+            onClick={() => setCurrentPage("dashboard")}
+            aria-label="Go to Home"
+          >
+            <div className="brand-icon">✦</div>
+            <div>
+              <div className="brand-title">MyDailyOS</div>
+              <div className="brand-subtitle">
+                Your daily health & productivity tracker
+              </div>
+            </div>
+          </button>
         </header>
 
         <main className="dashboard">
@@ -397,13 +418,20 @@ function App() {
       <div className="app">
 
         <header className="topbar">
-          <div>
-            <h1>MyDailyOS</h1>
-
-            <p>
-              Your daily health & productivity tracker
-            </p>
-          </div>
+          <button
+            type="button"
+            className="brand-button"
+            onClick={() => setCurrentPage("dashboard")}
+            aria-label="Go to Home"
+          >
+            <div className="brand-icon">✦</div>
+            <div>
+              <div className="brand-title">MyDailyOS</div>
+              <div className="brand-subtitle">
+                Your daily health & productivity tracker
+              </div>
+            </div>
+          </button>
         </header>
 
         <main className="dashboard">
@@ -427,13 +455,20 @@ function App() {
       <div className="app">
 
         <header className="topbar">
-          <div>
-            <h1>MyDailyOS</h1>
-
-            <p>
-              Your daily health & productivity tracker
-            </p>
-          </div>
+          <button
+            type="button"
+            className="brand-button"
+            onClick={() => setCurrentPage("dashboard")}
+            aria-label="Go to Home"
+          >
+            <div className="brand-icon">✦</div>
+            <div>
+              <div className="brand-title">MyDailyOS</div>
+              <div className="brand-subtitle">
+                Your daily health & productivity tracker
+              </div>
+            </div>
+          </button>
         </header>
 
         <main className="dashboard">
@@ -457,13 +492,20 @@ function App() {
       <div className="app">
 
         <header className="topbar">
-          <div>
-            <h1>MyDailyOS</h1>
-
-            <p>
-              Your daily health & productivity tracker
-            </p>
-          </div>
+          <button
+            type="button"
+            className="brand-button"
+            onClick={() => setCurrentPage("dashboard")}
+            aria-label="Go to Home"
+          >
+            <div className="brand-icon">✦</div>
+            <div>
+              <div className="brand-title">MyDailyOS</div>
+              <div className="brand-subtitle">
+                Your daily health & productivity tracker
+              </div>
+            </div>
+          </button>
         </header>
 
         <main className="dashboard">
@@ -488,13 +530,20 @@ function App() {
 
         <header className="topbar">
 
-          <div>
-            <h1>MyDailyOS</h1>
-
-            <p>
-              Your daily health & productivity tracker
-            </p>
-          </div>
+          <button
+            type="button"
+            className="brand-button"
+            onClick={() => setCurrentPage("dashboard")}
+            aria-label="Go to Home"
+          >
+            <div className="brand-icon">✦</div>
+            <div>
+              <div className="brand-title">MyDailyOS</div>
+              <div className="brand-subtitle">
+                Your daily health & productivity tracker
+              </div>
+            </div>
+          </button>
 
           <button
             className="secondary-button"
@@ -615,13 +664,20 @@ function App() {
 
       <header className="topbar">
 
-        <div>
-          <h1>MyDailyOS</h1>
-
-          <p>
-            Your daily health & productivity tracker
-          </p>
-        </div>
+        <button
+          type="button"
+          className="brand-button"
+          onClick={() => setCurrentPage("dashboard")}
+          aria-label="Go to Home"
+        >
+          <div className="brand-icon">✦</div>
+          <div>
+            <div className="brand-title">MyDailyOS</div>
+            <div className="brand-subtitle">
+              Your daily health & productivity tracker
+            </div>
+          </div>
+        </button>
 
         <div className="profile">
 
