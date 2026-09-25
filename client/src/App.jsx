@@ -1,15 +1,15 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, Suspense, lazy } from "react";
 import "./App.css";
 
-import FoodPage from "./pages/FoodPage";
-import FoodLogger from "./pages/FoodLogger";
-import ExercisePage from "./pages/ExercisePage";
-import TaskPage from "./pages/TaskPage";
-import HabitPage from "./pages/HabitPage";
-import WaterPage from "./pages/WaterPage";
-import WeightPage from "./pages/WeightPage";
-import ProfilePage from "./pages/ProfilePage";
-import ProgressPage from "./pages/ProgressPage";
+const FoodPage = lazy(() => import("./pages/FoodPage"));
+const FoodLogger = lazy(() => import("./pages/FoodLogger"));
+const ExercisePage = lazy(() => import("./pages/ExercisePage"));
+const TaskPage = lazy(() => import("./pages/TaskPage"));
+const HabitPage = lazy(() => import("./pages/HabitPage"));
+const WaterPage = lazy(() => import("./pages/WaterPage"));
+const WeightPage = lazy(() => import("./pages/WeightPage"));
+const ProfilePage = lazy(() => import("./pages/ProfilePage"));
+const ProgressPage = lazy(() => import("./pages/ProgressPage"));
 import MotivationCarousel from "./components/MotivationCarousel";
 
 import { getLocalDate } from "./utils/date";
@@ -95,8 +95,6 @@ function App() {
   // ============================================================
   // WATER
   // ============================================================
-
-  const [stepSummary, setStepSummary] = useState({ steps: 0, source: '' });
 
   const [waterSummary, setWaterSummary] =
     useState({
@@ -213,22 +211,6 @@ function App() {
         }
 
         // ======================================================
-        // STEPS — synced from Samsung Health / Health Connect
-        // ======================================================
-
-        const stepsResponse = await apiFetch(
-          `${API_URL}/api/steps?from=${today}&to=${today}`
-        );
-        const stepsData = await stepsResponse.json();
-        if (stepsData.success) {
-          const latest = stepsData.logs?.[0] || {};
-          setStepSummary({
-            steps: Number(latest.steps || 0),
-            source: latest.source || '',
-          });
-        }
-
-        // ======================================================
         // WATER
         // ======================================================
 
@@ -321,12 +303,14 @@ function App() {
         </header>
 
         <main className="dashboard">
+          <Suspense fallback={<div className="page-loading">Loading…</div>}>
           <FoodLogger
             date={today}
             onBack={() =>
               setCurrentPage("dashboard")
             }
           />
+        </Suspense>
         </main>
 
       </div>
@@ -346,11 +330,13 @@ function App() {
         </header>
 
         <main className="dashboard">
+          <Suspense fallback={<div className="page-loading">Loading…</div>}>
           <ExercisePage
             onBack={() =>
               setCurrentPage("dashboard")
             }
           />
+        </Suspense>
         </main>
 
       </div>
@@ -370,11 +356,13 @@ function App() {
         </header>
 
         <main className="dashboard">
+          <Suspense fallback={<div className="page-loading">Loading…</div>}>
           <TaskPage
             onBack={() =>
               setCurrentPage("dashboard")
             }
           />
+        </Suspense>
         </main>
 
       </div>
@@ -394,11 +382,13 @@ function App() {
         </header>
 
         <main className="dashboard">
+          <Suspense fallback={<div className="page-loading">Loading…</div>}>
           <HabitPage
             onBack={() =>
               setCurrentPage("dashboard")
             }
           />
+        </Suspense>
         </main>
 
       </div>
@@ -418,11 +408,13 @@ function App() {
         </header>
 
         <main className="dashboard">
+          <Suspense fallback={<div className="page-loading">Loading…</div>}>
           <WaterPage
             onBack={() =>
               setCurrentPage("dashboard")
             }
           />
+        </Suspense>
         </main>
 
       </div>
@@ -442,11 +434,13 @@ function App() {
         </header>
 
         <main className="dashboard">
+          <Suspense fallback={<div className="page-loading">Loading…</div>}>
           <WeightPage
             onBack={() =>
               setCurrentPage("dashboard")
             }
           />
+        </Suspense>
         </main>
 
       </div>
@@ -466,11 +460,13 @@ function App() {
         </header>
 
         <main className="dashboard">
+          <Suspense fallback={<div className="page-loading">Loading…</div>}>
           <ProfilePage
             onBack={() =>
               setCurrentPage("dashboard")
             }
           />
+        </Suspense>
         </main>
 
       </div>
@@ -488,7 +484,9 @@ function App() {
           <BrandHome onHome={() => setCurrentPage("dashboard")} />
         </header>
         <main className="dashboard">
+          <Suspense fallback={<div className="page-loading">Loading…</div>}>
           <ProgressPage onBack={() => setCurrentPage("dashboard")} />
+        </Suspense>
         </main>
       </div>
     );
@@ -518,7 +516,9 @@ function App() {
         </header>
 
         <main className="dashboard">
+          <Suspense fallback={<div className="page-loading">Loading…</div>}>
           <FoodPage />
+        </Suspense>
         </main>
 
       </div>
@@ -844,7 +844,7 @@ function App() {
             </p>
 
             <h3>
-              {stepSummary.steps.toLocaleString()}{" "}
+              0{" "}
 
               <small>
                 /{" "}
@@ -857,12 +857,8 @@ function App() {
 
             <div className="progress">
 
-              <div className="progress-fill steps" style={{ width: `${Math.min((stepSummary.steps / (profile?.goals?.stepsTarget ?? 10000)) * 100, 100)}%` }}></div>
+              <div className="progress-fill steps"></div>
 
-            </div>
-
-            <div className="card-description">
-              {stepSummary.steps > 0 ? (stepSummary.source || 'Samsung Health / Health Connect') : 'Connect Samsung Health in the MyDailyOS mobile app'}
             </div>
 
           </div>

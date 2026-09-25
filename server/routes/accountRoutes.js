@@ -15,7 +15,6 @@ const PERSONAL_MODELS = [
   'HabitLog',
   'FoodLog',
   'ActivityLog',
-  'StepLog',
 ];
 
 router.get('/me', async (req, res) => {
