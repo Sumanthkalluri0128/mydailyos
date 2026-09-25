@@ -51,7 +51,7 @@ app.get('/api/health', (req, res) => {
 app.get('/api/version', (req, res) => {
   res.status(200).json({
     success: true,
-    version: '2.1.0-auth',
+    version: '2.2.0-progress-history',
     service: 'MyDailyOS API',
   });
 });
@@ -67,6 +67,8 @@ app.use('/api/habits', habitRoutes);
 app.use('/api/water', waterRoutes);
 app.use('/api/weight', weightRoutes);
 app.use('/api/progress', progressRoutes);
+// Backward-compatible history namespace for older web/mobile builds.
+app.use('/api/history', progressRoutes);
 
 app.get('/', (req, res) => {
   res.json({ message: 'MyDailyOS API is running 🚀' });

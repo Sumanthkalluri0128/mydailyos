@@ -14,115 +14,120 @@ function validDate(value) {
   return typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value);
 }
 
+function normalizeDate(value) {
+  if (!validDate(value)) return null;
+  const [y, m, d] = value.split('-').map(Number);
+  const check = new Date(Date.UTC(y, m - 1, d));
+  if (
+    check.getUTCFullYear() !== y ||
+    check.getUTCMonth() !== m - 1 ||
+    check.getUTCDate() !== d
+  ) return null;
+  return value;
+}
+
 function enumerateDates(from, to) {
   const result = [];
-  const cursor = new Date(`${from}T00:00:00`);
-  const end = new Date(`${to}T00:00:00`);
+  const [fy, fm, fd] = from.split('-').map(Number);
+  const [ty, tm, td] = to.split('-').map(Number);
+  const cursor = new Date(Date.UTC(fy, fm - 1, fd));
+  const end = new Date(Date.UTC(ty, tm - 1, td));
   while (cursor <= end) {
-    const y = cursor.getFullYear();
-    const m = String(cursor.getMonth() + 1).padStart(2, '0');
-    const d = String(cursor.getDate()).padStart(2, '0');
-    result.push(`${y}-${m}-${d}`);
-    cursor.setDate(cursor.getDate() + 1);
+    result.push(
+      `${cursor.getUTCFullYear()}-${String(cursor.getUTCMonth() + 1).padStart(2, '0')}-${String(cursor.getUTCDate()).padStart(2, '0')}`
+    );
+    cursor.setUTCDate(cursor.getUTCDate() + 1);
   }
   return result;
 }
 
-router.get('/history', async (req, res) => {
-  try {
-    const from = String(req.query.from || '');
-    const to = String(req.query.to || '');
+function emptyDay(date) {
+  return {
+    date,
+    weightKg: null,
+    calories: 0,
+    protein: 0,
+    carbohydrates: 0,
+    fat: 0,
+    fiber: 0,
+    sugar: 0,
+    waterMl: 0,
+    exerciseMinutes: 0,
+    caloriesBurned: 0,
+    tasksTotal: 0,
+    tasksCompleted: 0,
+    habitsCompleted: 0,
+  };
+}
 
-    if (!validDate(from) || !validDate(to) || from > to) {
-      return res.status(400).json({ success: false, message: 'Valid from and to dates are required (YYYY-MM-DD).' });
-    }
+async function buildHistory(userId, from, to) {
+  const dates = enumerateDates(from, to);
+  const [foods, activities, water, weights, priorWeight, tasks, habits] = await Promise.all([
+    FoodLog.find({ userId, date: { $gte: from, $lte: to } }).sort({ createdAt: 1 }).lean(),
+    ActivityLog.find({ userId, date: { $gte: from, $lte: to } }).sort({ createdAt: 1 }).lean(),
+    WaterLog.find({ userId, date: { $gte: from, $lte: to } }).sort({ createdAt: 1 }).lean(),
+    WeightLog.find({ userId, date: { $gte: from, $lte: to } }).sort({ date: 1, createdAt: 1 }).lean(),
+    WeightLog.findOne({ userId, date: { $lt: from } }).sort({ date: -1, createdAt: -1 }).lean(),
+    Task.find({ userId, date: { $gte: from, $lte: to } }).sort({ date: 1, createdAt: 1 }).lean(),
+    HabitLog.find({ userId, date: { $gte: from, $lte: to } }).sort({ date: 1, createdAt: 1 }).lean(),
+  ]);
 
-    const start = new Date(`${from}T00:00:00`);
-    const end = new Date(`${to}T23:59:59.999`);
-    const userId = req.user.id;
+  const dayMap = new Map(dates.map((date) => [date, emptyDay(date)]));
 
-    const [foods, activities, water, weights, priorWeight, tasks, habits] = await Promise.all([
-      FoodLog.find({ userId, date: { $gte: from, $lte: to } }).lean(),
-      ActivityLog.find({ userId, date: { $gte: from, $lte: to } }).lean(),
-      WaterLog.find({ userId, date: { $gte: from, $lte: to } }).lean(),
-      WeightLog.find({ userId, date: { $gte: from, $lte: to } }).sort({ date: 1, createdAt: 1 }).lean(),
-      WeightLog.findOne({ userId, date: { $lt: from } }).sort({ date: -1, createdAt: -1 }).lean(),
-      Task.find({ userId, date: { $gte: from, $lte: to } }).lean(),
-      HabitLog.find({ userId, date: { $gte: from, $lte: to } }).lean(),
-    ]);
+  for (const log of foods) {
+    const day = dayMap.get(log.date);
+    if (!day) continue;
+    const n = log.nutritionTotal || {};
+    day.calories += Number(n.calories || 0);
+    day.protein += Number(n.protein || 0);
+    day.carbohydrates += Number(n.carbohydrates || 0);
+    day.fat += Number(n.fat || 0);
+    day.fiber += Number(n.fiber || 0);
+    day.sugar += Number(n.sugar || 0);
+  }
 
-    const dates = enumerateDates(from, to);
-    const foodMap = new Map();
-    const activityMap = new Map();
-    const waterMap = new Map();
-    const taskMap = new Map();
-    const habitMap = new Map();
+  for (const log of activities) {
+    const day = dayMap.get(log.date);
+    if (!day) continue;
+    day.exerciseMinutes += Number(log.durationMinutes || 0);
+    day.caloriesBurned += Number(log.caloriesBurned || 0);
+  }
 
-    for (const date of dates) {
-      foodMap.set(date, { calories: 0, protein: 0, carbohydrates: 0, fat: 0, fiber: 0, sugar: 0 });
-      activityMap.set(date, { exerciseMinutes: 0, caloriesBurned: 0 });
-      waterMap.set(date, 0);
-      taskMap.set(date, { total: 0, completed: 0 });
-      habitMap.set(date, 0);
-    }
+  for (const log of water) {
+    const day = dayMap.get(log.date);
+    if (day) day.waterMl += Number(log.amountMl || 0);
+  }
 
-    for (const log of foods) {
-      const target = foodMap.get(log.date);
-      if (!target) continue;
-      const n = log.nutritionTotal || {};
-      target.calories += Number(n.calories || 0);
-      target.protein += Number(n.protein || 0);
-      target.carbohydrates += Number(n.carbohydrates || 0);
-      target.fat += Number(n.fat || 0);
-      target.fiber += Number(n.fiber || 0);
-      target.sugar += Number(n.sugar || 0);
-    }
+  for (const task of tasks) {
+    const day = dayMap.get(task.date);
+    if (!day) continue;
+    day.tasksTotal += 1;
+    if (task.completed) day.tasksCompleted += 1;
+  }
 
-    for (const log of activities) {
-      const target = activityMap.get(log.date);
-      if (!target) continue;
-      target.exerciseMinutes += Number(log.durationMinutes || 0);
-      target.caloriesBurned += Number(log.caloriesBurned || 0);
-    }
+  for (const habit of habits) {
+    const day = dayMap.get(habit.date);
+    if (day && habit.completed) day.habitsCompleted += 1;
+  }
 
-    for (const log of water) {
-      if (waterMap.has(log.date)) waterMap.set(log.date, waterMap.get(log.date) + Number(log.amountMl || 0));
-    }
+  const weightByDate = new Map();
+  for (const weight of weights) {
+    weightByDate.set(weight.date, Number(weight.weightKg));
+  }
 
-    for (const task of tasks) {
-      const target = taskMap.get(task.date);
-      if (!target) continue;
-      target.total += 1;
-      if (task.completed) target.completed += 1;
-    }
+  let lastWeight = priorWeight ? Number(priorWeight.weightKg) : null;
+  for (const date of dates) {
+    if (weightByDate.has(date)) lastWeight = weightByDate.get(date);
+    if (lastWeight !== null) weightByDate.set(date, lastWeight);
+  }
 
-    for (const habit of habits) {
-      if (habit.completed && habitMap.has(habit.date)) habitMap.set(habit.date, habitMap.get(habit.date) + 1);
-    }
+  for (const [date, day] of dayMap) {
+    day.weightKg = weightByDate.has(date) ? weightByDate.get(date) : null;
+  }
 
-    const weightByDate = new Map();
-    for (const weight of weights) weightByDate.set(weight.date, Number(weight.weightKg));
-
-    // Carry the most recent known weight forward so the weight trend is continuous,
-    // including a weigh-in that happened before the selected period.
-    let lastWeight = priorWeight ? Number(priorWeight.weightKg) : null;
-    for (const date of dates) {
-      if (weightByDate.has(date)) lastWeight = weightByDate.get(date);
-      if (lastWeight !== null) weightByDate.set(date, lastWeight);
-    }
-
-    const days = dates.map(date => ({
-      date,
-      weightKg: weightByDate.has(date) ? weightByDate.get(date) : null,
-      ...foodMap.get(date),
-      ...activityMap.get(date),
-      waterMl: waterMap.get(date),
-      tasksTotal: taskMap.get(date).total,
-      tasksCompleted: taskMap.get(date).completed,
-      habitsCompleted: habitMap.get(date),
-    }));
-
-    const totals = days.reduce((acc, day) => {
+  const days = dates.map((date) => dayMap.get(date));
+  const totals = days.reduce(
+    (acc, day) => {
       acc.calories += day.calories;
       acc.protein += day.protein;
       acc.waterMl += day.waterMl;
@@ -132,12 +137,98 @@ router.get('/history', async (req, res) => {
       acc.tasksTotal += day.tasksTotal;
       acc.habitsCompleted += day.habitsCompleted;
       return acc;
-    }, { calories: 0, protein: 0, waterMl: 0, exerciseMinutes: 0, caloriesBurned: 0, tasksCompleted: 0, tasksTotal: 0, habitsCompleted: 0 });
+    },
+    {
+      calories: 0,
+      protein: 0,
+      waterMl: 0,
+      exerciseMinutes: 0,
+      caloriesBurned: 0,
+      tasksCompleted: 0,
+      tasksTotal: 0,
+      habitsCompleted: 0,
+    }
+  );
 
-    return res.json({ success: true, from, to, days, totals, generatedAt: new Date().toISOString(), rangeDays: dates.length, serverWindow: { start, end } });
+  return { from, to, days, totals, rangeDays: days.length };
+}
+
+async function getDayDetails(userId, date) {
+  const [food, exercise, water, weight, tasks, habits] = await Promise.all([
+    FoodLog.find({ userId, date }).sort({ createdAt: -1 }).lean(),
+    ActivityLog.find({ userId, date }).sort({ createdAt: -1 }).lean(),
+    WaterLog.find({ userId, date }).sort({ createdAt: -1 }).lean(),
+    WeightLog.find({ userId, date }).sort({ createdAt: -1 }).lean(),
+    Task.find({ userId, date }).sort({ completed: 1, priority: -1, time: 1, createdAt: 1 }).lean(),
+    HabitLog.find({ userId, date }).sort({ createdAt: -1 }).lean(),
+  ]);
+
+  return {
+    date,
+    food,
+    exercise,
+    water,
+    weight,
+    tasks,
+    habits,
+    summary: {
+      calories: food.reduce((sum, x) => sum + Number(x.nutritionTotal?.calories || 0), 0),
+      protein: food.reduce((sum, x) => sum + Number(x.nutritionTotal?.protein || 0), 0),
+      waterMl: water.reduce((sum, x) => sum + Number(x.amountMl || 0), 0),
+      exerciseMinutes: exercise.reduce((sum, x) => sum + Number(x.durationMinutes || 0), 0),
+      caloriesBurned: exercise.reduce((sum, x) => sum + Number(x.caloriesBurned || 0), 0),
+      weightKg: weight.length ? Number(weight[0].weightKg) : null,
+    },
+  };
+}
+
+router.get('/history', async (req, res) => {
+  try {
+    const from = normalizeDate(String(req.query.from || ''));
+    const to = normalizeDate(String(req.query.to || ''));
+    if (!from || !to || from > to) {
+      return res.status(400).json({ success: false, message: 'Valid from and to dates are required (YYYY-MM-DD).' });
+    }
+
+    const history = await buildHistory(req.user.id, from, to);
+    return res.json({ success: true, ...history, generatedAt: new Date().toISOString() });
   } catch (error) {
     console.error('Progress history failed:', error);
     return res.status(500).json({ success: false, message: 'Failed to build progress history.' });
+  }
+});
+
+// Canonical single-day history endpoint. All clients should use this for detail views.
+router.get('/day', async (req, res) => {
+  try {
+    const date = normalizeDate(String(req.query.date || ''));
+    if (!date) return res.status(400).json({ success: false, message: 'A valid date is required (YYYY-MM-DD).' });
+    return res.json({ success: true, ...(await getDayDetails(req.user.id, date)) });
+  } catch (error) {
+    console.error('Daily history failed:', error);
+    return res.status(500).json({ success: false, message: 'Failed to load daily history.' });
+  }
+});
+
+// Backward-compatible aliases so older clients never receive a 404 for history.
+router.get('/history/day', async (req, res) => {
+  try {
+    const date = normalizeDate(String(req.query.date || ''));
+    if (!date) return res.status(400).json({ success: false, message: 'A valid date is required (YYYY-MM-DD).' });
+    return res.json({ success: true, ...(await getDayDetails(req.user.id, date)) });
+  } catch (error) {
+    console.error('Daily history failed:', error);
+    return res.status(500).json({ success: false, message: 'Failed to load daily history.' });
+  }
+});
+router.get('/day/:date', async (req, res) => {
+  try {
+    const date = normalizeDate(req.params.date);
+    if (!date) return res.status(400).json({ success: false, message: 'A valid date is required (YYYY-MM-DD).' });
+    return res.json({ success: true, ...(await getDayDetails(req.user.id, date)) });
+  } catch (error) {
+    console.error('Daily history failed:', error);
+    return res.status(500).json({ success: false, message: 'Failed to load daily history.' });
   }
 });
 

@@ -168,6 +168,7 @@ function ProgressPage({ onBack }) {
   };
 
   useEffect(() => {
+    if (mode === "custom") return;
     const range = getPeriodRange(mode, anchor);
     setFrom(range.from);
     setTo(range.to);
@@ -185,23 +186,22 @@ function ProgressPage({ onBack }) {
   const loadDetails = async (date) => {
     setDetailsLoading(true);
     try {
-      const paths = [
-        ["food", `/api/food-logs?date=${date}`],
-        ["activity", `/api/activities/logs?date=${date}`],
-        ["water", `/api/water?date=${date}`],
-        ["tasks", `/api/tasks?date=${date}`],
-        ["habits", `/api/habits/logs?date=${date}`],
-        ["weight", `/api/weight?date=${date}`],
-      ];
-      const responses = await Promise.all(paths.map(async ([key, path]) => {
-        const r = await apiFetch(`${API_URL}${path}`);
-        const j = await r.json();
-        return [key, j];
-      }));
-      setDetails(Object.fromEntries(responses));
+      const response = await apiFetch(`${API_URL}/api/progress/day?date=${date}`);
+      const json = await response.json();
+      if (!response.ok || !json.success) {
+        throw new Error(json.message || `History request failed (${response.status})`);
+      }
+      setDetails({
+        food: { logs: json.food || [] },
+        activity: { logs: json.exercise || [] },
+        water: { logs: json.water || [] },
+        tasks: { tasks: json.tasks || [] },
+        habits: { logs: json.habits || [] },
+        weight: { logs: json.weight || [] },
+      });
     } catch (error) {
       console.error(error);
-      notify("Could not load the selected day's history.", "error");
+      notify(error.message || "Could not load the selected day's history.", "error");
     } finally {
       setDetailsLoading(false);
     }
