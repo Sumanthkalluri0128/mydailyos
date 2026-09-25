@@ -51,7 +51,7 @@ app.get('/api/health', (req, res) => {
 app.get('/api/version', (req, res) => {
   res.status(200).json({
     success: true,
-    version: '2.2.0-progress-history',
+    version: '2.3.0-motivation-swipe-delete',
     service: 'MyDailyOS API',
   });
 });

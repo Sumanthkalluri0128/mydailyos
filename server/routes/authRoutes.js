@@ -14,40 +14,6 @@ function createToken(user) {
   );
 }
 
-async function migrateLegacyPersonalData(userId) {
-  const collections = [
-    'WeightLog',
-    'WaterLog',
-    'Task',
-    'Habit',
-    'HabitLog',
-    'FoodLog',
-    'ActivityLog',
-  ];
-
-  for (const name of collections) {
-    const Model = require(`../models/${name}`);
-    await Model.updateMany(
-      { $or: [{ userId: { $exists: false } }, { userId: null }] },
-      { $set: { userId } }
-    );
-  }
-
-  // Legacy Profile is special because the new schema has a unique userId.
-  // Reuse the old profile if one exists instead of creating two profiles
-  // with the same userId.
-  const legacyProfile = await Profile.findOne({
-    $or: [{ userId: { $exists: false } }, { userId: null }],
-  }).sort({ createdAt: 1 });
-
-  if (legacyProfile) {
-    legacyProfile.userId = userId;
-    await legacyProfile.save();
-  } else {
-    await Profile.create({ userId });
-  }
-}
-
 router.post('/signup', async (req, res) => {
   try {
     const name = String(req.body.name || '').trim();
@@ -76,19 +42,15 @@ router.post('/signup', async (req, res) => {
       });
     }
 
-    const isFirstUser = (await User.countDocuments()) === 0;
-
     const user = await User.create({
       name,
       email,
       passwordHash: await bcrypt.hash(password, 12),
     });
 
-    if (isFirstUser) {
-      await migrateLegacyPersonalData(user._id);
-    } else {
-      await Profile.create({ userId: user._id, name: user.name });
-    }
+    // Every new account starts completely clean. Never re-attach legacy or
+    // orphaned personal records to a newly created account.
+    await Profile.create({ userId: user._id, name: user.name });
 
     res.status(201).json({
       success: true,

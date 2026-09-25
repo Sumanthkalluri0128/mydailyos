@@ -2438,3 +2438,92 @@ label {
   .period-current { flex-direction: column; gap: 5px; }
   .period-current strong { font-size: 15px; }
 }
+
+/* Daily motivation carousel */
+.motivation-carousel {
+  margin-top: 16px;
+  padding: 15px 16px 13px;
+  border: 1px solid rgba(255,255,255,.16);
+  border-radius: 18px;
+  background: rgba(255,255,255,.11);
+  backdrop-filter: blur(8px);
+}
+.motivation-topline,
+.motivation-bottomline {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.motivation-topline {
+  color: #dcd4ff;
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 1.2px;
+}
+.motivation-quote {
+  color: #fff;
+  font-size: 16px;
+  line-height: 1.5;
+  font-weight: 750;
+  margin-top: 9px;
+  animation: motivationFade .35s ease;
+}
+.motivation-dots {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+.motivation-dots span {
+  display: block;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: rgba(255,255,255,.3);
+  transition: width .2s ease, background .2s ease;
+}
+.motivation-dots span.active {
+  width: 16px;
+  border-radius: 4px;
+  background: #fff;
+}
+.motivation-bottomline { margin-top: 12px; }
+.motivation-next {
+  border: 0;
+  background: transparent;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 800;
+  cursor: pointer;
+  padding: 4px 6px;
+}
+.motivation-next:hover { opacity: .8; }
+@keyframes motivationFade {
+  from { opacity: .15; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.dashboard-motivation {
+  margin: 20px 0 24px;
+  padding: 20px;
+  border-radius: 24px;
+  background: linear-gradient(135deg, #6847e8 0%, #7b5cf1 58%, #5d44ca 100%);
+  box-shadow: 0 14px 30px rgba(104,71,232,.16);
+}
+.dashboard-motivation .motivation-carousel {
+  margin-top: 12px;
+}
+.motivation-heading span {
+  display: block;
+  color: #dcd4ff;
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 1.4px;
+}
+.motivation-heading strong {
+  display: block;
+  color: #fff;
+  font-size: 26px;
+  line-height: 1.15;
+  margin-top: 5px;
+}

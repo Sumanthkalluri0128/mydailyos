@@ -10,6 +10,7 @@ import WaterPage from "./pages/WaterPage";
 import WeightPage from "./pages/WeightPage";
 import ProfilePage from "./pages/ProfilePage";
 import ProgressPage from "./pages/ProgressPage";
+import MotivationCarousel from "./components/MotivationCarousel";
 
 import { getLocalDate } from "./utils/date";
 import { apiFetch } from "./config/api";
@@ -657,11 +658,19 @@ function App() {
             </h2>
 
             <p>
-              Let's make today productive.
+              Let's make today productive. One good choice at a time.
             </p>
 
           </div>
 
+        </section>
+
+        <section className="dashboard-motivation">
+          <div className="motivation-heading">
+            <span>YOUR DAILY RESET</span>
+            <strong>Keep going.</strong>
+          </div>
+          <MotivationCarousel />
         </section>
 
         {/* ==================================================== */}
