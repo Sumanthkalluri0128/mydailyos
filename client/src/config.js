@@ -1,5 +1,5 @@
-export const API_API_URL =
-  import.meta.env.API_URL ||
-  "http://127.0.0.1:5001";
 
+const rawApiUrl ='https://mydailyos.onrender.com';
+
+export const API_URL = rawApiUrl.replace(/\/+$/, '');
 export const API_URL = API_API_URL;
