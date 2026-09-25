@@ -9,6 +9,7 @@ import HabitPage from "./pages/HabitPage";
 import WaterPage from "./pages/WaterPage";
 import WeightPage from "./pages/WeightPage";
 import ProfilePage from "./pages/ProfilePage";
+import ProgressPage from "./pages/ProgressPage";
 
 import { getLocalDate } from "./utils/date";
 import { apiFetch } from "./config/api";
@@ -453,6 +454,23 @@ function App() {
           />
         </main>
 
+      </div>
+    );
+  }
+
+  // ============================================================
+  // PROGRESS PAGE
+  // ============================================================
+
+  if (currentPage === "progress") {
+    return (
+      <div className="app">
+        <header className="topbar">
+          <BrandHome onHome={() => setCurrentPage("dashboard")} />
+        </header>
+        <main className="dashboard">
+          <ProgressPage onBack={() => setCurrentPage("dashboard")} />
+        </main>
       </div>
     );
   }
@@ -1517,6 +1535,18 @@ function App() {
               🔁
               <span>
                 Habit
+              </span>
+            </button>
+
+            <button
+              className="progress-quick-action"
+              onClick={() =>
+                setCurrentPage("progress")
+              }
+            >
+              📈
+              <span>
+                Progress
               </span>
             </button>
 
