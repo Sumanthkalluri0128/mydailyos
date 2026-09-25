@@ -8,7 +8,9 @@ Vercel Production environment variable:
 API_URL=https://mydailyos.onrender.com
 ```
 
-The Vite config explicitly exposes `API_URL` to the browser. The client also removes trailing `/` characters from the API URL.
+The Vite config explicitly exposes `API_URL` to the browser. The resolved
+source-level value is exported as both `API_API_URL` and `API_URL`. The client
+also removes trailing `/` characters from the API URL.
 
 ## Authentication
 

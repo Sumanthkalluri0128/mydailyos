@@ -1,3 +1,5 @@
+import { confirmAction } from "../utils/confirm";
+import { notify } from "../utils/notify";
 import { apiFetch } from "../config/api";
 import { useEffect, useState } from "react";
 import { getLocalDate } from "../utils/date";
@@ -54,7 +56,7 @@ function TaskPage({ onBack }) {
     event.preventDefault();
 
     if (!form.title.trim()) {
-      alert("Please enter a task title.");
+      notify("Please enter a task title.", "error");
       return;
     }
 
@@ -88,11 +90,11 @@ function TaskPage({ onBack }) {
 
         fetchTasks();
       } else {
-        alert(data.message || "Failed to create task.");
+        notify(data.message || "Failed to create task.", "error");
       }
     } catch (error) {
       console.error("Failed to create task:", error);
-      alert("Failed to create task.");
+      notify("Failed to create task.", "error");
     } finally {
       setLoading(false);
     }
@@ -118,7 +120,7 @@ function TaskPage({ onBack }) {
   };
 
   const deleteTask = async (id) => {
-    const confirmed = window.confirm(
+    const confirmed = await confirmAction(
       "Are you sure you want to delete this task?"
     );
 

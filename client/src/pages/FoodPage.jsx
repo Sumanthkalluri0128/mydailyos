@@ -1,3 +1,5 @@
+import { confirmAction } from "../utils/confirm";
+import { notify } from "../utils/notify";
 import { apiFetch } from "../config/api";
 import { useEffect, useState } from "react";
 import { API_URL } from "../config";
@@ -102,7 +104,7 @@ const [editingFood, setEditingFood] = useState(null);
     const data = await response.json();
 
     if (!response.ok) {
-      alert(data.message || "Failed to save food");
+      notify(data.message || "Failed to save food", "error");
       return;
     }
 
@@ -128,7 +130,7 @@ const [editingFood, setEditingFood] = useState(null);
     setShowForm(false);
   } catch (error) {
     console.error("Failed to save food:", error);
-    alert("Could not connect to the backend.");
+    notify("Could not connect to the backend.", "error");
   }
 };
  
@@ -476,7 +478,7 @@ const [editingFood, setEditingFood] = useState(null);
     <button
       className="food-action-button delete-button"
       onClick={async () => {
-        const confirmed = window.confirm(
+        const confirmed = await confirmAction(
           `Are you sure you want to delete "${food.name}"?`
         );
 
@@ -495,14 +497,14 @@ const [editingFood, setEditingFood] = useState(null);
           const data = await response.json();
 
           if (!response.ok) {
-            alert(data.message || "Failed to delete food");
+            notify(data.message || "Failed to delete food", "error");
             return;
           }
 
           await fetchFoods(search, favoritesOnly);
         } catch (error) {
           console.error("Failed to delete food:", error);
-          alert("Could not connect to the backend.");
+          notify("Could not connect to the backend.", "error");
         }
       }}
       title="Delete food"

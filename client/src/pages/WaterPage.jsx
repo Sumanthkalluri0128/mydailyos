@@ -1,3 +1,5 @@
+import { confirmAction } from "../utils/confirm";
+import { notify } from "../utils/notify";
 import { apiFetch } from "../config/api";
 import { useEffect, useState } from "react";
 import { getLocalDate } from "../utils/date";
@@ -83,7 +85,7 @@ function WaterPage({ onBack }) {
 
   const addWater = async (amountMl) => {
     if (!amountMl || Number(amountMl) <= 0) {
-      alert("Enter a valid amount.");
+      notify("Enter a valid amount.", "error");
       return;
     }
 
@@ -109,10 +111,10 @@ function WaterPage({ onBack }) {
       if (data.success) {
         await fetchWater();
       } else {
-        alert(
+        notify(
           data.message ||
             "Failed to add water."
-        );
+        , "error");
       }
     } catch (error) {
       console.error(
@@ -120,9 +122,9 @@ function WaterPage({ onBack }) {
         error
       );
 
-      alert(
+      notify(
         "Could not connect to the backend."
-      );
+      , "error");
     } finally {
       setLoading(false);
     }
@@ -133,7 +135,7 @@ function WaterPage({ onBack }) {
   // ============================================================
 
   const deleteWater = async (id) => {
-    const confirmed = window.confirm(
+    const confirmed = await confirmAction(
       "Remove this water entry?"
     );
 

@@ -1,3 +1,5 @@
+import { confirmAction } from "../utils/confirm";
+import { notify } from "../utils/notify";
 import { apiFetch } from "../config/api";
 import { useEffect, useMemo, useState } from "react";
 import { API_URL } from "../config";
@@ -189,12 +191,12 @@ function FoodLogger({ date, onBack }) {
 
   const handleAddFood = async () => {
     if (!selectedFood) {
-      alert("Please select a food.");
+      notify("Please select a food.", "error");
       return;
     }
 
     if (!quantity || Number(quantity) <= 0) {
-      alert("Please enter the quantity.");
+      notify("Please enter the quantity.", "error");
       return;
     }
 
@@ -225,10 +227,10 @@ function FoodLogger({ date, onBack }) {
       const data = await response.json();
 
       if (!response.ok) {
-        alert(
+        notify(
           data.message ||
             "Failed to add food."
-        );
+        , "error");
 
         return;
       }
@@ -246,9 +248,9 @@ function FoodLogger({ date, onBack }) {
         error
       );
 
-      alert(
+      notify(
         "Could not connect to the backend."
-      );
+      , "error");
     } finally {
       setSaving(false);
     }
@@ -259,7 +261,7 @@ function FoodLogger({ date, onBack }) {
   // ============================================================
 
   const handleDeleteLog = async (id) => {
-    const confirmed = window.confirm(
+    const confirmed = await confirmAction(
       "Remove this food from today's log?"
     );
 
@@ -278,10 +280,10 @@ function FoodLogger({ date, onBack }) {
       const data = await response.json();
 
       if (!response.ok) {
-        alert(
+        notify(
           data.message ||
             "Failed to delete food log."
-        );
+        , "error");
 
         return;
       }
@@ -293,9 +295,9 @@ function FoodLogger({ date, onBack }) {
         error
       );
 
-      alert(
+      notify(
         "Could not connect to the backend."
-      );
+      , "error");
     }
   };
 

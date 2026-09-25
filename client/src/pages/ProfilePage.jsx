@@ -1,3 +1,4 @@
+import { notify } from "../utils/notify";
 import { apiFetch } from "../config/api";
 import { useEffect, useState } from "react";
 import { API_URL } from "../config";
@@ -247,18 +248,19 @@ function ProfilePage({ onBack }) {
         await response.json();
 
       if (data.success) {
-        alert(
-          "Profile saved successfully."
+        notify(
+          "Profile saved successfully.",
+          "success"
         );
 
         // Return to Dashboard so the
         // Dashboard reloads the latest Profile.
         onBack();
       } else {
-        alert(
+        notify(
           data.message ||
             "Failed to save profile."
-        );
+        , "error");
       }
     } catch (error) {
       console.error(
@@ -266,9 +268,9 @@ function ProfilePage({ onBack }) {
         error
       );
 
-      alert(
+      notify(
         "Could not connect to the backend."
-      );
+      , "error");
     } finally {
       setLoading(false);
     }

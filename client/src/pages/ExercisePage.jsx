@@ -1,3 +1,5 @@
+import { confirmAction } from "../utils/confirm";
+import { notify } from "../utils/notify";
 import { apiFetch } from "../config/api";
 import { useEffect, useState } from "react";
 import { API_URL } from "../config";
@@ -78,17 +80,17 @@ function ExercisePage({ onBack }) {
     event.preventDefault();
 
     if (!selectedActivity) {
-      alert("Please select an activity.");
+      notify("Please select an activity.", "error");
       return;
     }
 
     if (!duration || Number(duration) <= 0) {
-      alert("Please enter a valid duration.");
+      notify("Please enter a valid duration.", "error");
       return;
     }
 
     if (!weight || Number(weight) <= 0) {
-      alert("Please enter your weight.");
+      notify("Please enter your weight.", "error");
       return;
     }
 
@@ -117,10 +119,10 @@ function ExercisePage({ onBack }) {
       const data = await response.json();
 
       if (!response.ok || !data.success) {
-        alert(
+        notify(
           data.message ||
             "Failed to add activity."
-        );
+        , "error");
 
         return;
       }
@@ -136,9 +138,9 @@ function ExercisePage({ onBack }) {
     } catch (error) {
       console.error(error);
 
-      alert(
+      notify(
         "Could not connect to the backend."
-      );
+      , "error");
     } finally {
       setLoading(false);
     }
@@ -149,7 +151,7 @@ function ExercisePage({ onBack }) {
   // ============================================================
 
   const handleDelete = async (id) => {
-    const confirmed = window.confirm(
+    const confirmed = await confirmAction(
       "Delete this activity?"
     );
 
@@ -170,17 +172,17 @@ function ExercisePage({ onBack }) {
       if (data.success) {
         fetchLogs();
       } else {
-        alert(
+        notify(
           data.message ||
             "Failed to delete activity."
-        );
+        , "error");
       }
     } catch (error) {
       console.error(error);
 
-      alert(
+      notify(
         "Could not connect to the backend."
-      );
+      , "error");
     }
   };
 

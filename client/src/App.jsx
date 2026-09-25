@@ -11,8 +11,9 @@ import WeightPage from "./pages/WeightPage";
 import ProfilePage from "./pages/ProfilePage";
 
 import { getLocalDate } from "./utils/date";
+import { apiFetch } from "./config/api";
+import { API_URL } from "./config";
 
-const API_URL = "https://mydailyos.onrender.com";
 
 function BrandHome({ onHome }) {
   const handleKeyDown = (event) => {
@@ -132,7 +133,7 @@ function App() {
         // FOOD SUMMARY
         // ======================================================
 
-        const foodResponse = await fetch(
+        const foodResponse = await apiFetch(
           `${API_URL}/api/food-logs/summary?date=${today}`
         );
 
@@ -150,7 +151,7 @@ function App() {
         // ======================================================
 
         const activityResponse =
-          await fetch(
+          await apiFetch(
             `${API_URL}/api/activities/summary?date=${today}`
           );
 
@@ -167,7 +168,7 @@ function App() {
         // TASKS
         // ======================================================
 
-        const taskResponse = await fetch(
+        const taskResponse = await apiFetch(
           `${API_URL}/api/tasks?date=${today}`
         );
 
@@ -182,7 +183,7 @@ function App() {
         // HABITS
         // ======================================================
 
-        const habitResponse = await fetch(
+        const habitResponse = await apiFetch(
           `${API_URL}/api/habits`
         );
 
@@ -194,7 +195,7 @@ function App() {
         }
 
         const habitLogResponse =
-          await fetch(
+          await apiFetch(
             `${API_URL}/api/habits/logs?date=${today}`
           );
 
@@ -211,7 +212,7 @@ function App() {
         // WATER
         // ======================================================
 
-        const waterResponse = await fetch(
+        const waterResponse = await apiFetch(
           `${API_URL}/api/water?date=${today}`
         );
 
@@ -230,7 +231,7 @@ function App() {
         // WEIGHT HISTORY
         // ======================================================
 
-        const weightResponse = await fetch(
+        const weightResponse = await apiFetch(
           `${API_URL}/api/weight`
         );
 
@@ -249,7 +250,7 @@ function App() {
         // Profile is the source of truth for the
         // Dashboard current weight.
 
-        const profileResponse = await fetch(
+        const profileResponse = await apiFetch(
           `${API_URL}/api/profile`
         );
 
@@ -1229,7 +1230,7 @@ function App() {
                           try {
 
                             const response =
-                              await fetch(
+                              await apiFetch(
                                 `${API_URL}/api/habits/logs`,
                                 {
                                   method: "POST",
@@ -1383,7 +1384,7 @@ function App() {
                         try {
 
                           const response =
-                            await fetch(
+                            await apiFetch(
                               `${API_URL}/api/tasks/${task._id}/toggle`,
                               {
                                 method: "PATCH",

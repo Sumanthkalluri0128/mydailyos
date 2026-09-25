@@ -1,3 +1,5 @@
+import { confirmAction } from "../utils/confirm";
+import { notify } from "../utils/notify";
 import { apiFetch } from "../config/api";
 import { useEffect, useState } from "react";
 import { getLocalDate } from "../utils/date";
@@ -135,7 +137,7 @@ const [habitStats, setHabitStats] = useState({});
     event.preventDefault();
 
     if (!form.name.trim()) {
-      alert("Please enter a habit name.");
+      notify("Please enter a habit name.", "error");
       return;
     }
 
@@ -171,10 +173,10 @@ const [habitStats, setHabitStats] = useState({});
 
         await fetchHabits();
       } else {
-        alert(
+        notify(
           data.message ||
             "Failed to create habit."
-        );
+        , "error");
       }
     } catch (error) {
       console.error(
@@ -182,9 +184,9 @@ const [habitStats, setHabitStats] = useState({});
         error
       );
 
-      alert(
+      notify(
         "Could not connect to the backend."
-      );
+      , "error");
     } finally {
       setLoading(false);
     }
@@ -230,10 +232,10 @@ const [habitStats, setHabitStats] = useState({});
         await fetchHabitLogs();
   await fetchHabitStats(habits);
       } else {
-        alert(
+        notify(
           data.message ||
             "Failed to update habit."
-        );
+        , "error");
       }
     } catch (error) {
       console.error(
@@ -248,7 +250,7 @@ const [habitStats, setHabitStats] = useState({});
   // ============================================================
 
   const deleteHabit = async (id) => {
-    const confirmed = window.confirm(
+    const confirmed = await confirmAction(
       "Remove this habit?"
     );
 

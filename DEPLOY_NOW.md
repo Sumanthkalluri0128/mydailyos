@@ -77,3 +77,21 @@ No `VITE_API_URL` variable is required.
 ## Authentication note
 
 The web client sends the JWT explicitly on every authenticated API request. After signup/login the token is saved to `localStorage`, and the dashboard immediately uses it without requiring a page refresh.
+
+
+## Final web authentication/API behavior
+
+- Vercel Production variable: `API_URL=https://mydailyos.onrender.com`
+- `client/src/config.js` removes trailing slashes from the API URL.
+- `client/src/config/api.js` attaches `Authorization: Bearer <JWT>` to every authenticated API request.
+- Dashboard requests use `apiFetch`; they no longer use raw `fetch` without the JWT.
+- A 401 clears the local session and returns the user to the login screen.
+- Browser `alert()` and `confirm()` dialogs have been replaced in the web pages with MyDailyOS toast notifications and custom confirmation dialogs.
+
+After deploying the client, the browser Network tab should show requests such as:
+
+```text
+https://mydailyos.onrender.com/api/profile
+```
+
+with an `Authorization: Bearer ...` request header.

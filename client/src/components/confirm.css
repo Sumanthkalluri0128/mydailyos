@@ -1,0 +1,73 @@
+ .confirm-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 100000;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: rgba(20, 24, 43, 0.42);
+  backdrop-filter: blur(5px);
+}
+
+.confirm-dialog {
+  width: min(430px, 100%);
+  padding: 26px;
+  border: 1px solid #e8e6f2;
+  border-radius: 22px;
+  background: #fff;
+  box-shadow: 0 30px 80px rgba(20, 24, 43, 0.24);
+  animation: confirm-in 0.18s ease-out;
+}
+
+.confirm-icon {
+  width: 46px;
+  height: 46px;
+  display: grid;
+  place-items: center;
+  margin-bottom: 16px;
+  border-radius: 14px;
+  background: #fff0e8;
+  color: #c75a20;
+  font-size: 23px;
+  font-weight: 900;
+}
+
+.confirm-dialog h2 {
+  margin: 0;
+  color: var(--md-ink, #20243a);
+  font-size: 21px;
+}
+
+.confirm-dialog p {
+  margin: 9px 0 22px;
+  color: var(--md-muted, #77738a);
+  line-height: 1.5;
+  font-size: 14px;
+}
+
+.confirm-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+@keyframes confirm-in {
+  from {
+    opacity: 0;
+    transform: translateY(7px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@media (max-width: 520px) {
+  .confirm-actions {
+    flex-direction: column-reverse;
+  }
+
+  .confirm-actions button {
+    width: 100%;
+  }
+}

@@ -1,3 +1,5 @@
+import { confirmAction } from "../utils/confirm";
+import { notify } from "../utils/notify";
 import { apiFetch } from "../config/api";
 import { useEffect, useState } from "react";
 import { getLocalDate } from "../utils/date";
@@ -77,7 +79,7 @@ function WeightPage({ onBack }) {
       !Number.isFinite(numericWeight) ||
       numericWeight <= 0
     ) {
-      alert("Please enter a valid weight.");
+      notify("Please enter a valid weight.", "error");
       return;
     }
 
@@ -112,10 +114,10 @@ function WeightPage({ onBack }) {
         // Return to Dashboard.
         onBack();
       } else {
-        alert(
+        notify(
           data.message ||
             "Failed to save weight."
-        );
+        , "error");
       }
     } catch (error) {
       console.error(
@@ -123,9 +125,9 @@ function WeightPage({ onBack }) {
         error
       );
 
-      alert(
+      notify(
         "Could not connect to the backend."
-      );
+      , "error");
     } finally {
       setLoading(false);
     }
@@ -136,7 +138,7 @@ function WeightPage({ onBack }) {
   // ============================================================
 
   const deleteWeight = async (id) => {
-    const confirmed = window.confirm(
+    const confirmed = await confirmAction(
       "Delete this weight entry?"
     );
 
@@ -159,10 +161,10 @@ function WeightPage({ onBack }) {
         await fetchWeights();
         await fetchProfile();
       } else {
-        alert(
+        notify(
           data.message ||
             "Failed to delete weight."
-        );
+        , "error");
       }
     } catch (error) {
       console.error(
@@ -170,9 +172,9 @@ function WeightPage({ onBack }) {
         error
       );
 
-      alert(
+      notify(
         "Could not connect to the backend."
-      );
+      , "error");
     }
   };
 
