@@ -9,7 +9,6 @@ import HabitPage from "./pages/HabitPage";
 import WaterPage from "./pages/WaterPage";
 import WeightPage from "./pages/WeightPage";
 import ProfilePage from "./pages/ProfilePage";
-import AccountPage from "./pages/AccountPage";
 
 import { getLocalDate } from "./utils/date";
 import { API_URL } from "./config";
@@ -460,7 +459,7 @@ function App() {
         </header>
 
         <main className="dashboard">
-          <AccountPage
+          <ProfilePage
             onBack={() =>
               setCurrentPage("dashboard")
             }
