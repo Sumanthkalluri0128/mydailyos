@@ -270,13 +270,19 @@ function App() {
       <div className="app">
 
         <header className="topbar">
-          <div>
-            <h1>MyDailyOS</h1>
-
-            <p>
-              Your daily health & productivity tracker
-            </p>
-          </div>
+          <button
+  className="brand-button"
+  onClick={() => setCurrentPage("home")}
+  aria-label="Go to Home"
+>
+  <div className="brand-icon">✦</div>
+  <div>
+    <div className="brand-title">MyDailyOS</div>
+    <div className="brand-subtitle">
+      Your daily health & productivity tracker
+    </div>
+  </div>
+</button>
         </header>
 
         <main className="dashboard">
