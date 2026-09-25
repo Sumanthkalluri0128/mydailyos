@@ -1,4 +1,3 @@
-import { apiFetch } from "./config/api";
 import { useEffect, useState } from "react";
 import "./App.css";
 
@@ -10,11 +9,38 @@ import HabitPage from "./pages/HabitPage";
 import WaterPage from "./pages/WaterPage";
 import WeightPage from "./pages/WeightPage";
 import ProfilePage from "./pages/ProfilePage";
-import AccountPage from "./pages/AccountPage";
 
 import { getLocalDate } from "./utils/date";
-import { API_URL } from "./config";
 
+const API_URL = "http://127.0.0.1:5001";
+
+function BrandHome({ onHome }) {
+  const handleKeyDown = (event) => {
+    if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault();
+      onHome();
+    }
+  };
+
+  return (
+    <div
+      className="brand-home"
+      role="button"
+      tabIndex={0}
+      onClick={onHome}
+      onKeyDown={handleKeyDown}
+      aria-label="Go to Home"
+    >
+      <div className="brand-icon">✦</div>
+      <div>
+        <div className="brand-title">MyDailyOS</div>
+        <div className="brand-subtitle">
+          Your daily health & productivity tracker
+        </div>
+      </div>
+    </div>
+  );
+}
 
 function App() {
   const [currentPage, setCurrentPage] =
@@ -106,7 +132,7 @@ function App() {
         // FOOD SUMMARY
         // ======================================================
 
-        const foodResponse = await apiFetch(
+        const foodResponse = await fetch(
           `${API_URL}/api/food-logs/summary?date=${today}`
         );
 
@@ -124,7 +150,7 @@ function App() {
         // ======================================================
 
         const activityResponse =
-          await apiFetch(
+          await fetch(
             `${API_URL}/api/activities/summary?date=${today}`
           );
 
@@ -141,7 +167,7 @@ function App() {
         // TASKS
         // ======================================================
 
-        const taskResponse = await apiFetch(
+        const taskResponse = await fetch(
           `${API_URL}/api/tasks?date=${today}`
         );
 
@@ -156,7 +182,7 @@ function App() {
         // HABITS
         // ======================================================
 
-        const habitResponse = await apiFetch(
+        const habitResponse = await fetch(
           `${API_URL}/api/habits`
         );
 
@@ -168,7 +194,7 @@ function App() {
         }
 
         const habitLogResponse =
-          await apiFetch(
+          await fetch(
             `${API_URL}/api/habits/logs?date=${today}`
           );
 
@@ -185,7 +211,7 @@ function App() {
         // WATER
         // ======================================================
 
-        const waterResponse = await apiFetch(
+        const waterResponse = await fetch(
           `${API_URL}/api/water?date=${today}`
         );
 
@@ -204,7 +230,7 @@ function App() {
         // WEIGHT HISTORY
         // ======================================================
 
-        const weightResponse = await apiFetch(
+        const weightResponse = await fetch(
           `${API_URL}/api/weight`
         );
 
@@ -223,7 +249,7 @@ function App() {
         // Profile is the source of truth for the
         // Dashboard current weight.
 
-        const profileResponse = await apiFetch(
+        const profileResponse = await fetch(
           `${API_URL}/api/profile`
         );
 
@@ -270,19 +296,7 @@ function App() {
       <div className="app">
 
         <header className="topbar">
-          <button
-  className="brand-button"
-  onClick={() => setCurrentPage("dashboard")}
-  aria-label="Go to Home"
->
-  <div className="brand-icon">✦</div>
-  <div>
-    <div className="brand-title">MyDailyOS</div>
-    <div className="brand-subtitle">
-      Your daily health & productivity tracker
-    </div>
-  </div>
-</button>
+          <BrandHome onHome={() => setCurrentPage("dashboard")} />
         </header>
 
         <main className="dashboard">
@@ -307,20 +321,7 @@ function App() {
       <div className="app">
 
         <header className="topbar">
-          <button
-            type="button"
-            className="brand-button"
-            onClick={() => setCurrentPage("dashboard")}
-            aria-label="Go to Home"
-          >
-            <div className="brand-icon">✦</div>
-            <div>
-              <div className="brand-title">MyDailyOS</div>
-              <div className="brand-subtitle">
-                Your daily health & productivity tracker
-              </div>
-            </div>
-          </button>
+          <BrandHome onHome={() => setCurrentPage("dashboard")} />
         </header>
 
         <main className="dashboard">
@@ -344,20 +345,7 @@ function App() {
       <div className="app">
 
         <header className="topbar">
-          <button
-            type="button"
-            className="brand-button"
-            onClick={() => setCurrentPage("dashboard")}
-            aria-label="Go to Home"
-          >
-            <div className="brand-icon">✦</div>
-            <div>
-              <div className="brand-title">MyDailyOS</div>
-              <div className="brand-subtitle">
-                Your daily health & productivity tracker
-              </div>
-            </div>
-          </button>
+          <BrandHome onHome={() => setCurrentPage("dashboard")} />
         </header>
 
         <main className="dashboard">
@@ -381,20 +369,7 @@ function App() {
       <div className="app">
 
         <header className="topbar">
-          <button
-            type="button"
-            className="brand-button"
-            onClick={() => setCurrentPage("dashboard")}
-            aria-label="Go to Home"
-          >
-            <div className="brand-icon">✦</div>
-            <div>
-              <div className="brand-title">MyDailyOS</div>
-              <div className="brand-subtitle">
-                Your daily health & productivity tracker
-              </div>
-            </div>
-          </button>
+          <BrandHome onHome={() => setCurrentPage("dashboard")} />
         </header>
 
         <main className="dashboard">
@@ -418,20 +393,7 @@ function App() {
       <div className="app">
 
         <header className="topbar">
-          <button
-            type="button"
-            className="brand-button"
-            onClick={() => setCurrentPage("dashboard")}
-            aria-label="Go to Home"
-          >
-            <div className="brand-icon">✦</div>
-            <div>
-              <div className="brand-title">MyDailyOS</div>
-              <div className="brand-subtitle">
-                Your daily health & productivity tracker
-              </div>
-            </div>
-          </button>
+          <BrandHome onHome={() => setCurrentPage("dashboard")} />
         </header>
 
         <main className="dashboard">
@@ -455,20 +417,7 @@ function App() {
       <div className="app">
 
         <header className="topbar">
-          <button
-            type="button"
-            className="brand-button"
-            onClick={() => setCurrentPage("dashboard")}
-            aria-label="Go to Home"
-          >
-            <div className="brand-icon">✦</div>
-            <div>
-              <div className="brand-title">MyDailyOS</div>
-              <div className="brand-subtitle">
-                Your daily health & productivity tracker
-              </div>
-            </div>
-          </button>
+          <BrandHome onHome={() => setCurrentPage("dashboard")} />
         </header>
 
         <main className="dashboard">
@@ -492,24 +441,11 @@ function App() {
       <div className="app">
 
         <header className="topbar">
-          <button
-            type="button"
-            className="brand-button"
-            onClick={() => setCurrentPage("dashboard")}
-            aria-label="Go to Home"
-          >
-            <div className="brand-icon">✦</div>
-            <div>
-              <div className="brand-title">MyDailyOS</div>
-              <div className="brand-subtitle">
-                Your daily health & productivity tracker
-              </div>
-            </div>
-          </button>
+          <BrandHome onHome={() => setCurrentPage("dashboard")} />
         </header>
 
         <main className="dashboard">
-          <AccountPage
+          <ProfilePage
             onBack={() =>
               setCurrentPage("dashboard")
             }
@@ -530,20 +466,7 @@ function App() {
 
         <header className="topbar">
 
-          <button
-            type="button"
-            className="brand-button"
-            onClick={() => setCurrentPage("dashboard")}
-            aria-label="Go to Home"
-          >
-            <div className="brand-icon">✦</div>
-            <div>
-              <div className="brand-title">MyDailyOS</div>
-              <div className="brand-subtitle">
-                Your daily health & productivity tracker
-              </div>
-            </div>
-          </button>
+          <BrandHome onHome={() => setCurrentPage("dashboard")} />
 
           <button
             className="secondary-button"
@@ -664,20 +587,7 @@ function App() {
 
       <header className="topbar">
 
-        <button
-          type="button"
-          className="brand-button"
-          onClick={() => setCurrentPage("dashboard")}
-          aria-label="Go to Home"
-        >
-          <div className="brand-icon">✦</div>
-          <div>
-            <div className="brand-title">MyDailyOS</div>
-            <div className="brand-subtitle">
-              Your daily health & productivity tracker
-            </div>
-          </div>
-        </button>
+        <BrandHome onHome={() => setCurrentPage("dashboard")} />
 
         <div className="profile">
 
@@ -1319,7 +1229,7 @@ function App() {
                           try {
 
                             const response =
-                              await apiFetch(
+                              await fetch(
                                 `${API_URL}/api/habits/logs`,
                                 {
                                   method: "POST",
@@ -1473,7 +1383,7 @@ function App() {
                         try {
 
                           const response =
-                            await apiFetch(
+                            await fetch(
                               `${API_URL}/api/tasks/${task._id}/toggle`,
                               {
                                 method: "PATCH",
