@@ -1,33 +1,13 @@
-# MyDailyOS — Deployment Checklist
+# MyDailyOS deployment
 
-## 1. Vercel
+## Render backend
 
-Vercel Project: `mydailyos`
+Repository: `Sumankalluri0128/mydailyos`
 
-Set **Root Directory** to:
-
-```text
-mydailyos/client
-```
-
-Production environment variable:
+Root Directory:
 
 ```text
-API_URL=https://mydailyos.onrender.com
-```
-
-Do not create or use `VITE_API_URL`.
-
-Redeploy after changing the environment variable.
-
-## 2. Render
-
-Render Web Service: `mydailyos`
-
-Set **Root Directory** to:
-
-```text
-mydailyos/server
+server
 ```
 
 Build Command:
@@ -42,66 +22,58 @@ Start Command:
 npm start
 ```
 
-Required environment variables:
+Environment variables:
 
 ```text
-MONGO_URI=<your MongoDB Atlas connection string>
-JWT_SECRET=<your long random JWT secret>
+MONGO_URI=<your MongoDB connection string>
+JWT_SECRET=<stable long random secret>
 CLIENT_URL=https://mydailyos.vercel.app
 ```
 
 Do not manually set `PORT`.
 
-If you also need the old Vercel preview domain, `CLIENT_URL` can contain comma-separated origins.
-
-## 3. Force a fresh Render deployment
-
-The screenshot showed the live Render service on an older commit while the uploaded source already contains `/api/auth/signup`.
-
-After pushing this corrected source to the GitHub repository connected to Render, use **Manual Deploy → Deploy latest commit**.
-
-## 4. Verify Render before testing signup
-
-Open:
-
-```text
-https://mydailyos.onrender.com/api/health
-```
-
-Expected:
-
-```json
-{
-  "success": true,
-  "status": "healthy",
-  "service": "MyDailyOS API"
-}
-```
-
-Then open:
+After deploy, verify:
 
 ```text
 https://mydailyos.onrender.com/api/version
 ```
 
-Expected:
+Expected version:
 
 ```json
-{
-  "success": true,
-  "version": "2.1.0-auth",
-  "service": "MyDailyOS API"
-}
+{"success":true,"version":"2.1.0-auth","service":"MyDailyOS API"}
 ```
 
-Only after `/api/version` returns `2.1.0-auth` should you test signup.
+## Vercel frontend
 
-## 5. Test signup
-
-The browser should call:
+Root Directory:
 
 ```text
-POST https://mydailyos.onrender.com/api/auth/signup
+client
 ```
 
-The corrected backend registers that route.
+Framework: Vite
+
+Build Command:
+
+```text
+npm run build
+```
+
+Output Directory:
+
+```text
+dist
+```
+
+Production environment variable:
+
+```text
+API_URL=https://mydailyos.onrender.com
+```
+
+No `VITE_API_URL` variable is required.
+
+## Authentication note
+
+The web client sends the JWT explicitly on every authenticated API request. After signup/login the token is saved to `localStorage`, and the dashboard immediately uses it without requiring a page refresh.

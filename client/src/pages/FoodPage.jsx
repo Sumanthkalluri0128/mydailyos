@@ -1,3 +1,4 @@
+import { apiFetch } from "../config/api";
 import { useEffect, useState } from "react";
 import { API_URL } from "../config";
 
@@ -40,7 +41,7 @@ const [editingFood, setEditingFood] = useState(null);
 
     const url = `${API_URL}/api/foods?${params.toString()}`;
 
-    const response = await fetch(url);
+    const response = await apiFetch(url);
 
     const data = await response.json();
 
@@ -90,7 +91,7 @@ const [editingFood, setEditingFood] = useState(null);
       ? `${API_URL}/api/foods/${editingFood._id}`
       : `${API_URL}/api/foods`;
 
-    const response = await fetch(url, {
+    const response = await apiFetch(url, {
       method: isEditing ? "PUT" : "POST",
       headers: {
         "Content-Type": "application/json",
@@ -443,7 +444,7 @@ const [editingFood, setEditingFood] = useState(null);
       className="favorite-button"
       onClick={async () => {
         try {
-          const response = await fetch(
+          const response = await apiFetch(
             `${API_URL}/api/foods/${food._id}/favorite`,
             {
               method: "PATCH",
@@ -484,7 +485,7 @@ const [editingFood, setEditingFood] = useState(null);
         }
 
         try {
-          const response = await fetch(
+          const response = await apiFetch(
             `${API_URL}/api/foods/${food._id}`,
             {
               method: "DELETE",

@@ -1,3 +1,4 @@
+import { apiFetch } from "../config/api";
 import { useEffect, useState } from "react";
 import { getLocalDate } from "../utils/date";
 import { API_URL } from "../config";
@@ -18,7 +19,7 @@ function WeightPage({ onBack }) {
 
   const fetchWeights = async () => {
     try {
-      const response = await fetch(
+      const response = await apiFetch(
         `${API_URL}/api/weight`
       );
 
@@ -41,7 +42,7 @@ function WeightPage({ onBack }) {
 
   const fetchProfile = async () => {
     try {
-      const response = await fetch(
+      const response = await apiFetch(
         `${API_URL}/api/profile`
       );
 
@@ -83,7 +84,7 @@ function WeightPage({ onBack }) {
     try {
       setLoading(true);
 
-      const response = await fetch(
+      const response = await apiFetch(
         `${API_URL}/api/weight`,
         {
           method: "POST",
@@ -144,7 +145,7 @@ function WeightPage({ onBack }) {
     }
 
     try {
-      const response = await fetch(
+      const response = await apiFetch(
         `${API_URL}/api/weight/${id}`,
         {
           method: "DELETE",

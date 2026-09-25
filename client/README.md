@@ -1,32 +1,21 @@
-# MyDailyOS Web
+# MyDailyOS Web Client
 
-React + Vite web client.
+## Environment variable
 
-## Local development
-
-```bash
-npm install
-npm run dev
-```
-
-Create `.env.local`:
-
-```env
-API_URL=http://127.0.0.1:5001
-```
-
-## Vercel
-
-Set this Production environment variable in Vercel:
+Vercel Production environment variable:
 
 ```text
 API_URL=https://mydailyos.onrender.com
 ```
 
-The Vite configuration explicitly exposes `API_URL` to the browser. No `VITE_API_URL` variable is used.
+The Vite config explicitly exposes `API_URL` to the browser. The client also removes trailing `/` characters from the API URL.
 
-## Build
+## Authentication
 
-```bash
-npm run build
+All authenticated API calls use `src/config/api.js`, which reads the current JWT from `localStorage` and sends it as:
+
+```text
+Authorization: Bearer <token>
 ```
+
+This is intentionally explicit instead of monkey-patching `window.fetch`, so dashboard and page requests consistently include the authentication token.

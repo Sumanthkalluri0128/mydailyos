@@ -1,3 +1,4 @@
+import { apiFetch } from "../config/api";
 import { useEffect, useState } from "react";
 import { getLocalDate } from "../utils/date";
 import { API_URL } from "../config";
@@ -22,7 +23,7 @@ function TaskPage({ onBack }) {
 
   const fetchTasks = async () => {
     try {
-      const response = await fetch(
+      const response = await apiFetch(
         `${API_URL}/api/tasks?date=${form.date}`
       );
 
@@ -60,7 +61,7 @@ function TaskPage({ onBack }) {
     try {
       setLoading(true);
 
-      const response = await fetch(
+      const response = await apiFetch(
         `${API_URL}/api/tasks`,
         {
           method: "POST",
@@ -99,7 +100,7 @@ function TaskPage({ onBack }) {
 
   const toggleTask = async (id) => {
     try {
-      const response = await fetch(
+      const response = await apiFetch(
         `${API_URL}/api/tasks/${id}/toggle`,
         {
           method: "PATCH",
@@ -126,7 +127,7 @@ function TaskPage({ onBack }) {
     }
 
     try {
-      const response = await fetch(
+      const response = await apiFetch(
         `${API_URL}/api/tasks/${id}`,
         {
           method: "DELETE",

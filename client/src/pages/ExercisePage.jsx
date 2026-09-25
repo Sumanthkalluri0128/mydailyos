@@ -1,3 +1,4 @@
+import { apiFetch } from "../config/api";
 import { useEffect, useState } from "react";
 import { API_URL } from "../config";
 
@@ -24,7 +25,7 @@ function ExercisePage({ onBack }) {
 
   const fetchActivities = async () => {
     try {
-      const response = await fetch(
+      const response = await apiFetch(
         `${API_URL}/api/activities`
       );
 
@@ -47,7 +48,7 @@ function ExercisePage({ onBack }) {
 
   const fetchLogs = async () => {
     try {
-      const response = await fetch(
+      const response = await apiFetch(
         `${API_URL}/api/activities/logs?date=${today}`
       );
 
@@ -94,7 +95,7 @@ function ExercisePage({ onBack }) {
     setLoading(true);
 
     try {
-      const response = await fetch(
+      const response = await apiFetch(
         `${API_URL}/api/activities/logs`,
         {
           method: "POST",
@@ -157,7 +158,7 @@ function ExercisePage({ onBack }) {
     }
 
     try {
-      const response = await fetch(
+      const response = await apiFetch(
         `${API_URL}/api/activities/logs/${id}`,
         {
           method: "DELETE",

@@ -1,3 +1,4 @@
+import { apiFetch } from "../config/api";
 import { useEffect, useState } from "react";
 import { API_URL } from "../config";
 import {
@@ -80,7 +81,7 @@ function ProfilePage({ onBack }) {
 
   const fetchProfile = async () => {
     try {
-      const response = await fetch(
+      const response = await apiFetch(
         `${API_URL}/api/profile`
       );
 
@@ -178,7 +179,7 @@ function ProfilePage({ onBack }) {
     try {
       setLoading(true);
 
-      const response = await fetch(
+      const response = await apiFetch(
         `${API_URL}/api/profile`,
         {
           method: "PATCH",

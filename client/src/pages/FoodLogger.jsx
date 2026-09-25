@@ -1,3 +1,4 @@
+import { apiFetch } from "../config/api";
 import { useEffect, useMemo, useState } from "react";
 import { API_URL } from "../config";
 const MEALS = [
@@ -50,7 +51,7 @@ function FoodLogger({ date, onBack }) {
     try {
       setLoadingFoods(true);
 
-      const response = await fetch(
+      const response = await apiFetch(
         `${API_URL}/api/foods`
       );
 
@@ -75,7 +76,7 @@ function FoodLogger({ date, onBack }) {
 
   const fetchFoodLogs = async () => {
     try {
-      const response = await fetch(
+      const response = await apiFetch(
         `${API_URL}/api/food-logs?date=${date}`
       );
 
@@ -200,7 +201,7 @@ function FoodLogger({ date, onBack }) {
     try {
       setSaving(true);
 
-      const response = await fetch(
+      const response = await apiFetch(
         `${API_URL}/api/food-logs`,
         {
           method: "POST",
@@ -267,7 +268,7 @@ function FoodLogger({ date, onBack }) {
     }
 
     try {
-      const response = await fetch(
+      const response = await apiFetch(
         `${API_URL}/api/food-logs/${id}`,
         {
           method: "DELETE",

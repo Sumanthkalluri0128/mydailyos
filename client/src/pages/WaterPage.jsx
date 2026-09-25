@@ -1,3 +1,4 @@
+import { apiFetch } from "../config/api";
 import { useEffect, useState } from "react";
 import { getLocalDate } from "../utils/date";
 import { API_URL } from "../config";
@@ -23,7 +24,7 @@ function WaterPage({ onBack }) {
 
   const fetchWater = async () => {
     try {
-      const response = await fetch(
+      const response = await apiFetch(
         `${API_URL}/api/water?date=${today}`
       );
 
@@ -47,7 +48,7 @@ function WaterPage({ onBack }) {
 
   const fetchProfile = async () => {
     try {
-      const response = await fetch(
+      const response = await apiFetch(
         `${API_URL}/api/profile`
       );
 
@@ -89,7 +90,7 @@ function WaterPage({ onBack }) {
     try {
       setLoading(true);
 
-      const response = await fetch(
+      const response = await apiFetch(
         `${API_URL}/api/water`,
         {
           method: "POST",
@@ -141,7 +142,7 @@ function WaterPage({ onBack }) {
     }
 
     try {
-      const response = await fetch(
+      const response = await apiFetch(
         `${API_URL}/api/water/${id}`,
         {
           method: "DELETE",

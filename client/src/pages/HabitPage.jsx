@@ -1,3 +1,4 @@
+import { apiFetch } from "../config/api";
 import { useEffect, useState } from "react";
 import { getLocalDate } from "../utils/date";
 import { API_URL } from "../config";
@@ -28,7 +29,7 @@ const [habitStats, setHabitStats] = useState({});
   try {
     const statsResults = await Promise.all(
       habitList.map(async (habit) => {
-        const response = await fetch(
+        const response = await apiFetch(
           `${API_URL}/api/habits/${habit._id}/stats`
         );
 
@@ -66,7 +67,7 @@ const [habitStats, setHabitStats] = useState({});
 
   const fetchHabits = async () => {
   try {
-    const response = await fetch(
+    const response = await apiFetch(
       `${API_URL}/api/habits`
     );
 
@@ -91,7 +92,7 @@ const [habitStats, setHabitStats] = useState({});
 
   const fetchHabitLogs = async () => {
     try {
-      const response = await fetch(
+      const response = await apiFetch(
         `${API_URL}/api/habits/logs?date=${today}`
       );
 
@@ -141,7 +142,7 @@ const [habitStats, setHabitStats] = useState({});
     try {
       setLoading(true);
 
-      const response = await fetch(
+      const response = await apiFetch(
         `${API_URL}/api/habits`,
         {
           method: "POST",
@@ -208,7 +209,7 @@ const [habitStats, setHabitStats] = useState({});
     value
   ) => {
     try {
-      const response = await fetch(
+      const response = await apiFetch(
         `${API_URL}/api/habits/logs`,
         {
           method: "POST",
@@ -256,7 +257,7 @@ const [habitStats, setHabitStats] = useState({});
     }
 
     try {
-      const response = await fetch(
+      const response = await apiFetch(
         `${API_URL}/api/habits/${id}`,
         {
           method: "DELETE",

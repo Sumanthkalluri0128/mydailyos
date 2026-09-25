@@ -1,18 +1,51 @@
-import {useEffect,useState} from 'react';
-import {API_URL} from '../config';
+import { useEffect, useState } from 'react';
 import AuthPage from '../pages/AuthPage';
+import { apiFetch } from '../config/api';
 
-export default function AuthGate({children}){
-  const [ready,setReady]=useState(false);const [user,setUser]=useState(null);
-  useEffect(()=>{
-    const token=localStorage.getItem('mydailyos_token');
-    if(!token){setReady(true);return;}
-    const original=window.fetch;
-    window.fetch=(input,init={})=>{const h=new Headers(init.headers||{});h.set('Authorization',`Bearer ${token}`);return original(input,{...init,headers:h}).then(r=>{if(r.status===401){localStorage.removeItem('mydailyos_token');localStorage.removeItem('mydailyos_user');window.location.reload();}return r;});};
-    fetch(`${API_URL}/api/account/me`).then(r=>r.ok?r.json():Promise.reject()).then(d=>{setUser(d.user);localStorage.setItem('mydailyos_user',JSON.stringify(d.user));}).catch(()=>{localStorage.removeItem('mydailyos_token');localStorage.removeItem('mydailyos_user');}).finally(()=>setReady(true));
-    return()=>{window.fetch=original;};
-  },[]);
-  if(!ready)return <div className="auth-loading">Loading MyDailyOS…</div>;
-  if(!user)return <AuthPage onAuthenticated={(u)=>{setUser(u);window.location.reload();}}/>;
+export default function AuthGate({ children }) {
+  const [ready, setReady] = useState(false);
+  const [user, setUser] = useState(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    const token = localStorage.getItem('mydailyos_token');
+
+    if (!token) {
+      setReady(true);
+      return;
+    }
+
+    apiFetch('/api/account/me')
+      .then(async (response) => {
+        if (!response.ok) {
+          const data = await response.json().catch(() => ({}));
+          throw new Error(data.message || 'Session validation failed');
+        }
+        return response.json();
+      })
+      .then((data) => {
+        if (cancelled) return;
+        setUser(data.user);
+        localStorage.setItem('mydailyos_user', JSON.stringify(data.user));
+      })
+      .catch(() => {
+        if (cancelled) return;
+        localStorage.removeItem('mydailyos_token');
+        localStorage.removeItem('mydailyos_user');
+        setUser(null);
+      })
+      .finally(() => {
+        if (!cancelled) setReady(true);
+      });
+
+    return () => { cancelled = true; };
+  }, []);
+
+  if (!ready) return <div className="auth-loading">Loading MyDailyOS…</div>;
+
+  if (!user) {
+    return <AuthPage onAuthenticated={(authenticatedUser) => setUser(authenticatedUser)} />;
+  }
+
   return children;
 }
