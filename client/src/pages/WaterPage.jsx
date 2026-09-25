@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import { getLocalDate } from "../utils/date";
-
 import { API_URL } from "../config";
 
 const DEFAULT_WATER_GOAL = 3000;

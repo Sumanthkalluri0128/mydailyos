@@ -107,6 +107,15 @@ app.get(
   }
 );
 
+// Health check endpoint
+app.get("/api/health", (req, res) => {
+  res.status(200).json({
+    success: true,
+    status: "healthy",
+    service: "MyDailyOS API",
+    timestamp: new Date().toISOString(),
+  });
+});
 // ============================================================
 // MONGODB CONNECTION
 // ============================================================

@@ -260,6 +260,54 @@ function App() {
   }, [today, currentPage]);
 
   // ============================================================
+  // BACKEND KEEP-ALIVE HEARTBEAT
+  // ============================================================
+  // Pings the backend every 5 minutes while the web app is open.
+  // This helps keep the Render API active while you are using
+  // the application. It does not keep Render awake when the
+  // browser is completely closed.
+
+  useEffect(() => {
+    const KEEP_ALIVE_INTERVAL = 5 * 60 * 1000;
+
+    const keepBackendAlive = async () => {
+      try {
+        const response = await fetch(`${API_URL}/api/health`, {
+          method: "GET",
+          cache: "no-store",
+        });
+
+        if (response.ok) {
+          console.log("MyDailyOS backend heartbeat OK");
+        } else {
+          console.warn(
+            "MyDailyOS backend heartbeat failed:",
+            response.status
+          );
+        }
+      } catch (error) {
+        console.warn(
+          "MyDailyOS backend heartbeat error:",
+          error.message
+        );
+      }
+    };
+
+    // Send the first heartbeat immediately.
+    keepBackendAlive();
+
+    // Then repeat every 5 minutes.
+    const intervalId = setInterval(
+      keepBackendAlive,
+      KEEP_ALIVE_INTERVAL
+    );
+
+    return () => {
+      clearInterval(intervalId);
+    };
+  }, []);
+
+  // ============================================================
   // FOOD LOGGER PAGE
   // ============================================================
 

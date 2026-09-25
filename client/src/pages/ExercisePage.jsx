@@ -1,11 +1,7 @@
 import { useEffect, useState } from "react";
-import { getLocalDate } from "../utils/date";
 import { API_URL } from "../config";
 
-
 function ExercisePage({ onBack }) {
-  const today = getLocalDate();
-
   const [activities, setActivities] = useState([]);
   const [logs, setLogs] = useState([]);
 
@@ -17,7 +13,10 @@ function ExercisePage({ onBack }) {
   const [notes, setNotes] = useState("");
 
   const [loading, setLoading] = useState(false);
-  const [loadingProfile, setLoadingProfile] = useState(true);
+
+  const today = new Date()
+    .toISOString()
+    .split("T")[0];
 
   // ============================================================
   // FETCH ACTIVITIES
@@ -31,21 +30,13 @@ function ExercisePage({ onBack }) {
 
       const data = await response.json();
 
-      if (!response.ok || !data.success) {
-        throw new Error(
-          data.message || "Failed to fetch activities."
-        );
+      if (data.success) {
+        setActivities(data.activities);
       }
-
-      setActivities(data.activities || []);
     } catch (error) {
       console.error(
         "Failed to fetch activities:",
         error
-      );
-
-      alert(
-        "Could not load exercise activities."
       );
     }
   };
@@ -62,13 +53,9 @@ function ExercisePage({ onBack }) {
 
       const data = await response.json();
 
-      if (!response.ok || !data.success) {
-        throw new Error(
-          data.message || "Failed to fetch activity logs."
-        );
+      if (data.success) {
+        setLogs(data.logs);
       }
-
-      setLogs(data.logs || []);
     } catch (error) {
       console.error(
         "Failed to fetch activity logs:",
@@ -77,46 +64,9 @@ function ExercisePage({ onBack }) {
     }
   };
 
-  // ============================================================
-  // FETCH PROFILE WEIGHT
-  // ============================================================
-
-  const fetchProfileWeight = async () => {
-    try {
-      const response = await fetch(
-        `${API_URL}/api/profile`
-      );
-
-      const data = await response.json();
-
-      if (
-        response.ok &&
-        data.success &&
-        data.profile?.currentWeightKg !== null &&
-        data.profile?.currentWeightKg !== undefined
-      ) {
-        setWeight(
-          String(data.profile.currentWeightKg)
-        );
-      }
-    } catch (error) {
-      console.error(
-        "Failed to fetch profile weight:",
-        error
-      );
-    } finally {
-      setLoadingProfile(false);
-    }
-  };
-
-  // ============================================================
-  // INITIAL LOAD
-  // ============================================================
-
   useEffect(() => {
     fetchActivities();
     fetchLogs();
-    fetchProfileWeight();
   }, []);
 
   // ============================================================
@@ -137,7 +87,7 @@ function ExercisePage({ onBack }) {
     }
 
     if (!weight || Number(weight) <= 0) {
-      alert("Please enter a valid weight.");
+      alert("Please enter your weight.");
       return;
     }
 
@@ -148,15 +98,17 @@ function ExercisePage({ onBack }) {
         `${API_URL}/api/activities/logs`,
         {
           method: "POST",
+
           headers: {
             "Content-Type": "application/json",
           },
+
           body: JSON.stringify({
             activityId: selectedActivity,
             date: today,
             durationMinutes: Number(duration),
             weightKg: Number(weight),
-            notes: notes.trim(),
+            notes,
           }),
         }
       );
@@ -172,16 +124,16 @@ function ExercisePage({ onBack }) {
         return;
       }
 
+      // Clear form
       setSelectedActivity("");
       setDuration("");
       setNotes("");
 
-      await fetchLogs();
+      // Refresh today's activities
+      fetchLogs();
+
     } catch (error) {
-      console.error(
-        "Failed to add activity:",
-        error
-      );
+      console.error(error);
 
       alert(
         "Could not connect to the backend."
@@ -214,21 +166,16 @@ function ExercisePage({ onBack }) {
 
       const data = await response.json();
 
-      if (!response.ok || !data.success) {
+      if (data.success) {
+        fetchLogs();
+      } else {
         alert(
           data.message ||
             "Failed to delete activity."
         );
-
-        return;
       }
-
-      await fetchLogs();
     } catch (error) {
-      console.error(
-        "Failed to delete activity:",
-        error
-      );
+      console.error(error);
 
       alert(
         "Could not connect to the backend."
@@ -237,7 +184,7 @@ function ExercisePage({ onBack }) {
   };
 
   // ============================================================
-  // TOTALS
+  // TOTAL CALORIES
   // ============================================================
 
   const totalCalories = logs.reduce(
@@ -257,7 +204,9 @@ function ExercisePage({ onBack }) {
   return (
     <div className="exercise-page">
 
-      {/* HEADER */}
+      {/* ======================================================
+          HEADER
+      ====================================================== */}
 
       <div className="page-header">
 
@@ -278,7 +227,10 @@ function ExercisePage({ onBack }) {
 
       </div>
 
-      {/* TODAY SUMMARY */}
+
+      {/* ======================================================
+          TODAY SUMMARY
+      ====================================================== */}
 
       <div className="exercise-summary-grid">
 
@@ -295,6 +247,7 @@ function ExercisePage({ onBack }) {
           </h3>
         </div>
 
+
         <div className="card">
           <span className="card-icon">
             ⏱️
@@ -307,6 +260,7 @@ function ExercisePage({ onBack }) {
             <small> min</small>
           </h3>
         </div>
+
 
         <div className="card">
           <span className="card-icon">
@@ -322,7 +276,10 @@ function ExercisePage({ onBack }) {
 
       </div>
 
-      {/* ADD ACTIVITY */}
+
+      {/* ======================================================
+          ADD ACTIVITY
+      ====================================================== */}
 
       <div className="large-card">
 
@@ -338,10 +295,13 @@ function ExercisePage({ onBack }) {
 
         </div>
 
+
         <form
           className="exercise-form"
           onSubmit={handleAddActivity}
         >
+
+          {/* Activity */}
 
           <div className="form-group">
 
@@ -356,8 +316,8 @@ function ExercisePage({ onBack }) {
                   event.target.value
                 )
               }
-              disabled={loading}
             >
+
               <option value="">
                 Select an activity
               </option>
@@ -372,9 +332,13 @@ function ExercisePage({ onBack }) {
                   </option>
                 )
               )}
+
             </select>
 
           </div>
+
+
+          {/* Duration */}
 
           <div className="form-group">
 
@@ -387,7 +351,6 @@ function ExercisePage({ onBack }) {
               <input
                 type="number"
                 min="1"
-                step="1"
                 placeholder="45"
                 value={duration}
                 onChange={(event) =>
@@ -395,7 +358,6 @@ function ExercisePage({ onBack }) {
                     event.target.value
                   )
                 }
-                disabled={loading}
               />
 
               <span>
@@ -405,6 +367,9 @@ function ExercisePage({ onBack }) {
             </div>
 
           </div>
+
+
+          {/* Weight */}
 
           <div className="form-group">
 
@@ -418,20 +383,12 @@ function ExercisePage({ onBack }) {
                 type="number"
                 min="1"
                 step="0.1"
-                placeholder={
-                  loadingProfile
-                    ? "Loading..."
-                    : "82"
-                }
+                placeholder="82"
                 value={weight}
                 onChange={(event) =>
                   setWeight(
                     event.target.value
                   )
-                }
-                disabled={
-                  loadingProfile ||
-                  loading
                 }
               />
 
@@ -441,12 +398,10 @@ function ExercisePage({ onBack }) {
 
             </div>
 
-            <small>
-              Your current profile weight is used
-              automatically when available.
-            </small>
-
           </div>
+
+
+          {/* Notes */}
 
           <div className="form-group">
 
@@ -462,10 +417,10 @@ function ExercisePage({ onBack }) {
                   event.target.value
                 )
               }
-              disabled={loading}
             />
 
           </div>
+
 
           <button
             className="primary-button"
@@ -481,7 +436,10 @@ function ExercisePage({ onBack }) {
 
       </div>
 
-      {/* TODAY'S ACTIVITIES */}
+
+      {/* ======================================================
+          TODAY'S ACTIVITIES
+      ====================================================== */}
 
       <div className="large-card">
 
@@ -502,10 +460,10 @@ function ExercisePage({ onBack }) {
 
         </div>
 
+
         {logs.length === 0 ? (
 
           <div className="empty-state">
-
             <div>
               🏃
             </div>
@@ -515,9 +473,9 @@ function ExercisePage({ onBack }) {
             </h3>
 
             <p>
-              Add your first activity above.
+              Add your first activity
+              above.
             </p>
-
           </div>
 
         ) : (
@@ -546,6 +504,7 @@ function ExercisePage({ onBack }) {
                   </span>
 
                 </div>
+
 
                 <div className="activity-calories">
 

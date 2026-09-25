@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { API_URL } from "../config";
+
 function FoodPage() {
   const [foods, setFoods] = useState([]);
 const [showForm, setShowForm] = useState(false);
@@ -87,7 +88,7 @@ const [editingFood, setEditingFood] = useState(null);
 
     const url = isEditing
       ? `${API_URL}/api/foods/${editingFood._id}`
-      : "${API_URL}/api/foods";
+      : `${API_URL}/api/foods`;
 
     const response = await fetch(url, {
       method: isEditing ? "PUT" : "POST",

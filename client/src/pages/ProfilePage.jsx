@@ -1,10 +1,9 @@
 import { useEffect, useState } from "react";
+import { API_URL } from "../config";
 import {
   calculateBMR,
   calculateTDEE,
 } from "../utils/calories";
-
-import { API_URL } from "../config";
 
 function ProfilePage({ onBack }) {
   const [form, setForm] = useState({

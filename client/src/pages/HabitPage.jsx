@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import { getLocalDate } from "../utils/date";
-
 import { API_URL } from "../config";
 
 function HabitPage({ onBack }) {
