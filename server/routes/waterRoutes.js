@@ -1,0 +1,4 @@
+const express=require('express');const Water=require('../models/WaterLog');const {requireAuth}=require('../middleware/auth');const router=express.Router();router.use(requireAuth);
+router.get('/',async(req,res)=>{const logs=await Water.find({userId:req.user.id,date:req.query.date}).sort({createdAt:-1});const totalMl=logs.reduce((s,x)=>s+x.amountMl,0);res.json({success:true,logs,totalMl,totalLiters:totalMl/1000});});
+router.post('/',async(req,res)=>{try{const log=await Water.create({userId:req.user.id,date:req.body.date,amountMl:Number(req.body.amountMl),notes:req.body.notes||''});res.status(201).json({success:true,log});}catch(e){res.status(400).json({success:false,message:e.message});}});
+router.delete('/:id',async(req,res)=>{await Water.deleteOne({_id:req.params.id,userId:req.user.id});res.json({success:true});});module.exports=router;
