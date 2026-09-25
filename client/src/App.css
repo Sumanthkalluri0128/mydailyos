@@ -2086,3 +2086,128 @@ label {
     font-size: 35px;
   }
 }
+
+
+/* ============================================================
+   CLICKABLE MYDAILYOS BRAND
+   Keeps the header looking like normal branding — not a button.
+   ============================================================ */
+
+.brand-home {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 0;
+  margin: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  user-select: none;
+  text-align: left;
+  border-radius: 16px;
+  outline: none;
+  transition:
+    transform 0.18s ease,
+    opacity 0.18s ease;
+}
+
+/* Remove the old automatically generated icon because the JSX
+   now provides the icon itself. */
+.topbar > div:first-child::before {
+  display: none !important;
+  content: none !important;
+}
+
+.brand-home:hover {
+  transform: translateY(-1px);
+  opacity: 0.92;
+}
+
+.brand-home:active {
+  transform: translateY(0);
+  opacity: 0.82;
+}
+
+/* Keyboard accessibility without the ugly browser blue rectangle. */
+.brand-home:focus {
+  outline: none;
+  box-shadow: none;
+}
+
+.brand-home:focus-visible {
+  outline: 2px solid rgba(109, 93, 252, 0.35);
+  outline-offset: 5px;
+  border-radius: 18px;
+}
+
+.brand-icon {
+  width: 48px;
+  height: 48px;
+  flex: 0 0 48px;
+  display: grid;
+  place-items: center;
+  border-radius: 15px;
+  color: #fff;
+  font-size: 23px;
+  line-height: 1;
+  background: linear-gradient(135deg, var(--md-primary), #8d7dff);
+  box-shadow: 0 8px 20px rgba(109, 93, 252, 0.25);
+}
+
+.brand-title {
+  margin: 0;
+  font-size: 22px;
+  line-height: 1.15;
+  font-weight: 800;
+  letter-spacing: -0.4px;
+  color: var(--md-ink);
+}
+
+.brand-subtitle {
+  margin-top: 4px;
+  color: var(--md-muted);
+  font-size: 13px;
+  line-height: 1.25;
+  font-weight: 500;
+}
+
+/* Keep the header clean on smaller screens. */
+@media (max-width: 800px) {
+  .brand-home {
+    gap: 10px;
+  }
+
+  .brand-icon {
+    width: 40px;
+    height: 40px;
+    flex-basis: 40px;
+    border-radius: 12px;
+    font-size: 19px;
+  }
+
+  .brand-title {
+    font-size: 19px;
+  }
+
+  .brand-subtitle {
+    display: none;
+  }
+}
+
+@media (max-width: 480px) {
+  .brand-home {
+    gap: 9px;
+  }
+
+  .brand-icon {
+    width: 38px;
+    height: 38px;
+    flex-basis: 38px;
+    border-radius: 11px;
+  }
+
+  .brand-title {
+    font-size: 18px;
+  }
+}
