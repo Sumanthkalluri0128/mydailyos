@@ -2440,64 +2440,7 @@ label {
 }
 
 /* Daily motivation carousel */
-.motivation-carousel {
-  margin-top: 16px;
-  padding: 15px 16px 13px;
-  border: 1px solid rgba(255,255,255,.16);
-  border-radius: 18px;
-  background: rgba(255,255,255,.11);
-  backdrop-filter: blur(8px);
-}
-.motivation-topline,
-.motivation-bottomline {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-}
-.motivation-topline {
-  color: #dcd4ff;
-  font-size: 10px;
-  font-weight: 900;
-  letter-spacing: 1.2px;
-}
-.motivation-quote {
-  color: #fff;
-  font-size: 16px;
-  line-height: 1.5;
-  font-weight: 750;
-  margin-top: 9px;
-  animation: motivationFade .35s ease;
-}
-.motivation-dots {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-}
-.motivation-dots span {
-  display: block;
-  width: 5px;
-  height: 5px;
-  border-radius: 50%;
-  background: rgba(255,255,255,.3);
-  transition: width .2s ease, background .2s ease;
-}
-.motivation-dots span.active {
-  width: 16px;
-  border-radius: 4px;
-  background: #fff;
-}
-.motivation-bottomline { margin-top: 12px; }
-.motivation-next {
-  border: 0;
-  background: transparent;
-  color: #fff;
-  font-size: 12px;
-  font-weight: 800;
-  cursor: pointer;
-  padding: 4px 6px;
-}
-.motivation-next:hover { opacity: .8; }
+
 @keyframes motivationFade {
   from { opacity: .15; transform: translateY(4px); }
   to { opacity: 1; transform: translateY(0); }
@@ -2513,17 +2456,67 @@ label {
 .dashboard-motivation .motivation-carousel {
   margin-top: 12px;
 }
-.motivation-heading span {
+.motivation-carousel {
+  position: relative;
   display: block;
-  color: #dcd4ff;
-  font-size: 10px;
-  font-weight: 900;
-  letter-spacing: 1.4px;
-}
-.motivation-heading strong {
-  display: block;
+  width: 100%;
+  margin-top: 18px;
+  padding: 22px 22px 15px;
+  border: 1px solid rgba(255,255,255,.16);
+  border-radius: 22px;
+  background: rgba(255,255,255,.10);
   color: #fff;
-  font-size: 26px;
-  line-height: 1.15;
-  margin-top: 5px;
+  text-align: left;
+  cursor: pointer;
+  overflow: hidden;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.08);
+}
+.motivation-carousel:hover { background: rgba(255,255,255,.14); }
+.motivation-quote-mark {
+  position: absolute;
+  top: -14px;
+  right: 14px;
+  font-size: 92px;
+  line-height: 1;
+  font-weight: 900;
+  color: rgba(255,255,255,.10);
+  pointer-events: none;
+}
+.motivation-quote {
+  position: relative;
+  z-index: 1;
+  display: block;
+  min-height: 58px;
+  padding-right: 20px;
+  font-size: 17px;
+  line-height: 1.55;
+  font-weight: 750;
+  animation: motivationQuoteIn .42s ease both;
+}
+.motivation-progress {
+  display: block;
+  height: 3px;
+  margin-top: 16px;
+  overflow: hidden;
+  border-radius: 99px;
+  background: rgba(255,255,255,.16);
+}
+.motivation-progress > span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: #fff;
+  transition: width .45s ease;
+}
+.motivation-hint {
+  display: block;
+  margin-top: 9px;
+  color: rgba(255,255,255,.60);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .3px;
+}
+@keyframes motivationQuoteIn {
+  from { opacity: 0; transform: translateY(7px); }
+  to { opacity: 1; transform: translateY(0); }
 }

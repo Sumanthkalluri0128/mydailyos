@@ -65,36 +65,23 @@ export default function MotivationCarousel() {
   }, [dayKey]);
 
   useEffect(() => {
-    const timer = window.setInterval(() => {
-      setIndex((value) => (value + 1) % quotes.length);
-    }, 5500);
+    const timer = window.setInterval(() => setIndex((value) => (value + 1) % quotes.length), 5500);
     return () => window.clearInterval(timer);
   }, [quotes.length]);
 
   return (
-    <div className="motivation-carousel">
-      <div className="motivation-topline">
-        <span>✦ DAILY MOTIVATION</span>
-        <span>{index + 1}/{quotes.length}</span>
-      </div>
-      <div className="motivation-quote" key={`${dayKey}-${index}`}>
-        “{quotes[index]}”
-      </div>
-      <div className="motivation-bottomline">
-        <div className="motivation-dots" aria-hidden="true">
-          {quotes.slice(0, 5).map((_, dot) => (
-            <span key={dot} className={dot === index % 5 ? 'active' : ''} />
-          ))}
-        </div>
-        <button
-          type="button"
-          className="motivation-next"
-          onClick={() => setIndex((value) => (value + 1) % quotes.length)}
-          aria-label="Show another motivational quote"
-        >
-          Next ›
-        </button>
-      </div>
-    </div>
+    <button
+      type="button"
+      className="motivation-carousel"
+      onClick={() => setIndex((value) => (value + 1) % quotes.length)}
+      aria-label="Show another motivational quote"
+    >
+      <span className="motivation-quote-mark">“</span>
+      <span className="motivation-quote" key={`${dayKey}-${index}`}>
+        {quotes[index]}
+      </span>
+      <span className="motivation-progress"><span style={{ width: `${((index + 1) / quotes.length) * 100}%` }} /></span>
+      <span className="motivation-hint">Tap for another</span>
+    </button>
   );
 }

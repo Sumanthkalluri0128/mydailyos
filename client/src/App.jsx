@@ -666,10 +666,6 @@ function App() {
         </section>
 
         <section className="dashboard-motivation">
-          <div className="motivation-heading">
-            <span>YOUR DAILY RESET</span>
-            <strong>Keep going.</strong>
-          </div>
           <MotivationCarousel />
         </section>
 
