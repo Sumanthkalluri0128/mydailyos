@@ -18,11 +18,11 @@
   gap: 10px;
   min-height: 58px;
   padding: 10px 10px 10px 12px;
-  border: 1px solid #e7e5f2;
+  border: 1px solid var(--border);
   border-radius: 16px;
-  background: rgba(255, 255, 255, 0.97);
+  background: var(--surface);
   box-shadow: 0 18px 45px rgba(31, 35, 61, 0.16);
-  color: #20243a;
+  color: var(--text);
   animation: toast-in 0.22s ease-out;
   backdrop-filter: blur(12px);
 }
@@ -68,14 +68,14 @@
   border: 0;
   border-radius: 9px;
   background: transparent;
-  color: #77738a;
+  color: var(--text-muted);
   font-size: 20px;
   cursor: pointer;
 }
 
 .toast-close:hover {
-  background: #f2f1f7;
-  color: #25283b;
+  background: var(--surface-soft);
+  color: var(--text);
 }
 
 @keyframes toast-in {

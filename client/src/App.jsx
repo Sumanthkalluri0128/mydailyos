@@ -17,6 +17,40 @@ import { apiFetch } from "./config/api";
 import { API_URL } from "./config";
 
 
+const THEME_KEY = "mydailyos_theme";
+
+function getInitialTheme() {
+  try {
+    const stored = localStorage.getItem(THEME_KEY);
+    if (stored === "light" || stored === "dark") return stored;
+  } catch {
+    // localStorage can throw in some privacy modes — fall through.
+  }
+  if (
+    typeof window !== "undefined" &&
+    window.matchMedia &&
+    window.matchMedia("(prefers-color-scheme: dark)").matches
+  ) {
+    return "dark";
+  }
+  return "light";
+}
+
+function ThemeToggle({ theme, onToggle }) {
+  const isDark = theme === "dark";
+  return (
+    <button
+      type="button"
+      className="theme-toggle"
+      onClick={onToggle}
+      aria-label={isDark ? "Switch to light mode" : "Switch to dark mode"}
+      title={isDark ? "Switch to light mode" : "Switch to dark mode"}
+    >
+      {isDark ? "☀️" : "🌙"}
+    </button>
+  );
+}
+
 function BrandHome({ onHome }) {
   const handleKeyDown = (event) => {
     if (event.key === "Enter" || event.key === " ") {
@@ -48,6 +82,25 @@ function BrandHome({ onHome }) {
 function App() {
   const [currentPage, setCurrentPage] =
     useState("dashboard");
+
+  // ============================================================
+  // THEME (light / dark)
+  // ============================================================
+
+  const [theme, setTheme] = useState(getInitialTheme);
+
+  useEffect(() => {
+    document.documentElement.setAttribute("data-theme", theme);
+    try {
+      localStorage.setItem(THEME_KEY, theme);
+    } catch {
+      // Best-effort — a failed write just means the choice won't
+      // persist across reloads, which isn't worth surfacing to the user.
+    }
+  }, [theme]);
+
+  const toggleTheme = () =>
+    setTheme((current) => (current === "dark" ? "light" : "dark"));
 
   // ============================================================
   // DAILY NUTRITION
@@ -132,153 +185,103 @@ function App() {
     const fetchDailySummary = async () => {
       try {
         // ======================================================
-        // FOOD SUMMARY
+        // Every dashboard section used to be fetched one after
+        // another with sequential `await`s -- seven round trips
+        // back-to-back, each one waiting on the last to finish.
+        // On a real network that's the single biggest cause of a
+        // slow dashboard load. Firing them together with
+        // Promise.all lets the browser run all seven requests at
+        // once, so total load time is roughly the slowest single
+        // request instead of the sum of all of them.
         // ======================================================
 
-        const foodResponse = await apiFetch(
-          `${API_URL}/api/food-logs/summary?date=${today}`
-        );
+        const [
+          foodResponse,
+          activityResponse,
+          taskResponse,
+          habitResponse,
+          habitLogResponse,
+          waterResponse,
+          weightResponse,
+          profileResponse,
+        ] = await Promise.all([
+          apiFetch(`${API_URL}/api/food-logs/summary?date=${today}`),
+          apiFetch(`${API_URL}/api/activities/summary?date=${today}`),
+          apiFetch(`${API_URL}/api/tasks?date=${today}`),
+          apiFetch(`${API_URL}/api/habits`),
+          apiFetch(`${API_URL}/api/habits/logs?date=${today}`),
+          apiFetch(`${API_URL}/api/water?date=${today}`),
+          apiFetch(`${API_URL}/api/weight`),
+          apiFetch(`${API_URL}/api/profile`),
+        ]);
 
-        const foodData =
-          await foodResponse.json();
+        const [
+          foodData,
+          activityData,
+          taskData,
+          habitData,
+          habitLogData,
+          waterData,
+          weightData,
+          profileData,
+        ] = await Promise.all([
+          foodResponse.json(),
+          activityResponse.json(),
+          taskResponse.json(),
+          habitResponse.json(),
+          habitLogResponse.json(),
+          waterResponse.json(),
+          weightResponse.json(),
+          profileResponse.json(),
+        ]);
 
         if (foodData.success) {
-          setDailySummary(
-            foodData.summary
-          );
+          setDailySummary(foodData.summary);
         }
-
-        // ======================================================
-        // ACTIVITY SUMMARY
-        // ======================================================
-
-        const activityResponse =
-          await apiFetch(
-            `${API_URL}/api/activities/summary?date=${today}`
-          );
-
-        const activityData =
-          await activityResponse.json();
 
         if (activityData.success) {
-          setActivitySummary(
-            activityData.summary
-          );
+          setActivitySummary(activityData.summary);
         }
-
-        // ======================================================
-        // TASKS
-        // ======================================================
-
-        const taskResponse = await apiFetch(
-          `${API_URL}/api/tasks?date=${today}`
-        );
-
-        const taskData =
-          await taskResponse.json();
 
         if (taskData.success) {
           setTasks(taskData.tasks);
         }
 
-        // ======================================================
-        // HABITS
-        // ======================================================
-
-        const habitResponse = await apiFetch(
-          `${API_URL}/api/habits`
-        );
-
-        const habitData =
-          await habitResponse.json();
-
         if (habitData.success) {
           setHabits(habitData.habits);
         }
 
-        const habitLogResponse =
-          await apiFetch(
-            `${API_URL}/api/habits/logs?date=${today}`
-          );
-
-        const habitLogData =
-          await habitLogResponse.json();
-
         if (habitLogData.success) {
-          setHabitLogs(
-            habitLogData.logs
-          );
+          setHabitLogs(habitLogData.logs);
         }
-
-        // ======================================================
-        // WATER
-        // ======================================================
-
-        const waterResponse = await apiFetch(
-          `${API_URL}/api/water?date=${today}`
-        );
-
-        const waterData =
-          await waterResponse.json();
 
         if (waterData.success) {
           setWaterSummary({
             totalMl: waterData.totalMl,
-            totalLiters:
-              waterData.totalLiters,
+            totalLiters: waterData.totalLiters,
           });
         }
 
-        // ======================================================
-        // WEIGHT HISTORY
-        // ======================================================
-
-        const weightResponse = await apiFetch(
-          `${API_URL}/api/weight`
-        );
-
-        const weightData =
-          await weightResponse.json();
-
         if (weightData.success) {
-          setWeightHistory(
-            weightData.logs || []
-          );
+          setWeightHistory(weightData.logs || []);
         }
 
-        // ======================================================
-        // PROFILE
-        // ======================================================
-        // Profile is the source of truth for the
-        // Dashboard current weight.
-
-        const profileResponse = await apiFetch(
-          `${API_URL}/api/profile`
-        );
-
-        const profileData =
-          await profileResponse.json();
-
+        // Profile is the source of truth for the Dashboard
+        // current weight.
         if (profileData.success) {
-          const currentProfile =
-            profileData.profile;
+          const currentProfile = profileData.profile;
 
           setProfile(currentProfile);
 
           if (
-            currentProfile.currentWeightKg !==
-              null &&
-            currentProfile.currentWeightKg !==
-              undefined
+            currentProfile.currentWeightKg !== null &&
+            currentProfile.currentWeightKg !== undefined
           ) {
-            setLatestWeight(
-              currentProfile.currentWeightKg
-            );
+            setLatestWeight(currentProfile.currentWeightKg);
           } else {
             setLatestWeight(null);
           }
         }
-
       } catch (error) {
         console.error(
           "Failed to fetch dashboard data:",
@@ -300,6 +303,7 @@ function App() {
 
         <header className="topbar">
           <BrandHome onHome={() => setCurrentPage("dashboard")} />
+        <ThemeToggle theme={theme} onToggle={toggleTheme} />
         </header>
 
         <main className="dashboard">
@@ -327,6 +331,7 @@ function App() {
 
         <header className="topbar">
           <BrandHome onHome={() => setCurrentPage("dashboard")} />
+        <ThemeToggle theme={theme} onToggle={toggleTheme} />
         </header>
 
         <main className="dashboard">
@@ -353,6 +358,7 @@ function App() {
 
         <header className="topbar">
           <BrandHome onHome={() => setCurrentPage("dashboard")} />
+        <ThemeToggle theme={theme} onToggle={toggleTheme} />
         </header>
 
         <main className="dashboard">
@@ -379,6 +385,7 @@ function App() {
 
         <header className="topbar">
           <BrandHome onHome={() => setCurrentPage("dashboard")} />
+        <ThemeToggle theme={theme} onToggle={toggleTheme} />
         </header>
 
         <main className="dashboard">
@@ -405,6 +412,7 @@ function App() {
 
         <header className="topbar">
           <BrandHome onHome={() => setCurrentPage("dashboard")} />
+        <ThemeToggle theme={theme} onToggle={toggleTheme} />
         </header>
 
         <main className="dashboard">
@@ -431,6 +439,7 @@ function App() {
 
         <header className="topbar">
           <BrandHome onHome={() => setCurrentPage("dashboard")} />
+        <ThemeToggle theme={theme} onToggle={toggleTheme} />
         </header>
 
         <main className="dashboard">
@@ -457,6 +466,7 @@ function App() {
 
         <header className="topbar">
           <BrandHome onHome={() => setCurrentPage("dashboard")} />
+        <ThemeToggle theme={theme} onToggle={toggleTheme} />
         </header>
 
         <main className="dashboard">
@@ -482,6 +492,7 @@ function App() {
       <div className="app">
         <header className="topbar">
           <BrandHome onHome={() => setCurrentPage("dashboard")} />
+        <ThemeToggle theme={theme} onToggle={toggleTheme} />
         </header>
         <main className="dashboard">
           <Suspense fallback={<div className="page-loading">Loading…</div>}>
@@ -512,6 +523,8 @@ function App() {
           >
             ← Dashboard
           </button>
+
+          <ThemeToggle theme={theme} onToggle={toggleTheme} />
 
         </header>
 
@@ -628,6 +641,8 @@ function App() {
         <BrandHome onHome={() => setCurrentPage("dashboard")} />
 
         <div className="topbar-actions">
+          <ThemeToggle theme={theme} onToggle={toggleTheme} />
+
           <button
             className={`topbar-progress ${currentPage === "progress" ? "active" : ""}`}
             onClick={() => setCurrentPage("progress")}

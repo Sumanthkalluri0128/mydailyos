@@ -1,3 +1,57 @@
+:root {
+  --bg: #f5f7fb;
+  --surface: #ffffff;
+  --surface-soft: #fbfbff;
+  --text: #172033;
+  --text-muted: #7b8494;
+  --text-muted-2: #8a93a1;
+  --border: #e7eaf0;
+  --primary: #6847e8;
+  --primary-soft: #f0edff;
+  --danger: #d64545;
+  --success: #20a46b;
+  --shadow: rgba(23, 32, 51, 0.08);
+  color-scheme: light;
+}
+
+[data-theme="dark"] {
+  --bg: #0e0f15;
+  --surface: #1a1b23;
+  --surface-soft: #21222c;
+  --text: #eef0f6;
+  --text-muted: #a0a5b8;
+  --text-muted-2: #8890a6;
+  --border: #2c2d3a;
+  --primary: #8f7dff;
+  --primary-soft: #2a2447;
+  --danger: #ff6b6b;
+  --success: #3ecf8e;
+  --shadow: rgba(0, 0, 0, 0.35);
+  color-scheme: dark;
+}
+
+/* Respect the OS preference the first time a visitor arrives, before
+   they've made an explicit choice with the toggle (App.jsx sets
+   data-theme="light"/"dark" explicitly once they do, which always wins
+   over this). */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0e0f15;
+    --surface: #1a1b23;
+    --surface-soft: #21222c;
+    --text: #eef0f6;
+    --text-muted: #a0a5b8;
+    --text-muted-2: #8890a6;
+    --border: #2c2d3a;
+    --primary: #8f7dff;
+    --primary-soft: #2a2447;
+    --danger: #ff6b6b;
+    --success: #3ecf8e;
+    --shadow: rgba(0, 0, 0, 0.35);
+    color-scheme: dark;
+  }
+}
+
 * {
   box-sizing: border-box;
 }
@@ -5,8 +59,9 @@
 body {
   margin: 0;
   font-family: Inter, Arial, sans-serif;
-  background: #f5f7fb;
-  color: #172033;
+  background: var(--bg);
+  color: var(--text);
+  transition: background-color 0.15s ease, color 0.15s ease;
 }
 
 button {
@@ -21,11 +76,32 @@ button {
 .topbar {
   height: 76px;
   padding: 0 40px;
-  background: white;
-  border-bottom: 1px solid #e7eaf0;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
   display: flex;
   align-items: center;
   justify-content: space-between;
+}
+
+.theme-toggle {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+  background: var(--surface-soft);
+  font-size: 17px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.15s ease, transform 0.1s ease;
+}
+
+.theme-toggle:hover {
+  background: var(--primary-soft);
+}
+
+.theme-toggle:active {
+  transform: scale(0.94);
 }
 
 .topbar h1 {
@@ -35,7 +111,7 @@ button {
 
 .topbar p {
   margin: 4px 0 0;
-  color: #7b8494;
+  color: var(--text-muted);
   font-size: 13px;
 }
 
@@ -62,7 +138,7 @@ button {
 }
 
 .date {
-  color: #7b8494;
+  color: var(--text-muted);
   font-size: 14px;
   margin: 0 0 6px;
 }
@@ -73,7 +149,7 @@ button {
 }
 
 .welcome p:last-child {
-  color: #7b8494;
+  color: var(--text-muted);
   margin-top: 7px;
 }
 
@@ -86,8 +162,8 @@ button {
 
 .card,
 .large-card {
-  background: white;
-  border: 1px solid #e7eaf0;
+  background: var(--surface);
+  border: 1px solid var(--border);
   border-radius: 16px;
   padding: 22px;
 }
@@ -97,7 +173,7 @@ button {
 }
 
 .card p {
-  color: #7b8494;
+  color: var(--text-muted);
   margin: 15px 0 5px;
   font-size: 14px;
 }
@@ -110,12 +186,12 @@ button {
 .card h3 small {
   font-size: 13px;
   font-weight: 400;
-  color: #7b8494;
+  color: var(--text-muted);
 }
 
 .progress {
   height: 7px;
-  background: #edf0f4;
+  background: var(--border);
   border-radius: 10px;
   margin-top: 15px;
   overflow: hidden;
@@ -128,7 +204,7 @@ button {
 }
 
 .card-description {
-  color: #8a93a1;
+  color: var(--text-muted-2);
   font-size: 12px;
   margin-top: 15px;
 }
@@ -154,7 +230,7 @@ button {
 
 .section-header p {
   margin: 5px 0 0;
-  color: #8a93a1;
+  color: var(--text-muted-2);
   font-size: 13px;
 }
 
@@ -173,12 +249,12 @@ button {
 
 .secondary-button {
   background: #edf0f5;
-  color: #172033;
+  color: var(--text);
 }
 
 .meal {
   padding: 15px 0;
-  border-bottom: 1px solid #edf0f4;
+  border-bottom: 1px solid var(--border);
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -195,7 +271,7 @@ button {
 }
 
 .meal span {
-  color: #8a93a1;
+  color: var(--text-muted-2);
   font-size: 13px;
 }
 
@@ -213,7 +289,7 @@ button {
   align-items: center;
   gap: 12px;
   padding: 15px 0;
-  border-bottom: 1px solid #edf0f4;
+  border-bottom: 1px solid var(--border);
 }
 
 .task:last-child {
@@ -240,8 +316,8 @@ button {
 }
 
 .quick-grid button {
-  background: white;
-  border: 1px solid #e7eaf0;
+  background: var(--surface);
+  border: 1px solid var(--border);
   border-radius: 14px;
   padding: 18px 10px;
   font-size: 22px;
@@ -316,14 +392,14 @@ button {
 }
 
 .food-header p {
-  color: #7b8494;
+  color: var(--text-muted);
   margin: 7px 0 0;
 }
 
 .food-form-card,
 .food-list-card {
-  background: white;
-  border: 1px solid #e7eaf0;
+  background: var(--surface);
+  border: 1px solid var(--border);
   border-radius: 16px;
   padding: 24px;
   margin-bottom: 20px;
@@ -341,7 +417,7 @@ button {
 }
 
 .form-header p {
-  color: #7b8494;
+  color: var(--text-muted);
   font-size: 13px;
 }
 
@@ -380,11 +456,11 @@ button {
 .form-field select,
 .form-field textarea {
   width: 100%;
-  border: 1px solid #dfe3e9;
+  border: 1px solid var(--border);
   border-radius: 9px;
   padding: 11px 12px;
   font: inherit;
-  background: white;
+  background: var(--surface);
 }
 
 .form-field input:focus,
@@ -425,15 +501,15 @@ button {
 
 .food-table-header {
   padding: 14px 0;
-  color: #7b8494;
+  color: var(--text-muted);
   font-size: 12px;
   font-weight: 600;
-  border-bottom: 1px solid #e7eaf0;
+  border-bottom: 1px solid var(--border);
 }
 
 .food-row {
   padding: 16px 0;
-  border-bottom: 1px solid #edf0f4;
+  border-bottom: 1px solid var(--border);
   font-size: 13px;
 }
 
@@ -444,13 +520,13 @@ button {
 }
 
 .food-row small {
-  color: #8a93a1;
+  color: var(--text-muted-2);
 }
 
 .empty-state {
   text-align: center;
   padding: 60px 20px;
-  color: #7b8494;
+  color: var(--text-muted);
 }
 
 .empty-state > div {
@@ -458,7 +534,7 @@ button {
 }
 
 .empty-state h3 {
-  color: #172033;
+  color: var(--text);
   margin: 15px 0 5px;
 }
 
@@ -499,7 +575,7 @@ button {
 
 .food-filters input {
   flex: 1;
-  border: 1px solid #dfe3e9;
+  border: 1px solid var(--border);
   border-radius: 9px;
   padding: 11px 13px;
   font: inherit;
@@ -511,8 +587,8 @@ button {
 }
 
 .food-filters button {
-  border: 1px solid #dfe3e9;
-  background: white;
+  border: 1px solid var(--border);
+  background: var(--surface);
   border-radius: 9px;
   padding: 10px 15px;
   cursor: pointer;
@@ -540,7 +616,7 @@ button {
 }
 
 .food-action-button:hover {
-  background: #e5e8ed;
+  background: var(--border);
 }
 
 .delete-button:hover {
@@ -567,7 +643,7 @@ button {
 }
 
 .food-logger-header p {
-  color: #7b8494;
+  color: var(--text-muted);
   margin: 0;
 }
 
@@ -579,8 +655,8 @@ button {
 }
 
 .meal-button {
-  border: 1px solid #e1e5eb;
-  background: white;
+  border: 1px solid var(--border);
+  background: var(--surface);
   border-radius: 12px;
   padding: 16px;
   cursor: pointer;
@@ -607,8 +683,8 @@ button {
 
 .logger-card,
 .today-log-card {
-  background: white;
-  border: 1px solid #e7eaf0;
+  background: var(--surface);
+  border: 1px solid var(--border);
   border-radius: 16px;
   padding: 24px;
   margin-bottom: 20px;
@@ -622,7 +698,7 @@ button {
   width: 100%;
   box-sizing: border-box;
   padding: 13px;
-  border: 1px solid #dfe3e9;
+  border: 1px solid var(--border);
   border-radius: 10px;
   font: inherit;
 }
@@ -641,8 +717,8 @@ button {
 .logger-food-item {
   width: 100%;
   border: 0;
-  border-bottom: 1px solid #edf0f4;
-  background: white;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
   padding: 15px 5px;
   display: flex;
   justify-content: space-between;
@@ -653,7 +729,7 @@ button {
 }
 
 .logger-food-item:hover {
-  background: #f8f9fb;
+  background: var(--surface-soft);
 }
 
 .logger-food-item > div {
@@ -663,13 +739,13 @@ button {
 }
 
 .logger-food-item small {
-  color: #7b8494;
+  color: var(--text-muted);
 }
 
 .logger-empty {
   text-align: center;
   padding: 40px;
-  color: #7b8494;
+  color: var(--text-muted);
 }
 
 .logger-empty div {
@@ -678,7 +754,7 @@ button {
 
 .selected-food {
   margin-top: 20px;
-  border-top: 1px solid #edf0f4;
+  border-top: 1px solid var(--border);
   padding-top: 20px;
 }
 
@@ -694,7 +770,7 @@ button {
 
 .selected-food-header p {
   margin: 5px 0;
-  color: #7b8494;
+  color: var(--text-muted);
 }
 
 .quantity-section {
@@ -716,7 +792,7 @@ button {
 .quantity-input input {
   width: 180px;
   padding: 13px;
-  border: 1px solid #dfe3e9;
+  border: 1px solid var(--border);
   border-radius: 9px;
   font: inherit;
 }
@@ -728,7 +804,7 @@ button {
 .quantity-section small {
   display: block;
   margin-top: 7px;
-  color: #7b8494;
+  color: var(--text-muted);
 }
 
 .nutrition-preview {
@@ -739,7 +815,7 @@ button {
 }
 
 .nutrition-preview > div {
-  background: #f7f8fa;
+  background: var(--surface-soft);
   border-radius: 10px;
   padding: 15px 10px;
   text-align: center;
@@ -752,7 +828,7 @@ button {
 
 .nutrition-preview span {
   display: block;
-  color: #7b8494;
+  color: var(--text-muted);
   font-size: 12px;
   margin-top: 4px;
 }
@@ -771,12 +847,12 @@ button {
 }
 
 .today-log-header p {
-  color: #7b8494;
+  color: var(--text-muted);
   margin: 5px 0;
 }
 
 .meal-log-section {
-  border-top: 1px solid #edf0f4;
+  border-top: 1px solid var(--border);
   padding: 18px 0;
 }
 
@@ -794,7 +870,7 @@ button {
 }
 
 .no-food {
-  color: #8a93a1;
+  color: var(--text-muted-2);
   font-size: 13px;
   margin: 10px 0;
 }
@@ -805,7 +881,7 @@ button {
   align-items: center;
   gap: 15px;
   padding: 12px 0;
-  border-top: 1px solid #f0f1f4;
+  border-top: 1px solid var(--border);
 }
 
 .food-log-row > div {
@@ -815,12 +891,12 @@ button {
 }
 
 .food-log-row small {
-  color: #7b8494;
+  color: var(--text-muted);
 }
 
 .delete-log-button {
   border: 0;
-  background: #f5f6f8;
+  background: var(--surface-soft);
   border-radius: 8px;
   width: 36px;
   height: 36px;
@@ -859,9 +935,9 @@ button {
 
 .energy-card {
   padding: 20px;
-  border: 1px solid #e5e7eb;
+  border: 1px solid var(--border);
   border-radius: 12px;
-  background: #ffffff;
+  background: var(--surface);
 }
 
 .energy-card span {
@@ -902,7 +978,7 @@ button {
 
 .weight-goal-summary > div {
   padding: 14px;
-  border: 1px solid #e5e7eb;
+  border: 1px solid var(--border);
   border-radius: 10px;
 }
 
@@ -940,7 +1016,7 @@ button {
   --md-danger-soft: #fff0f0;
   --md-ink: #172033;
   --md-muted: #748096;
-  --md-border: #e7eaf2;
+  --md-border: var(--border);
   --md-bg: #f6f7fb;
   --md-card: rgba(255, 255, 255, 0.96);
   --md-shadow: 0 12px 35px rgba(39, 45, 78, 0.08);
@@ -1151,7 +1227,7 @@ button:disabled {
 .progress-bar {
   width: 100%;
   height: 9px;
-  background: #eceef5;
+  background: var(--border);
   border-radius: 999px;
   overflow: hidden;
   margin-top: 14px;
@@ -1201,9 +1277,9 @@ button:disabled {
 
 .secondary-button,
 .back-button {
-  background: #f1f2f8;
+  background: var(--border);
   color: var(--md-ink);
-  border: 1px solid #e2e4ed;
+  border: 1px solid var(--border);
 }
 
 .secondary-button:hover,
@@ -1216,7 +1292,7 @@ button:disabled {
 
 .meal,
 .task {
-  border-color: #eef0f5;
+  border-color: var(--border);
   border-radius: 12px;
 }
 
@@ -1226,7 +1302,7 @@ button:disabled {
 
 .meal:hover,
 .task:hover {
-  background: #fafaff;
+  background: var(--surface-soft);
 }
 
 .quick-actions {
@@ -1249,7 +1325,7 @@ button:disabled {
   transform: translateY(-4px);
   border-color: #d5d0ff;
   box-shadow: 0 14px 25px rgba(39, 45, 78, 0.10);
-  background: #faf9ff;
+  background: var(--surface-soft);
 }
 
 /* Shared page headers */
@@ -1297,10 +1373,10 @@ input:not([type="checkbox"]):not([type="radio"]),
 select,
 textarea {
   width: 100%;
-  border: 1px solid #dfe3ec;
+  border: 1px solid var(--border);
   border-radius: 12px;
   padding: 12px 13px;
-  background: #fbfcff;
+  background: var(--surface-soft);
   color: var(--md-ink);
   font-size: 14px;
   outline: none;
@@ -1310,14 +1386,14 @@ textarea {
 input:not([type="checkbox"]):not([type="radio"]):hover,
 select:hover,
 textarea:hover {
-  border-color: #cfd4e3;
+  border-color: var(--border);
 }
 
 input:not([type="checkbox"]):not([type="radio"]):focus,
 select:focus,
 textarea:focus {
   border-color: var(--md-primary);
-  background: white;
+  background: var(--surface);
   box-shadow: 0 0 0 4px rgba(109, 93, 252, 0.10);
 }
 
@@ -1421,7 +1497,7 @@ label {
 
 .habit-item {
   padding: 18px;
-  border: 1px solid #e8eaf2;
+  border: 1px solid var(--border);
   border-radius: 17px;
   background: linear-gradient(180deg, #fff, #fbfbff);
   box-shadow: 0 7px 20px rgba(39, 45, 78, 0.05);
@@ -1455,7 +1531,7 @@ label {
 .habit-stats span {
   padding: 6px 9px;
   border-radius: 999px;
-  background: #f4f3ff;
+  background: var(--surface-soft);
   color: #5549c9;
   font-size: 11px;
   font-weight: 700;
@@ -1481,9 +1557,9 @@ label {
 }
 
 .habit-actions button {
-  border: 1px solid #e2e4ed;
+  border: 1px solid var(--border);
   border-radius: 10px;
-  background: #f7f7fb;
+  background: var(--surface-soft);
   color: var(--md-ink);
   padding: 9px 13px;
   font-weight: 700;
@@ -1534,9 +1610,9 @@ label {
 
 .task-item {
   padding: 15px 16px;
-  border: 1px solid #e9ebf2;
+  border: 1px solid var(--border);
   border-radius: 15px;
-  background: #fff;
+  background: var(--surface);
   transition: 0.2s ease;
 }
 
@@ -1567,7 +1643,7 @@ label {
 
 .task-item.completed {
   opacity: 0.62;
-  background: #f8faf9;
+  background: var(--surface-soft);
 }
 
 .task-item.completed h3 {
@@ -1614,7 +1690,7 @@ label {
 
 .water-buttons button {
   border: 1px solid #d9edfb;
-  background: #f4fbff;
+  background: var(--surface-soft);
   color: #1877b7;
   border-radius: 12px;
   padding: 12px;
@@ -1647,7 +1723,7 @@ label {
   padding: 14px 15px;
   border: 1px solid #e7f1f8;
   border-radius: 13px;
-  background: #fbfdff;
+  background: var(--surface-soft);
 }
 
 /* ============================================================
@@ -1696,9 +1772,9 @@ label {
   justify-content: space-between;
   gap: 15px;
   padding: 14px 15px;
-  border: 1px solid #e8eaf1;
+  border: 1px solid var(--border);
   border-radius: 13px;
-  background: #fff;
+  background: var(--surface);
 }
 
 .weight-log > div {
@@ -1751,9 +1827,9 @@ label {
   justify-content: space-between;
   gap: 15px;
   padding: 15px;
-  border: 1px solid #e8eaf1;
+  border: 1px solid var(--border);
   border-radius: 14px;
-  background: #fff;
+  background: var(--surface);
 }
 
 .activity-info {
@@ -1778,7 +1854,7 @@ label {
 .input-with-unit span {
   padding: 11px 12px;
   border-radius: 10px;
-  background: #f1f2f7;
+  background: var(--border);
   color: var(--md-muted);
   font-size: 13px;
   font-weight: 700;
@@ -1827,8 +1903,8 @@ label {
 
 .energy-card {
   border-radius: 15px;
-  border-color: #e7e8f0;
-  background: #fbfbff;
+  border-color: var(--border);
+  background: var(--surface-soft);
 }
 
 .energy-card strong {
@@ -1836,8 +1912,8 @@ label {
 }
 
 .weight-goal-summary > div {
-  background: #fbfbff;
-  border-color: #e6e8f0;
+  background: var(--surface-soft);
+  border-color: var(--border);
 }
 
 /* ============================================================
@@ -1872,7 +1948,7 @@ label {
 .logger-search input,
 .quantity-input input {
   border-radius: 12px;
-  background: #fbfcff;
+  background: var(--surface-soft);
 }
 
 .form-field input:focus,
@@ -1901,7 +1977,7 @@ label {
 }
 
 .food-row:hover {
-  background: #fafaff;
+  background: var(--surface-soft);
 }
 
 .meal-selector {
@@ -1925,8 +2001,8 @@ label {
 }
 
 .nutrition-preview > div {
-  background: #f7f7fc;
-  border: 1px solid #ebecf3;
+  background: var(--surface-soft);
+  border: 1px solid var(--border);
 }
 
 .nutrition-preview strong {
@@ -1937,7 +2013,7 @@ label {
 .delete-log-button,
 .delete-button {
   border: 0;
-  background: #f5f6f9;
+  background: var(--surface-soft);
   color: #697288;
   border-radius: 10px;
 }
@@ -1953,7 +2029,7 @@ label {
 .empty-state,
 .logger-empty {
   border-radius: 16px;
-  background: #fafaff;
+  background: var(--surface-soft);
 }
 
 /* ============================================================
@@ -2222,14 +2298,14 @@ label {
 .eyebrow { margin:0; color:var(--md-primary); font-size:12px; font-weight:800; text-transform:uppercase; letter-spacing:.09em; }
 .progress-toolbar { display:flex; justify-content:space-between; align-items:center; gap:18px; flex-wrap:wrap; }
 .progress-presets { display:flex; flex-wrap:wrap; gap:8px; }
-.filter-chip { border:1px solid var(--md-border); background:#fff; color:var(--md-ink); border-radius:999px; padding:9px 14px; cursor:pointer; font-weight:700; }
+.filter-chip { border:1px solid var(--md-border); background:var(--surface); color:var(--md-ink); border-radius:999px; padding:9px 14px; cursor:pointer; font-weight:700; }
 .filter-chip.active { background:var(--md-primary); color:#fff; border-color:var(--md-primary); }
 .date-range-controls { display:flex; align-items:flex-end; gap:10px; flex-wrap:wrap; }
 .date-range-controls label { display:flex; flex-direction:column; gap:5px; font-size:11px; font-weight:800; color:var(--md-muted); }
 .date-range-controls input { min-height:40px; border:1px solid var(--md-border); border-radius:10px; padding:0 10px; }
 .progress-summary-grid { margin:0; }
 .progress-charts-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:18px; }
-.trend-chart { background:#fff; border:1px solid var(--md-border); border-radius:20px; padding:18px; box-shadow:0 8px 24px rgba(31,35,55,.06); overflow:hidden; }
+.trend-chart { background:var(--surface); border:1px solid var(--md-border); border-radius:20px; padding:18px; box-shadow:0 8px 24px rgba(31,35,55,.06); overflow:hidden; }
 .trend-chart-header { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:8px; }
 .trend-chart-header div { display:flex; flex-direction:column; gap:3px; }
 .trend-chart-header strong { font-size:16px; }
@@ -2250,15 +2326,15 @@ label {
 .section-heading { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:15px; }
 .section-heading h3 { margin:0 0 4px; }
 .section-heading p { margin:0; color:var(--md-muted); font-size:13px; }
-.muted-pill,.loading-label { color:var(--md-muted); background:#f4f5f8; padding:7px 11px; border-radius:999px; font-size:12px; font-weight:700; }
+.muted-pill,.loading-label { color:var(--md-muted); background:var(--surface-soft); padding:7px 11px; border-radius:999px; font-size:12px; font-weight:700; }
 .daily-table-wrap { overflow:auto; }
 .daily-table { width:100%; border-collapse:collapse; min-width:780px; }
 .daily-table th,.daily-table td { text-align:left; padding:12px 10px; border-bottom:1px solid var(--md-border); white-space:nowrap; }
 .daily-table th { font-size:11px; text-transform:uppercase; letter-spacing:.05em; color:var(--md-muted); }
 .daily-table tbody tr { cursor:pointer; transition:background .15s ease; }
-.daily-table tbody tr:hover,.daily-table tbody tr.selected { background:#f7f6ff; }
+.daily-table tbody tr:hover,.daily-table tbody tr.selected { background:var(--surface-soft); }
 .history-detail-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:15px; }
-.history-detail-block { border:1px solid var(--md-border); border-radius:16px; padding:15px; background:#fafbfe; }
+.history-detail-block { border:1px solid var(--md-border); border-radius:16px; padding:15px; background:var(--surface-soft); }
 .history-detail-block h4 { margin:0 0 10px; }
 .history-row { display:flex; justify-content:space-between; gap:12px; padding:10px 0; border-bottom:1px solid var(--md-border); }
 .history-row:last-child { border-bottom:0; padding-bottom:0; }
@@ -2288,10 +2364,10 @@ label {
 .topbar-progress {
   min-height: 40px;
   padding: 0 14px;
-  border: 1px solid #e4e7ef;
+  border: 1px solid var(--border);
   border-radius: 12px;
-  background: #fff;
-  color: #25304a;
+  background: var(--surface);
+  color: var(--text);
   display: inline-flex;
   align-items: center;
   gap: 7px;
@@ -2303,8 +2379,8 @@ label {
 .topbar-progress:hover,
 .topbar-progress.active {
   border-color: #d7d0ff;
-  background: #f5f3ff;
-  color: #6847e8;
+  background: var(--surface-soft);
+  color: var(--primary);
 }
 
 .progress-page {
@@ -2322,9 +2398,9 @@ label {
 .period-mode {
   min-height: 42px;
   padding: 0 18px;
-  border: 1px solid #e4e7ef;
+  border: 1px solid var(--border);
   border-radius: 12px;
-  background: #fff;
+  background: var(--surface);
   color: #667085;
   font-weight: 800;
   font-size: 13px;
@@ -2332,8 +2408,8 @@ label {
 
 .period-mode.active {
   color: #fff;
-  background: #6847e8;
-  border-color: #6847e8;
+  background: var(--primary);
+  border-color: var(--primary);
 }
 
 .period-navigation {
@@ -2347,10 +2423,10 @@ label {
 .period-nav-button {
   width: 44px;
   height: 44px;
-  border: 1px solid #e4e7ef;
+  border: 1px solid var(--border);
   border-radius: 12px;
-  background: #fff;
-  color: #25304a;
+  background: var(--surface);
+  color: var(--text);
   font-size: 28px;
   line-height: 1;
 }
@@ -2371,13 +2447,13 @@ label {
 
 .period-current strong {
   font-size: 18px;
-  color: #172033;
+  color: var(--text);
 }
 
 .period-today-button {
   border: 0;
   background: #f0efff;
-  color: #6847e8;
+  color: var(--primary);
   border-radius: 10px;
   padding: 8px 11px;
   font-weight: 800;
@@ -2389,17 +2465,17 @@ label {
   align-items: center;
   gap: 10px;
   flex-wrap: wrap;
-  color: #7b8494;
+  color: var(--text-muted);
   font-size: 12px;
 }
 
 .selected-period-info input {
   min-height: 40px;
-  border: 1px solid #e4e7ef;
+  border: 1px solid var(--border);
   border-radius: 10px;
   padding: 0 10px;
-  color: #25304a;
-  background: #fff;
+  color: var(--text);
+  background: var(--surface);
 }
 
 .daily-day-picker {
@@ -2414,18 +2490,18 @@ label {
   flex: 0 0 auto;
   min-width: 78px;
   padding: 10px 12px;
-  border: 1px solid #e6e8ef;
+  border: 1px solid var(--border);
   border-radius: 12px;
-  background: #fff;
+  background: var(--surface);
   display: flex;
   flex-direction: column;
   gap: 4px;
   text-align: left;
 }
 
-.daily-day-chip strong { font-size: 12px; color: #25304a; }
-.daily-day-chip span { font-size: 10px; color: #8a93a1; }
-.daily-day-chip.active { background: #6847e8; border-color: #6847e8; }
+.daily-day-chip strong { font-size: 12px; color: var(--text); }
+.daily-day-chip span { font-size: 10px; color: var(--text-muted-2); }
+.daily-day-chip.active { background: var(--primary); border-color: var(--primary); }
 .daily-day-chip.active strong { color: #fff; }
 .daily-day-chip.active span { color: #e7e2ff; }
 
@@ -2450,7 +2526,7 @@ label {
   margin: 20px 0 24px;
   padding: 20px;
   border-radius: 24px;
-  background: linear-gradient(135deg, #6847e8 0%, #7b5cf1 58%, #5d44ca 100%);
+  background: linear-gradient(135deg, var(--primary) 0%, #7b5cf1 58%, #5d44ca 100%);
   box-shadow: 0 14px 30px rgba(104,71,232,.16);
 }
 .dashboard-motivation .motivation-carousel {
@@ -2505,7 +2581,7 @@ label {
   display: block;
   height: 100%;
   border-radius: inherit;
-  background: #fff;
+  background: var(--surface);
   transition: width .45s ease;
 }
 .motivation-hint {
