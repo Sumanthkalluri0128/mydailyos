@@ -1,4 +1,4 @@
-# MyDailyOS deployment
+# FlexFit deployment
 
 ## Render backend
 
@@ -41,7 +41,7 @@ https://mydailyos.onrender.com/api/version
 Expected version:
 
 ```json
-{"success":true,"version":"2.1.0-auth","service":"MyDailyOS API"}
+{"success":true,"version":"2.1.0-auth","service":"FlexFit API"}
 ```
 
 ## Vercel frontend
@@ -86,7 +86,7 @@ The web client sends the JWT explicitly on every authenticated API request. Afte
 - `client/src/config/api.js` attaches `Authorization: Bearer <JWT>` to every authenticated API request.
 - Dashboard requests use `apiFetch`; they no longer use raw `fetch` without the JWT.
 - A 401 clears the local session and returns the user to the login screen.
-- Browser `alert()` and `confirm()` dialogs have been replaced in the web pages with MyDailyOS toast notifications and custom confirmation dialogs.
+- Browser `alert()` and `confirm()` dialogs have been replaced in the web pages with FlexFit toast notifications and custom confirmation dialogs.
 
 After deploying the client, the browser Network tab should show requests such as:
 

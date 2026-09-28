@@ -1,4 +1,4 @@
-# MyDailyOS Web Client
+# FlexFit Web Client
 
 ## Environment variable
 

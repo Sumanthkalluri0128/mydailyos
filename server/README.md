@@ -1,4 +1,4 @@
-# MyDailyOS Backend
+# FlexFit Backend
 
 Express + MongoDB + JWT authentication API.
 

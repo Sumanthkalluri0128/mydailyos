@@ -188,6 +188,7 @@ const [editingFood, setEditingFood] = useState(null);
 
             <button
               className="close-button"
+              aria-label="Close"
               onClick={() => setShowForm(false)}
             >
               ×
@@ -463,6 +464,7 @@ const [editingFood, setEditingFood] = useState(null);
         }
       }}
       title="Favorite"
+      aria-label={food.isFavorite ? "Remove from favorites" : "Add to favorites"}
     >
       {food.isFavorite ? "⭐" : "☆"}
     </button>
@@ -471,12 +473,14 @@ const [editingFood, setEditingFood] = useState(null);
       className="food-action-button"
       onClick={() => handleEdit(food)}
       title="Edit food"
+      aria-label="Edit food"
     >
       ✏️
     </button>
 
     <button
       className="food-action-button delete-button"
+      aria-label="Delete food"
       onClick={async () => {
         const confirmed = await confirmAction(
           `Are you sure you want to delete "${food.name}"?`
@@ -508,6 +512,7 @@ const [editingFood, setEditingFood] = useState(null);
         }
       }}
       title="Delete food"
+      aria-label="Delete food"
     >
       🗑️
     </button>

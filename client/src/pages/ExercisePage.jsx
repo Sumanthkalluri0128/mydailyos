@@ -519,6 +519,7 @@ function ExercisePage({ onBack }) {
 
                   <button
                     className="delete-button"
+                    aria-label="Delete workout log"
                     onClick={() =>
                       handleDelete(
                         log._id

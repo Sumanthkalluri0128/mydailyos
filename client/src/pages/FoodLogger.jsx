@@ -508,6 +508,7 @@ function FoodLogger({ date, onBack }) {
 
               <button
                 className="close-button"
+                aria-label="Close"
                 onClick={() => {
                   setSelectedFood(null);
                   setQuantity("");
@@ -768,6 +769,7 @@ function FoodLogger({ date, onBack }) {
 
                     <button
                       className="delete-log-button"
+                      aria-label="Delete food log"
                       onClick={() =>
                         handleDeleteLog(
                           log._id

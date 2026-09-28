@@ -80,9 +80,9 @@ export default function AuthPage({ onAuthenticated }) {
     <div className="auth-shell">
       <div className="auth-card">
         <div className="auth-brand">
-          <div className="auth-logo">M</div>
+          <div className="auth-logo">F</div>
           <div>
-            <h1>MyDailyOS</h1>
+            <h1>FlexFit</h1>
             <p>Your daily operating system</p>
           </div>
         </div>
@@ -92,7 +92,7 @@ export default function AuthPage({ onAuthenticated }) {
           <p>
             {mode === 'signup'
               ? 'One account works across web and mobile.'
-              : 'Sign in to continue to MyDailyOS.'}
+              : 'Sign in to continue to FlexFit.'}
           </p>
         </div>
 

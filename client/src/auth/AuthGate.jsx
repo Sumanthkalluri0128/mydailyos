@@ -56,7 +56,7 @@ export default function AuthGate({ children }) {
   }, []);
 
   if (!ready) {
-    return <div className="auth-loading">Loading MyDailyOS…</div>;
+    return <div className="auth-loading">Loading FlexFit…</div>;
   }
 
   if (!user) {

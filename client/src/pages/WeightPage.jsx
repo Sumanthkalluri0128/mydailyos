@@ -561,6 +561,7 @@ function WeightPage({ onBack }) {
 
                 <button
                   className="delete-log-button"
+                  aria-label="Delete weight entry"
                   onClick={() =>
                     deleteWeight(
                       log._id

@@ -534,6 +534,7 @@ const [habitStats, setHabitStats] = useState({});
 
                       <button
                         className="delete-log-button"
+                        aria-label="Delete habit"
                         onClick={() =>
                           deleteHabit(
                             habit._id

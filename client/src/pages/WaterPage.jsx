@@ -365,6 +365,7 @@ function WaterPage({ onBack }) {
 
                 <button
                   className="delete-log-button"
+                  aria-label="Delete water entry"
                   onClick={() =>
                     deleteWater(log._id)
                   }

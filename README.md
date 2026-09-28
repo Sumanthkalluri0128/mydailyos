@@ -1,12 +1,12 @@
-# MyDailyOS — Complete Source
+# FlexFit — Complete Source
 
-This is the cleaned, corrected source for the MyDailyOS web app, backend, and mobile app.
+This is the cleaned, corrected source for the FlexFit web app, backend, and mobile app.
 
 ## Project layout
 
 - `client/` — React + Vite web app
 - `server/` — Express + MongoDB + JWT API
-- `MyDailyOSMobile/` — Expo React Native app
+- `FlexFitMobile/` — Expo React Native app
 
 ## Important environment variable naming
 

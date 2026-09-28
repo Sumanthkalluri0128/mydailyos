@@ -1,4 +1,4 @@
-# MyDailyOS — Final Fixes Applied
+# FlexFit — Final Fixes Applied
 
 This package is based on the uploaded `mydailyos-main.zip`.
 
@@ -21,13 +21,13 @@ This package is based on the uploaded `mydailyos-main.zip`.
 
 ## UI notifications
 
-- Browser `alert()` calls were replaced with MyDailyOS toast notifications.
+- Browser `alert()` calls were replaced with FlexFit toast notifications.
 - Browser `confirm()` dialogs were replaced with custom confirmation modals.
 - Toasts support success, error, warning, and info styles.
 
 ## Header
 
-- MyDailyOS branding remains clickable and returns to the dashboard.
+- FlexFit branding remains clickable and returns to the dashboard.
 - It is styled as branding, not as a browser button.
 
 ## Render

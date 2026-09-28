@@ -52,7 +52,7 @@ router.delete('/me', async (req, res) => {
       });
     }
 
-    // Older versions of MyDailyOS stored a small amount of personal data
+    // Older versions of FlexFit stored a small amount of personal data
     // without userId. If this was the last account in the database, those
     // orphan records can only belong to the old single-user installation,
     // so remove them too. This prevents a deleted account from ever being

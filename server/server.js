@@ -45,7 +45,7 @@ app.get('/api/health', (req, res) => {
   res.status(200).json({
     success: true,
     status: 'healthy',
-    service: 'MyDailyOS API',
+    service: 'FlexFit API',
     timestamp: new Date().toISOString(),
   });
 });
@@ -54,7 +54,7 @@ app.get('/api/version', (req, res) => {
   res.status(200).json({
     success: true,
     version: '2.3.1-fast-swipe-quotes',
-    service: 'MyDailyOS API',
+    service: 'FlexFit API',
   });
 });
 
@@ -73,7 +73,7 @@ app.use('/api/progress', progressRoutes);
 app.use('/api/history', progressRoutes);
 
 app.get('/', (req, res) => {
-  res.json({ message: 'MyDailyOS API is running 🚀' });
+  res.json({ message: 'FlexFit API is running 🚀' });
 });
 
 // Always return JSON for unknown API routes. This prevents the frontend from
@@ -99,7 +99,7 @@ mongoose
   .connect(process.env.MONGO_URI)
   .then(() => {
     app.listen(PORT, '0.0.0.0', () => {
-      console.log(`MyDailyOS server running on port ${PORT}`);
+      console.log(`FlexFit server running on port ${PORT}`);
       console.log(`Allowed CORS origins: ${allowedOrigins.join(', ')}`);
     });
   })

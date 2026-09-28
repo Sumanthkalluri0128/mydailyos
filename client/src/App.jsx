@@ -70,7 +70,7 @@ function BrandHome({ onHome }) {
     >
       <div className="brand-icon">✦</div>
       <div>
-        <div className="brand-title">MyDailyOS</div>
+        <div className="brand-title">FlexFit</div>
         <div className="brand-subtitle">
           Your daily health & productivity tracker
         </div>
