@@ -1,6 +1,6 @@
 services:
   - type: web
-    name: mydailyos
+    name: flexfit-api
     runtime: node
     rootDir: server
     buildCommand: npm install

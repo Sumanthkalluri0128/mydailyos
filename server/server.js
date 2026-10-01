@@ -1,24 +1,11 @@
 require('dotenv').config();
-const express = require('express');
 const mongoose = require('mongoose');
-const cors = require('cors');
-const compression = require('compression');
+const { createApp } = require('./app');
+const { initMonitoring } = require('./lib/monitoring');
 
-const authRoutes = require('./routes/authRoutes');
-const accountRoutes = require('./routes/accountRoutes');
-const profileRoutes = require('./routes/profileRoutes');
-const foodRoutes = require('./routes/foodRoutes');
-const foodLogRoutes = require('./routes/foodLogRoutes');
-const activityRoutes = require('./routes/activityRoutes');
-const taskRoutes = require('./routes/taskRoutes');
-const habitRoutes = require('./routes/habitRoutes');
-const waterRoutes = require('./routes/waterRoutes');
-const weightRoutes = require('./routes/weightRoutes');
-const progressRoutes = require('./routes/progressRoutes');
+initMonitoring();
 
-const app = express();
 const PORT = Number(process.env.PORT) || 5001;
-
 const allowedOrigins = [
   'http://localhost:5173',
   ...(process.env.CLIENT_URL || '')
@@ -27,77 +14,22 @@ const allowedOrigins = [
     .filter(Boolean),
 ];
 
-app.use(
-  cors({
-    origin: (origin, callback) => {
-      if (!origin || allowedOrigins.includes(origin)) {
-        return callback(null, true);
-      }
-      return callback(new Error(`CORS blocked for origin: ${origin}`));
-    },
-  })
-);
+for (const name of ['MONGO_URI', 'JWT_SECRET']) {
+  if (!process.env[name]) {
+    console.error(`Missing required environment variable: ${name}`);
+    process.exit(1);
+  }
+}
 
-app.use(compression());
-app.use(express.json());
-
-app.get('/api/health', (req, res) => {
-  res.status(200).json({
-    success: true,
-    status: 'healthy',
-    service: 'FlexFit API',
-    timestamp: new Date().toISOString(),
-  });
-});
-
-app.get('/api/version', (req, res) => {
-  res.status(200).json({
-    success: true,
-    version: '2.3.1-fast-swipe-quotes',
-    service: 'FlexFit API',
-  });
-});
-
-app.use('/api/auth', authRoutes);
-app.use('/api/account', accountRoutes);
-app.use('/api/profile', profileRoutes);
-app.use('/api/foods', foodRoutes);
-app.use('/api/food-logs', foodLogRoutes);
-app.use('/api/activities', activityRoutes);
-app.use('/api/tasks', taskRoutes);
-app.use('/api/habits', habitRoutes);
-app.use('/api/water', waterRoutes);
-app.use('/api/weight', weightRoutes);
-app.use('/api/progress', progressRoutes);
-// Backward-compatible history namespace for older web/mobile builds.
-app.use('/api/history', progressRoutes);
-
-app.get('/', (req, res) => {
-  res.json({ message: 'FlexFit API is running 🚀' });
-});
-
-// Always return JSON for unknown API routes. This prevents the frontend from
-// receiving an HTML 404 page and then failing with "Unexpected token '<'".
-app.use('/api', (req, res) => {
-  res.status(404).json({
-    success: false,
-    message: 'API route not found',
-    path: req.originalUrl,
-  });
-});
-
-app.use((err, req, res, next) => {
-  console.error('Server error:', err);
-  if (res.headersSent) return next(err);
-  res.status(500).json({
-    success: false,
-    message: err.message || 'Internal server error',
-  });
-});
+const app = createApp({ allowedOrigins });
 
 mongoose
   .connect(process.env.MONGO_URI)
-  .then(() => {
+  .then(async () => {
+    // Make sure the unique indexes that make offline replays idempotent exist (additive; never drops anything).
+    for (const Model of Object.values(mongoose.models)) {
+      await Model.createIndexes().catch((e) => console.warn(`Index warning (${Model.modelName}):`, e.message));
+    }
     app.listen(PORT, '0.0.0.0', () => {
       console.log(`FlexFit server running on port ${PORT}`);
       console.log(`Allowed CORS origins: ${allowedOrigins.join(', ')}`);

@@ -3,97 +3,61 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 const Profile = require('../models/Profile');
+const { wrap, HttpError } = require('../lib/http');
+const v = require('../lib/validate');
+const { rateLimit } = require('../middleware/rateLimit');
 
 const router = express.Router();
 
+// Brute-force protection: slow down password guessing per IP+email and mass sign-ups per IP.
+const loginLimiter = rateLimit({
+  windowMs: 15 * 60_000,
+  max: 10,
+  keyFn: (req) => `${req.ip}|${String(req.body?.email || '').toLowerCase()}`,
+  message: 'Too many login attempts. Please wait a few minutes and try again.',
+});
+const signupLimiter = rateLimit({ windowMs: 60 * 60_000, max: 20, message: 'Too many sign-ups from this network. Please try again later.' });
+
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
 function createToken(user) {
-  return jwt.sign(
-    { sub: user._id.toString(), email: user.email },
-    process.env.JWT_SECRET,
-    { expiresIn: '30d' }
-  );
+  return jwt.sign({ sub: user._id.toString(), email: user.email }, process.env.JWT_SECRET, { expiresIn: '30d' });
 }
 
-router.post('/signup', async (req, res) => {
-  try {
-    const name = String(req.body.name || '').trim();
-    const email = String(req.body.email || '').trim().toLowerCase();
-    const password = String(req.body.password || '');
+// A real bcrypt hash used to burn the same CPU time when the email doesn't exist.
+let dummyHash = null;
+const getDummyHash = async () => dummyHash || (dummyHash = await bcrypt.hash('flexfit-dummy-password', 12));
 
-    if (!name || !email || password.length < 8) {
-      return res.status(400).json({
-        success: false,
-        message:
-          'Name, valid email and password of at least 8 characters are required',
-      });
-    }
+const publicUser = (u) => ({ id: u._id, name: u.name, email: u.email });
 
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      return res.status(400).json({
-        success: false,
-        message: 'Please enter a valid email address',
-      });
-    }
+router.post('/signup', signupLimiter, wrap(async (req, res) => {
+  const name = v.string(req.body?.name, 'name', { max: 100, required: true });
+  const email = v.string(req.body?.email, 'email', { max: 254, required: true }).toLowerCase();
+  const password = typeof req.body?.password === 'string' ? req.body.password : '';
 
-    if (await User.exists({ email })) {
-      return res.status(409).json({
-        success: false,
-        message: 'An account with this email already exists',
-      });
-    }
+  if (!EMAIL_RE.test(email)) throw new HttpError(400, 'Please enter a valid email address');
+  if (password.length < 8) throw new HttpError(400, 'Password must be at least 8 characters');
+  if (password.length > 128) throw new HttpError(400, 'Password must be at most 128 characters');
+  if (await User.exists({ email })) throw new HttpError(409, 'An account with this email already exists');
 
-    const user = await User.create({
-      name,
-      email,
-      passwordHash: await bcrypt.hash(password, 12),
-    });
+  const user = await User.create({ name, email, passwordHash: await bcrypt.hash(password, 12) });
+  // Every new account starts clean and goes through first-run onboarding.
+  await Profile.create({ userId: user._id, name: user.name, onboarded: false });
 
-    // Every new account starts completely clean. Never re-attach legacy or
-    // orphaned personal records to a newly created account.
-    await Profile.create({ userId: user._id, name: user.name });
+  res.status(201).json({ success: true, token: createToken(user), user: publicUser(user) });
+}));
 
-    res.status(201).json({
-      success: true,
-      token: createToken(user),
-      user: {
-        id: user._id,
-        name: user.name,
-        email: user.email,
-      },
-    });
-  } catch (error) {
-    console.error('Signup failed:', error);
-    res.status(500).json({ success: false, message: error.message });
-  }
-});
+router.post('/login', loginLimiter, wrap(async (req, res) => {
+  const email = v.string(req.body?.email, 'email', { max: 254 }).toLowerCase();
+  const password = typeof req.body?.password === 'string' ? req.body.password : '';
 
-router.post('/login', async (req, res) => {
-  try {
-    const email = String(req.body.email || '').trim().toLowerCase();
-    const password = String(req.body.password || '');
+  const user = email ? await User.findOne({ email }) : null;
+  // Always run a bcrypt comparison so response time doesn't reveal whether the email exists.
+  const hash = user ? user.passwordHash : await getDummyHash();
+  const ok = await bcrypt.compare(password, hash);
+  if (!user || !ok) throw new HttpError(401, 'Invalid email or password');
 
-    const user = await User.findOne({ email });
-
-    if (!user || !(await bcrypt.compare(password, user.passwordHash))) {
-      return res.status(401).json({
-        success: false,
-        message: 'Invalid email or password',
-      });
-    }
-
-    res.json({
-      success: true,
-      token: createToken(user),
-      user: {
-        id: user._id,
-        name: user.name,
-        email: user.email,
-      },
-    });
-  } catch (error) {
-    console.error('Login failed:', error);
-    res.status(500).json({ success: false, message: error.message });
-  }
-});
+  res.json({ success: true, token: createToken(user), user: publicUser(user) });
+}));
 
 module.exports = router;

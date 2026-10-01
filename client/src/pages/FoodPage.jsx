@@ -512,7 +512,6 @@ const [editingFood, setEditingFood] = useState(null);
         }
       }}
       title="Delete food"
-      aria-label="Delete food"
     >
       🗑️
     </button>
