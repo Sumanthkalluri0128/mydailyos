@@ -3,6 +3,7 @@ import { notify } from "../utils/notify";
 import { apiFetch } from "../config/api";
 import { useEffect, useMemo, useState } from "react";
 import { API_URL } from "../config";
+import FoodFormModal from "../components/FoodFormModal";
 const MEALS = [
   {
     id: "breakfast",
@@ -44,6 +45,9 @@ function FoodLogger({ date, onBack }) {
     useState(true);
 
   const [saving, setSaving] = useState(false);
+
+  // Add-a-new-food modal (so a missing food can be created without leaving this screen)
+  const [showAddFood, setShowAddFood] = useState(false);
 
   // ============================================================
   // LOAD SAVED FOODS
@@ -183,6 +187,16 @@ function FoodLogger({ date, onBack }) {
     setQuantity("");
 
     setSearch(food.name);
+  };
+
+  // ============================================================
+  // NEW CUSTOM FOOD SAVED -> add to list and select it
+  // ============================================================
+
+  const handleFoodCreated = (food) => {
+    setFoods((prev) => [food, ...prev]);
+    setShowAddFood(false);
+    handleSelectFood(food);
   };
 
   // ============================================================
@@ -417,6 +431,14 @@ function FoodLogger({ date, onBack }) {
             }}
           />
 
+          <button
+            type="button"
+            className="secondary-button add-food-inline"
+            onClick={() => setShowAddFood(true)}
+          >
+            + New food
+          </button>
+
         </div>
 
 
@@ -434,6 +456,16 @@ function FoodLogger({ date, onBack }) {
                 <p>
                   No matching foods found.
                 </p>
+
+                <button
+                  type="button"
+                  className="primary-button"
+                  onClick={() => setShowAddFood(true)}
+                >
+                  {search.trim()
+                    ? `+ Add "${search.trim().slice(0, 40)}" as a new food`
+                    : "+ Add a new food"}
+                </button>
               </div>
             ) : (
               filteredFoods.map(
@@ -788,6 +820,15 @@ function FoodLogger({ date, onBack }) {
         })}
 
       </div>
+
+
+      {showAddFood && (
+        <FoodFormModal
+          initialName={search.trim()}
+          onClose={() => setShowAddFood(false)}
+          onSaved={handleFoodCreated}
+        />
+      )}
 
     </div>
   );
