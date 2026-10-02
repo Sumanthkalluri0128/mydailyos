@@ -11,6 +11,9 @@ const WeightPage = lazy(() => import("./pages/WeightPage"));
 const ProfilePage = lazy(() => import("./pages/ProfilePage"));
 const ProgressPage = lazy(() => import("./pages/ProgressPage"));
 import MotivationCarousel from "./components/MotivationCarousel";
+import GoalBar from "./components/GoalBar";
+import CalorieBalance from "./components/CalorieBalance";
+import { expectedEnergy, waterTargetMl } from "./utils/energy";
 
 import { getLocalDate } from "./utils/date";
 import { apiFetch } from "./config/api";
@@ -538,6 +541,17 @@ function App() {
     );
   }
 
+  // Targets follow body weight when it is known; saved goals are the fallback.
+  const calorieTarget =
+    expectedEnergy(profile)?.calorieTarget ??
+    profile?.goals?.calorieTarget ??
+    1800;
+
+  const waterTarget =
+    waterTargetMl(profile?.currentWeightKg) ??
+    profile?.goals?.waterTargetMl ??
+    3000;
+
   // ============================================================
   // WEIGHT GOAL CALCULATIONS
   // ============================================================
@@ -702,6 +716,8 @@ function App() {
           <MotivationCarousel />
         </section>
 
+        <CalorieBalance refreshKey={dailySummary.calories} />
+
         {/* ==================================================== */}
         {/* STATS */}
         {/* ==================================================== */}
@@ -730,32 +746,12 @@ function App() {
               <small>
                 {" "}
                 /{" "}
-                {profile?.goals?.calorieTarget ??
-                  1800}{" "}
+                {calorieTarget}{" "}
                 kcal
               </small>
             </h3>
 
-            <div className="progress-bar">
-
-              <div
-                className="progress-fill"
-                style={{
-                  width: `${Math.min(
-                    (
-                      dailySummary.calories /
-                      (
-                        profile?.goals
-                          ?.calorieTarget ??
-                        1800
-                      )
-                    ) * 100,
-                    100
-                  )}%`,
-                }}
-              ></div>
-
-            </div>
+            <GoalBar value={dailySummary.calories} target={calorieTarget} unit="kcal" color="#e8823a" overIsBad />
 
           </div>
 
@@ -785,26 +781,7 @@ function App() {
               </small>
             </h3>
 
-            <div className="progress-bar">
-
-              <div
-                className="progress-fill"
-                style={{
-                  width: `${Math.min(
-                    (
-                      dailySummary.protein /
-                      (
-                        profile?.goals
-                          ?.proteinTarget ??
-                        140
-                      )
-                    ) * 100,
-                    100
-                  )}%`,
-                }}
-              ></div>
-
-            </div>
+            <GoalBar value={dailySummary.protein} target={profile?.goals?.proteinTarget ?? 140} unit="g" color="#20a46b" />
 
           </div>
 
@@ -911,9 +888,7 @@ function App() {
                 /{" "}
                 {(
                   (
-                    profile?.goals
-                      ?.waterTargetMl ??
-                    3000
+                    waterTarget
                   ) / 1000
                 ).toFixed(1)}{" "}
                 L
@@ -921,26 +896,7 @@ function App() {
 
             </h3>
 
-            <div className="progress-bar">
-
-              <div
-                className="progress-fill"
-                style={{
-                  width: `${Math.min(
-                    (
-                      waterSummary.totalMl /
-                      (
-                        profile?.goals
-                          ?.waterTargetMl ??
-                        3000
-                      )
-                    ) * 100,
-                    100
-                  )}%`,
-                }}
-              ></div>
-
-            </div>
+            <GoalBar value={waterSummary.totalMl} target={waterTarget} unit="ml" color="#2587d9" />
 
             <div className="card-description">
 

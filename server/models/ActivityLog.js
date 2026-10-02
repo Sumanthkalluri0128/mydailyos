@@ -12,6 +12,8 @@ const schema = new mongoose.Schema(
     weightKg: { type: Number, required: true, min: 0 },
     met: { type: Number, required: true, min: 0 },
     caloriesBurned: { type: Number, required: true, min: 0 },
+    // 'manual' = the person typed in the calories burned (e.g. from a watch); 'estimated' = MET formula.
+    caloriesSource: { type: String, enum: ['estimated', 'manual'], default: 'estimated' },
     notes: { type: String, default: '' },
   },
   { timestamps: true }

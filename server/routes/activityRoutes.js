@@ -20,7 +20,15 @@ router.get('/', wrap(async (req, res) => {
   res.json({ success: true, activities: await Activity.find(filter).sort({ name: 1 }).lean() });
 }));
 
+// ?date=YYYY-MM-DD for one day, or ?from=&to= for a range (used by the workout history list).
 router.get('/logs', wrap(async (req, res) => {
+  if (req.query.from || req.query.to) {
+    const from = v.date(req.query.from, 'from');
+    const to = v.date(req.query.to, 'to');
+    if (from > to) throw new HttpError(400, 'from must be on or before to');
+    const logs = await ActivityLog.find({ userId: req.user.id, date: { $gte: from, $lte: to } }).sort({ date: -1, createdAt: -1 }).limit(1000).lean();
+    return res.json({ success: true, logs });
+  }
   const date = v.date(req.query.date);
   res.json({ success: true, logs: await ActivityLog.find({ userId: req.user.id, date }).sort({ createdAt: -1 }).lean() });
 }));
@@ -47,10 +55,15 @@ router.post('/logs', wrap(async (req, res) => {
   let weight = v.number(req.body?.weightKg, 'weightKg', { min: 1, max: 700, required: false, def: 0 });
   if (!weight) weight = Number((await Profile.findOne({ userId: req.user.id }).lean())?.currentWeightKg || 70);
 
+  // Optional manual calories (e.g. from a smartwatch). Blank/absent -> estimate from MET x weight x time.
+  const manual = v.number(req.body?.caloriesBurned, 'caloriesBurned', { min: 0, max: 20000, required: false, def: undefined });
+  const hasManual = manual !== undefined;
+
   const { doc, duplicate } = await createOnce(ActivityLog, req.user.id, clientId, {
     activityId: activity._id, date, activityName: activity.name, category: activity.category,
     durationMinutes: duration, weightKg: weight, met: activity.met,
-    caloriesBurned: (activity.met * 3.5 * weight / 200) * duration,
+    caloriesBurned: hasManual ? manual : (activity.met * 3.5 * weight / 200) * duration,
+    caloriesSource: hasManual ? 'manual' : 'estimated',
     notes: v.string(req.body?.notes, 'notes', { max: 300 }),
   });
   res.status(duplicate ? 200 : 201).json({ success: true, log: doc, duplicate });

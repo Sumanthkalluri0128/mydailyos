@@ -4,6 +4,8 @@ import { apiFetch } from "../config/api";
 import { useEffect, useState } from "react";
 import { getLocalDate } from "../utils/date";
 import { API_URL } from "../config";
+import { waterTargetMl } from "../utils/energy";
+import GoalBar from "../components/GoalBar";
 
 const DEFAULT_WATER_GOAL = 3000;
 
@@ -19,6 +21,7 @@ function WaterPage({ onBack }) {
   const [waterGoal, setWaterGoal] = useState(
     DEFAULT_WATER_GOAL
   );
+  const [weightKg, setWeightKg] = useState(null);
 
   // ============================================================
   // LOAD TODAY'S WATER
@@ -56,15 +59,15 @@ function WaterPage({ onBack }) {
 
       const data = await response.json();
 
-      if (
-        data.success &&
-        data.profile?.goals?.waterTargetMl
-      ) {
-        setWaterGoal(
-          Number(
-            data.profile.goals.waterTargetMl
-          )
-        );
+      if (data.success) {
+        // Target follows body weight (~35 ml per kg); the saved goal is the fallback.
+        const fromWeight = waterTargetMl(data.profile?.currentWeightKg);
+        if (fromWeight) {
+          setWeightKg(Number(data.profile.currentWeightKg));
+          setWaterGoal(fromWeight);
+        } else if (data.profile?.goals?.waterTargetMl) {
+          setWaterGoal(Number(data.profile.goals.waterTargetMl));
+        }
       }
     } catch (error) {
       console.error(
@@ -164,14 +167,6 @@ function WaterPage({ onBack }) {
     }
   };
 
-  const progress =
-    waterGoal > 0
-      ? Math.min(
-          (totalMl / waterGoal) * 100,
-          100
-        )
-      : 0;
-
   return (
     <div className="water-page">
 
@@ -221,19 +216,17 @@ function WaterPage({ onBack }) {
 
         </div>
 
-        <div className="progress-bar">
-
-          <div
-            className="progress-fill"
-            style={{
-              width: `${progress}%`,
-            }}
-          ></div>
-
-        </div>
+        <GoalBar value={totalMl} target={waterGoal} unit="ml" color="#2587d9" />
 
         <p>
           {totalMl.toLocaleString()} ml consumed
+        </p>
+
+        <p className="water-target-note">
+          <strong>Daily target: {waterGoal.toLocaleString()} ml</strong>
+          {weightKg
+            ? ` — based on your weight (35 ml × ${weightKg} kg). It updates when you log a new weight.`
+            : " — add your weight in your profile and this target will be worked out for you (35 ml per kg)."}
         </p>
 
       </div>

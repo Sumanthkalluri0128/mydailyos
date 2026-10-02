@@ -300,6 +300,18 @@ test('exercise: catalogue, log with calories, templates (create, log in one tap,
   assert.equal(replay.duplicate, true);
   assert.equal((await call('POST', '/api/activities/logs', { token: ctx.alice, body: { activityId: run._id, date: today(), durationMinutes: 0 } })).status, 400);
 
+  // Manual calories burned (e.g. from a watch) override the estimate; a range query returns history. Uses yesterday so today's counts below are unchanged.
+  const manual = await call('POST', '/api/activities/logs', { token: ctx.alice, body: { activityId: run._id, date: plus(-1), durationMinutes: 30, weightKg: 70, caloriesBurned: 410, clientId: 'a-manual' } });
+  assert.equal(manual.status, 201);
+  assert.equal(manual.log.caloriesBurned, 410);
+  assert.equal(manual.log.caloriesSource, 'manual');
+  assert.equal(log.log.caloriesSource, 'estimated');
+  assert.equal((await call('POST', '/api/activities/logs', { token: ctx.alice, body: { activityId: run._id, date: today(), durationMinutes: 10, caloriesBurned: -5 } })).status, 400);
+  const range = await call('GET', `/api/activities/logs?from=${plus(-2)}&to=${today()}`, { token: ctx.alice });
+  assert.equal(range.logs.length, 2, 'yesterday manual + today estimated');
+  assert.equal((await call('GET', `/api/activities/logs?from=${today()}&to=${plus(-2)}`, { token: ctx.alice })).status, 400);
+  assert.equal((await call('GET', `/api/activities/logs?from=${plus(-2)}&to=${today()}`, { token: ctx.bob })).logs.length, 0);
+
   assert.equal((await call('POST', '/api/templates', { token: ctx.alice, body: { name: 'Empty', items: [] } })).status, 400);
   const tpl = await call('POST', '/api/templates', { token: ctx.alice, body: { name: 'Push day', items: [{ activityId: push._id, durationMinutes: 20 }, { activityId: run._id, durationMinutes: 10 }] } });
   assert.equal(tpl.status, 201);

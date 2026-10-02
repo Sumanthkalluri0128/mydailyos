@@ -2702,3 +2702,207 @@ label {
   .food-modal { padding: 18px; }
   .food-modal .form-grid { grid-template-columns: 1fr; }
 }
+
+
+/* ======================================================================
+   Progress bars, calorie balance, servings, exercise history, keyboard
+   ====================================================================== */
+
+/* Thicker, clearer bars everywhere (dashboard weight goal, water page, ...) */
+.progress,
+.progress-bar {
+  height: 14px;
+  background: var(--border);
+}
+
+.goalbar {
+  margin-top: 14px;
+}
+
+.goalbar-track {
+  height: 14px;
+  background: var(--border);
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.goalbar-fill {
+  height: 100%;
+  border-radius: 999px;
+  min-width: 0;
+  transition: width 0.35s ease;
+}
+
+.goalbar-fill.over {
+  background: #d93025;
+}
+
+.goalbar-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-top: 6px;
+  font-size: 12px;
+  color: var(--text-muted, #6b7280);
+}
+
+.goalbar-meta strong {
+  color: inherit;
+  font-weight: 800;
+}
+
+.goalbar-meta strong.over {
+  color: #d93025;
+}
+
+.balance-card {
+  margin-bottom: 18px;
+}
+
+.balance-card h3 {
+  margin: 0;
+}
+
+.balance-sub {
+  margin: 4px 0 14px;
+  font-size: 13px;
+  color: var(--text-muted, #6b7280);
+}
+
+.balance-line {
+  display: flex;
+  justify-content: space-between;
+  font-size: 14px;
+}
+
+.balance-rows > div {
+  display: flex;
+  justify-content: space-between;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border);
+  font-size: 13px;
+}
+
+.balance-rows span {
+  color: var(--text-muted, #6b7280);
+}
+
+.balance-result {
+  margin-top: 14px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  display: grid;
+  gap: 3px;
+}
+
+.balance-result span {
+  font-size: 12px;
+}
+
+.balance-result.deficit {
+  background: #e6f6ee;
+  color: #157a4e;
+}
+
+.balance-result.surplus {
+  background: #fdecec;
+  color: #b3261e;
+}
+
+.serving-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.serving-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 4px 0 10px;
+}
+
+.serving-chips .chip {
+  border: 1px solid var(--border);
+  background: transparent;
+  color: inherit;
+  border-radius: 10px;
+  padding: 6px 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.serving-chips .chip.active {
+  background: var(--md-primary, #6847e8);
+  border-color: transparent;
+  color: #fff;
+}
+
+.history-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.history-day {
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 12px 14px;
+}
+
+.history-day-head,
+.history-item {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.history-day-head {
+  margin-bottom: 6px;
+}
+
+.history-item {
+  font-size: 13px;
+  padding: 2px 0;
+  color: var(--text-muted, #6b7280);
+}
+
+.water-target-note {
+  margin-top: 10px;
+  font-size: 13px;
+}
+
+/* On phones the on-screen keyboard must never cover the field being typed in */
+html {
+  scroll-padding-bottom: 40vh;
+}
+
+input,
+textarea,
+select {
+  scroll-margin-bottom: 40vh;
+}
+
+@media (max-width: 640px) {
+  body {
+    padding-bottom: env(safe-area-inset-bottom, 0);
+  }
+
+  .serving-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Popup forms: size to the visible viewport so the keyboard doesn't hide the fields */
+.food-modal-overlay {
+  overflow-y: auto;
+  align-items: flex-start;
+}
+
+.food-modal {
+  max-height: 92vh;
+  max-height: 92dvh;
+  margin: auto;
+}

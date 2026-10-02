@@ -4,6 +4,7 @@ import { apiFetch } from "../config/api";
 import { useEffect, useMemo, useState } from "react";
 import { API_URL } from "../config";
 import FoodFormModal from "../components/FoodFormModal";
+import CalorieBalance from "../components/CalorieBalance";
 const MEALS = [
   {
     id: "breakfast",
@@ -37,7 +38,12 @@ function FoodLogger({ date, onBack }) {
   const [selectedFood, setSelectedFood] =
     useState(null);
 
-  const [quantity, setQuantity] = useState("");
+  // Servings x serving size = total amount eaten (in the food's own unit).
+  const [servings, setServings] = useState("1");
+  const [serveSize, setServeSize] = useState("");
+  const total = (Number(servings) || 0) * (Number(serveSize) || 0);
+  const quantity = total > 0 ? String(Math.round(total * 100) / 100) : "";
+  const resetServing = () => { setServings("1"); setServeSize(""); };
 
   const [search, setSearch] = useState("");
 
@@ -184,7 +190,8 @@ function FoodLogger({ date, onBack }) {
   const handleSelectFood = (food) => {
     setSelectedFood(food);
 
-    setQuantity("");
+    setServings("1");
+    setServeSize(String(food.servingSize));
 
     setSearch(food.name);
   };
@@ -254,7 +261,7 @@ function FoodLogger({ date, onBack }) {
 
       // Reset selection
       setSelectedFood(null);
-      setQuantity("");
+      resetServing();
       setSearch("");
     } catch (error) {
       console.error(
@@ -365,6 +372,8 @@ function FoodLogger({ date, onBack }) {
         </div>
 
       </div>
+
+      <CalorieBalance refreshKey={foodLogs.length} />
 
 
       {/* ====================================================== */}
@@ -543,7 +552,7 @@ function FoodLogger({ date, onBack }) {
                 aria-label="Close"
                 onClick={() => {
                   setSelectedFood(null);
-                  setQuantity("");
+                  resetServing();
                   setSearch("");
                 }}
               >
@@ -553,47 +562,54 @@ function FoodLogger({ date, onBack }) {
             </div>
 
 
-            {/* Quantity */}
+            {/* Servings + serving size */}
 
             <div className="quantity-section">
 
-              <label>
-                How much did you eat?
-              </label>
+              <div className="serving-grid">
+                <div className="form-group">
+                  <label>Servings</label>
+                  <input
+                    type="number"
+                    min="0"
+                    step="any"
+                    inputMode="decimal"
+                    placeholder="1"
+                    value={servings}
+                    onChange={(event) => setServings(event.target.value)}
+                  />
+                </div>
 
-              <div className="quantity-input">
+                <div className="form-group">
+                  <label>Serving size ({selectedFood.servingUnit})</label>
+                  <input
+                    type="number"
+                    min="0"
+                    step="any"
+                    inputMode="decimal"
+                    placeholder={selectedFood.servingSize}
+                    value={serveSize}
+                    onChange={(event) => setServeSize(event.target.value)}
+                  />
+                </div>
+              </div>
 
-                <input
-                  type="number"
-                  min="0"
-                  step="any"
-                  placeholder={
-                    selectedFood.servingSize
-                  }
-                  value={quantity}
-                  onChange={(event) =>
-                    setQuantity(
-                      event.target.value
-                    )
-                  }
-                />
-
-                <span>
-                  {
-                    selectedFood.servingUnit
-                  }
-                </span>
-
+              <div className="serving-chips">
+                {[0.5, 1, 1.5, 2].map((n) => (
+                  <button
+                    type="button"
+                    key={n}
+                    className={Number(servings) === n ? "chip active" : "chip"}
+                    onClick={() => setServings(String(n))}
+                  >
+                    {n}×
+                  </button>
+                ))}
               </div>
 
               <small>
-                Base serving:{" "}
-                {
-                  selectedFood.servingSize
-                }{" "}
-                {
-                  selectedFood.servingUnit
-                }
+                Standard serving: {selectedFood.servingSize} {selectedFood.servingUnit}
+                {quantity ? ` · you are logging ${quantity} ${selectedFood.servingUnit} in total` : ""}
               </small>
 
             </div>
