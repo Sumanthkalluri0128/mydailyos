@@ -2914,3 +2914,10 @@ select {
 .health-bar { flex: 1; min-width: 3px; background: var(--md-primary, #6847e8); border-radius: 4px 4px 0 0; }
 .health-target { position: absolute; left: 0; right: 0; border-top: 2px dashed #20a46b; pointer-events: none; }
 .auth-success { color: #157a4e; background: #e6f6ee; padding: 10px 12px; border-radius: 10px; font-size: 13px; }
+
+/* Profile -> Your data / session / danger zone */
+.data-controls { margin-top: 32px; padding-top: 24px; border-top: 1px solid var(--border); max-width: 620px; }
+.data-actions { display: flex; flex-wrap: wrap; gap: 10px; margin: 8px 0 18px; }
+.session-box { margin-top: 24px; padding: 18px; border: 1px solid var(--border); border-radius: 18px; }
+.session-box h3 { margin: 0 0 4px; }
+.password-form { display: grid; gap: 10px; margin-top: 18px; }

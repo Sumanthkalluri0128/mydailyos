@@ -79,3 +79,6 @@ Forgot password, Health & Steps page, steps on the dashboard, step calories in C
 
 ## Fix: Health page crash ("Cannot read properties of undefined (reading 'find')")
 The server already had `/api/health` as its uptime check (Render uses it). The new measurements API reused that address, so the old check answered first and the Health page got a reply with no data. Measurements now live at `/api/health-logs`; `/api/health` is untouched. The web and mobile Health screens also tolerate an unexpected reply instead of crashing. **Deploy the server first, then the web app.**
+
+## Fix: Log out / Delete account / Export on the web
+These existed as files (`DataControls.jsx`, `AccountPage.jsx`) but nothing in the web app displayed them. They now appear at the bottom of **Profile**: Export CSV/JSON, Change password, Log out, and Delete account (with confirmation). The mobile app already had them at the bottom of the Profile tab.

@@ -2,6 +2,7 @@ import { notify } from "../utils/notify";
 import { apiFetch } from "../config/api";
 import { useEffect, useState } from "react";
 import { API_URL } from "../config";
+import DataControls from "../components/DataControls";
 import {
   calculateBMR,
   calculateTDEE,
@@ -678,6 +679,9 @@ function ProfilePage({ onBack }) {
         </button>
 
       </form>
+
+      {/* Export your data, change password, log out, delete account */}
+      <DataControls />
 
     </div>
   );

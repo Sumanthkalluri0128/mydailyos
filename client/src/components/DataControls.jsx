@@ -2,6 +2,7 @@ import { useState } from "react";
 import { apiFetch, clearSession } from "../config/api";
 import { confirmAction } from "../utils/confirm";
 import { notify } from "../utils/notify";
+import "../auth/account.css";
 
 async function download(format) {
   const res = await apiFetch(`/api/account/export?format=${format}`);
@@ -39,6 +40,13 @@ export default function DataControls() {
     });
   };
 
+  const logout = async () => {
+    const ok = await confirmAction("You will need to sign in again to use FlexFit on this device.", { title: "Log out?", confirmText: "Log out" });
+    if (!ok) return;
+    clearSession();
+    window.location.reload();
+  };
+
   const deleteAccount = () =>
     run(async () => {
       const ok = await confirmAction("Permanently delete your FlexFit account and all your data? This cannot be undone.", { title: "Delete account?", confirmText: "Delete account" });
@@ -64,6 +72,12 @@ export default function DataControls() {
         <input type="password" placeholder="New password (min 8 characters)" autoComplete="new-password" value={next} onChange={(e) => setNext(e.target.value)} />
         <button className="primary-button" disabled={busy || !current || next.length < 8}>Update password</button>
       </form>
+
+      <div className="session-box">
+        <h3>Session</h3>
+        <p className="card-description">Sign out of FlexFit on this device. Your data stays safe in your account.</p>
+        <button type="button" className="secondary-button" disabled={busy} onClick={logout}>Log out</button>
+      </div>
 
       <div className="danger-box">
         <h3>Danger zone</h3>
