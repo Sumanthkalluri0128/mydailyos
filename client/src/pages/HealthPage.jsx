@@ -46,7 +46,10 @@ export default function HealthPage({ onBack }) {
     const from = new Date(); from.setDate(from.getDate() - 59);
     const pad = (n) => String(n).padStart(2, "0");
     const f = `${from.getFullYear()}-${pad(from.getMonth() + 1)}-${pad(from.getDate())}`;
-    try { setLogs((await call(`/api/health?type=${tab}&from=${f}&to=${today}&limit=200`)).logs); } catch (e) { setNotice(e.message); }
+    try {
+      const d = await call(`/api/health-logs?type=${tab}&from=${f}&to=${today}&limit=200`);
+      setLogs(Array.isArray(d.logs) ? d.logs : []);
+    } catch (e) { setNotice(e.message); }
   }, [tab, today]);
   useEffect(() => { load(); }, [load]);
   useEffect(() => { call("/api/profile").then((d) => setProfile(d.profile)).catch(() => {}); }, []);
@@ -58,11 +61,11 @@ export default function HealthPage({ onBack }) {
     event.preventDefault();
     setNotice("");
     try {
-      await call("/api/health", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ type: tab, date: today, value: Number(value), ...(tab === "bloodPressure" ? { value2: Number(value2) } : {}), source: "manual" }) });
+      await call("/api/health-logs", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ type: tab, date: today, value: Number(value), ...(tab === "bloodPressure" ? { value2: Number(value2) } : {}), source: "manual" }) });
       setValue(""); setValue2(""); setNotice("Saved ✓"); load();
     } catch (e) { setNotice(e.message); }
   }
-  async function remove(id) { try { await call(`/api/health/${id}`, { method: "DELETE" }); load(); } catch (e) { setNotice(e.message); } }
+  async function remove(id) { try { await call(`/api/health-logs/${id}`, { method: "DELETE" }); load(); } catch (e) { setNotice(e.message); } }
 
   const unitLabel = useMemo(() => meta.unit, [meta]);
 

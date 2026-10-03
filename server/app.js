@@ -62,7 +62,8 @@ function createApp({ allowedOrigins = [] } = {}) {
   app.use('/api/habits', habitRoutes);
   app.use('/api/water', waterRoutes);
   app.use('/api/weight', weightRoutes);
-  app.use('/api/health', healthRoutes);
+  // NOTE: '/api/health' is the uptime check above (used by Render) — measurements live under /api/health-logs.
+  app.use('/api/health-logs', healthRoutes);
   app.use('/api/fasting', fastingRoutes);
   app.use('/api/saved-meals', savedMealRoutes);
   app.use('/api/progress', progressRoutes);

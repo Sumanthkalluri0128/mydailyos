@@ -416,15 +416,15 @@ test('security: malformed input is rejected cleanly, headers present, login is r
 test('steps count toward calories burned automatically; health logs validate; one steps value per day', { skip }, async () => {
   await call('PATCH', '/api/profile', { token: ctx.alice, body: { currentWeightKg: 80 } });
   const d = plus(-3);
-  assert.equal((await call('POST', '/api/health', { token: ctx.alice, body: { type: 'steps', date: d, value: -1 } })).status, 400);
-  assert.equal((await call('POST', '/api/health', { token: ctx.alice, body: { type: 'nope', date: d, value: 5 } })).status, 400);
-  assert.equal((await call('POST', '/api/health', { token: ctx.alice, body: { type: 'steps', date: d, value: 4000 } })).status, 201);
-  await call('POST', '/api/health', { token: ctx.alice, body: { type: 'steps', date: d, value: 10000, source: 'device' } });
-  const list = await call('GET', '/api/health?type=steps', { token: ctx.alice });
+  assert.equal((await call('POST', '/api/health-logs', { token: ctx.alice, body: { type: 'steps', date: d, value: -1 } })).status, 400);
+  assert.equal((await call('POST', '/api/health-logs', { token: ctx.alice, body: { type: 'nope', date: d, value: 5 } })).status, 400);
+  assert.equal((await call('POST', '/api/health-logs', { token: ctx.alice, body: { type: 'steps', date: d, value: 4000 } })).status, 201);
+  await call('POST', '/api/health-logs', { token: ctx.alice, body: { type: 'steps', date: d, value: 10000, source: 'device' } });
+  const list = await call('GET', '/api/health-logs?type=steps', { token: ctx.alice });
   assert.equal(list.logs.filter((l) => l.date === d).length, 1, 're-saving the same day replaces it');
   assert.equal(list.logs.find((l) => l.date === d).value, 10000);
 
-  const day = await call('GET', `/api/health/steps/day?date=${d}`, { token: ctx.alice });
+  const day = await call('GET', `/api/health-logs/steps/day?date=${d}`, { token: ctx.alice });
   assert.equal(day.steps, 10000);
   assert.equal(day.caloriesBurned, 400, '10,000 steps x 80 kg x 0.0005');
   const summary = await call('GET', `/api/activities/summary?date=${d}`, { token: ctx.alice });
@@ -434,12 +434,12 @@ test('steps count toward calories burned automatically; health logs validate; on
   assert.equal(hist.days[0].steps, 10000);
   assert.ok(hist.days[0].caloriesBurned >= 400);
 
-  const bp = (b) => call('POST', '/api/health', { token: ctx.alice, body: { type: 'bloodPressure', date: d, ...b } });
+  const bp = (b) => call('POST', '/api/health-logs', { token: ctx.alice, body: { type: 'bloodPressure', date: d, ...b } });
   assert.equal((await bp({ value: 120 })).status, 400, 'diastolic required');
   assert.equal((await bp({ value: 80, value2: 120 })).status, 400, 'systolic must exceed diastolic');
   assert.equal((await bp({ value: 120, value2: 80 })).status, 201);
-  assert.equal((await call('GET', '/api/health?type=steps', { token: ctx.bob })).logs.length, 0, 'private to the owner');
-  const latest = await call('GET', '/api/health/latest', { token: ctx.alice });
+  assert.equal((await call('GET', '/api/health-logs?type=steps', { token: ctx.bob })).logs.length, 0, 'private to the owner');
+  const latest = await call('GET', '/api/health-logs/latest', { token: ctx.alice });
   assert.ok(latest.latest.steps && latest.latest.bloodPressure);
 });
 

@@ -76,3 +76,6 @@ Forgot password, Health & Steps page, steps on the dashboard, step calories in C
 - Server: all files parse; unit tests pass (steps->kcal, streaks, records, barcode conversion, catalogue sanity check that every food's calories agree with its macros). New integration tests (steps summary, health validation, saved meals, fasting, streaks, strength sets, password reset) are written but **need MongoDB to run**: `TEST_MONGO_URI=... npm test`.
 - Web: production build succeeds, 0 lint errors.
 - Not tested on a real phone: camera scanning, the pedometer, photo picking and the keyboard changes need a device build.
+
+## Fix: Health page crash ("Cannot read properties of undefined (reading 'find')")
+The server already had `/api/health` as its uptime check (Render uses it). The new measurements API reused that address, so the old check answered first and the Health page got a reply with no data. Measurements now live at `/api/health-logs`; `/api/health` is untouched. The web and mobile Health screens also tolerate an unexpected reply instead of crashing. **Deploy the server first, then the web app.**
