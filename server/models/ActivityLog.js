@@ -12,6 +12,8 @@ const schema = new mongoose.Schema(
     weightKg: { type: Number, required: true, min: 0 },
     met: { type: Number, required: true, min: 0 },
     caloriesBurned: { type: Number, required: true, min: 0 },
+    // Strength training: optional sets (reps x weight). Used for personal records.
+    sets: { type: [{ _id: false, reps: { type: Number, min: 1, max: 1000 }, weightKg: { type: Number, min: 0, max: 1000, default: 0 } }], default: [] },
     // 'manual' = the person typed in the calories burned (e.g. from a watch); 'estimated' = MET formula.
     caloriesSource: { type: String, enum: ['estimated', 'manual'], default: 'estimated' },
     notes: { type: String, default: '' },

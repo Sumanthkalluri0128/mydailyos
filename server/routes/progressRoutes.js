@@ -2,6 +2,8 @@ const express = require('express');
 const Profile = require('../models/Profile');
 const Habit = require('../models/Habit');
 const WeightLog = require('../models/WeightLog');
+const FoodLog = require('../models/FoodLog');
+const { computeStreaks } = require('../lib/streaks');
 const { requireAuth } = require('../middleware/auth');
 const { wrap, HttpError } = require('../lib/http');
 const { buildHistory, getDayDetails, lifetimeTotals } = require('../lib/progress');
@@ -57,6 +59,12 @@ const dayHandler = (dateOf) => wrap(async (req, res) => {
 router.get('/day', dayHandler((req) => req.query.date));
 router.get('/history/day', dayHandler((req) => req.query.date));
 router.get('/day/:date', dayHandler((req) => req.params.date));
+
+router.get('/streaks', wrap(async (req, res) => {
+  const today = v.date(req.query.today);
+  const dates = await FoodLog.distinct('date', { userId: req.user.id });
+  res.json({ success: true, streaks: computeStreaks(dates, today) });
+}));
 
 router.get('/achievements', wrap(async (req, res) => {
   const today = req.query.today ? v.date(req.query.today, 'today') : todayUtc();

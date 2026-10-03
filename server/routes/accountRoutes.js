@@ -14,6 +14,7 @@ router.use(requireAuth);
 
 const PERSONAL_MODELS = [
   'Profile', 'WeightLog', 'WaterLog', 'Task', 'Habit', 'HabitLog', 'FoodLog', 'ActivityLog', 'WorkoutTemplate',
+  'HealthLog', 'Fast', 'SavedMeal',
 ];
 
 const passwordLimiter = rateLimit({
@@ -52,14 +53,15 @@ router.post('/change-password', passwordLimiter, wrap(async (req, res) => {
 // ---------------------------------------------------------------- export
 async function collectExport(userId) {
   const load = (name, sort = { date: 1, createdAt: 1 }) => require(`../models/${name}`).find({ userId }).sort(sort).lean();
-  const [user, profile, foodLogs, activityLogs, waterLogs, weightLogs, tasks, habits, habitLogs, templates, customFoods] = await Promise.all([
+  const [user, profile, foodLogs, activityLogs, waterLogs, weightLogs, tasks, habits, habitLogs, templates, customFoods, healthLogs, fasts] = await Promise.all([
     User.findById(userId).select('name email createdAt').lean(),
     load('Profile', {}),
     load('FoodLog'), load('ActivityLog'), load('WaterLog'), load('WeightLog'),
     load('Task'), load('Habit', { createdAt: 1 }), load('HabitLog'), load('WorkoutTemplate', { name: 1 }),
     Food.find({ userId }).sort({ name: 1 }).lean(),
+    load('HealthLog'), load('Fast', { startedAt: 1 }),
   ]);
-  return { user, profile: profile[0] || null, foodLogs, activityLogs, waterLogs, weightLogs, tasks, habits, habitLogs, templates, customFoods };
+  return { user, profile: profile[0] || null, foodLogs, activityLogs, waterLogs, weightLogs, tasks, habits, habitLogs, templates, customFoods, healthLogs, fasts };
 }
 
 const CSV_HEADERS = ['type', 'date', 'name', 'quantity', 'unit', 'calories', 'protein_g', 'carbs_g', 'fat_g', 'details', 'notes'];
@@ -78,6 +80,7 @@ function toCsvRows(d) {
   for (const l of d.activityLogs) {
     rows.push(r({ type: 'exercise', date: l.date, name: l.activityName, quantity: l.durationMinutes, unit: 'min', calories: -Math.round(l.caloriesBurned || 0), details: l.category, notes: l.notes }));
   }
+  for (const l of d.healthLogs || []) rows.push(r({ type: l.type, date: l.date, name: l.type, quantity: l.value, unit: '', details: l.value2 != null ? `value2 ${l.value2}` : '', notes: l.notes }));
   for (const l of d.waterLogs) rows.push(r({ type: 'water', date: l.date, name: 'Water', quantity: l.amountMl, unit: 'ml', notes: l.notes }));
   for (const l of d.weightLogs) rows.push(r({ type: 'weight', date: l.date, name: 'Weight', quantity: l.weightKg, unit: 'kg', notes: l.notes }));
   for (const t of d.tasks) {

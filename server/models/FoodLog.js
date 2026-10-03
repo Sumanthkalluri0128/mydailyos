@@ -7,6 +7,7 @@ const nutrition = {
   fat: { type: Number, default: 0, min: 0 },
   fiber: { type: Number, default: 0, min: 0 },
   sugar: { type: Number, default: 0, min: 0 },
+  sodium: { type: Number, default: 0, min: 0 },
 };
 
 const schema = new mongoose.Schema(

@@ -413,6 +413,89 @@ test('security: malformed input is rejected cleanly, headers present, login is r
   assert.equal(last.status, 429);
 });
 
+test('steps count toward calories burned automatically; health logs validate; one steps value per day', { skip }, async () => {
+  await call('PATCH', '/api/profile', { token: ctx.alice, body: { currentWeightKg: 80 } });
+  const d = plus(-3);
+  assert.equal((await call('POST', '/api/health', { token: ctx.alice, body: { type: 'steps', date: d, value: -1 } })).status, 400);
+  assert.equal((await call('POST', '/api/health', { token: ctx.alice, body: { type: 'nope', date: d, value: 5 } })).status, 400);
+  assert.equal((await call('POST', '/api/health', { token: ctx.alice, body: { type: 'steps', date: d, value: 4000 } })).status, 201);
+  await call('POST', '/api/health', { token: ctx.alice, body: { type: 'steps', date: d, value: 10000, source: 'device' } });
+  const list = await call('GET', '/api/health?type=steps', { token: ctx.alice });
+  assert.equal(list.logs.filter((l) => l.date === d).length, 1, 're-saving the same day replaces it');
+  assert.equal(list.logs.find((l) => l.date === d).value, 10000);
+
+  const day = await call('GET', `/api/health/steps/day?date=${d}`, { token: ctx.alice });
+  assert.equal(day.steps, 10000);
+  assert.equal(day.caloriesBurned, 400, '10,000 steps x 80 kg x 0.0005');
+  const summary = await call('GET', `/api/activities/summary?date=${d}`, { token: ctx.alice });
+  assert.equal(summary.summary.stepCalories, 400);
+  assert.equal(summary.summary.caloriesBurned, summary.summary.workoutCalories + 400);
+  const hist = await call('GET', `/api/progress/history?from=${d}&to=${d}`, { token: ctx.alice });
+  assert.equal(hist.days[0].steps, 10000);
+  assert.ok(hist.days[0].caloriesBurned >= 400);
+
+  const bp = (b) => call('POST', '/api/health', { token: ctx.alice, body: { type: 'bloodPressure', date: d, ...b } });
+  assert.equal((await bp({ value: 120 })).status, 400, 'diastolic required');
+  assert.equal((await bp({ value: 80, value2: 120 })).status, 400, 'systolic must exceed diastolic');
+  assert.equal((await bp({ value: 120, value2: 80 })).status, 201);
+  assert.equal((await call('GET', '/api/health?type=steps', { token: ctx.bob })).logs.length, 0, 'private to the owner');
+  const latest = await call('GET', '/api/health/latest', { token: ctx.alice });
+  assert.ok(latest.latest.steps && latest.latest.bloodPressure);
+});
+
+test('saved meals, barcode validation, fasting, streaks, strength sets + records', { skip }, async () => {
+  const food = (await call('POST', '/api/foods', { token: ctx.alice, body: { name: 'Meal test food', servingSize: 100, servingUnit: 'g', calories: 200, units: [{ label: 'bowl', quantity: 150 }] } })).food;
+  assert.equal(food.units[0].label, 'bowl');
+  const saved = await call('POST', '/api/saved-meals', { token: ctx.alice, body: { name: 'My breakfast', items: [{ foodId: food._id, quantity: 150 }] } });
+  assert.equal(saved.status, 201);
+  assert.equal(saved.meal.items[0].calories, 300);
+  assert.equal((await call('POST', '/api/saved-meals', { token: ctx.alice, body: { name: 'Empty', items: [] } })).status, 400);
+  const logged = await call('POST', `/api/saved-meals/${saved.meal._id}/log`, { token: ctx.alice, body: { date: today(), mealType: 'breakfast', clientId: 'sm-1' } });
+  assert.equal(logged.logs.length, 1);
+  assert.equal(logged.logs[0].nutritionTotal.calories, 300);
+  const again = await call('POST', `/api/saved-meals/${saved.meal._id}/log`, { token: ctx.alice, body: { date: today(), mealType: 'breakfast', clientId: 'sm-1' } });
+  assert.equal(again.logs[0]._id, logged.logs[0]._id, 'replay is idempotent');
+  assert.equal((await call('GET', '/api/saved-meals', { token: ctx.bob })).meals.length, 0);
+
+  assert.equal((await call('GET', '/api/foods/barcode/abc', { token: ctx.alice })).status, 400);
+
+  const s = await call('GET', `/api/progress/streaks?today=${today()}`, { token: ctx.alice });
+  assert.ok(s.streaks.current >= 1 && s.streaks.loggedToday);
+
+  assert.equal((await call('POST', '/api/fasting/start', { token: ctx.alice, body: { targetHours: 16 } })).status, 201);
+  assert.equal((await call('POST', '/api/fasting/start', { token: ctx.alice, body: {} })).status, 409);
+  const ended = await call('POST', '/api/fasting/end', { token: ctx.alice, body: {} });
+  assert.equal(ended.reachedGoal, false);
+  assert.equal((await call('GET', '/api/fasting', { token: ctx.alice })).history.length, 1);
+
+  const act = (await call('GET', '/api/activities', { token: ctx.alice })).activities[0];
+  const withSets = await call('POST', '/api/activities/logs', { token: ctx.alice, body: { activityId: act._id, date: today(), durationMinutes: 20, sets: [{ reps: 5, weightKg: 100 }, { reps: 8, weightKg: 80 }] } });
+  assert.equal(withSets.status, 201);
+  assert.equal(withSets.log.sets.length, 2);
+  assert.equal((await call('POST', '/api/activities/logs', { token: ctx.alice, body: { activityId: act._id, date: today(), durationMinutes: 20, sets: [{ reps: 0 }] } })).status, 400);
+  const rec = await call('GET', '/api/activities/records', { token: ctx.alice });
+  assert.equal(rec.records[0].bestWeightKg, 100);
+});
+
+test('password reset: generic response, wrong code rejected, correct code changes password', { skip }, async () => {
+  const User = require('../models/User');
+  const crypto = require('crypto');
+  const email = 'bob@test.dev';
+  const unknown = await call('POST', '/api/auth/forgot', { body: { email: 'nobody@test.dev' } });
+  const known = await call('POST', '/api/auth/forgot', { body: { email } });
+  assert.equal(unknown.status, 200);
+  assert.equal(known.status, 200);
+  assert.equal(unknown.message, known.message, 'does not reveal whether the email exists');
+  // The code is emailed, so the test plants a known one the same way the route stores it.
+  const plant = async (code) => User.updateOne({ email }, { resetCodeHash: crypto.createHash('sha256').update(`${code}|${process.env.JWT_SECRET}`).digest('hex'), resetExpires: new Date(Date.now() + 60000), resetAttempts: 0 });
+  await plant('ABCD2345');
+  assert.equal((await call('POST', '/api/auth/reset', { body: { email, code: 'WRONG123', newPassword: 'brand-new-pass' } })).status, 400);
+  assert.equal((await call('POST', '/api/auth/reset', { body: { email, code: 'ABCD2345', newPassword: 'short' } })).status, 400);
+  assert.equal((await call('POST', '/api/auth/reset', { body: { email, code: 'abcd-2345', newPassword: 'brand-new-pass' } })).status, 200);
+  assert.equal((await call('POST', '/api/auth/reset', { body: { email, code: 'ABCD2345', newPassword: 'another-pass-1' } })).status, 400, 'code is single use');
+  assert.equal((await call('POST', '/api/auth/login', { body: { email, password: 'brand-new-pass' } })).status, 200);
+});
+
 test('account deletion removes everything the person owns (and only theirs)', { skip }, async () => {
   const Food = require('../models/Food');
   const Task = require('../models/Task');

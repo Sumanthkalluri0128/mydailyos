@@ -16,6 +16,10 @@ const schema = new mongoose.Schema(
     fat: { type: Number, default: 0, min: 0 },
     fiber: { type: Number, default: 0, min: 0 },
     sugar: { type: Number, default: 0, min: 0 },
+    sodium: { type: Number, default: 0, min: 0 }, // mg per serving
+    barcode: { type: String, default: '', trim: true, maxlength: 20, index: true },
+    // Household measures, e.g. { label: 'katori', quantity: 150 } => 1 katori = 150 (servingUnit).
+    units: { type: [{ _id: false, label: { type: String, maxlength: 30 }, quantity: { type: Number, min: 0.01 } }], default: [] },
     notes: { type: String, default: '', maxlength: 500 },
     // Per-person favourites (a shared food can be a favourite for one person and not another).
     favoriteBy: { type: [mongoose.Schema.Types.ObjectId], default: [], select: false },

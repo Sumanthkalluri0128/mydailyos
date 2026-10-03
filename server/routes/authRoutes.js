@@ -60,4 +60,47 @@ router.post('/login', loginLimiter, wrap(async (req, res) => {
   res.json({ success: true, token: createToken(user), user: publicUser(user) });
 }));
 
+// ---------------------------------------------------------------- password reset (emailed 8-character code)
+const crypto = require('crypto');
+const { sendMail } = require('../lib/mailer');
+const ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // no 0/O/1/I to avoid typos
+const hashCode = (code) => crypto.createHash('sha256').update(`${code}|${process.env.JWT_SECRET}`).digest('hex');
+const forgotLimiter = rateLimit({ windowMs: 15 * 60_000, max: 5, keyFn: (req) => `forgot|${req.ip}|${String(req.body?.email || '').toLowerCase()}`, message: 'Too many reset requests. Please wait a few minutes.' });
+const resetLimiter = rateLimit({ windowMs: 15 * 60_000, max: 10, message: 'Too many attempts. Please wait a few minutes.' });
+
+router.post('/forgot', forgotLimiter, wrap(async (req, res) => {
+  const email = v.string(req.body?.email, 'email', { max: 200, required: true }).toLowerCase();
+  const user = await User.findOne({ email });
+  if (user) {
+    const code = Array.from({ length: 8 }, () => ALPHABET[crypto.randomInt(ALPHABET.length)]).join('');
+    user.resetCodeHash = hashCode(code);
+    user.resetExpires = new Date(Date.now() + 30 * 60_000);
+    user.resetAttempts = 0;
+    await user.save();
+    await sendMail({ to: user.email, subject: 'Your FlexFit password reset code', text: `Your FlexFit reset code is ${code}\n\nIt expires in 30 minutes. If you did not ask for this, you can ignore this email.` }).catch((e) => console.error('mail error', e.message));
+  }
+  // Same answer whether or not the account exists, so this can't be used to find registered emails.
+  res.json({ success: true, message: 'If that email is registered, a reset code has been sent.' });
+}));
+
+router.post('/reset', resetLimiter, wrap(async (req, res) => {
+  const email = v.string(req.body?.email, 'email', { max: 200, required: true }).toLowerCase();
+  const code = v.string(req.body?.code, 'code', { max: 20, required: true }).toUpperCase().replace(/\s|-/g, '');
+  const password = String(req.body?.newPassword || '');
+  if (password.length < 8 || password.length > 128) throw new HttpError(400, 'Password must be 8–128 characters');
+  const bad = new HttpError(400, 'That code is invalid or has expired. Request a new one.');
+
+  const user = await User.findOne({ email }).select('+resetCodeHash +resetExpires +resetAttempts');
+  if (!user || !user.resetCodeHash || !user.resetExpires || user.resetExpires < new Date()) throw bad;
+  if (user.resetAttempts >= 5) { user.resetCodeHash = null; user.resetExpires = null; await user.save(); throw bad; }
+  const a = Buffer.from(hashCode(code)); const b = Buffer.from(user.resetCodeHash);
+  if (a.length !== b.length || !crypto.timingSafeEqual(a, b)) { user.resetAttempts += 1; await user.save(); throw bad; }
+
+  user.passwordHash = await bcrypt.hash(password, 12);
+  user.passwordChangedAt = new Date();
+  user.resetCodeHash = null; user.resetExpires = null; user.resetAttempts = 0;
+  await user.save();
+  res.json({ success: true, message: 'Password updated. You can sign in now.' });
+}));
+
 module.exports = router;

@@ -312,6 +312,8 @@ function ProgressPage({ onBack }) {
             <TrendChart data={days} metric="calories" label="Calories eaten" unit=" kcal" />
             <TrendChart data={days} metric="protein" label="Protein intake" unit=" g" decimals={1} />
             <TrendChart data={days} metric="waterMl" label="Water intake" unit=" ml" />
+            <TrendChart data={days} metric="steps" label="Steps (goal 10,000)" unit="" />
+            <TrendChart data={days} metric="caloriesBurned" label="Calories burned (workouts + steps)" unit=" kcal" />
           </section>
 
           <section className="card daily-timeline-card">

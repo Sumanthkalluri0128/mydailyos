@@ -7,6 +7,7 @@ const WeightLog = require('../models/WeightLog');
 const Task = require('../models/Task');
 const HabitLog = require('../models/HabitLog');
 const { enumerate } = require('./dates');
+const { stepCalories, stepsByDate, profileWeight } = require('./steps');
 
 const VISIBLE_TASK = { skipped: { $ne: true } };
 
@@ -23,6 +24,8 @@ const emptyDay = (date) => ({
   waterMl: 0,
   exerciseMinutes: 0,
   caloriesBurned: 0,
+  steps: 0,
+  stepCalories: 0,
   tasksTotal: 0,
   tasksCompleted: 0,
   habitsCompleted: 0,
@@ -32,6 +35,7 @@ const emptyDay = (date) => ({
 async function buildHistory(userId, from, to) {
   const dates = enumerate(from, to);
   const range = { $gte: from, $lte: to };
+  const [stepMap, fallbackWeight] = await Promise.all([stepsByDate(userId, from, to), profileWeight(userId)]);
   const [foods, activities, water, weights, priorWeight, tasks, habits] = await Promise.all([
     FoodLog.find({ userId, date: range }).select('date nutritionTotal').lean(),
     ActivityLog.find({ userId, date: range }).select('date durationMinutes caloriesBurned').lean(),
@@ -89,6 +93,13 @@ async function buildHistory(userId, from, to) {
     }
     day.weightKg = last;
   }
+  // Steps are counted automatically: their calories are added to that day's total burned.
+  for (const d of dates) {
+    const day = dayMap.get(d);
+    day.steps = stepMap.get(d) || 0;
+    day.stepCalories = stepCalories(day.steps, day.weightKg || fallbackWeight);
+    day.caloriesBurned += day.stepCalories;
+  }
 
   const days = dates.map((d) => dayMap.get(d));
   const totals = days.reduce(
@@ -98,18 +109,20 @@ async function buildHistory(userId, from, to) {
       a.waterMl += d.waterMl;
       a.exerciseMinutes += d.exerciseMinutes;
       a.caloriesBurned += d.caloriesBurned;
+      a.steps += d.steps;
       a.tasksCompleted += d.tasksCompleted;
       a.tasksTotal += d.tasksTotal;
       a.habitsCompleted += d.habitsCompleted;
       return a;
     },
-    { calories: 0, protein: 0, waterMl: 0, exerciseMinutes: 0, caloriesBurned: 0, tasksCompleted: 0, tasksTotal: 0, habitsCompleted: 0 }
+    { calories: 0, protein: 0, waterMl: 0, exerciseMinutes: 0, caloriesBurned: 0, steps: 0, tasksCompleted: 0, tasksTotal: 0, habitsCompleted: 0 }
   );
   return { from, to, days, totals, rangeDays: days.length };
 }
 
 /** Everything logged on a single date, plus a summary — the one call the dashboards need. */
 async function getDayDetails(userId, date) {
+  const [stepMap, fallbackWeight] = await Promise.all([stepsByDate(userId, date, date), profileWeight(userId)]);
   const [food, exercise, water, weight, tasks, habits] = await Promise.all([
     FoodLog.find({ userId, date }).sort({ createdAt: -1 }).lean(),
     ActivityLog.find({ userId, date }).sort({ createdAt: -1 }).lean(),
@@ -140,7 +153,10 @@ async function getDayDetails(userId, date) {
       meals,
       waterMl: sum(water, (x) => x.amountMl),
       exerciseMinutes: sum(exercise, (x) => x.durationMinutes),
-      caloriesBurned: sum(exercise, (x) => x.caloriesBurned),
+      workoutCalories: sum(exercise, (x) => x.caloriesBurned),
+      steps: stepMap.get(date) || 0,
+      stepCalories: stepCalories(stepMap.get(date) || 0, weight.length ? Number(weight[0].weightKg) : fallbackWeight),
+      caloriesBurned: sum(exercise, (x) => x.caloriesBurned) + stepCalories(stepMap.get(date) || 0, weight.length ? Number(weight[0].weightKg) : fallbackWeight),
       weightKg: weight.length ? Number(weight[0].weightKg) : null,
     },
   };

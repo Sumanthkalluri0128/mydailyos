@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { API_URL } from '../config';
 import '../auth/auth.css';
+import ForgotPassword from './ForgotPassword';
 
 async function readResponse(response) {
   const text = await response.text();
@@ -75,6 +76,8 @@ export default function AuthPage({ onAuthenticated }) {
     setMode(nextMode);
     setError('');
   }
+
+  if (mode === 'forgot') return <ForgotPassword onBack={() => switchMode('login')} />;
 
   return (
     <div className="auth-shell">
@@ -158,6 +161,12 @@ export default function AuthPage({ onAuthenticated }) {
                 : 'Login'}
           </button>
         </form>
+
+        {mode === 'login' && (
+          <button type="button" className="auth-switch" onClick={() => switchMode('forgot')}>
+            Forgot password?
+          </button>
+        )}
 
         <button
           type="button"

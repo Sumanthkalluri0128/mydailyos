@@ -5,6 +5,7 @@ const FoodLog = require('../models/FoodLog');
 const { requireAuth } = require('../middleware/auth');
 const { wrap, HttpError } = require('../lib/http');
 const v = require('../lib/validate');
+const { lookupBarcode, CODE_RE } = require('../lib/openFoodFacts');
 
 const router = express.Router();
 router.use(requireAuth);
@@ -22,6 +23,14 @@ function present(food, userId) {
   return f;
 }
 
+function parseUnits(raw) {
+  if (!Array.isArray(raw)) return [];
+  return raw.slice(0, 8).map((u) => ({
+    label: v.string(u?.label, 'unit label', { max: 30, required: true }),
+    quantity: v.number(u?.quantity, 'unit quantity', { min: 0.01, max: 100000 }),
+  }));
+}
+
 function parseFood(body = {}) {
   const num = (k, o = {}) => v.number(body[k], k, { min: 0, max: 100000, required: false, def: 0, ...o });
   return {
@@ -35,6 +44,9 @@ function parseFood(body = {}) {
     fat: num('fat'),
     fiber: num('fiber'),
     sugar: num('sugar'),
+    sodium: num('sodium'),
+    barcode: v.string(body.barcode, 'barcode', { max: 20 }),
+    units: parseUnits(body.units),
     notes: v.string(body.notes, 'notes', { max: 500 }),
   };
 }
@@ -68,6 +80,17 @@ router.get('/recent', wrap(async (req, res) => {
   const foods = await Food.find({ _id: { $in: ids }, ...visibleTo(uid) }).select('+favoriteBy').lean();
   const byId = new Map(foods.map((f) => [String(f._id), f]));
   res.json({ success: true, foods: ids.map((id) => byId.get(id)).filter(Boolean).map((f) => present(f, uid)) });
+}));
+
+// GET /api/foods/barcode/:code — my/catalogue food with that barcode, else a draft from Open Food Facts (not saved).
+router.get('/barcode/:code', wrap(async (req, res) => {
+  const code = String(req.params.code || '').trim();
+  if (!CODE_RE.test(code)) throw new HttpError(400, 'Barcode must be 6–14 digits');
+  const known = await Food.findOne({ barcode: code, ...visibleTo(req.user.id) }).select('+favoriteBy').lean();
+  if (known) return res.json({ success: true, found: true, saved: true, food: present(known, req.user.id) });
+  const draft = await lookupBarcode(code);
+  if (!draft) return res.json({ success: true, found: false, saved: false, food: null });
+  res.json({ success: true, found: true, saved: false, food: draft });
 }));
 
 router.get('/:id', wrap(async (req, res) => {

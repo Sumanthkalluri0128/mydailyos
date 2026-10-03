@@ -2906,3 +2906,11 @@ select {
   max-height: 92dvh;
   margin: auto;
 }
+
+/* Health page */
+.health-form { display: flex; gap: 12px; flex-wrap: wrap; align-items: flex-end; margin: 14px 0; }
+.health-form label { display: grid; gap: 4px; font-size: 13px; }
+.health-bars { position: relative; display: flex; align-items: flex-end; gap: 3px; height: 150px; padding: 8px 4px 0; border-bottom: 1px solid var(--border); margin-bottom: 18px; }
+.health-bar { flex: 1; min-width: 3px; background: var(--md-primary, #6847e8); border-radius: 4px 4px 0 0; }
+.health-target { position: absolute; left: 0; right: 0; border-top: 2px dashed #20a46b; pointer-events: none; }
+.auth-success { color: #157a4e; background: #e6f6ee; padding: 10px 12px; border-radius: 10px; font-size: 13px; }

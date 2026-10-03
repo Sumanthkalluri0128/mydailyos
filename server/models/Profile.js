@@ -20,6 +20,8 @@ const schema = new mongoose.Schema(
       stepsTarget: { type: Number, min: 1, default: 10000 },
       exerciseMinutesTarget: { type: Number, min: 1, default: 30 },
       targetWeightKg: { type: Number, min: 1, default: null },
+      // How fast to move toward the target weight, in kg per week (drives the calorie target).
+      weeklyPaceKg: { type: Number, min: 0.1, max: 1, default: 0.5 },
     },
     // Display preferences only — every value is stored metric.
     units: {

@@ -7,6 +7,7 @@ const ExercisePage = lazy(() => import("./pages/ExercisePage"));
 const TaskPage = lazy(() => import("./pages/TaskPage"));
 const HabitPage = lazy(() => import("./pages/HabitPage"));
 const WaterPage = lazy(() => import("./pages/WaterPage"));
+const HealthPage = lazy(() => import("./pages/HealthPage"));
 const WeightPage = lazy(() => import("./pages/WeightPage"));
 const ProfilePage = lazy(() => import("./pages/ProfilePage"));
 const ProgressPage = lazy(() => import("./pages/ProgressPage"));
@@ -132,6 +133,9 @@ function App() {
   const [activitySummary, setActivitySummary] =
     useState({
       caloriesBurned: 0,
+      workoutCalories: 0,
+      stepCalories: 0,
+      steps: 0,
       totalMinutes: 0,
     });
 
@@ -327,6 +331,22 @@ function App() {
   // ============================================================
   // EXERCISE PAGE
   // ============================================================
+
+  if (currentPage === "health") {
+    return (
+      <div className="app">
+        <header className="topbar">
+          <BrandHome onHome={() => setCurrentPage("dashboard")} />
+          <ThemeToggle theme={theme} onToggle={toggleTheme} />
+        </header>
+        <main className="dashboard">
+          <Suspense fallback={<div className="page-loading">Loading…</div>}>
+            <HealthPage onBack={() => setCurrentPage("dashboard")} />
+          </Suspense>
+        </main>
+      </div>
+    );
+  }
 
   if (currentPage === "exercise") {
     return (
@@ -812,10 +832,12 @@ function App() {
 
             <div className="card-description">
 
-              {activitySummary.totalMinutes >
-              0
-                ? `${activitySummary.totalMinutes} min of activity`
-                : "No activity recorded"}
+              {Math.round(activitySummary.workoutCalories || 0)} kcal workouts
+              {" + "}
+              {Math.round(activitySummary.stepCalories || 0)} kcal from steps
+              {activitySummary.totalMinutes > 0
+                ? ` · ${activitySummary.totalMinutes} min of activity`
+                : ""}
 
             </div>
 
@@ -825,7 +847,7 @@ function App() {
           {/* STEPS */}
           {/* ================================================== */}
 
-          <div className="card">
+          <div className="card" onClick={() => setCurrentPage("health")} style={{ cursor: "pointer" }}>
 
             <span className="card-icon">
               🚶
@@ -836,21 +858,21 @@ function App() {
             </p>
 
             <h3>
-              0{" "}
-
+              {Number(activitySummary.steps || 0).toLocaleString()}{" "}
               <small>
-                /{" "}
-                {(
-                  profile?.goals?.stepsTarget ??
-                  10000
-                ).toLocaleString()}
+                / {(profile?.goals?.stepsTarget ?? 10000).toLocaleString()}
               </small>
             </h3>
 
-            <div className="progress">
+            <GoalBar
+              value={Number(activitySummary.steps || 0)}
+              target={profile?.goals?.stepsTarget ?? 10000}
+              unit="steps"
+              color="#14a38b"
+            />
 
-              <div className="progress-fill steps"></div>
-
+            <div className="card-description">
+              ≈ {Math.round(activitySummary.stepCalories || 0)} kcal burned, counted automatically
             </div>
 
           </div>
@@ -1505,6 +1527,11 @@ function App() {
               <span>
                 Water
               </span>
+            </button>
+
+            <button onClick={() => setCurrentPage("health")}>
+              👟
+              <span>Health &amp; Steps</span>
             </button>
 
             <button

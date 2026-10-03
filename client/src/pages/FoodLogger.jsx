@@ -45,6 +45,28 @@ function FoodLogger({ date, onBack }) {
   const quantity = total > 0 ? String(Math.round(total * 100) / 100) : "";
   const resetServing = () => { setServings("1"); setServeSize(""); };
 
+  // Copy everything logged for the selected meal yesterday onto today.
+  const copyYesterday = async () => {
+    const d = new Date(`${date}T00:00:00`);
+    d.setDate(d.getDate() - 1);
+    const pad = (n) => String(n).padStart(2, "0");
+    const from = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+    try {
+      const response = await apiFetch(`${API_URL}/api/food-logs/copy`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ fromDate: from, toDate: date, mealType: selectedMeal }),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.message || "Could not copy");
+      if (!data.logs?.length) notify(`You didn't log any ${selectedMeal} yesterday.`, "error");
+      else notify(`Copied ${data.logs.length} item(s) from yesterday's ${selectedMeal}.`, "success");
+      await fetchFoodLogs();
+    } catch (error) {
+      notify(error.message || "Could not copy", "error");
+    }
+  };
+
   const [search, setSearch] = useState("");
 
   const [loadingFoods, setLoadingFoods] =
@@ -406,6 +428,12 @@ function FoodLogger({ date, onBack }) {
 
       </div>
 
+      <div className="serving-chips">
+        <button type="button" className="chip" onClick={copyYesterday}>
+          ⟲ Same {selectedMeal} as yesterday
+        </button>
+      </div>
+
 
       {/* ====================================================== */}
       {/* ADD FOOD CARD */}
@@ -593,6 +621,21 @@ function FoodLogger({ date, onBack }) {
                   />
                 </div>
               </div>
+
+              {selectedFood.units?.length > 0 && (
+                <div className="serving-chips" aria-label="Household measures">
+                  {selectedFood.units.map((u) => (
+                    <button
+                      type="button"
+                      key={u.label}
+                      className={Number(serveSize) === u.quantity ? "chip active" : "chip"}
+                      onClick={() => setServeSize(String(u.quantity))}
+                    >
+                      1 {u.label} = {u.quantity}{selectedFood.servingUnit}
+                    </button>
+                  ))}
+                </div>
+              )}
 
               <div className="serving-chips">
                 {[0.5, 1, 1.5, 2].map((n) => (

@@ -10,7 +10,7 @@ const router = express.Router();
 router.use(requireAuth);
 
 const MEALS = ['breakfast', 'lunch', 'dinner', 'snacks'];
-const KEYS = ['calories', 'protein', 'carbohydrates', 'fat', 'fiber', 'sugar'];
+const KEYS = ['calories', 'protein', 'carbohydrates', 'fat', 'fiber', 'sugar', 'sodium'];
 
 const perServing = (f) => Object.fromEntries(KEYS.map((k) => [k, Number(f[k] || 0)]));
 const scale = (per, servings) => Object.fromEntries(KEYS.map((k) => [k, Number(per[k] || 0) * servings]));
@@ -23,7 +23,7 @@ router.get('/', wrap(async (req, res) => {
 router.get('/summary', wrap(async (req, res) => {
   const date = v.date(req.query.date);
   const logs = await FoodLog.find({ userId: req.user.id, date }).lean();
-  const summary = { calories: 0, protein: 0, carbohydrates: 0, fat: 0, fiber: 0, sugar: 0, meals: { breakfast: 0, lunch: 0, dinner: 0, snacks: 0 } };
+  const summary = { calories: 0, protein: 0, carbohydrates: 0, fat: 0, fiber: 0, sugar: 0, sodium: 0, meals: { breakfast: 0, lunch: 0, dinner: 0, snacks: 0 } };
   for (const l of logs) {
     const n = l.nutritionTotal || {};
     for (const k of KEYS) summary[k] += Number(n[k] || 0);

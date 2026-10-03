@@ -30,6 +30,10 @@ mongoose
     for (const Model of Object.values(mongoose.models)) {
       await Model.createIndexes().catch((e) => console.warn(`Index warning (${Model.modelName}):`, e.message));
     }
+    // Fill the shared food catalogue on first run (adds missing foods only; never edits or deletes).
+    if (process.env.SEED_FOODS !== 'false') {
+      require('./lib/foodCatalogue').seedFoods().then((r) => r.added && console.log(`Seeded ${r.added} catalogue foods`)).catch((e) => console.warn('Food seed warning:', e.message));
+    }
     app.listen(PORT, '0.0.0.0', () => {
       console.log(`FlexFit server running on port ${PORT}`);
       console.log(`Allowed CORS origins: ${allowedOrigins.join(', ')}`);

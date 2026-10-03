@@ -26,6 +26,7 @@ function parseUpdate(body = {}) {
     if (g.waterTargetMl !== undefined) set['goals.waterTargetMl'] = v.number(g.waterTargetMl, 'waterTargetMl', { min: 250, max: 20000 });
     if (g.stepsTarget !== undefined) set['goals.stepsTarget'] = v.number(g.stepsTarget, 'stepsTarget', { min: 1, max: 200000 });
     if (g.exerciseMinutesTarget !== undefined) set['goals.exerciseMinutesTarget'] = v.number(g.exerciseMinutesTarget, 'exerciseMinutesTarget', { min: 1, max: 1440 });
+    if (g.weeklyPaceKg !== undefined) set['goals.weeklyPaceKg'] = v.number(g.weeklyPaceKg, 'weeklyPaceKg', { min: 0.1, max: 1 });
     if (g.targetWeightKg !== undefined) set['goals.targetWeightKg'] = v.nullableNumber(g.targetWeightKg, 'targetWeightKg', { min: 1, max: 700 });
   }
   const u = body.units;

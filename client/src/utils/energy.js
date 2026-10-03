@@ -36,3 +36,6 @@ export function calorieBalance(energy, eaten, burned) {
 }
 
 export const estimateBurn = (met, weightKg, minutes) => ((met * 3.5 * weightKg) / 200) * minutes;
+
+/** ~0.0005 kcal per step per kg of body weight (10,000 steps at 70 kg is about 350 kcal). Mirrors the server. */
+export const stepCalories = (steps, weightKg) => Math.round(Math.max(0, Number(steps) || 0) * (Number(weightKg) || 70) * 0.0005);

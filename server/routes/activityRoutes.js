@@ -6,6 +6,8 @@ const { requireAuth } = require('../middleware/auth');
 const { wrap, HttpError } = require('../lib/http');
 const { createOnce } = require('../lib/idempotent');
 const v = require('../lib/validate');
+const { stepCalories, stepDistanceKm, stepsByDate, profileWeight } = require('../lib/steps');
+const { computeRecords } = require('../lib/records');
 
 const router = express.Router();
 router.use(requireAuth);
@@ -33,16 +35,42 @@ router.get('/logs', wrap(async (req, res) => {
   res.json({ success: true, logs: await ActivityLog.find({ userId: req.user.id, date }).sort({ createdAt: -1 }).lean() });
 }));
 
+function parseSets(raw) {
+  if (!Array.isArray(raw)) return [];
+  return raw.slice(0, 40).map((s) => ({
+    reps: Math.round(v.number(s?.reps, 'reps', { min: 1, max: 1000 })),
+    weightKg: v.number(s?.weightKg, 'set weight', { min: 0, max: 1000, required: false, def: 0 }),
+  }));
+}
+
+// Burned today = logged workouts + calories from the day's steps (counted automatically).
 router.get('/summary', wrap(async (req, res) => {
   const date = v.date(req.query.date);
-  const logs = await ActivityLog.find({ userId: req.user.id, date }).lean();
+  const [logs, steps, weight] = await Promise.all([
+    ActivityLog.find({ userId: req.user.id, date }).lean(),
+    stepsByDate(req.user.id, date, date),
+    profileWeight(req.user.id),
+  ]);
+  const workoutCalories = logs.reduce((s, x) => s + x.caloriesBurned, 0);
+  const stepCount = steps.get(date) || 0;
+  const fromSteps = stepCalories(stepCount, weight);
   res.json({
     success: true,
     summary: {
-      caloriesBurned: logs.reduce((s, x) => s + x.caloriesBurned, 0),
+      caloriesBurned: workoutCalories + fromSteps,
+      workoutCalories,
+      stepCalories: fromSteps,
+      steps: stepCount,
+      stepDistanceKm: stepDistanceKm(stepCount),
       totalMinutes: logs.reduce((s, x) => s + x.durationMinutes, 0),
     },
   });
+}));
+
+// Personal records from logged sets.
+router.get('/records', wrap(async (req, res) => {
+  const logs = await ActivityLog.find({ userId: req.user.id, 'sets.0': { $exists: true } }).select('activityName date sets').lean();
+  res.json({ success: true, records: computeRecords(logs) });
 }));
 
 router.post('/logs', wrap(async (req, res) => {
@@ -64,6 +92,7 @@ router.post('/logs', wrap(async (req, res) => {
     durationMinutes: duration, weightKg: weight, met: activity.met,
     caloriesBurned: hasManual ? manual : (activity.met * 3.5 * weight / 200) * duration,
     caloriesSource: hasManual ? 'manual' : 'estimated',
+    sets: parseSets(req.body?.sets),
     notes: v.string(req.body?.notes, 'notes', { max: 300 }),
   });
   res.status(duplicate ? 200 : 201).json({ success: true, log: doc, duplicate });
