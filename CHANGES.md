@@ -82,3 +82,8 @@ The server already had `/api/health` as its uptime check (Render uses it). The n
 
 ## Fix: Log out / Delete account / Export on the web
 These existed as files (`DataControls.jsx`, `AccountPage.jsx`) but nothing in the web app displayed them. They now appear at the bottom of **Profile**: Export CSV/JSON, Change password, Log out, and Delete account (with confirmation). The mobile app already had them at the bottom of the Profile tab.
+
+# v5 / server 2.5.0
+- Mail: HTTPS providers (Brevo/Resend), IPv4 + timeouts for SMTP, non-blocking forgot-password. See SETUP_V5.md.
+- Google sign-in and per-user Google Sheet mirror (drive.file scope, encrypted refresh token, debounced sync). New /api/google/* routes.
+- Web: Continue with Google, Google Sheets card on Profile.

@@ -162,6 +162,16 @@ export default function AuthPage({ onAuthenticated }) {
           </button>
         </form>
 
+        {mode !== 'forgot' && (
+          <button
+            type="button"
+            className="auth-switch"
+            onClick={() => { window.location.href = `${API_URL}/api/google/start?returnTo=${encodeURIComponent(`${window.location.origin}/`)}`; }}
+          >
+            Continue with Google
+          </button>
+        )}
+
         {mode === 'login' && (
           <button type="button" className="auth-switch" onClick={() => switchMode('forgot')}>
             Forgot password?

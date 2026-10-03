@@ -77,7 +77,10 @@ router.post('/forgot', forgotLimiter, wrap(async (req, res) => {
     user.resetExpires = new Date(Date.now() + 30 * 60_000);
     user.resetAttempts = 0;
     await user.save();
-    await sendMail({ to: user.email, subject: 'Your FlexFit password reset code', text: `Your FlexFit reset code is ${code}\n\nIt expires in 30 minutes. If you did not ask for this, you can ignore this email.` }).catch((e) => console.error('mail error', e.message));
+    // Send in the background: a slow/blocked mail provider must never make this request hang, and the reply
+    // is identical whether or not the account exists (so response time can't reveal registered emails either).
+    sendMail({ to: user.email, subject: 'Your FlexFit password reset code', text: `Your FlexFit reset code is ${code}\n\nIt expires in 30 minutes. If you did not ask for this, you can ignore this email.` })
+      .catch((e) => console.error('mail error:', e.message));
   }
   // Same answer whether or not the account exists, so this can't be used to find registered emails.
   res.json({ success: true, message: 'If that email is registered, a reset code has been sent.' });
