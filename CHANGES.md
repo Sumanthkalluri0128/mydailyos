@@ -93,3 +93,9 @@ These existed as files (`DataControls.jsx`, `AccountPage.jsx`) but nothing in th
 - Google: public /api/google/config so the login button and Profile card appear only when set up; clearer errors back on the login page.
 - Web CSS: dark-mode tokens (cards, top bar, greeting, banners were near-white), Profile page full-width responsive grid (class collision with account.css removed), themed auth buttons/inputs.
 - test/e2e_flows.test.js: 15 real-HTTP end-to-end tests (signup, forgot/reset, Google sign-in, connect, sheet sync, disconnect).
+
+## v5.2 / server 2.6.0
+- Food catalogue: ~130 -> 484 foods (regional Indian dishes, street food, sweets, drinks, grains, fruit, staples); seeded additively at start.
+- Exercise catalogue: 12 -> 72 activities, incl. 33 Cult.fit formats (HRX, Adidas Strength+, Boxing, Dance Fitness, Yoga, Burn, Bootcamp, HIIT, Pilates, Run, Zumba, Kettlebell...) as MET estimates; seeded automatically (old seed script no longer deletes).
+- /api/health reports version, mail provider and Google status; scripts/check-deploy.js verifies a deployed server end to end.
+- Web: dashboard paints from a saved copy instantly, then refreshes; Continue with Google always visible.

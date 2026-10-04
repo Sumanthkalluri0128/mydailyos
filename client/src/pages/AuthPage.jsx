@@ -23,11 +23,7 @@ async function readResponse(response) {
 }
 
 export default function AuthPage({ onAuthenticated, notice = '' }) {
-  const [googleAvailable, setGoogleAvailable] = useState(false);
-  useEffect(() => {
-    // Only offer "Continue with Google" when the server is actually set up for it.
-    fetch(`${API_URL}/api/google/config`).then((r) => r.json()).then((d) => setGoogleAvailable(!!d.available)).catch(() => {});
-  }, []);
+
   const [mode, setMode] = useState('signup');
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -167,7 +163,7 @@ export default function AuthPage({ onAuthenticated, notice = '' }) {
           </button>
         </form>
 
-        {mode !== 'forgot' && googleAvailable && (
+        {mode !== 'forgot' && (
           <button
             type="button"
             className="auth-google"

@@ -46,7 +46,7 @@ function createApp({ allowedOrigins = [] } = {}) {
   app.use(express.json({ limit: '100kb' }));
 
   app.get('/api/health', (req, res) =>
-    res.status(200).json({ success: true, status: 'healthy', service: 'FlexFit API', timestamp: new Date().toISOString(), mail: require('./lib/mailer').mailStatus().provider || 'not-configured', google: require('./lib/googleClient').configured() ? 'configured' : 'not-configured' })
+    res.status(200).json({ success: true, status: 'healthy', service: 'FlexFit API', version: require('./package.json').version, timestamp: new Date().toISOString(), mail: require('./lib/mailer').mailStatus().provider || 'not-configured', google: require('./lib/googleClient').configured() ? 'configured' : 'not-configured' })
   );
   app.get('/api/version', (req, res) => res.status(200).json({ success: true, version: pkg.version, service: 'FlexFit API' }));
 

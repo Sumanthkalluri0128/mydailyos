@@ -1,4 +1,30 @@
-# FlexFit server v2.5 — what to set up
+# FlexFit server v2.6 — deployment guide
+
+## 0. FIRST: check what is actually deployed
+Run this from the `server/` folder on your computer (it only reads, it never sends email):
+
+    node scripts/check-deploy.js https://mydailyos.onrender.com https://mydailyos.vercel.app
+
+It prints PASS/FAIL for each item below and tells you the exact fix for every FAIL. Quick manual version: open
+`https://mydailyos.onrender.com/api/health` — it must show `"version":"2.6.0"` (or newer), `"mail":"gmail"` and `"google":"configured"`.
+**If there is no `version` field, Render is still running an OLD build** (that is what your phone screenshot showed:
+the raw "Google is not set up…" JSON comes from the old code). Deploy the new code first.
+
+### Deployment checklist
+| # | Where | Check | If it is wrong |
+|---|-------|-------|----------------|
+| 1 | GitHub | The new server code is pushed to the branch Render deploys | Copy the zip contents into the repo, commit, push |
+| 2 | Render -> Deploys | Latest deploy says "Live" and is the newest commit | Manual Deploy -> "Deploy latest commit"; read Logs if it failed |
+| 3 | Render -> Environment | `MONGO_URI`, `JWT_SECRET` (32+ random chars), `CLIENT_URL` = your Vercel URL (no trailing slash; several allowed, comma-separated) | Add/fix, then redeploy |
+| 4 | Render -> Environment | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | See section 2 |
+| 5 | Render -> Environment | `GMAIL_REFRESH_TOKEN` | See section 1 |
+| 6 | Render -> Logs (after start) | Lines `Mail: sending via gmail` and `Google: sign-in + Sheets enabled` | They tell you which variable is missing |
+| 7 | Google Cloud | Redirect URI is exactly `https://mydailyos.onrender.com/api/google/callback` | The checker prints the exact value the server uses |
+| 8 | Google Cloud | Consent screen: your Gmail is a **Test user** (or app is "In production") | Otherwise Google shows "Access blocked" |
+| 9 | Vercel | Website redeployed after the new code | Redeploy; the checker confirms it points at your API |
+
+Free-tier tip: Render sleeps after ~15 min idle and takes ~50 s to wake — that is the main reason everything feels slow.
+Create a free monitor at uptimerobot.com that opens `https://mydailyos.onrender.com/api/health` every 5 minutes and it stays awake.
 
 ## 1. Password-reset email (fixes "code sent" but nothing arrives)
 Render's free tier blocks outbound SMTP, so email must go over HTTPS. Best free option with no domain: **send through your own Gmail using the Gmail API** — mail genuinely comes from your gmail.com address, so it is not spam-filtered.

@@ -153,7 +153,12 @@ function toFood(row) {
   };
 }
 
-const CATALOGUE = ROWS.map(toFood);
+// Merge the extended Indian catalogue, de-duplicating by normalised name (the first definition wins).
+const norm = (n) => String(n).toLowerCase().replace(/[^a-z0-9]+/g, '');
+const seen = new Set();
+const CATALOGUE = [...ROWS, ...require('./indianFoods'), ...require('./indianFoods2')]
+  .filter((r) => { const k = norm(r[0]); if (seen.has(k)) return false; seen.add(k); return true; })
+  .map(toFood);
 
 /** Adds any catalogue food that's missing (matched by name). Never overwrites or removes anything. */
 async function seedFoods(Food = require('../models/Food')) {

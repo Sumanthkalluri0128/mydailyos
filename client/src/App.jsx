@@ -189,6 +189,22 @@ function App() {
   // ============================================================
 
   useEffect(() => {
+    // Paint instantly from the last saved copy (same day only), then refresh from the server below. On a free-tier host
+    // the server can take seconds to answer; this makes the dashboard appear immediately instead of sitting empty.
+    try {
+      const saved = JSON.parse(localStorage.getItem("mydailyos_dash_v1") || "null");
+      if (saved && saved.date === today) {
+        if (saved.food) setDailySummary(saved.food);
+        if (saved.activity) setActivitySummary(saved.activity);
+        if (saved.tasks) setTasks(saved.tasks);
+        if (saved.habits) setHabits(saved.habits);
+        if (saved.habitLogs) setHabitLogs(saved.habitLogs);
+        if (saved.water) setWaterSummary(saved.water);
+        if (saved.weight) setWeightHistory(saved.weight);
+        if (saved.profile) { setProfile(saved.profile); setLatestWeight(saved.profile.currentWeightKg ?? null); }
+      }
+    } catch { /* ignore a corrupt cache */ }
+
     const fetchDailySummary = async () => {
       try {
         // ======================================================
@@ -289,6 +305,20 @@ function App() {
             setLatestWeight(null);
           }
         }
+
+        try {
+          localStorage.setItem("mydailyos_dash_v1", JSON.stringify({
+            date: today,
+            food: foodData.success ? foodData.summary : undefined,
+            activity: activityData.success ? activityData.summary : undefined,
+            tasks: taskData.success ? taskData.tasks : undefined,
+            habits: habitData.success ? habitData.habits : undefined,
+            habitLogs: habitLogData.success ? habitLogData.logs : undefined,
+            water: waterData.success ? { totalMl: waterData.totalMl, totalLiters: waterData.totalLiters } : undefined,
+            weight: weightData.success ? (weightData.logs || []) : undefined,
+            profile: profileData.success ? profileData.profile : undefined,
+          }));
+        } catch { /* storage full / private mode */ }
       } catch (error) {
         console.error(
           "Failed to fetch dashboard data:",

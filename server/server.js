@@ -34,6 +34,10 @@ mongoose
     if (process.env.SEED_FOODS !== 'false') {
       require('./lib/foodCatalogue').seedFoods().then((r) => r.added && console.log(`Seeded ${r.added} catalogue foods`)).catch((e) => console.warn('Food seed warning:', e.message));
     }
+    // Same for the exercise list (incl. Cult.fit formats): add anything missing, never delete or overwrite.
+    if (process.env.SEED_ACTIVITIES !== 'false') {
+      require('./lib/activityCatalogue').seedActivities().then((r) => r.added && console.log(`Seeded ${r.added} exercises`)).catch((e) => console.warn('Exercise seed warning:', e.message));
+    }
     app.listen(PORT, '0.0.0.0', () => {
       console.log(`FlexFit server running on port ${PORT}`);
       console.log(`Allowed CORS origins: ${allowedOrigins.join(', ')}`);
