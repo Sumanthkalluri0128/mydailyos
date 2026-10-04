@@ -11,6 +11,7 @@ const HealthPage = lazy(() => import("./pages/HealthPage"));
 const WeightPage = lazy(() => import("./pages/WeightPage"));
 const ProfilePage = lazy(() => import("./pages/ProfilePage"));
 const ProgressPage = lazy(() => import("./pages/ProgressPage"));
+import OnboardingPage from "./pages/OnboardingPage";
 import MotivationCarousel from "./components/MotivationCarousel";
 import GoalBar from "./components/GoalBar";
 import CalorieBalance from "./components/CalorieBalance";
@@ -329,6 +330,27 @@ function App() {
 
     fetchDailySummary();
   }, [today, currentPage]);
+
+  // ============================================================
+  // FIRST-RUN ONBOARDING + AVATAR INITIAL
+  // ============================================================
+
+  const avatarInitial = (profile?.name || "").trim().charAt(0).toUpperCase() || "?";
+
+  if (profile && profile.onboarded === false) {
+    return (
+      <OnboardingPage
+        profile={profile}
+        onDone={(updated) => {
+          setProfile(updated);
+          try {
+            const saved = JSON.parse(localStorage.getItem("mydailyos_dash_v1") || "null");
+            if (saved) localStorage.setItem("mydailyos_dash_v1", JSON.stringify({ ...saved, profile: updated }));
+          } catch { /* ignore */ }
+        }}
+      />
+    );
+  }
 
   // ============================================================
   // FOOD LOGGER PAGE
@@ -721,8 +743,9 @@ function App() {
               className="profile-avatar"
               onClick={() => setCurrentPage("profile")}
               aria-label="Open profile"
+              title={profile?.name || ""}
             >
-              S
+              {avatarInitial}
             </button>
           </div>
         </div>
