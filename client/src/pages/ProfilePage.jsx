@@ -332,8 +332,6 @@ function ProfilePage({ onBack }) {
         {/* PERSONAL INFORMATION */}
         {/* ==================================================== */}
 
-      <GoogleSheetsCard />
-
         <div className="card">
 
           <h2>Personal Information</h2>
@@ -684,6 +682,8 @@ function ProfilePage({ onBack }) {
       </form>
 
       {/* Export your data, change password, log out, delete account */}
+      <GoogleSheetsCard />
+
       <DataControls />
 
     </div>

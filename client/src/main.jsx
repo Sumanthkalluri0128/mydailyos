@@ -6,6 +6,12 @@ import ToastHost from "./components/ToastHost";
 import ConfirmHost from "./components/ConfirmHost";
 import "./index.css";
 
+// Apply the saved theme BEFORE anything renders, so the sign-in / reset pages (which render outside <App />) honour it too.
+try {
+  const saved = localStorage.getItem("mydailyos_theme");
+  if (saved === "light" || saved === "dark") document.documentElement.setAttribute("data-theme", saved);
+} catch { /* privacy mode: fall back to the system setting */ }
+
 // On phones the on-screen keyboard can cover the field being typed in. When a field gains
 // focus, wait for the keyboard to open, then scroll that field to the middle of the view.
 document.addEventListener("focusin", (event) => {

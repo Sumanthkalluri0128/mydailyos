@@ -47,11 +47,14 @@ function createGoogleRouter({ allowedOrigins = [] } = {}) {
   const signState = (payload) => jwt.sign({ purpose: 'google-oauth', nonce: crypto.randomBytes(8).toString('hex'), ...payload }, process.env.JWT_SECRET, { expiresIn: '10m' });
   const authUrlFor = (req, state, loginHint) => g.buildAuthUrl({ clientId: process.env.GOOGLE_CLIENT_ID, redirectUri: redirectUri(req), state, loginHint });
 
+  // Public: lets login screens hide the Google button when the server isn't set up for it.
+  router.get('/config', (req, res) => res.json({ success: true, available: g.configured() }));
+
   // Public: start "Continue with Google" (the client opens this URL in a browser).
   router.get('/start', limiter, wrap(async (req, res) => {
-    needConfig();
     const returnTo = safeReturnTo(req.query.returnTo, allowedOrigins);
     if (!returnTo) throw new HttpError(400, 'Invalid returnTo');
+    if (!g.configured()) return res.redirect(redirectWith(returnTo, { google: 'error', reason: 'Google sign-in is not set up on the server yet.' }));
     res.redirect(authUrlFor(req, signState({ mode: 'login', returnTo })));
   }));
 

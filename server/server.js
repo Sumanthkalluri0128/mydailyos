@@ -37,6 +37,9 @@ mongoose
     app.listen(PORT, '0.0.0.0', () => {
       console.log(`FlexFit server running on port ${PORT}`);
       console.log(`Allowed CORS origins: ${allowedOrigins.join(', ')}`);
+      const mail = require('./lib/mailer').mailStatus();
+      console.log(mail.ready ? `Mail: sending via ${mail.provider}` : 'Mail: NOT CONFIGURED — password-reset emails cannot be sent (see SETUP_V5.md)');
+      console.log(require('./lib/googleClient').configured() ? 'Google: sign-in + Sheets enabled' : 'Google: not configured (sign-in and Sheets backup are hidden)');
     });
   })
   .catch((error) => {

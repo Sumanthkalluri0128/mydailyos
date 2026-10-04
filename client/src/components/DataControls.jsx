@@ -58,7 +58,7 @@ export default function DataControls() {
     });
 
   return (
-    <div className="profile-form data-controls">
+    <div className="account-form data-controls">
       <h2>Your data</h2>
       <p className="card-description">Download everything you've logged, or remove your account completely.</p>
       <div className="data-actions">

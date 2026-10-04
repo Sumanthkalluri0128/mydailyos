@@ -1070,9 +1070,37 @@ button {
   --md-border: var(--border);
   --md-bg: var(--bg);
   --md-card: rgba(255, 255, 255, 0.96);
+  --topbar-bg: rgba(255, 255, 255, 0.88);
   --md-shadow: 0 12px 35px rgba(39, 45, 78, 0.08);
   --md-shadow-hover: 0 18px 45px rgba(39, 45, 78, 0.13);
   --md-radius: 20px;
+}
+
+/* Dark values for the --md-* tokens above. They must come AFTER that :root block (same specificity, later wins) —
+   before this, cards, the top bar and tinted panels stayed near-white in dark mode. */
+:root[data-theme="dark"] {
+  --md-card: rgba(27, 28, 37, 0.96);
+  --topbar-bg: rgba(18, 19, 27, 0.88);
+  --md-shadow: 0 12px 35px rgba(0, 0, 0, 0.35);
+  --md-shadow-hover: 0 18px 45px rgba(0, 0, 0, 0.5);
+  --md-primary-soft: rgba(109, 93, 252, 0.18);
+  --md-success-soft: rgba(24, 168, 115, 0.15);
+  --md-water-soft: rgba(38, 151, 232, 0.15);
+  --md-orange-soft: rgba(245, 158, 11, 0.15);
+  --md-danger-soft: rgba(228, 84, 84, 0.16);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+  --md-card: rgba(27, 28, 37, 0.96);
+  --topbar-bg: rgba(18, 19, 27, 0.88);
+  --md-shadow: 0 12px 35px rgba(0, 0, 0, 0.35);
+  --md-shadow-hover: 0 18px 45px rgba(0, 0, 0, 0.5);
+  --md-primary-soft: rgba(109, 93, 252, 0.18);
+  --md-success-soft: rgba(24, 168, 115, 0.15);
+  --md-water-soft: rgba(38, 151, 232, 0.15);
+  --md-orange-soft: rgba(245, 158, 11, 0.15);
+  --md-danger-soft: rgba(228, 84, 84, 0.16);
+  }
 }
 
 html {
@@ -1109,8 +1137,8 @@ button:disabled {
 .topbar {
   height: 82px;
   padding: 0 42px;
-  background: rgba(255, 255, 255, 0.88);
-  border-bottom: 1px solid rgba(226, 229, 238, 0.9);
+  background: var(--topbar-bg);
+  border-bottom: 1px solid var(--border);
   backdrop-filter: blur(18px);
   position: sticky;
   top: 0;
@@ -1174,6 +1202,21 @@ button:disabled {
     radial-gradient(circle at 90% 10%, rgba(255,255,255,0.45), transparent 30%),
     linear-gradient(135deg, #f0edff, #f8f7ff 55%, #edf7ff);
   box-shadow: var(--md-shadow);
+}
+
+:root[data-theme="dark"] .welcome {
+  background:
+    radial-gradient(circle at 90% 10%, rgba(109, 93, 252, 0.28), transparent 35%),
+    linear-gradient(135deg, #1d1b33, #1a1b26 60%, #16222d);
+  border-color: rgba(109, 93, 252, 0.28);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .welcome {
+    background:
+      radial-gradient(circle at 90% 10%, rgba(109, 93, 252, 0.28), transparent 35%),
+      linear-gradient(135deg, #1d1b33, #1a1b26 60%, #16222d);
+    border-color: rgba(109, 93, 252, 0.28);
+  }
 }
 
 .welcome::after {
@@ -1368,7 +1411,7 @@ button:disabled {
   border: 1px solid var(--md-border);
   border-radius: 17px;
   padding: 20px 10px;
-  background: rgba(255,255,255,0.95);
+  background: var(--md-card);
   box-shadow: 0 6px 18px rgba(39, 45, 78, 0.05);
 }
 
@@ -1935,7 +1978,7 @@ label {
   padding: 22px;
   border: 1px solid var(--md-border);
   border-radius: 18px;
-  background: rgba(255,255,255,0.94);
+  background: var(--md-card);
   box-shadow: var(--md-shadow);
 }
 
@@ -2800,13 +2843,20 @@ label {
 }
 
 .balance-result.deficit {
-  background: #e6f6ee;
+  background: var(--md-success-soft);
   color: #157a4e;
 }
 
 .balance-result.surplus {
-  background: #fdecec;
+  background: var(--md-danger-soft);
   color: #b3261e;
+}
+
+:root[data-theme="dark"] .balance-result.deficit { color: #5be0a4; }
+:root[data-theme="dark"] .balance-result.surplus { color: #ff9494; }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .balance-result.deficit { color: #5be0a4; }
+  :root:not([data-theme="light"]) .balance-result.surplus { color: #ff9494; }
 }
 
 .serving-grid {
@@ -2921,3 +2971,58 @@ select {
 .session-box { margin-top: 24px; padding: 18px; border: 1px solid var(--border); border-radius: 18px; }
 .session-box h3 { margin: 0 0 4px; }
 .password-form { display: grid; gap: 10px; margin-top: 18px; }
+
+
+/* ============================================================
+   PROFILE PAGE POLISH
+   ============================================================ */
+.profile-page { max-width: 1080px; margin: 0 auto; }
+.profile-form { max-width: none; }
+.profile-form > .card,
+.profile-form > .profile-section { height: 100%; }
+.profile-form .energy-grid { grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 10px; }
+.profile-form .energy-card { min-width: 0; padding: 14px; }
+.profile-form .energy-card strong { font-size: clamp(20px, 2.2vw, 26px); overflow-wrap: anywhere; }
+.profile-form .form-actions,
+.profile-form > .primary-button { grid-column: 1 / -1; }
+.profile-form > .primary-button { justify-self: start; min-width: 240px; }
+
+.google-card { margin-top: 24px; }
+.google-card h2 { margin-bottom: 6px; }
+.google-card .google-what { max-width: 640px; line-height: 1.55; margin: 0 0 14px; }
+.google-card .google-status { margin: 0 0 12px; line-height: 1.5; }
+.google-card > div[style] { align-items: center; }
+.google-card a.btn,
+.google-card button {
+  display: inline-flex; align-items: center; justify-content: center;
+  padding: 11px 18px; border-radius: 12px; font-weight: 700; font-size: 14px; text-decoration: none; cursor: pointer;
+  border: 1px solid var(--border); background: var(--chip-bg); color: var(--text);
+}
+.google-card a.btn { background: var(--primary); border-color: var(--primary); color: #fff; }
+.google-card button:first-of-type:only-of-type { background: var(--primary); border-color: var(--primary); color: #fff; }
+.google-card button:disabled { opacity: .55; cursor: default; }
+
+.account-form.data-controls { max-width: none; }
+.data-controls { max-width: none; }
+
+/* Continue with Google on the sign-in / sign-up card */
+.auth-google {
+  width: 100%; margin-top: 12px; padding: 13px; border-radius: 14px; cursor: pointer; font-weight: 700; font-size: 15px;
+  border: 1px solid var(--border); background: var(--surface-soft); color: var(--text);
+}
+.auth-google:hover { border-color: var(--primary); }
+.auth-success { color: #157a4e; background: #e6f6ee; }
+:root[data-theme="dark"] .auth-success { color: #5be0a4; background: rgba(24,168,115,.15); }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .auth-success { color: #5be0a4; background: rgba(24,168,115,.15); } }
+
+@media (max-width: 800px) {
+  .profile-form > .primary-button { justify-self: stretch; }
+}
+
+/* Form labels: readable in both themes (they were a dark slate that vanished on dark cards). */
+.profile-form label,
+.task-layout form label,
+.habit-layout form label,
+.weight-page form label,
+.water-page form label,
+.exercise-form label { color: var(--text); font-weight: 600; }

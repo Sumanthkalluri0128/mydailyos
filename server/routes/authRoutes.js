@@ -62,7 +62,7 @@ router.post('/login', loginLimiter, wrap(async (req, res) => {
 
 // ---------------------------------------------------------------- password reset (emailed 8-character code)
 const crypto = require('crypto');
-const { sendMail } = require('../lib/mailer');
+const { sendMail, mailStatus } = require('../lib/mailer');
 const ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // no 0/O/1/I to avoid typos
 const hashCode = (code) => crypto.createHash('sha256').update(`${code}|${process.env.JWT_SECRET}`).digest('hex');
 const forgotLimiter = rateLimit({ windowMs: 15 * 60_000, max: 5, keyFn: (req) => `forgot|${req.ip}|${String(req.body?.email || '').toLowerCase()}`, message: 'Too many reset requests. Please wait a few minutes.' });
@@ -70,6 +70,12 @@ const resetLimiter = rateLimit({ windowMs: 15 * 60_000, max: 10, message: 'Too m
 
 router.post('/forgot', forgotLimiter, wrap(async (req, res) => {
   const email = v.string(req.body?.email, 'email', { max: 200, required: true }).toLowerCase();
+  // If the server has no way to send email, say so plainly. This does not depend on whether the account exists,
+  // so it reveals nothing — and it stops the screen from claiming "code sent" when nothing could ever arrive.
+  if (process.env.NODE_ENV === 'production' && !mailStatus().ready) {
+    console.error('forgot-password requested but no mail provider is configured (see SETUP_V5.md)');
+    throw new HttpError(503, 'Password-reset email is not set up on the server yet. Ask the app owner to finish the email setup.');
+  }
   const user = await User.findOne({ email });
   if (user) {
     const code = Array.from({ length: 8 }, () => ALPHABET[crypto.randomInt(ALPHABET.length)]).join('');
@@ -77,10 +83,13 @@ router.post('/forgot', forgotLimiter, wrap(async (req, res) => {
     user.resetExpires = new Date(Date.now() + 30 * 60_000);
     user.resetAttempts = 0;
     await user.save();
-    // Send in the background: a slow/blocked mail provider must never make this request hang, and the reply
-    // is identical whether or not the account exists (so response time can't reveal registered emails either).
-    sendMail({ to: user.email, subject: 'Your FlexFit password reset code', text: `Your FlexFit reset code is ${code}\n\nIt expires in 30 minutes. If you did not ask for this, you can ignore this email.` })
-      .catch((e) => console.error('mail error:', e.message));
+    try {
+      await sendMail({ to: user.email, subject: 'Your FlexFit password reset code', text: `Your FlexFit reset code is ${code}\n\nIt expires in 30 minutes. If you did not ask for this, you can ignore this email.` });
+    } catch (e) {
+      // Tell the person (instead of pretending it worked). Only reachable when the mail provider itself is failing.
+      console.error('mail error:', e.message);
+      throw new HttpError(502, 'We could not send the email right now. Please try again in a minute.');
+    }
   }
   // Same answer whether or not the account exists, so this can't be used to find registered emails.
   res.json({ success: true, message: 'If that email is registered, a reset code has been sent.' });

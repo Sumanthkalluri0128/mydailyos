@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { API_URL } from "../config";
 import "../auth/auth.css";
 
@@ -18,13 +18,22 @@ export default function ForgotPassword({ onBack }) {
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  const [cooldown, setCooldown] = useState(0);
+  useEffect(() => { if (cooldown <= 0) return undefined; const t = setTimeout(() => setCooldown(cooldown - 1), 1000); return () => clearTimeout(t); }, [cooldown]);
 
   async function run(fn) {
     setError(""); setBusy(true);
     try { await fn(); } catch (e) { setError(e.message || "Something went wrong"); } finally { setBusy(false); }
   }
 
-  const sendCode = (event) => { event.preventDefault(); run(async () => { await post("/api/auth/forgot", { email }); setStep("code"); setMessage("If that email is registered, we sent an 8-character code. It expires in 30 minutes."); }); };
+  const sendCode = (event) => {
+    event?.preventDefault();
+    run(async () => {
+      await post("/api/auth/forgot", { email });
+      setStep("code"); setCooldown(30);
+      setMessage("If that email is registered, we sent an 8-character code. It expires in 30 minutes. Check your spam folder too.");
+    });
+  };
   const reset = (event) => {
     event.preventDefault();
     if (password.length < 8) return setError("Use at least 8 characters.");
@@ -52,6 +61,11 @@ export default function ForgotPassword({ onBack }) {
             <label>New password<input type="password" value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="new-password" minLength={8} required /></label>
             <button type="submit" disabled={busy}>{busy ? "Please wait…" : "Update password"}</button>
           </form>
+        )}
+        {step === "code" && (
+          <button type="button" className="auth-switch" disabled={busy || cooldown > 0} onClick={() => sendCode()}>
+            {cooldown > 0 ? `Didn't get it? Resend in ${cooldown}s` : "Didn't get it? Send a new code"}
+          </button>
         )}
         <button type="button" className="auth-switch" onClick={onBack}>{step === "done" ? "Go to sign in" : "Back to sign in"}</button>
       </div>

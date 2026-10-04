@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { API_URL } from '../config';
 import '../auth/auth.css';
 import ForgotPassword from './ForgotPassword';
@@ -22,13 +22,18 @@ async function readResponse(response) {
   return data;
 }
 
-export default function AuthPage({ onAuthenticated }) {
+export default function AuthPage({ onAuthenticated, notice = '' }) {
+  const [googleAvailable, setGoogleAvailable] = useState(false);
+  useEffect(() => {
+    // Only offer "Continue with Google" when the server is actually set up for it.
+    fetch(`${API_URL}/api/google/config`).then((r) => r.json()).then((d) => setGoogleAvailable(!!d.available)).catch(() => {});
+  }, []);
   const [mode, setMode] = useState('signup');
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirm, setConfirm] = useState('');
-  const [error, setError] = useState('');
+  const [error, setError] = useState(notice);
   const [busy, setBusy] = useState(false);
 
   async function submit(event) {
@@ -162,10 +167,10 @@ export default function AuthPage({ onAuthenticated }) {
           </button>
         </form>
 
-        {mode !== 'forgot' && (
+        {mode !== 'forgot' && googleAvailable && (
           <button
             type="button"
-            className="auth-switch"
+            className="auth-google"
             onClick={() => { window.location.href = `${API_URL}/api/google/start?returnTo=${encodeURIComponent(`${window.location.origin}/`)}`; }}
           >
             Continue with Google

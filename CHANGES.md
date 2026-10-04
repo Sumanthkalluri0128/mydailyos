@@ -87,3 +87,9 @@ These existed as files (`DataControls.jsx`, `AccountPage.jsx`) but nothing in th
 - Mail: HTTPS providers (Brevo/Resend), IPv4 + timeouts for SMTP, non-blocking forgot-password. See SETUP_V5.md.
 - Google sign-in and per-user Google Sheet mirror (drive.file scope, encrypted refresh token, debounced sync). New /api/google/* routes.
 - Web: Continue with Google, Google Sheets card on Profile.
+
+## v5.1
+- Forgot password: Gmail-API mail provider (free, from your own Gmail); honest 503/502 errors instead of a fake "code sent"; resend button; /api/health shows mail + Google status; startup log line.
+- Google: public /api/google/config so the login button and Profile card appear only when set up; clearer errors back on the login page.
+- Web CSS: dark-mode tokens (cards, top bar, greeting, banners were near-white), Profile page full-width responsive grid (class collision with account.css removed), themed auth buttons/inputs.
+- test/e2e_flows.test.js: 15 real-HTTP end-to-end tests (signup, forgot/reset, Google sign-in, connect, sheet sync, disconnect).

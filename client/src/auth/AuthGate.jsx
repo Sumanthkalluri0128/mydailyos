@@ -3,21 +3,33 @@ import AuthPage from "../pages/AuthPage";
 import { apiFetch, clearSession } from "../config/api";
 import { notify } from "../utils/notify";
 
-// Google redirects back to "/#google=ok&token=…" (sign-in) or "/#google=ok" (sheet connected). Take it, then clean the URL.
-function consumeGoogleRedirect() {
+// Google redirects back to "/#google=ok&token=…" (sign-in), "/#google=ok" (sheet connected) or "/#google=error&reason=…".
+// Read it once (cached, so React StrictMode's double render can't lose it), then clean the URL.
+let googleRedirect;
+function readGoogleRedirect() {
+  if (googleRedirect !== undefined) return googleRedirect;
+  googleRedirect = null;
   const h = window.location.hash.replace(/^#/, "");
-  if (!h.includes("google=")) return;
+  if (!h.includes("google=")) return googleRedirect;
   const p = new URLSearchParams(h);
   window.history.replaceState(null, "", window.location.pathname + window.location.search);
-  const status = p.get("google");
-  if (status === "ok" && p.get("token")) localStorage.setItem("mydailyos_token", p.get("token"));
-  else if (status === "ok") setTimeout(() => notify("Google connected — your sheet is being created.", "success"), 500);
-  else if (status === "error") setTimeout(() => notify(p.get("reason") || "Google sign-in failed.", "error"), 500);
+  googleRedirect = { status: p.get("google"), token: p.get("token") || "", reason: p.get("reason") || "" };
+  if (googleRedirect.status === "ok" && googleRedirect.token) localStorage.setItem("mydailyos_token", googleRedirect.token);
+  return googleRedirect;
 }
 
 export default function AuthGate({ children }) {
   const [ready, setReady] = useState(false);
   const [user, setUser] = useState(null);
+  const redirect = readGoogleRedirect();
+  // Errors/cancellation are shown on the login page itself (toasts only exist inside the signed-in app).
+  const loginNotice = redirect && redirect.status !== "ok"
+    ? (redirect.status === "cancelled" ? "Google sign-in was cancelled." : redirect.reason || "Google sign-in failed. Please try again.")
+    : "";
+
+  useEffect(() => {
+    if (user && redirect && redirect.status === "ok" && !redirect.token) notify("Google connected — your sheet is being created.", "success");
+  }, [user]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     let cancelled = false;
@@ -28,7 +40,7 @@ export default function AuthGate({ children }) {
     };
 
     window.addEventListener("mydailyos:unauthorized", handleUnauthorized);
-    consumeGoogleRedirect();
+    readGoogleRedirect();
 
     const token = localStorage.getItem("mydailyos_token");
 
@@ -76,6 +88,7 @@ export default function AuthGate({ children }) {
   if (!user) {
     return (
       <AuthPage
+        notice={loginNotice}
         onAuthenticated={(authenticatedUser) => setUser(authenticatedUser)}
       />
     );

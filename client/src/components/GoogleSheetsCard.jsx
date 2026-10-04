@@ -43,14 +43,20 @@ export default function GoogleSheetsCard() {
     await load(); setBusy(false);
   }
 
+  // Not set up on the server (or still checking / offline): show nothing rather than a technical message.
+  if (!status || !status.available) return null;
+
   return (
-    <div className="card">
+    <div className="card google-card">
       <h2>Google Sheets backup</h2>
-      {!status ? <p className="muted">Checking…</p> : !status.available ? (
-        <p className="muted">Not set up on the server yet — add GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET.</p>
-      ) : status.connected ? (
+      <p className="muted google-what">
+        A spreadsheet called “FlexFit data” is created in <strong>your own Google Drive</strong> and kept up to date with your
+        food, water, weight, workouts, tasks and habits — handy for charts, sharing with a coach, or just owning a copy of your data.
+        FlexFit can only open that one file.
+      </p>
+      {status.connected ? (
         <>
-          <p className="muted">
+          <p className="google-status">
             Every entry is copied to a “FlexFit data” sheet in {status.email || "your Google account"}.{" "}
             {status.lastSyncAt ? `Last synced ${new Date(status.lastSyncAt).toLocaleString()}.` : "First sync in progress…"}
           </p>
@@ -63,7 +69,6 @@ export default function GoogleSheetsCard() {
         </>
       ) : (
         <>
-          <p className="muted">Keep a copy of your food, water, weight, workouts, tasks and habits in a Google Sheet in your own Google account. FlexFit can only see the one sheet it creates.</p>
           <button type="button" disabled={busy} onClick={connect}>{busy ? "Working…" : "Connect Google"}</button>
         </>
       )}
