@@ -11,6 +11,9 @@
 // and have no IPv6 egress — which is exactly the `connect ENETUNREACH 2607:f8b0:…:465` error in the logs
 // (smtp.gmail.com resolved to an IPv6 address). HTTPS (port 443) is never blocked.
 //
+// Every configured provider is tried in the order above: if Gmail fails (e.g. its token expired) the next configured
+// provider is used, so a single broken credential no longer blocks password resets.
+//
 // Without any provider configured, development prints the message to the log so flows can still be tested.
 
 const FROM_DEFAULT = 'FlexFit <no-reply@flexfit.app>';
@@ -36,12 +39,18 @@ async function postJson(fetchImpl, url, headers, body) {
   }
 }
 
+/** All configured providers, best first. */
+function providerList(env = process.env) {
+  const list = [];
+  if (env.GMAIL_REFRESH_TOKEN && env.GOOGLE_CLIENT_ID && env.GOOGLE_CLIENT_SECRET) list.push('gmail');
+  if (env.BREVO_API_KEY) list.push('brevo');
+  if (env.RESEND_API_KEY) list.push('resend');
+  if (env.SMTP_URL) list.push('smtp');
+  return list;
+}
+
 function chooseProvider(env = process.env) {
-  if (env.GMAIL_REFRESH_TOKEN && env.GOOGLE_CLIENT_ID && env.GOOGLE_CLIENT_SECRET) return 'gmail';
-  if (env.BREVO_API_KEY) return 'brevo';
-  if (env.RESEND_API_KEY) return 'resend';
-  if (env.SMTP_URL) return 'smtp';
-  return null;
+  return providerList(env)[0] || null;
 }
 
 const b64url = (buf) => Buffer.from(buf).toString('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
@@ -53,43 +62,63 @@ function buildRawMessage({ to, subject, text }) {
   return b64url(`${headers.join('\r\n')}\r\n\r\n${Buffer.from(text, 'utf8').toString('base64')}`);
 }
 
+// The access token lives ~1 hour; reuse it instead of asking Google for a new one on every email.
+let cachedToken = { key: '', value: '', expiresAt: 0 };
+
 async function gmailAccessToken(fetchImpl, env) {
-  const res = await fetchImpl('https://oauth2.googleapis.com/token', {
-    method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    body: new URLSearchParams({ client_id: env.GOOGLE_CLIENT_ID, client_secret: env.GOOGLE_CLIENT_SECRET, refresh_token: env.GMAIL_REFRESH_TOKEN, grant_type: 'refresh_token' }).toString(),
-  });
+  const key = `${env.GOOGLE_CLIENT_ID}|${env.GMAIL_REFRESH_TOKEN}`;
+  if (cachedToken.key === key && cachedToken.expiresAt > Date.now() + 60_000) return cachedToken.value;
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), TIMEOUT_MS);
+  let res;
+  try {
+    res = await fetchImpl('https://oauth2.googleapis.com/token', {
+      method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, signal: ctrl.signal,
+      body: new URLSearchParams({ client_id: env.GOOGLE_CLIENT_ID, client_secret: env.GOOGLE_CLIENT_SECRET, refresh_token: env.GMAIL_REFRESH_TOKEN, grant_type: 'refresh_token' }).toString(),
+    });
+  } finally { clearTimeout(timer); }
   const body = await res.json().catch(() => ({}));
   if (!res.ok || !body.access_token) {
-    const why = body.error === 'invalid_grant' ? 'Gmail permission expired or was revoked — run scripts/gmail-token.js again (and set the Google consent screen to "In production" so it stops expiring)' : (body.error_description || body.error || res.status);
+    const why = body.error === 'invalid_grant'
+      ? 'Gmail permission expired or was revoked (invalid_grant) — set the Google consent screen to "In production", then run scripts/gmail-token.js again and update GMAIL_REFRESH_TOKEN'
+      : (body.error_description || body.error || res.status);
     throw new Error(`gmail token refresh failed: ${why}`);
   }
+  cachedToken = { key, value: body.access_token, expiresAt: Date.now() + (Number(body.expires_in) || 3000) * 1000 };
   return body.access_token;
 }
+
+const resetGmailTokenCache = () => { cachedToken = { key: '', value: '', expiresAt: 0 }; };
 
 function mailStatus(env = process.env) {
   const provider = chooseProvider(env);
   return { provider, ready: !!provider };
 }
 
-async function sendMail({ to, subject, text }, { env = process.env, fetchImpl = globalThis.fetch, nodemailer } = {}) {
-  const provider = chooseProvider(env);
+async function sendVia(provider, { to, subject, text }, { env, fetchImpl, nodemailer }) {
   const from = env.MAIL_FROM || FROM_DEFAULT;
 
   if (provider === 'gmail') {
-    const token = await gmailAccessToken(fetchImpl, env);
-    await postJson(fetchImpl, 'https://gmail.googleapis.com/gmail/v1/users/me/messages/send', { Authorization: `Bearer ${token}` }, { raw: buildRawMessage({ to, subject, text }) });
-    return true;
+    const send = async () => {
+      const token = await gmailAccessToken(fetchImpl, env);
+      await postJson(fetchImpl, 'https://gmail.googleapis.com/gmail/v1/users/me/messages/send', { Authorization: `Bearer ${token}` }, { raw: buildRawMessage({ to, subject, text }) });
+    };
+    try { await send(); }
+    catch (e) {
+      // A 401 means the cached access token was rejected: drop it and try once more with a fresh one.
+      if (/answered 401/.test(e.message)) { resetGmailTokenCache(); await send(); } else throw e;
+    }
+    return;
   }
 
   if (provider === 'brevo') {
-    const sender = parseFrom(from);
-    await postJson(fetchImpl, 'https://api.brevo.com/v3/smtp/email', { 'api-key': env.BREVO_API_KEY }, { sender, to: [{ email: to }], subject, textContent: text });
-    return true;
+    await postJson(fetchImpl, 'https://api.brevo.com/v3/smtp/email', { 'api-key': env.BREVO_API_KEY }, { sender: parseFrom(from), to: [{ email: to }], subject, textContent: text });
+    return;
   }
 
   if (provider === 'resend') {
     await postJson(fetchImpl, 'https://api.resend.com/emails', { Authorization: `Bearer ${env.RESEND_API_KEY}` }, { from, to: [to], subject, text });
-    return true;
+    return;
   }
 
   if (provider === 'smtp') {
@@ -101,15 +130,34 @@ async function sendMail({ to, subject, text }, { env = process.env, fetchImpl = 
       socketTimeout: TIMEOUT_MS,
     });
     await transport.sendMail({ from, to, subject, text });
+  }
+}
+
+async function sendMail({ to, subject, text }, { env = process.env, fetchImpl = globalThis.fetch, nodemailer } = {}) {
+  const providers = providerList(env);
+
+  if (!providers.length) {
+    if (env.NODE_ENV === 'production') {
+      console.warn('No mail provider configured (set GMAIL_REFRESH_TOKEN, BREVO_API_KEY, RESEND_API_KEY or SMTP_URL) — email was NOT sent');
+      return false;
+    }
+    console.log(`\n[mail:dev] to=${to}\n${subject}\n${text}\n`);
     return true;
   }
 
-  if (env.NODE_ENV === 'production') {
-    console.warn('No mail provider configured (set BREVO_API_KEY, RESEND_API_KEY or SMTP_URL) — email was NOT sent');
-    return false;
+  const failures = [];
+  for (const provider of providers) {
+    try {
+      await sendVia(provider, { to, subject, text }, { env, fetchImpl, nodemailer });
+      if (failures.length) console.warn(`mail: sent via ${provider} after ${failures.map((f) => f.split(':')[0]).join(', ')} failed`);
+      return true;
+    } catch (e) {
+      console.error(`mail: ${provider} failed — ${e.message}`);
+      failures.push(`${provider}: ${e.message}`);
+    }
   }
-  console.log(`\n[mail:dev] to=${to}\n${subject}\n${text}\n`);
-  return true;
+  // Every configured provider failed. Keep the first (preferred) provider's error as the main message.
+  throw new Error(failures.join(' | '));
 }
 
-module.exports = { sendMail, chooseProvider, parseFrom, mailStatus, buildRawMessage };
+module.exports = { sendMail, chooseProvider, providerList, parseFrom, mailStatus, buildRawMessage, resetGmailTokenCache };

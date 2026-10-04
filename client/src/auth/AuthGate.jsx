@@ -1,9 +1,8 @@
 import { useEffect, useState } from "react";
 import AuthPage from "../pages/AuthPage";
 import { apiFetch, clearSession } from "../config/api";
-import { notify } from "../utils/notify";
 
-// Google redirects back to "/#google=ok&token=…" (sign-in), "/#google=ok" (sheet connected) or "/#google=error&reason=…".
+// Google sign-in redirects back to "/#google=ok&token=…" or "/#google=error&reason=…" (or "cancelled").
 // Read it once (cached, so React StrictMode's double render can't lose it), then clean the URL.
 let googleRedirect;
 function readGoogleRedirect() {
@@ -26,10 +25,6 @@ export default function AuthGate({ children }) {
   const loginNotice = redirect && redirect.status !== "ok"
     ? (redirect.status === "cancelled" ? "Google sign-in was cancelled." : redirect.reason || "Google sign-in failed. Please try again.")
     : "";
-
-  useEffect(() => {
-    if (user && redirect && redirect.status === "ok" && !redirect.token) notify("Google connected — your sheet is being created.", "success");
-  }, [user]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     let cancelled = false;

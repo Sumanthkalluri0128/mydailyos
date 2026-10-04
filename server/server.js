@@ -43,7 +43,7 @@ mongoose
       console.log(`Allowed CORS origins: ${allowedOrigins.join(', ')}`);
       const mail = require('./lib/mailer').mailStatus();
       console.log(mail.ready ? `Mail: sending via ${mail.provider}` : 'Mail: NOT CONFIGURED — password-reset emails cannot be sent (see SETUP_V5.md)');
-      console.log(require('./lib/googleClient').configured() ? 'Google: sign-in + Sheets enabled' : 'Google: not configured (sign-in and Sheets backup are hidden)');
+      console.log(require('./lib/googleClient').configured() ? 'Google: sign-in enabled' : 'Google: not configured (the Continue with Google button is hidden)');
     });
   })
   .catch((error) => {

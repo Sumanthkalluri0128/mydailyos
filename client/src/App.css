@@ -2987,21 +2987,6 @@ select {
 .profile-form > .primary-button { grid-column: 1 / -1; }
 .profile-form > .primary-button { justify-self: start; min-width: 240px; }
 
-.google-card { margin-top: 24px; }
-.google-card h2 { margin-bottom: 6px; }
-.google-card .google-what { max-width: 640px; line-height: 1.55; margin: 0 0 14px; }
-.google-card .google-status { margin: 0 0 12px; line-height: 1.5; }
-.google-card > div[style] { align-items: center; }
-.google-card a.btn,
-.google-card button {
-  display: inline-flex; align-items: center; justify-content: center;
-  padding: 11px 18px; border-radius: 12px; font-weight: 700; font-size: 14px; text-decoration: none; cursor: pointer;
-  border: 1px solid var(--border); background: var(--chip-bg); color: var(--text);
-}
-.google-card a.btn { background: var(--primary); border-color: var(--primary); color: #fff; }
-.google-card button:first-of-type:only-of-type { background: var(--primary); border-color: var(--primary); color: #fff; }
-.google-card button:disabled { opacity: .55; cursor: default; }
-
 .account-form.data-controls { max-width: none; }
 .data-controls { max-width: none; }
 

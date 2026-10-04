@@ -1,10 +1,8 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 
-const { sendMail, chooseProvider, parseFrom } = require('../lib/mailer');
+const { sendMail, chooseProvider, providerList, parseFrom, resetGmailTokenCache } = require('../lib/mailer');
 const gc = require('../lib/googleClient');
-const { buildTabs, dailySummary, TAB_NAMES } = require('../lib/sheetData');
-const { encrypt, decrypt } = require('../lib/cryptoBox');
 const { safeReturnTo, redirectWith } = require('../routes/googleRoutes');
 
 const okRes = (body = {}) => ({ ok: true, status: 200, text: async () => JSON.stringify(body) });
@@ -49,95 +47,76 @@ test('mailer: SMTP fallback forces IPv4 and sets timeouts (the ENETUNREACH fix)'
   assert.ok(opts.connectionTimeout > 0 && opts.connectionTimeout <= 15000);
 });
 
-// ---------------------------------------------------------------- crypto
-test('cryptoBox: round-trips and rejects tampering', () => {
-  const env = { JWT_SECRET: 'abc' };
-  const box = encrypt('1//refresh-token', env);
-  assert.notEqual(box, '1//refresh-token');
-  assert.equal(decrypt(box, env), '1//refresh-token');
-  const parts = box.split('.');
-  parts[2] = Buffer.from('tampered-ciphertext').toString('base64');
-  assert.throws(() => decrypt(parts.join('.'), env));
-  assert.throws(() => decrypt(box, { JWT_SECRET: 'other' }));
+// ---------------------------------------------------------------- mailer resilience
+const gmailEnv = { GMAIL_REFRESH_TOKEN: 'rt', GOOGLE_CLIENT_ID: 'cid', GOOGLE_CLIENT_SECRET: 'cs' };
+const jsonRes = (status, body) => ({ ok: status < 400, status, json: async () => body, text: async () => JSON.stringify(body) });
+
+test('mailer: lists every configured provider, best first', () => {
+  assert.deepEqual(providerList({ ...gmailEnv, BREVO_API_KEY: 'k', SMTP_URL: 'smtps://x' }), ['gmail', 'brevo', 'smtp']);
+  assert.deepEqual(providerList({}), []);
+});
+
+test('mailer: Gmail access token is cached, so a second email does not hit the token endpoint again', async () => {
+  resetGmailTokenCache();
+  const urls = [];
+  const fetchImpl = async (url) => { urls.push(url); return url.includes('oauth2') ? jsonRes(200, { access_token: 'AT', expires_in: 3600 }) : jsonRes(200, {}); };
+  await sendMail({ to: 'a@b.com', subject: 'S', text: 'T' }, { env: gmailEnv, fetchImpl });
+  await sendMail({ to: 'a@b.com', subject: 'S', text: 'T' }, { env: gmailEnv, fetchImpl });
+  assert.equal(urls.filter((u) => u.includes('oauth2')).length, 1);
+  assert.equal(urls.filter((u) => u.includes('gmail.googleapis.com')).length, 2);
+});
+
+test('mailer: a rejected cached token (401) is dropped and the send is retried once with a fresh one', async () => {
+  resetGmailTokenCache();
+  let tokens = 0; let sends = 0;
+  const fetchImpl = async (url) => {
+    if (url.includes('oauth2')) { tokens += 1; return jsonRes(200, { access_token: `AT${tokens}`, expires_in: 3600 }); }
+    sends += 1;
+    return sends === 1 ? jsonRes(401, { error: { message: 'expired' } }) : jsonRes(200, {});
+  };
+  await sendMail({ to: 'a@b.com', subject: 'S', text: 'T' }, { env: gmailEnv, fetchImpl });
+  assert.equal(tokens, 2);
+  assert.equal(sends, 2);
+});
+
+test('mailer: if Gmail is broken (expired token) the next configured provider still delivers the email', async () => {
+  resetGmailTokenCache();
+  const urls = [];
+  const fetchImpl = async (url) => {
+    urls.push(url);
+    if (url.includes('oauth2')) return jsonRes(400, { error: 'invalid_grant' });
+    return jsonRes(200, {});
+  };
+  const ok = await sendMail({ to: 'a@b.com', subject: 'S', text: 'T' }, { env: { ...gmailEnv, BREVO_API_KEY: 'k' }, fetchImpl });
+  assert.equal(ok, true);
+  assert.ok(urls.some((u) => u.startsWith('https://api.brevo.com/')));
+});
+
+test('mailer: when every provider fails, the error names the reason (invalid_grant is explained)', async () => {
+  resetGmailTokenCache();
+  const fetchImpl = async (url) => (url.includes('oauth2') ? jsonRes(400, { error: 'invalid_grant' }) : jsonRes(200, {}));
+  await assert.rejects(sendMail({ to: 'a@b.com', subject: 'S', text: 'T' }, { env: gmailEnv, fetchImpl }), /invalid_grant/);
 });
 
 // ---------------------------------------------------------------- google client
-test('google: auth url asks for offline access, consent and only the drive.file scope', () => {
-  const u = new URL(gc.buildAuthUrl({ clientId: 'cid', redirectUri: 'https://x/cb', state: 's1', loginHint: 'me@gmail.com' }));
-  assert.equal(u.searchParams.get('access_type'), 'offline');
-  assert.equal(u.searchParams.get('prompt'), 'consent');
-  assert.equal(u.searchParams.get('login_hint'), 'me@gmail.com');
-  const scope = u.searchParams.get('scope');
-  assert.match(scope, /auth\/drive\.file/);
-  assert.doesNotMatch(scope, /auth\/drive(\s|$)/); // never the full-Drive scope
-  assert.doesNotMatch(scope, /spreadsheets/);
+test('google: auth url asks for identity scopes only (no Drive, Sheets or offline access)', () => {
+  const u = new URL(gc.buildAuthUrl({ clientId: 'cid', redirectUri: 'https://x/cb', state: 's1' }));
+  assert.equal(u.searchParams.get('scope'), 'openid email profile');
+  assert.equal(u.searchParams.get('access_type'), null);
+  assert.equal(u.searchParams.get('prompt'), 'select_account');
+  assert.equal(u.searchParams.get('state'), 's1');
+  assert.doesNotMatch(u.search, /drive|spreadsheets|gmail/);
 });
 
-test('google: invalid_grant is flagged as needing reconnect', async () => {
+test('google: Sheets helpers are gone from the client', () => {
+  for (const fn of ['createSpreadsheet', 'ensureTabs', 'writeTabs', 'refreshAccessToken']) assert.equal(gc[fn], undefined, fn);
+});
+
+test('google: a failing token exchange surfaces Google\'s message', async () => {
   await assert.rejects(
-    gc.refreshAccessToken({ refreshToken: 'r', clientId: 'c', clientSecret: 's' }, async () => errRes(400, { error: 'invalid_grant', error_description: 'Token revoked' })),
-    (e) => e.needsReconnect === true
+    gc.exchangeCode({ code: 'c', clientId: 'a', clientSecret: 'b', redirectUri: 'https://x/cb' }, async () => errRes(400, { error: 'invalid_grant', error_description: 'Bad code' })),
+    /Bad code/
   );
-});
-
-test('google: writeTabs clears then writes RAW values in two calls', async () => {
-  const calls = [];
-  await gc.writeTabs('tok', 'SHEET', { Water: [['Date', 'Amount ml'], ['2026-10-03', 250]] }, async (url, init) => { calls.push({ url, body: JSON.parse(init.body) }); return okRes(); });
-  assert.equal(calls.length, 2);
-  assert.match(calls[0].url, /values:batchClear$/);
-  assert.match(calls[1].url, /values:batchUpdate$/);
-  assert.equal(calls[1].body.valueInputOption, 'RAW');
-  assert.deepEqual(calls[1].body.data[0].values[1], ['2026-10-03', 250]);
-});
-
-test('google: ensureTabs adds only the missing tabs', async () => {
-  const calls = [];
-  const fetchImpl = async (url, init) => {
-    calls.push({ url, init });
-    return /fields=/.test(url) ? okRes({ sheets: [{ properties: { title: 'Food' } }] }) : okRes();
-  };
-  const added = await gc.ensureTabs('t', 'ID', ['Food', 'Water'], fetchImpl);
-  assert.deepEqual(added, ['Water']);
-  assert.equal(JSON.parse(calls[1].init.body).requests[0].addSheet.properties.title, 'Water');
-});
-
-// ---------------------------------------------------------------- sheet data
-const sample = {
-  user: { name: 'Sumanth', email: 's@gmail.com' },
-  profile: { currentWeightKg: 70, goals: { calorieTarget: 1800 } },
-  foodLogs: [
-    { date: '2026-10-02', mealType: 'lunch', foodName: 'Dal', consumedQuantity: 200, servingUnit: 'g', servings: 1, nutritionTotal: { calories: 250, protein: 12, carbohydrates: 30, fat: 8 } },
-    { date: '2026-10-02', mealType: 'dinner', foodName: 'Roti', consumedQuantity: 2, servingUnit: 'piece', servings: 2, nutritionTotal: { calories: 200, protein: 6, carbohydrates: 40, fat: 2 } },
-  ],
-  waterLogs: [{ date: '2026-10-02', amountMl: 250 }, { date: '2026-10-02', amountMl: 500 }],
-  weightLogs: [{ date: '2026-10-01', weightKg: 71 }, { date: '2026-10-02', weightKg: 70.4 }],
-  activityLogs: [{ date: '2026-10-02', activityName: 'Run', category: 'cardio', durationMinutes: 30, caloriesBurned: 300, sets: [{ reps: 10, weightKg: 20 }] }],
-  tasks: [{ date: '2026-10-02', title: '=HYPERLINK("evil")', priority: 'high', category: 'General', completed: true }],
-  healthLogs: [{ date: '2026-10-02', type: 'steps', value: 4000 }, { date: '2026-10-02', type: 'steps', value: 8000 }],
-  habitLogs: [], fasts: [], now: Date.UTC(2026, 9, 3),
-};
-
-test('sheetData: every tab exists and has a header row', () => {
-  const tabs = buildTabs(sample);
-  assert.deepEqual(Object.keys(tabs).sort(), [...TAB_NAMES].sort());
-  for (const rows of Object.values(tabs)) assert.ok(rows.length >= 1 && Array.isArray(rows[0]));
-});
-
-test('sheetData: daily summary adds up food, water, burn, best steps and latest weight', () => {
-  const rows = dailySummary(sample);
-  const day = rows.find((r) => r[0] === '2026-10-02');
-  assert.equal(day[1], 450);   // calories
-  assert.equal(day[5], 750);   // water
-  assert.equal(day[6], 300);   // burned
-  assert.equal(day[8], 8000);  // steps = max reading, not the sum of cumulative readings
-  assert.equal(day[9], 70.4);  // weight
-  assert.equal(day[10], 1);    // tasks done
-});
-
-test('sheetData: numbers stay numbers; formula-looking text is kept as text for RAW writes', () => {
-  const tabs = buildTabs(sample);
-  assert.equal(typeof tabs.Water[1][1], 'number');
-  assert.equal(tabs.Tasks[1][2], '=HYPERLINK("evil")'); // written with valueInputOption RAW => stored as plain text
 });
 
 // ---------------------------------------------------------------- redirect safety

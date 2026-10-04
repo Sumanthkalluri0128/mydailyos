@@ -5,7 +5,7 @@
 //
 // It is read-only and safe: the password-reset probe uses an address that does not exist, so no email is ever sent.
 
-const MIN_VERSION = '2.6.0';
+const MIN_VERSION = '2.7.0';
 const cmp = (a, b) => { const x = String(a).split('.').map(Number); const y = String(b).split('.').map(Number); for (let i = 0; i < 3; i++) { if ((x[i] || 0) !== (y[i] || 0)) return (x[i] || 0) - (y[i] || 0); } return 0; };
 
 async function runChecks(api, web, { fetchImpl = globalThis.fetch } = {}) {

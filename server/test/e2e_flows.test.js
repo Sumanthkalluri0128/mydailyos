@@ -1,9 +1,9 @@
 // End-to-end flows through the REAL Express app over real HTTP: sign up, forgot/reset password (mail captured),
-// Continue with Google (consent -> callback -> session), connect Google + spreadsheet creation/sync/disconnect.
+// and Continue with Google (consent -> callback -> session).
 //
 // Only the outside world is faked: MongoDB (in-memory stand-ins for the model methods the flows use) and Google/mail
 // HTTPS endpoints (an intercepting fetch). Everything between — routing, validation, JWT, OAuth state, redirects,
-// encryption, sheet building — is the production code.
+// — is the production code.
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const mongoose = require('mongoose');
@@ -12,7 +12,6 @@ process.env.JWT_SECRET = 'test-secret-test-secret-test-secret';
 process.env.NODE_ENV = 'production';
 process.env.GOOGLE_CLIENT_ID = 'cid.apps.googleusercontent.com';
 process.env.GOOGLE_CLIENT_SECRET = 'csecret';
-process.env.SHEET_SYNC_DEBOUNCE_MS = '20';
 delete process.env.BREVO_API_KEY; delete process.env.RESEND_API_KEY; delete process.env.SMTP_URL; delete process.env.GMAIL_REFRESH_TOKEN;
 
 const { createApp } = require('../app');
@@ -42,7 +41,6 @@ for (const n of ['FoodLog', 'WaterLog', 'WeightLog', 'ActivityLog', 'Task', 'Hab
 // ---------------------------------------------------------------- fake outside world
 const realFetch = globalThis.fetch;
 const calls = [];
-let sheetBodies = [];
 let googleEmail = 'sumanth@gmail.com';
 let mailFails = false;
 globalThis.fetch = async (url, init = {}) => {
@@ -56,11 +54,6 @@ globalThis.fetch = async (url, init = {}) => {
     if (body.get('grant_type') === 'refresh_token') return body.get('refresh_token') === 'REFRESH-1' || body.get('refresh_token') === 'GMAIL-RT' ? json({ access_token: 'ACCESS2' }) : json({ error: 'invalid_grant' }, 400);
   }
   if (u.startsWith('https://openidconnect.googleapis.com/v1/userinfo')) return json({ sub: 'google-sub-1', email: googleEmail, email_verified: true, name: 'Sumanth K' });
-  if (u === 'https://sheets.googleapis.com/v4/spreadsheets') return json({ spreadsheetId: 'SHEET1', spreadsheetUrl: 'https://docs.google.com/spreadsheets/d/SHEET1/edit' });
-  if (u.includes('/values:batchClear')) return json({});
-  if (u.includes('/values:batchUpdate')) { sheetBodies.push(JSON.parse(init.body)); return json({}); }
-  if (u.includes('?fields=sheets.properties.title')) return json({ sheets: [{ properties: { title: 'Food' } }] });
-  if (u.endsWith(':batchUpdate')) return json({});
   if (u.startsWith('https://gmail.googleapis.com/')) return mailFails ? json({ error: { message: 'boom' } }, 500) : json({ id: 'm1' });
   if (u.startsWith('https://api.brevo.com/')) return mailFails ? json({ message: 'down' }, 500) : json({ messageId: 'x' });
   throw new Error(`unexpected outbound call in test: ${u}`);
@@ -155,7 +148,10 @@ test('Continue with Google (web): consent URL -> callback -> new account + sessi
   const g = new URL(start.location);
   assert.equal(g.origin + g.pathname, 'https://accounts.google.com/o/oauth2/v2/auth');
   assert.equal(g.searchParams.get('redirect_uri'), `${base}/api/google/callback`);
-  assert.match(g.searchParams.get('scope'), /drive\.file/);
+  // Identity scopes only: no Drive/Sheets/Gmail access, no offline refresh token, so no Google verification is needed.
+  assert.equal(g.searchParams.get('scope'), 'openid email profile');
+  assert.equal(g.searchParams.get('access_type'), null);
+  assert.equal(g.searchParams.get('prompt'), 'select_account');
   const state = g.searchParams.get('state');
 
   const cb = await api(`/api/google/callback?code=AUTHCODE&state=${encodeURIComponent(state)}`);
@@ -173,35 +169,6 @@ test('Continue with Google (web): consent URL -> callback -> new account + sessi
   assert.equal(profiles.length >= 1, true, 'a profile was created for the new account');
 });
 
-test('the Google sheet is created in the background and filled with every tab', async () => {
-  assert.ok(await wait(() => sheetBodies.length > 0), 'first sync happened');
-  assert.ok(calls.some((c) => c.url === 'https://sheets.googleapis.com/v4/spreadsheets'), 'spreadsheet created');
-  const tabs = sheetBodies[0].data.map((d) => d.range.split('!')[0].replace(/'/g, ''));
-  assert.deepEqual(tabs, ['Daily summary', 'Food', 'Water', 'Weight', 'Exercise', 'Tasks', 'Habits', 'Health', 'Fasting', 'Profile']);
-  const profileTab = sheetBodies[0].data.find((d) => d.range.startsWith("'Profile'"));
-  assert.equal(profileTab.values.find((r) => r[0] === 'Email')[1], 'sumanth@gmail.com');
-  // refresh token is stored encrypted, never in clear
-  const u = [...users.values()].find((x) => x.googleId === 'google-sub-1');
-  assert.ok(u.google.refreshTokenEnc && !u.google.refreshTokenEnc.includes('REFRESH-1'));
-});
-
-test('status / sync now / disconnect work for the signed-in person', async () => {
-  const s = await api('/api/google/status', { token: webToken });
-  assert.equal(s.json.connected, true);
-  assert.equal(s.json.spreadsheetUrl, 'https://docs.google.com/spreadsheets/d/SHEET1/edit');
-  assert.ok(s.json.lastSyncAt);
-
-  const before = sheetBodies.length;
-  const sync = await api('/api/google/sync', { method: 'POST', token: webToken, body: {} });
-  assert.equal(sync.status, 200, sync.text);
-  assert.equal(sheetBodies.length, before + 1);
-
-  const d = await api('/api/google/disconnect', { method: 'POST', token: webToken, body: {} });
-  assert.equal(d.status, 200);
-  const s2 = await api('/api/google/status', { token: webToken });
-  assert.equal(s2.json.connected, false);
-});
-
 test('a tampered or expired OAuth state is rejected', async () => {
   const r = await api('/api/google/callback?code=x&state=not-a-real-token');
   assert.equal(r.status, 400);
@@ -214,27 +181,7 @@ test('cancelled consent sends the person back with a clear status', async () => 
   assert.equal(new URL(r.location).searchParams.get('google'), 'cancelled');
 });
 
-// ================================================================= connect Google to an existing password account
-test('Connect Google (signed-in, mobile deep link): consent -> callback -> sheet; account stays the same', async () => {
-  googleEmail = 'pw.person@gmail.com';
-  const login = await api('/api/auth/login', { method: 'POST', body: { email: 'pw@example.com', password: 'NewPassw0rd!' } });
-  const t = login.json.token;
-  const urlRes = await api('/api/google/connect-url', { method: 'POST', token: t, body: { returnTo: 'flexfit://google' } });
-  assert.equal(urlRes.status, 200);
-  const g = new URL(urlRes.json.url);
-  assert.equal(g.searchParams.get('login_hint'), 'pw@example.com');
-  sheetBodies = [];
-  const cb = await api(`/api/google/callback?code=AUTHCODE&state=${encodeURIComponent(g.searchParams.get('state'))}`);
-  const back = new URL(cb.location);
-  assert.equal(back.protocol, 'flexfit:');
-  assert.equal(back.searchParams.get('google'), 'ok');
-  assert.equal(back.searchParams.get('token'), null, 'connect mode must not mint a new session');
-  assert.ok(await wait(() => sheetBodies.length > 0));
-  const s = await api('/api/google/status', { token: t });
-  assert.equal(s.json.connected, true);
-  assert.equal(s.json.email, 'pw.person@gmail.com');
-});
-
+// ================================================================= linking to an existing password account
 test('Continue with Google for an email that already has a password account links to it (no duplicate)', async () => {
   const before = users.size;
   googleEmail = 'pw@example.com';
@@ -255,4 +202,18 @@ test('when Google is not configured, /start sends the person back with an explan
   assert.match(new URLSearchParams(new URL(r.location).hash.slice(1)).get('reason'), /not set up/i);
   const cfg = await api('/api/google/config');
   assert.equal(cfg.json.available, true);
+});
+
+test('the old Google Sheets endpoints are gone', async () => {
+  for (const [method, path] of [['GET', '/api/google/status'], ['POST', '/api/google/connect-url'], ['POST', '/api/google/sync'], ['POST', '/api/google/disconnect']]) {
+    const r = await api(path, { method, token: webToken, body: method === 'POST' ? {} : undefined });
+    assert.ok([401, 404].includes(r.status), `${method} ${path} -> ${r.status}`);
+  }
+});
+
+test('Google sign-in stores only the Google account id (no tokens, no spreadsheet fields)', async () => {
+  const u = [...users.values()].find((x) => x.googleId === 'google-sub-1');
+  assert.ok(u);
+  const raw = JSON.stringify(u.toObject());
+  assert.doesNotMatch(raw, /REFRESH-1|ACCESS|refreshToken|spreadsheet/i);
 });

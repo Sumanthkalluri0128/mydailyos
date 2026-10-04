@@ -3,7 +3,6 @@ import { apiFetch } from "../config/api";
 import { useEffect, useState } from "react";
 import { API_URL } from "../config";
 import DataControls from "../components/DataControls";
-import GoogleSheetsCard from "../components/GoogleSheetsCard";
 import {
   calculateBMR,
   calculateTDEE,
@@ -682,8 +681,6 @@ function ProfilePage({ onBack }) {
       </form>
 
       {/* Export your data, change password, log out, delete account */}
-      <GoogleSheetsCard />
-
       <DataControls />
 
     </div>

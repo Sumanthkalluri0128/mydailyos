@@ -1,3 +1,11 @@
+# v2.7 — Google Sheets removed, Google sign-in simplified, password-reset email hardened
+
+- **Google Sheets backup removed** (server, website and mobile app): no more "FlexFit data" spreadsheet, no `/api/google/{status,connect-url,sync,disconnect}`, no background sync after writes. Nothing else changed — CSV export, all logging features and email/password login work as before.
+- **Google sign-in now asks only for `openid email profile`** (was also `drive.file`, offline access and a forced consent screen). No Google verification is needed once the consent screen is "In production". No Google tokens are stored; existing `google.*` fields on old user records are simply ignored.
+- **Password-reset email**: Gmail access token is cached (not re-requested for every email), a rejected token is retried once, and if Gmail fails the next configured provider (Brevo/Resend/SMTP) is used. New `scripts/check-mail.js` prints the exact reason when sending fails.
+
+---
+
 # FlexFit — fixes for the 7 issues
 
 ## 1. Keyboard covering inputs

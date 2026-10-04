@@ -53,18 +53,6 @@ function createApp({ allowedOrigins = [] } = {}) {
   // Generous global ceiling per IP; auth and export routes have their own, tighter limits.
   app.use('/api', rateLimit({ windowMs: 60_000, max: 400 }));
 
-  // Mirror to the person's Google Sheet after any successful write (debounced; no-op if they haven't connected Google).
-  app.use('/api', (req, res, next) => {
-    if (req.method !== 'GET' && req.method !== 'OPTIONS' && !req.originalUrl.startsWith('/api/google')) {
-      res.on('finish', () => {
-        if (res.statusCode < 400 && req.user?.id && process.env.GOOGLE_CLIENT_ID) {
-          require('./lib/sheetSync').scheduleSyncIfConnected(req.user.id);
-        }
-      });
-    }
-    next();
-  });
-
   app.use('/api/auth', authRoutes);
   app.use('/api/google', createGoogleRouter({ allowedOrigins }));
   app.use('/api/account', accountRoutes);
