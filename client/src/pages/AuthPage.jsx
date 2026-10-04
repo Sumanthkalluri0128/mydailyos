@@ -188,6 +188,11 @@ export default function AuthPage({ onAuthenticated, notice = '' }) {
             ? 'Already have an account? Login'
             : 'Need an account? Create one'}
         </button>
+
+        <p className="auth-legal">
+          By continuing you agree to how we handle your data in our{' '}
+          <a href="/privacy" target="_blank" rel="noopener noreferrer">Privacy Policy</a>.
+        </p>
       </div>
     </div>
   );

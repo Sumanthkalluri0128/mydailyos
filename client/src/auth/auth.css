@@ -7,3 +7,5 @@
 .auth-card input{color:var(--text);background:var(--surface-soft);border:1px solid var(--border);border-radius:13px;padding:13px 14px;font-size:15px;font-family:inherit}
 .auth-card label{display:grid;gap:6px;font-weight:700;color:var(--text)}
 .auth-error{color:var(--danger)}
+
+.auth-legal{margin:18px 0 0;text-align:center;font-size:12.5px;line-height:1.5;color:var(--text-muted)}.auth-legal a{color:var(--primary);font-weight:700}
