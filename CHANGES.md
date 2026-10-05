@@ -1,3 +1,15 @@
+# v8.1 — one number, one place (web)
+
+The dashboard showed calories 3 times, steps 3 times, weight 2 times. Now each number appears once:
+- **Hero card:** greeting, coach line, calorie ring (left · eaten · budget · activity), water / steps / exercise rings, quick actions (Food · +250 ml water · Workout · Steps), streak chip.
+- **Macros card:** protein / carbs / fat (the only place protein appears). **Weight card:** current weight plus goal progress in ONE card.
+- **Your calorie plan:** collapsed; open for the maths.
+- Removed: the repeated Calories / Protein / Calories-burned / Steps / Water cards and the second weight card.
+- Wide screens use two columns; phones stack. Reduced-motion and dark mode supported.
+New: `components/DashboardHero.jsx`, `MacroCard.jsx`, `utils/coach.js` (same logic as mobile).
+
+---
+
 # v8 — what changed (web)
 
 **Calories now match the mobile app.** `client/src/utils/energy.js` is the same model as `server/lib/energy.js` and the

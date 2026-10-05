@@ -88,3 +88,95 @@ button:active:not(:disabled) { transform: scale(0.98); }
 
 /* ---- printing a page (export/report) ---- */
 @media print { .topbar, .offline-banner { display: none !important; } body { background: #fff; } }
+
+/* =====================================================================================================
+   Dashboard hero: ONE card answers "how is my day going". Every number appears once.
+   ===================================================================================================== */
+.hero2 {
+  background: var(--surface); border: 1px solid var(--border); border-radius: 30px; padding: 26px;
+  box-shadow: 0 18px 50px var(--shadow); margin-bottom: 22px; display: grid; gap: 22px;
+}
+.hero2-head { position: relative; padding-right: 76px; }
+.hero2-head .date { margin: 0 0 4px; font-size: 12px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-muted); }
+.hero2-head h2 { margin: 0; font-size: clamp(26px, 3.4vw, 36px); font-weight: 800; letter-spacing: -0.03em; }
+.streak-chip { position: absolute; top: 0; right: 0; display: inline-flex; align-items: center; gap: 6px; padding: 7px 13px; border-radius: 999px; border: 1px solid var(--border); background: var(--surface); color: var(--text); font-size: 15px; }
+
+.coach { display: flex; align-items: center; gap: 14px; padding: 14px 16px; border-radius: 20px; background: color-mix(in srgb, var(--primary) 10%, var(--surface)); }
+.coach-great { background: color-mix(in srgb, var(--protein) 14%, var(--surface)); }
+.coach-calm { background: color-mix(in srgb, var(--text-muted) 12%, var(--surface)); }
+.coach-emoji { flex: none; width: 46px; height: 46px; display: grid; place-items: center; border-radius: 50%; background: var(--surface); font-size: 23px; box-shadow: 0 2px 8px var(--shadow); }
+.coach strong { display: block; font-size: 16px; }
+.coach span:not(.coach-emoji) { display: block; margin-top: 2px; font-size: 14px; line-height: 1.4; color: var(--text-muted); }
+
+.hero2-main { display: grid; grid-template-columns: auto 1fr; align-items: center; gap: 30px; }
+.ring-btn { background: none; border: 0; padding: 0; border-radius: 50%; min-height: 0; }
+.ring { position: relative; display: inline-block; }
+.ring svg { display: block; }
+.ring-track { stroke: color-mix(in srgb, var(--text-muted) 18%, transparent); }
+.ring-fill { transition: stroke-dashoffset 0.9s cubic-bezier(0.22, 1, 0.36, 1); }
+.ring-center { position: absolute; inset: 0; display: grid; place-content: center; text-align: center; }
+.ring-big { font-size: 38px; line-height: 1; font-weight: 800; letter-spacing: -0.04em; }
+.ring-big.over { color: var(--danger, #d64545); }
+.ring-center > span { margin-top: 4px; font-size: 13px; font-weight: 700; color: var(--text-muted); }
+
+.hero2-stats { margin: 0; display: grid; gap: 14px; }
+.hero2-stats dt { font-size: 11px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-muted); }
+.hero2-stats dd { margin: 2px 0 0; font-size: 26px; font-weight: 800; letter-spacing: -0.02em; }
+.hero2-stats dd small { font-size: 13px; font-weight: 600; color: var(--text-muted); letter-spacing: 0; }
+.hero2-stats em { display: block; font-style: normal; font-size: 12px; color: var(--text-muted); margin-top: 1px; }
+.steps-ink { color: var(--steps); }
+
+.hero2-minis { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; padding-top: 20px; border-top: 1px solid var(--border); }
+.mini { display: grid; justify-items: center; gap: 2px; background: none; border: 0; padding: 4px; border-radius: 18px; }
+.mini:hover { background: color-mix(in srgb, var(--primary) 6%, transparent); }
+.mini strong { margin-top: 8px; font-size: 15px; font-weight: 800; }
+.mini > span { font-size: 12px; color: var(--text-muted); }
+.mini-icon { font-size: 25px; }
+
+.quick { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+.quick button {
+  display: grid; justify-items: center; align-content: center; gap: 4px; min-height: 76px; padding: 10px 6px;
+  border-radius: 20px; border: 1px solid var(--border); background: var(--surface); color: var(--text);
+  font-size: 13px; font-weight: 700; box-shadow: 0 6px 16px var(--shadow);
+}
+.quick button span { font-size: 24px; }
+.quick button:hover:not(:disabled) { border-color: var(--primary); transform: translateY(-1px); }
+.quick button:disabled { opacity: 0.6; }
+
+/* supporting cards */
+.stats-grid.two { grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); align-items: start; }
+.macro-card h3 { font-size: 20px; margin: 0 0 12px; }
+.macro-row { display: flex; justify-content: space-between; gap: 12px; margin: 14px 0 6px; font-size: 14px; }
+.macro-row:first-of-type { margin-top: 0; }
+.macro-row span { color: var(--text-muted); }
+.weight-card h3 { margin: 6px 0 12px; }
+.plan-details { cursor: pointer; }
+.plan-details summary { list-style: none; display: grid; grid-template-columns: 1fr auto; align-items: start; gap: 12px; }
+.plan-details summary::-webkit-details-marker { display: none; }
+.plan-details summary .balance-sub { margin-bottom: 0; }
+.plan-chevron { font-size: 22px; color: var(--text-muted); transition: transform 0.2s; }
+.plan-details[open] .plan-chevron { transform: rotate(180deg); }
+.plan-details[open] summary { margin-bottom: 14px; }
+.plan-details > :not(summary) { cursor: default; }
+
+@media (max-width: 720px) {
+  .hero2 { padding: 18px; border-radius: 26px; gap: 18px; }
+  .hero2-main { grid-template-columns: 1fr; justify-items: center; gap: 18px; }
+  .hero2-stats { grid-template-columns: repeat(3, 1fr); width: 100%; text-align: center; gap: 8px; }
+  .hero2-stats dd { font-size: 19px; }
+  .hero2-stats dd small { display: block; }
+  .hero2-stats em { display: none; }
+  .quick button { min-height: 68px; font-size: 12px; }
+}
+@media (prefers-reduced-motion: reduce) { .ring-fill { transition: none; } }
+.ring-center > .mini-icon { font-size: 26px; margin: 0; color: inherit; line-height: 1; }
+@media (max-width: 720px) { .hero2-head h2 { font-size: 24px; } .hero2-head { padding-right: 70px; } }
+
+/* wide screens: calories on the left, the three smaller rings on the right, so the card has no empty middle */
+@media (min-width: 900px) {
+  .hero2 { grid-template-columns: 1.15fr 1fr; column-gap: 34px; }
+  .hero2-head, .coach, .quick { grid-column: 1 / -1; }
+  .hero2-main { grid-column: 1; grid-template-columns: auto 1fr; }
+  .hero2-minis { grid-column: 2; align-self: center; border-top: 0; padding-top: 0; padding-left: 34px; border-left: 1px solid var(--border); }
+}
+@media (max-width: 420px) { .hero2-head h2 { font-size: 22px; } }

@@ -8,7 +8,7 @@ import GoalBar from "./GoalBar";
 // "How much should I eat for my weight, and where am I today?" Uses the ONE shared energy model (same numbers as the
 // mobile app and the server): only activity beyond what the daily target already assumes earns extra food.
 // Fetches its own data; change `refreshKey` after logging food, exercise or steps to reload it.
-export default function CalorieBalance({ refreshKey = 0 }) {
+export default function CalorieBalance({ refreshKey = 0, collapsible = false, showProgress = true }) {
   const [state, setState] = useState({ loading: true, profile: null, eaten: 0, workout: 0, stepKcal: 0 });
 
   useEffect(() => {
@@ -47,15 +47,23 @@ export default function CalorieBalance({ refreshKey = 0 }) {
   const deficit = b.net >= 0;
   const goal = e.direction === "lose" ? "to lose weight" : e.direction === "gain" ? "to gain weight" : "to maintain weight";
   const n = (v) => Math.round(v).toLocaleString();
-  return (
-    <div className="card balance-card">
-      <h3>Calories for your weight</h3>
+  const header = (
+    <>
+      <h3>{collapsible ? "Your calorie plan" : "Calories for your weight"}</h3>
       <p className="balance-sub">
         Based on {e.weightKg} kg · eat about <strong>{n(b.target)} kcal</strong> a day {goal}
         {e.mode === "manual" ? " (your own target)" : ""}.
       </p>
-      <div className="balance-line"><span>Eaten today</span><strong>{n(b.eaten)} / {n(b.budget)} kcal</strong></div>
-      <GoalBar value={b.eaten} target={b.budget} unit="kcal" color="#e8823a" overIsBad />
+    </>
+  );
+  const body = (
+    <>
+      {showProgress && (
+        <>
+          <div className="balance-line"><span>Eaten today</span><strong>{n(b.eaten)} / {n(b.budget)} kcal</strong></div>
+          <GoalBar value={b.eaten} target={b.budget} unit="kcal" color="#e8823a" overIsBad />
+        </>
+      )}
       <div className="balance-rows">
         <div><span>{e.mode === "manual" ? "Daily target (yours)" : "Daily target (what to eat)"}</span><strong>{n(b.target)} kcal</strong></div>
         <div><span>Maintenance (what you burn)</span><strong>{n(e.tdee)} kcal</strong></div>
@@ -67,6 +75,20 @@ export default function CalorieBalance({ refreshKey = 0 }) {
         <strong>{deficit ? "Calorie deficit" : "Calorie surplus"}: {n(Math.abs(b.net))} kcal</strong>
         <span>{deficit ? "Below" : "Above"} what you burn today (maintenance + extra activity − food) ≈ {b.fatKg.toFixed(2)} kg of body {deficit ? "fat lost" : "weight gained"} if every day were like this.</span>
       </div>
+    </>
+  );
+  if (collapsible) {
+    return (
+      <details className="card balance-card plan-details">
+        <summary>{header}<span className="plan-chevron" aria-hidden="true">⌄</span></summary>
+        {body}
+      </details>
+    );
+  }
+  return (
+    <div className="card balance-card">
+      {header}
+      {body}
     </div>
   );
 }

@@ -12,11 +12,11 @@ const WeightPage = lazy(() => import("./pages/WeightPage"));
 const ProfilePage = lazy(() => import("./pages/ProfilePage"));
 const ProgressPage = lazy(() => import("./pages/ProgressPage"));
 import OnboardingPage from "./pages/OnboardingPage";
-import MotivationCarousel from "./components/MotivationCarousel";
-import GoalBar from "./components/GoalBar";
 import CalorieBalance from "./components/CalorieBalance";
-import { dayBalance, waterTargetMl } from "./utils/energy";
+import { waterTargetMl } from "./utils/energy";
 import { currentOwner } from "./utils/cacheOwner";
+import DashboardHero from "./components/DashboardHero";
+import MacroCard from "./components/MacroCard";
 
 import { getLocalDate } from "./utils/date";
 import { apiFetch } from "./config/api";
@@ -91,6 +91,18 @@ function App() {
 
   // Bumped when changes made offline finish syncing, so the dashboard reloads with the real numbers.
   const [syncTick, setSyncTick] = useState(0);
+
+  // Logging streak for the header chip and the coach line. Optional: the dashboard works without it.
+  const [streak, setStreak] = useState(null);
+  useEffect(() => {
+    let alive = true;
+    apiFetch(`/api/progress/streaks?today=${getLocalDate()}`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => { if (alive && d?.streaks) setStreak({ current: d.streaks.current, loggedToday: d.streaks.loggedToday }); })
+      .catch(() => {});
+    return () => { alive = false; };
+  }, [syncTick]);
+
   useEffect(() => {
     const bump = () => setSyncTick((n) => n + 1);
     window.addEventListener("flexfit:synced", bump);
@@ -624,14 +636,7 @@ function App() {
   }
 
   // Targets follow body weight when it is known; saved goals are the fallback.
-  // One shared plan (same as the mobile app): your own number, or worked out from body + goal + pace; only activity beyond
-  // what the target already assumes earns extra food.
-  const calorieBalance = dayBalance(profile, {
-    eaten: dailySummary.calories,
-    workout: Number(activitySummary.workoutCalories ?? Math.max(0, Number(activitySummary.caloriesBurned || 0) - Number(activitySummary.stepCalories || 0))),
-    steps: Number(activitySummary.stepCalories || 0),
-  });
-  const calorieTarget = calorieBalance.budget;
+  // The calorie budget, ring and plan all come from the one shared model (DashboardHero / CalorieBalance).
 
   const waterTarget =
     waterTargetMl(profile?.currentWeightKg) ??
@@ -772,349 +777,52 @@ function App() {
         {/* WELCOME */}
         {/* ==================================================== */}
 
-        <section className="welcome">
+        <DashboardHero
+          profile={profile}
+          today={today}
+          summary={dailySummary}
+          activity={activitySummary}
+          water={waterSummary}
+          waterTarget={waterTarget}
+          goTo={setCurrentPage}
+          onChanged={() => setSyncTick((t) => t + 1)}
+          streak={streak}
+        />
 
-          <div>
+        <section className="stats-grid two">
 
-            <p className="date">
-  {new Date(`${today}T00:00:00`).toLocaleDateString(
-    "en-US",
-    {
-      weekday: "long",
-      month: "long",
-      day: "numeric",
-    }
-  )}
-</p>
+          <MacroCard profile={profile} summary={dailySummary} />
 
-            <h2>
-              Good morning 👋
-            </h2>
-
-            <p>
-              Let's make today productive. One good choice at a time.
-            </p>
-
-          </div>
-
-        </section>
-
-        <section className="dashboard-motivation">
-          <MotivationCarousel />
-        </section>
-
-        <CalorieBalance refreshKey={`${Math.round(dailySummary.calories)}|${Math.round(activitySummary.caloriesBurned || 0)}|${activitySummary.steps || 0}|${profile?.goals?.calorieMode || ""}${profile?.goals?.calorieTarget || ""}${profile?.goals?.weeklyPaceKg || ""}`} />
-
-        {/* ==================================================== */}
-        {/* STATS */}
-        {/* ==================================================== */}
-
-        <section className="stats-grid">
-
-          {/* ================================================== */}
-          {/* CALORIES */}
-          {/* ================================================== */}
-
-          <div className="card">
-
-            <span className="card-icon">
-              🍽️
-            </span>
-
-            <p>
-              Calories
-            </p>
-
+          {/* One weight card: where you are, and (if you set one) how far along your goal is. */}
+          <div className="card weight-card" onClick={() => setCurrentPage("weight")} style={{ cursor: "pointer" }}>
+            <span className="card-icon">⚖️</span>
+            <p>Weight</p>
             <h3>
-              {Math.round(
-                dailySummary.calories
-              )}
-
-              <small>
-                {" "}
-                /{" "}
-                {Math.round(calorieTarget)}{" "}
-                kcal
-              </small>
+              {latestWeight !== null ? Number(latestWeight).toFixed(1) : "--"}
+              <small> kg</small>
             </h3>
-
-            <GoalBar value={dailySummary.calories} target={calorieTarget} unit="kcal" color="#e8823a" overIsBad />
-
-          </div>
-
-          {/* ================================================== */}
-          {/* PROTEIN */}
-          {/* ================================================== */}
-
-          <div className="card">
-
-            <span className="card-icon">
-              🥩
-            </span>
-
-            <p>
-              Protein
-            </p>
-
-            <h3>
-              {dailySummary.protein.toFixed(1)}
-
-              <small>
-                {" "}
-                /{" "}
-                {profile?.goals?.proteinTarget ??
-                  140}{" "}
-                g
-              </small>
-            </h3>
-
-            <GoalBar value={dailySummary.protein} target={profile?.goals?.proteinTarget ?? 140} unit="g" color="#20a46b" />
-
-          </div>
-
-          {/* ================================================== */}
-          {/* CALORIES BURNED */}
-          {/* ================================================== */}
-
-          <div className="card">
-
-            <span className="card-icon">
-              🔥
-            </span>
-
-            <p>
-              Calories Burned
-            </p>
-
-            <h3>
-              {Math.round(
-                activitySummary.caloriesBurned
-              )}
-
-              <small>
-                {" "}
-                kcal
-              </small>
-            </h3>
-
-            <div className="card-description">
-
-              {Math.round(activitySummary.workoutCalories || 0)} kcal workouts
-              {" + "}
-              {Math.round(activitySummary.stepCalories || 0)} kcal from steps
-              {activitySummary.totalMinutes > 0
-                ? ` · ${activitySummary.totalMinutes} min of activity`
-                : ""}
-
-            </div>
-
-          </div>
-
-          {/* ================================================== */}
-          {/* STEPS */}
-          {/* ================================================== */}
-
-          <div className="card" onClick={() => setCurrentPage("health")} style={{ cursor: "pointer" }}>
-
-            <span className="card-icon">
-              🚶
-            </span>
-
-            <p>
-              Steps
-            </p>
-
-            <h3>
-              {Number(activitySummary.steps || 0).toLocaleString()}{" "}
-              <small>
-                / {(profile?.goals?.stepsTarget ?? 10000).toLocaleString()}
-              </small>
-            </h3>
-
-            <GoalBar
-              value={Number(activitySummary.steps || 0)}
-              target={profile?.goals?.stepsTarget ?? 10000}
-              unit="steps"
-              color="#14a38b"
-            />
-
-            <div className="card-description">
-              ≈ {Math.round(activitySummary.stepCalories || 0)} kcal burned, counted automatically
-            </div>
-
-          </div>
-
-          {/* ================================================== */}
-          {/* WATER */}
-          {/* ================================================== */}
-
-          <div
-            className="card"
-            onClick={() =>
-              setCurrentPage("water")
-            }
-            style={{
-              cursor: "pointer",
-            }}
-          >
-
-            <span className="card-icon">
-              💧
-            </span>
-
-            <p>
-              Water
-            </p>
-
-            <h3>
-
-              {waterSummary.totalLiters.toFixed(
-                2
-              )}
-
-              <small>
-                {" "}
-                /{" "}
-                {(
-                  (
-                    waterTarget
-                  ) / 1000
-                ).toFixed(1)}{" "}
-                L
-              </small>
-
-            </h3>
-
-            <GoalBar value={waterSummary.totalMl} target={waterTarget} unit="ml" color="#2587d9" />
-
-            <div className="card-description">
-
-              {waterSummary.totalMl.toLocaleString()}{" "}
-              ml consumed
-
-            </div>
-
-          </div>
-
-          {/* ================================================== */}
-          {/* WEIGHT */}
-          {/* ================================================== */}
-
-          <div
-            className="card"
-            onClick={() =>
-              setCurrentPage("weight")
-            }
-            style={{
-              cursor: "pointer",
-            }}
-          >
-
-            <span className="card-icon">
-              ⚖️
-            </span>
-
-            <p>
-              Weight
-            </p>
-
-            <h3>
-
-              {latestWeight !== null
-                ? Number(
-                    latestWeight
-                  ).toFixed(1)
-                : "--"}
-
-              <small>
-                {" "}
-                kg
-              </small>
-
-            </h3>
-
-            <div className="card-description">
-
-              {latestWeight !== null
-                ? "Current profile weight"
-                : "No weight recorded"}
-
-            </div>
-
-          </div>
-
-          {/* ================================================== */}
-          {/* WEIGHT GOAL */}
-          {/* ================================================== */}
-
-          <div className="card">
-
-            <span className="card-icon">
-              🎯
-            </span>
-
-            <p>
-              Weight Goal
-            </p>
-
             {hasWeightGoal ? (
-
               <>
-                <div className="card-description">
-                  Starting:{" "}
-                  {Number.isFinite(startingWeight)
-                    ? startingWeight.toFixed(1)
-                    : "--"}{" "}
-                  kg
-                </div>
-
-                <h3>
-                  {currentWeight.toFixed(1)}
-                  <small>
-                    {" "}
-                    current
-                  </small>
-                </h3>
-
-                <div className="card-description">
-                  Target: {targetWeight.toFixed(1)} kg
-                </div>
-
                 <div className="progress-bar">
-
-                  <div
-                    className="progress-fill"
-                    style={{
-                      width: `${weightGoalProgress}%`,
-                    }}
-                  ></div>
-
+                  <div className="progress-fill" style={{ width: `${weightGoalProgress}%` }}></div>
                 </div>
-
                 <div className="card-description">
                   {weightDirection === "Maintain"
-                    ? "Maintain your current weight"
-                    : `${remainingWeight.toFixed(
-                        1
-                      )} kg to ${weightDirection.toLowerCase()}`
-                  }
-                  {" · "}
-                  {Math.round(
-                    weightGoalProgress
-                  )}
-                  % complete
+                    ? "Maintaining your weight"
+                    : `${remainingWeight.toFixed(1)} kg to ${weightDirection.toLowerCase()} · target ${targetWeight.toFixed(1)} kg`}
+                  {" · "}{Math.round(weightGoalProgress)}% there
                 </div>
               </>
-
             ) : (
-
-              <div className="card-description">
-                Set a target weight in Profile
-              </div>
-
+              <div className="card-description">{latestWeight !== null ? "Set a target weight in Profile to track your goal" : "No weight recorded yet"}</div>
             )}
-
           </div>
+
+          <CalorieBalance
+            collapsible
+            showProgress={false}
+            refreshKey={`${Math.round(dailySummary.calories)}|${Math.round(activitySummary.caloriesBurned || 0)}|${activitySummary.steps || 0}|${profile?.goals?.calorieMode || ""}${profile?.goals?.calorieTarget || ""}${profile?.goals?.weeklyPaceKg || ""}`}
+          />
 
         </section>
 
