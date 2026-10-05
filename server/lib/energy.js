@@ -1,6 +1,6 @@
 // ONE energy model for FlexFit. The same logic lives in:
-//   - server/lib/energy.js
-//   - client/src/utils/energy.js      (this file, web)
+//   - server/lib/energy.js            (this file)
+//   - client/src/utils/energy.js      (web)
 //   - src/utils/energy.ts             (mobile)
 // All three are checked against test/fixtures/energy-fixtures.json, so they cannot drift apart silently.
 // If you change a rule here, change it in all three and regenerate the fixtures (see test/energy.unit.test.js).
@@ -131,19 +131,8 @@ function weeksToGoal(currentKg, targetKg, pace = 0.5) {
   return diff < 0.4 ? null : Math.ceil(diff / pace);
 }
 
-/** MET-based estimate, same formula the server uses. */
-const estimateBurn = (met, weightKg, minutes) => ((met * 3.5 * weightKg) / 200) * minutes;
-
-/** Old name kept so existing imports keep working; it now uses the shared plan (pace, manual target, activity already counted). */
-function calorieBalance(energy, eaten, burned) {
-  const bonus = Math.max(0, Math.round(burned - energy.baselineActivityKcal));
-  const budget = energy.calorieTarget + bonus;
-  const net = energy.tdee + bonus - eaten;
-  return { budget, bonus, remaining: budget - eaten, net, isDeficit: net >= 0, fatKg: Math.abs(net) / KCAL_PER_KG };
-}
-
-export {
+module.exports = {
   ACTIVITY_MULTIPLIER, KCAL_PER_KG, KCAL_PER_STEP_PER_KG, DEFAULT_TARGET,
   bmr, goalDirection, expectedEnergy, dailyTarget, dayBalance,
-  stepCalories, stepDistanceKm, waterTargetMl, macroTargets, weeksToGoal, estimateBurn, calorieBalance,
+  stepCalories, stepDistanceKm, waterTargetMl, macroTargets, weeksToGoal,
 };

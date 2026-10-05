@@ -15,6 +15,7 @@ const Profile = require('../models/Profile');
 const { wrap, HttpError } = require('../lib/http');
 const { rateLimit } = require('../middleware/rateLimit');
 const g = require('../lib/googleClient');
+const { gmailVariantRegex } = require('../lib/emailMatch');
 
 /** Only ever redirect back to our own app (custom scheme) or to an allowed web origin — never an arbitrary URL. */
 function safeReturnTo(raw, allowedOrigins = []) {
@@ -72,16 +73,28 @@ function createGoogleRouter({ allowedOrigins = [] } = {}) {
       if (!info.email || info.email_verified === false) return back({ reason: 'Your Google email is not verified.' });
       const email = String(info.email).toLowerCase();
 
+      // Same person, same data: match by Google account id, then by the exact email, then by any other spelling of the same
+      // Gmail mailbox (dots / +tags). Only when none match do we create a new account.
       let user = (await User.findOne({ googleId: info.sub })) || (await User.findOne({ email }));
+      if (!user) {
+        const rx = gmailVariantRegex(email);
+        if (rx) {
+          const hits = await User.find({ email: rx }).sort({ createdAt: 1 }).limit(2);
+          if (hits.length === 1) user = hits[0]; // exactly one candidate -> unambiguous; two or more -> don't guess
+        }
+      }
+      let created = false;
       if (!user) {
         // New account created through Google. Random password hash: they can set a real one via "Forgot password".
         user = await User.create({ name: info.name || email.split('@')[0], email, passwordHash: await bcrypt.hash(crypto.randomBytes(24).toString('hex'), 12) });
         await Profile.create({ userId: user._id, name: user.name, onboarded: false });
+        created = true;
       }
       if (user.googleId !== info.sub) { user.googleId = info.sub; await user.save(); }
 
       const sessionToken = jwt.sign({ sub: user._id.toString(), email: user.email }, process.env.JWT_SECRET, { expiresIn: '30d' });
-      return back({ google: 'ok', token: sessionToken, email });
+      // `existing=1` lets the app say "your data is here" instead of starting onboarding for someone who already has an account.
+      return back({ google: 'ok', token: sessionToken, email: user.email, existing: created ? '' : '1' });
     } catch (e) {
       console.error('google callback error:', e.message);
       return back({ reason: e instanceof g.GoogleError ? e.message : 'Google sign-in failed. Please try again.' });

@@ -4,7 +4,9 @@ import App from "./App";
 import AuthGate from "./auth/AuthGate";
 import ToastHost from "./components/ToastHost";
 import ConfirmHost from "./components/ConfirmHost";
+import OfflineBanner from "./components/OfflineBanner";
 import "./index.css";
+import "./styles/redesign.css"; // last: refines App.css without replacing it
 
 // Apply the saved theme BEFORE anything renders, so the sign-in / reset pages (which render outside <App />) honour it too.
 try {
@@ -25,8 +27,16 @@ ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>
     <ToastHost />
     <ConfirmHost />
+    <OfflineBanner />
     <AuthGate>
       <App />
     </AuthGate>
   </React.StrictMode>
 );
+
+// Offline support: the service worker caches the app shell so the site opens with no connection (production builds only).
+if ("serviceWorker" in navigator && import.meta.env.PROD) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("/sw.js").catch(() => { /* unsupported / blocked: the site still works online */ });
+  });
+}

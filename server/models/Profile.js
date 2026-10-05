@@ -15,6 +15,8 @@ const schema = new mongoose.Schema(
     },
     goals: {
       calorieTarget: { type: Number, min: 1, default: 1800 },
+      // 'auto' = calculated from body, goal and pace (the saved calorieTarget just mirrors it); 'manual' = the number the person typed.
+      calorieMode: { type: String, enum: ['auto', 'manual'], default: 'auto' },
       proteinTarget: { type: Number, min: 1, default: 140 },
       waterTargetMl: { type: Number, min: 1, default: 3000 },
       stepsTarget: { type: Number, min: 1, default: 10000 },

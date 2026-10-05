@@ -1,6 +1,7 @@
 const express = require('express');
 const WeightLog = require('../models/WeightLog');
 const Profile = require('../models/Profile');
+const { refreshStoredTarget } = require('../lib/profileEnergy');
 const { requireAuth } = require('../middleware/auth');
 const { wrap, HttpError } = require('../lib/http');
 const { createOnce } = require('../lib/idempotent');
@@ -11,7 +12,8 @@ router.use(requireAuth);
 
 async function syncProfileWeight(userId) {
   const latest = await WeightLog.findOne({ userId }).sort({ date: -1, createdAt: -1 }).lean();
-  await Profile.findOneAndUpdate({ userId }, { $set: { currentWeightKg: latest ? latest.weightKg : null } }, { upsert: true });
+  const profile = await Profile.findOneAndUpdate({ userId }, { $set: { currentWeightKg: latest ? latest.weightKg : null } }, { upsert: true, new: true });
+  await refreshStoredTarget(Profile, profile); // a new weight moves the calorie plan
 }
 
 router.get('/', wrap(async (req, res) => {

@@ -9,6 +9,7 @@ const { wrap, HttpError } = require('../lib/http');
 const { buildHistory, getDayDetails, lifetimeTotals } = require('../lib/progress');
 const { buildAchievements } = require('../lib/achievements');
 const { buildWeeklySummary } = require('../lib/weekly');
+const { dailyTarget } = require('../lib/energy');
 const { addDays, diffDays, todayUtc } = require('../lib/dates');
 const { materializeRecurring } = require('../lib/taskSeries');
 const v = require('../lib/validate');
@@ -86,7 +87,7 @@ router.get('/weekly', wrap(async (req, res) => {
   const [{ days }, profile] = await Promise.all([buildHistory(uid, prevStart, end), Profile.findOne({ userId: uid }).lean()]);
   const previous = days.slice(0, 7);
   const current = days.slice(7);
-  res.json({ success: true, ...buildWeeklySummary({ current, previous, goals: profile?.goals || {} }) });
+  res.json({ success: true, ...buildWeeklySummary({ current, previous, goals: { ...(profile?.goals || {}), calorieTarget: dailyTarget(profile) } }) });
 }));
 
 module.exports = router;

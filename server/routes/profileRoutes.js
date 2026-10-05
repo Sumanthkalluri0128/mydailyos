@@ -3,6 +3,7 @@ const Profile = require('../models/Profile');
 const { requireAuth } = require('../middleware/auth');
 const { wrap } = require('../lib/http');
 const v = require('../lib/validate');
+const { refreshStoredTarget } = require('../lib/profileEnergy');
 
 const router = express.Router();
 router.use(requireAuth);
@@ -22,6 +23,7 @@ function parseUpdate(body = {}) {
   const g = body.goals;
   if (g && typeof g === 'object') {
     if (g.calorieTarget !== undefined) set['goals.calorieTarget'] = v.number(g.calorieTarget, 'calorieTarget', { min: 500, max: 20000 });
+    if (g.calorieMode !== undefined) set['goals.calorieMode'] = v.oneOf(g.calorieMode, 'calorieMode', ['auto', 'manual']);
     if (g.proteinTarget !== undefined) set['goals.proteinTarget'] = v.number(g.proteinTarget, 'proteinTarget', { min: 1, max: 1000 });
     if (g.waterTargetMl !== undefined) set['goals.waterTargetMl'] = v.number(g.waterTargetMl, 'waterTargetMl', { min: 250, max: 20000 });
     if (g.stepsTarget !== undefined) set['goals.stepsTarget'] = v.number(g.stepsTarget, 'stepsTarget', { min: 1, max: 200000 });
@@ -50,7 +52,8 @@ router.patch('/', wrap(async (req, res) => {
     { $set: set },
     { new: true, upsert: true, setDefaultsOnInsert: true, runValidators: true }
   );
-  res.json({ success: true, profile });
+  // In auto mode the saved calorie goal mirrors the plan, so exports and other readers never see a stale number.
+  res.json({ success: true, profile: (await refreshStoredTarget(Profile, profile)) || profile });
 }));
 
 module.exports = router;

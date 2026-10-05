@@ -3,10 +3,7 @@ import { apiFetch } from "../config/api";
 import { useEffect, useState } from "react";
 import { API_URL } from "../config";
 import DataControls from "../components/DataControls";
-import {
-  calculateBMR,
-  calculateTDEE,
-} from "../utils/calories";
+import { expectedEnergy } from "../utils/energy";
 
 function ProfilePage({ onBack }) {
   const [form, setForm] = useState({
@@ -18,6 +15,8 @@ function ProfilePage({ onBack }) {
     activityLevel: "moderate",
 
     calorieTarget: 1800,
+    calorieMode: "auto",
+    weeklyPaceKg: 0.5,
     proteinTarget: 140,
     waterTargetMl: 3000,
     stepsTarget: 10000,
@@ -32,24 +31,22 @@ function ProfilePage({ onBack }) {
   // BMR
   // ============================================================
 
-  const bmr = calculateBMR({
-    weightKg: form.currentWeightKg,
-    heightCm: form.heightCm,
+  // The same plan the dashboard and the mobile app use (Mifflin-St Jeor, activity, goal weight, pace, or your own number).
+  const plan = expectedEnergy({
     age: form.age,
     sex: form.sex,
-  });
-
-  // ============================================================
-  // TDEE
-  // ============================================================
-
-  const tdee = calculateTDEE({
-    weightKg: form.currentWeightKg,
     heightCm: form.heightCm,
-    age: form.age,
-    sex: form.sex,
+    currentWeightKg: form.currentWeightKg,
     activityLevel: form.activityLevel,
+    goals: {
+      targetWeightKg: form.targetWeightKg === "" ? null : Number(form.targetWeightKg),
+      weeklyPaceKg: form.weeklyPaceKg,
+      calorieMode: form.calorieMode,
+      calorieTarget: Number(form.calorieTarget),
+    },
   });
+  const bmr = plan ? plan.bmr : null;
+  const tdee = plan ? plan.tdee : null;
 
   // ============================================================
   // WEIGHT GOAL CALCULATIONS
@@ -121,6 +118,12 @@ function ProfilePage({ onBack }) {
           calorieTarget:
             profile.goals?.calorieTarget ??
             1800,
+
+          calorieMode:
+            profile.goals?.calorieMode === "manual" ? "manual" : "auto",
+
+          weeklyPaceKg:
+            profile.goals?.weeklyPaceKg ?? 0.5,
 
           proteinTarget:
             profile.goals?.proteinTarget ??
@@ -214,10 +217,13 @@ function ProfilePage({ onBack }) {
               form.activityLevel,
 
             goals: {
-              calorieTarget:
-                Number(
-                  form.calorieTarget
-                ),
+              calorieMode: form.calorieMode,
+
+              weeklyPaceKg: Number(form.weeklyPaceKg) || 0.5,
+
+              ...(form.calorieMode === "manual" && Number(form.calorieTarget) >= 500
+                ? { calorieTarget: Number(form.calorieTarget) }
+                : {}),
 
               proteinTarget:
                 Number(
@@ -467,17 +473,47 @@ function ProfilePage({ onBack }) {
 
           <h2>Daily Goals</h2>
 
-          <label>
-            Calorie Target (kcal)
-          </label>
+          <label>Calorie target</label>
 
-          <input
-            type="number"
-            name="calorieTarget"
-            min="1"
-            value={form.calorieTarget}
-            onChange={handleChange}
-          />
+          <select
+            name="calorieMode"
+            value={form.calorieMode}
+            onChange={(e) => {
+              const mode = e.target.value;
+              setForm((f) => ({ ...f, calorieMode: mode, calorieTarget: mode === "manual" && plan ? plan.autoTarget : f.calorieTarget }));
+            }}
+          >
+            <option value="auto">Auto — worked out for you (recommended)</option>
+            <option value="manual">My own number</option>
+          </select>
+
+          {form.calorieMode === "manual" ? (
+            <>
+              <label>Calories per day (kcal)</label>
+              <input
+                type="number"
+                name="calorieTarget"
+                min="500"
+                value={form.calorieTarget}
+                onChange={handleChange}
+              />
+            </>
+          ) : (
+            <p className="muted">
+              {plan
+                ? `Worked out for you: ${plan.autoTarget.toLocaleString()} kcal a day. It updates when your weight, goal or pace changes.`
+                : "Add your age, height and weight above to get your personal target."}
+            </p>
+          )}
+
+          <label>Weight-change pace (kg per week)</label>
+
+          <select name="weeklyPaceKg" value={form.weeklyPaceKg} onChange={handleChange}>
+            <option value="0.25">0.25 — gentle</option>
+            <option value="0.5">0.5 — recommended</option>
+            <option value="0.75">0.75 — faster</option>
+            <option value="1">1 — fastest</option>
+          </select>
 
           <label>
             Protein Target (g)
@@ -569,9 +605,7 @@ function ProfilePage({ onBack }) {
               <span>Current Target</span>
 
               <strong>
-                {Number(
-                  form.calorieTarget || 0
-                ).toLocaleString()}
+                {(plan ? plan.calorieTarget : Number(form.calorieTarget || 0)).toLocaleString()}
               </strong>
 
               <small>

@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import AuthPage from "../pages/AuthPage";
-import { apiFetch, clearSession } from "../config/api";
+import { apiFetch, clearSession, startOfflineSync, syncNow } from "../config/api";
+import { purgeOthers } from "../offline/offlineApi";
 
 // Google sign-in redirects back to "/#google=ok&token=…" or "/#google=error&reason=…" (or "cancelled").
 // Read it once (cached, so React StrictMode's double render can't lose it), then clean the URL.
@@ -13,7 +14,12 @@ function readGoogleRedirect() {
   const p = new URLSearchParams(h);
   window.history.replaceState(null, "", window.location.pathname + window.location.search);
   googleRedirect = { status: p.get("google"), token: p.get("token") || "", reason: p.get("reason") || "" };
-  if (googleRedirect.status === "ok" && googleRedirect.token) localStorage.setItem("mydailyos_token", googleRedirect.token);
+  if (googleRedirect.status === "ok" && googleRedirect.token) {
+    // Whoever was signed in before is replaced; their saved dashboard copy goes with them (the new account is loaded below).
+    localStorage.removeItem("mydailyos_dash_v1");
+    localStorage.removeItem("mydailyos_user");
+    localStorage.setItem("mydailyos_token", googleRedirect.token);
+  }
   return googleRedirect;
 }
 
@@ -45,6 +51,14 @@ export default function AuthGate({ children }) {
           const data = await response.json().catch(() => ({}));
 
           if (!response.ok) {
+            // Only a real "this session is not valid" ends the session. Offline, or a sleeping/failing server, must not
+            // sign anyone out: keep the person we already know and carry on with their saved data.
+            if (response.status !== 401 && response.status !== 404) {
+              try {
+                const stored = JSON.parse(localStorage.getItem("mydailyos_user") || "null");
+                if (stored && stored.email) return { user: stored };
+              } catch { /* fall through */ }
+            }
             throw new Error(data.message || "Session validation failed");
           }
 
@@ -75,6 +89,11 @@ export default function AuthGate({ children }) {
       );
     };
   }, []);
+
+  useEffect(() => {
+    if (!user) return;
+    purgeOthers().then(() => { startOfflineSync(); syncNow(); });
+  }, [user]);
 
   if (!ready) {
     return <div className="auth-loading">Loading FlexFit…</div>;

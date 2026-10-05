@@ -395,7 +395,7 @@ function FoodLogger({ date, onBack }) {
 
       </div>
 
-      <CalorieBalance refreshKey={foodLogs.length} />
+      <CalorieBalance refreshKey={`${foodLogs.length}|${foodLogs.reduce((t, l) => t + Number(l.nutritionTotal?.calories || 0), 0)}`} />
 
 
       {/* ====================================================== */}

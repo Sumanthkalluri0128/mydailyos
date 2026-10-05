@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { apiFetch, clearSession } from "../config/api";
+import { apiFetch, signOutCompletely } from "../config/api";
 import { confirmAction } from "../utils/confirm";
 import { notify } from "../utils/notify";
 import "../auth/account.css";
@@ -43,7 +43,7 @@ export default function DataControls() {
   const logout = async () => {
     const ok = await confirmAction("You will need to sign in again to use FlexFit on this device.", { title: "Log out?", confirmText: "Log out" });
     if (!ok) return;
-    clearSession();
+    await signOutCompletely();
     window.location.reload();
   };
 
@@ -53,7 +53,7 @@ export default function DataControls() {
       if (!ok) return;
       const res = await apiFetch("/api/account/me", { method: "DELETE" });
       if (!res.ok) throw new Error((await res.json().catch(() => ({}))).message || "Delete failed");
-      clearSession();
+      await signOutCompletely();
       window.location.reload();
     });
 

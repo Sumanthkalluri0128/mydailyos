@@ -1,0 +1,21 @@
+.offline-banner {
+  /* left/right 0 + auto margins + fit-content centres it WITHOUT shrinking its available width to half the screen */
+  position: fixed; left: 0; right: 0; margin: 0 auto; width: fit-content;
+  top: calc(env(safe-area-inset-top, 0px) + 8px); z-index: 1000;
+  display: flex; align-items: center; gap: 12px; max-width: min(calc(100vw - 24px), 560px);
+  padding: 8px 14px; border-radius: 14px; font-size: 13px; font-weight: 600; line-height: 1.35;
+  background: var(--surface); color: var(--text); border: 1px solid var(--border);
+  box-shadow: 0 8px 24px var(--shadow);
+}
+.offline-banner.warn { background: #fff6e5; color: #8a5a00; border-color: #f0c36a; }
+.offline-banner.ok { background: #e6f6ee; color: #157a4e; border-color: #a8dec3; }
+:root[data-theme="dark"] .offline-banner.warn { background: #2b2412; color: #f2c265; border-color: #6b5320; }
+:root[data-theme="dark"] .offline-banner.ok { background: #12261e; color: #5be0a4; border-color: #1f5a3f; }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .offline-banner.warn { background: #2b2412; color: #f2c265; border-color: #6b5320; }
+  :root:not([data-theme="light"]) .offline-banner.ok { background: #12261e; color: #5be0a4; border-color: #1f5a3f; }
+}
+.offline-banner button {
+  border: 0; border-radius: 999px; padding: 5px 12px; font-weight: 700; cursor: pointer;
+  background: var(--primary); color: #fff; min-height: 28px;
+}

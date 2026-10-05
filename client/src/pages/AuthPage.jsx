@@ -59,6 +59,8 @@ export default function AuthPage({ onAuthenticated, notice = '' }) {
 
       const data = await readResponse(response);
 
+      // A different person on this browser must not see the previous person's saved dashboard.
+      localStorage.removeItem('mydailyos_dash_v1');
       localStorage.setItem('mydailyos_token', data.token);
       localStorage.setItem(
         'mydailyos_user',
@@ -172,6 +174,8 @@ export default function AuthPage({ onAuthenticated, notice = '' }) {
             Continue with Google
           </button>
         )}
+
+        <p className="auth-hint">Already have an account? Google sign-in with the same email opens that same account and all its data.</p>
 
         {mode === 'login' && (
           <button type="button" className="auth-switch" onClick={() => switchMode('forgot')}>

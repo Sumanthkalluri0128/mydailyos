@@ -15,7 +15,8 @@ import OnboardingPage from "./pages/OnboardingPage";
 import MotivationCarousel from "./components/MotivationCarousel";
 import GoalBar from "./components/GoalBar";
 import CalorieBalance from "./components/CalorieBalance";
-import { expectedEnergy, waterTargetMl } from "./utils/energy";
+import { dayBalance, waterTargetMl } from "./utils/energy";
+import { currentOwner } from "./utils/cacheOwner";
 
 import { getLocalDate } from "./utils/date";
 import { apiFetch } from "./config/api";
@@ -87,6 +88,14 @@ function BrandHome({ onHome }) {
 function App() {
   const [currentPage, setCurrentPage] =
     useState("dashboard");
+
+  // Bumped when changes made offline finish syncing, so the dashboard reloads with the real numbers.
+  const [syncTick, setSyncTick] = useState(0);
+  useEffect(() => {
+    const bump = () => setSyncTick((n) => n + 1);
+    window.addEventListener("flexfit:synced", bump);
+    return () => window.removeEventListener("flexfit:synced", bump);
+  }, []);
 
   // ============================================================
   // THEME (light / dark)
@@ -194,7 +203,7 @@ function App() {
     // the server can take seconds to answer; this makes the dashboard appear immediately instead of sitting empty.
     try {
       const saved = JSON.parse(localStorage.getItem("mydailyos_dash_v1") || "null");
-      if (saved && saved.date === today) {
+      if (saved && saved.date === today && saved.owner === currentOwner()) {
         if (saved.food) setDailySummary(saved.food);
         if (saved.activity) setActivitySummary(saved.activity);
         if (saved.tasks) setTasks(saved.tasks);
@@ -310,6 +319,7 @@ function App() {
         try {
           localStorage.setItem("mydailyos_dash_v1", JSON.stringify({
             date: today,
+            owner: currentOwner(),
             food: foodData.success ? foodData.summary : undefined,
             activity: activityData.success ? activityData.summary : undefined,
             tasks: taskData.success ? taskData.tasks : undefined,
@@ -329,7 +339,7 @@ function App() {
     };
 
     fetchDailySummary();
-  }, [today, currentPage]);
+  }, [today, currentPage, syncTick]);
 
   // ============================================================
   // FIRST-RUN ONBOARDING + AVATAR INITIAL
@@ -614,10 +624,14 @@ function App() {
   }
 
   // Targets follow body weight when it is known; saved goals are the fallback.
-  const calorieTarget =
-    expectedEnergy(profile)?.calorieTarget ??
-    profile?.goals?.calorieTarget ??
-    1800;
+  // One shared plan (same as the mobile app): your own number, or worked out from body + goal + pace; only activity beyond
+  // what the target already assumes earns extra food.
+  const calorieBalance = dayBalance(profile, {
+    eaten: dailySummary.calories,
+    workout: Number(activitySummary.workoutCalories ?? Math.max(0, Number(activitySummary.caloriesBurned || 0) - Number(activitySummary.stepCalories || 0))),
+    steps: Number(activitySummary.stepCalories || 0),
+  });
+  const calorieTarget = calorieBalance.budget;
 
   const waterTarget =
     waterTargetMl(profile?.currentWeightKg) ??
@@ -789,7 +803,7 @@ function App() {
           <MotivationCarousel />
         </section>
 
-        <CalorieBalance refreshKey={dailySummary.calories} />
+        <CalorieBalance refreshKey={`${Math.round(dailySummary.calories)}|${Math.round(activitySummary.caloriesBurned || 0)}|${activitySummary.steps || 0}|${profile?.goals?.calorieMode || ""}${profile?.goals?.calorieTarget || ""}${profile?.goals?.weeklyPaceKg || ""}`} />
 
         {/* ==================================================== */}
         {/* STATS */}
@@ -819,7 +833,7 @@ function App() {
               <small>
                 {" "}
                 /{" "}
-                {calorieTarget}{" "}
+                {Math.round(calorieTarget)}{" "}
                 kcal
               </small>
             </h3>
