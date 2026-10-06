@@ -5,6 +5,8 @@ import { useEffect, useMemo, useState } from "react";
 import { API_URL } from "../config";
 import FoodFormModal from "../components/FoodFormModal";
 import CalorieBalance from "../components/CalorieBalance";
+import TextLogger from "../components/TextLogger";
+import SmartSuggestions from "../components/SmartSuggestions";
 const MEALS = [
   {
     id: "breakfast",
@@ -28,7 +30,9 @@ const MEALS = [
   },
 ];
 
-function FoodLogger({ date, onBack }) {
+function FoodLogger({ date, onBack, goTo }) {
+  const [dragId, setDragId] = useState(null);
+  const [dropMeal, setDropMeal] = useState(null);
   const [foods, setFoods] = useState([]);
   const [foodLogs, setFoodLogs] = useState([]);
 
@@ -345,6 +349,29 @@ function FoodLogger({ date, onBack }) {
   };
 
   // ============================================================
+  // MOVE A LOGGED FOOD TO ANOTHER MEAL (breakfast -> lunch, etc.)
+  // ============================================================
+
+  const handleMoveLog = async (id, mealType) => {
+    try {
+      const response = await apiFetch(`${API_URL}/api/food-logs/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ mealType }),
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        notify(data.message || "Could not move this food.", "error");
+        return;
+      }
+      await fetchFoodLogs();
+    } catch (error) {
+      console.error("Failed to move food log:", error);
+      notify("Could not connect to the backend.", "error");
+    }
+  };
+
+  // ============================================================
   // MEAL LOGS
   // ============================================================
 
@@ -386,6 +413,13 @@ function FoodLogger({ date, onBack }) {
             ← Back
           </button>
 
+          {goTo && (
+            <span className="food-logger-links">
+              <button className="secondary-button" onClick={() => goTo("planner")}>📅 Meal planner</button>
+              <button className="secondary-button" onClick={() => goTo("recipes")}>🍲 Recipes</button>
+            </span>
+          )}
+
           <h1>Log Food</h1>
 
           <p>
@@ -401,6 +435,9 @@ function FoodLogger({ date, onBack }) {
       {/* ====================================================== */}
       {/* MEAL SELECTOR */}
       {/* ====================================================== */}
+
+      <TextLogger date={date} defaultMeal={selectedMeal} onLogged={fetchFoodLogs} />
+      <SmartSuggestions date={date} mealType={selectedMeal} refreshKey={foodLogs.length} onLogged={fetchFoodLogs} />
 
       <div className="meal-selector">
 
@@ -782,8 +819,17 @@ function FoodLogger({ date, onBack }) {
 
           return (
             <div
-              className="meal-log-section"
+              className={`meal-log-section ${dropMeal === meal.id ? "drop-target" : ""}`}
               key={meal.id}
+              onDragOver={(e) => { if (dragId) { e.preventDefault(); setDropMeal(meal.id); } }}
+              onDragLeave={() => setDropMeal((m) => (m === meal.id ? null : m))}
+              onDrop={(e) => {
+                e.preventDefault();
+                const id = dragId || e.dataTransfer.getData("text/plain");
+                setDragId(null); setDropMeal(null);
+                const log = foodLogs.find((l) => l._id === id);
+                if (log && log.mealType !== meal.id) handleMoveLog(id, meal.id);
+              }}
             >
 
               <div className="meal-log-header">
@@ -817,8 +863,12 @@ function FoodLogger({ date, onBack }) {
               ) : (
                 logs.map((log) => (
                   <div
-                    className="food-log-row"
+                    className={`food-log-row ${dragId === log._id ? "dragging" : ""}`}
                     key={log._id}
+                    draggable
+                    onDragStart={(e) => { setDragId(log._id); e.dataTransfer.setData("text/plain", log._id); e.dataTransfer.effectAllowed = "move"; }}
+                    onDragEnd={() => { setDragId(null); setDropMeal(null); }}
+                    title="Drag to another meal"
                   >
 
                     <div>
@@ -857,6 +907,18 @@ function FoodLogger({ date, onBack }) {
                         g protein
                       </small>
                     </div>
+
+                    <select
+                      className="move-log-select"
+                      aria-label={`Move ${log.foodName} to another meal`}
+                      value=""
+                      onChange={(e) => e.target.value && handleMoveLog(log._id, e.target.value)}
+                    >
+                      <option value="">Move to…</option>
+                      {MEALS.filter((m) => m.id !== log.mealType).map((m) => (
+                        <option key={m.id} value={m.id}>{m.emoji} {m.label}</option>
+                      ))}
+                    </select>
 
                     <button
                       className="delete-log-button"

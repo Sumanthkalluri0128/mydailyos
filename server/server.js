@@ -38,6 +38,12 @@ mongoose
     if (process.env.SEED_ACTIVITIES !== 'false') {
       require('./lib/activityCatalogue').seedActivities().then((r) => r.added && console.log(`Seeded ${r.added} exercises`)).catch((e) => console.warn('Exercise seed warning:', e.message));
     }
+    // Opt-in weekly emails: checked hourly, sent once per week (Monday, UTC). Hosts that sleep can use `npm run send-weekly` as a cron job instead.
+    if (process.env.WEEKLY_EMAIL_SCHEDULER !== 'false') {
+      const tick = () => { if (new Date().getUTCDay() === 1) require('./lib/weeklyDigest').sendWeeklyDigests().then((r) => r.sent && console.log(`Weekly emails sent: ${r.sent}`)).catch((e) => console.warn('Weekly email warning:', e.message)); };
+      setInterval(tick, 60 * 60_000).unref();
+      setTimeout(tick, 30_000).unref();
+    }
     app.listen(PORT, '0.0.0.0', () => {
       console.log(`FlexFit server running on port ${PORT}`);
       console.log(`Allowed CORS origins: ${allowedOrigins.join(', ')}`);

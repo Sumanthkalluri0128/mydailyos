@@ -11,6 +11,8 @@ const HealthPage = lazy(() => import("./pages/HealthPage"));
 const WeightPage = lazy(() => import("./pages/WeightPage"));
 const ProfilePage = lazy(() => import("./pages/ProfilePage"));
 const ProgressPage = lazy(() => import("./pages/ProgressPage"));
+const PlannerPage = lazy(() => import("./pages/PlannerPage"));
+const RecipesPage = lazy(() => import("./pages/RecipesPage"));
 import OnboardingPage from "./pages/OnboardingPage";
 import CalorieBalance from "./components/CalorieBalance";
 import { waterTargetMl } from "./utils/energy";
@@ -391,6 +393,7 @@ function App() {
           <Suspense fallback={<div className="page-loading">Loading…</div>}>
           <FoodLogger
             date={today}
+            goTo={setCurrentPage}
             onBack={() =>
               setCurrentPage("dashboard")
             }
@@ -600,6 +603,24 @@ function App() {
     );
   }
 
+  if (currentPage === "planner" || currentPage === "recipes") {
+    return (
+      <div className="app">
+        <header className="topbar">
+          <BrandHome onHome={() => setCurrentPage("dashboard")} />
+          <ThemeToggle theme={theme} onToggle={toggleTheme} />
+        </header>
+        <main className="dashboard">
+          <Suspense fallback={<div className="page-loading">Loading…</div>}>
+            {currentPage === "planner"
+              ? <PlannerPage onBack={() => setCurrentPage("dashboard")} goTo={setCurrentPage} />
+              : <RecipesPage onBack={() => setCurrentPage("foodLogger")} />}
+          </Suspense>
+        </main>
+      </div>
+    );
+  }
+
   // ============================================================
   // FOOD PAGE
   // ============================================================
@@ -747,6 +768,15 @@ function App() {
 
         <div className="topbar-actions">
           <ThemeToggle theme={theme} onToggle={toggleTheme} />
+
+          <button
+            className="topbar-progress"
+            onClick={() => setCurrentPage("planner")}
+            aria-label="Open meal planner"
+          >
+            <span>📅</span>
+            <span>Plan</span>
+          </button>
 
           <button
             className={`topbar-progress ${currentPage === "progress" ? "active" : ""}`}

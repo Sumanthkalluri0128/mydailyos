@@ -37,6 +37,8 @@ function parseUpdate(body = {}) {
     if (u.energy !== undefined) set['units.energy'] = v.oneOf(u.energy, 'units.energy', ['kcal', 'kJ']);
     if (u.volume !== undefined) set['units.volume'] = v.oneOf(u.volume, 'units.volume', ['ml', 'oz']);
   }
+  const nf = body.notify;
+  if (nf && typeof nf === 'object' && nf.weeklyEmail !== undefined) set['notify.weeklyEmail'] = v.bool(nf.weeklyEmail, 'notify.weeklyEmail');
   return set;
 }
 

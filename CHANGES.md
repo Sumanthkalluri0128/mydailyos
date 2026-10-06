@@ -1,3 +1,26 @@
+# v8.3 — planner, recipes, text logging, suggestions, reports (web + server 2.8.0)
+
+- **Drag & drop** food between meals on the Log Food page (the "Move to…" menu still works on touch screens).
+- **Type what you ate** ("2 roti, dal, 1 cup rice, 100 g paneer"): foods and amounts are matched, you adjust, then log.
+- **Suggested for you**: foods that fit the calories, protein and fibre still missing today.
+- **Meal planner** (top bar → Plan): plan a week, log items or a whole day with one tap, copy last week, shopping list.
+- **Recipes**: ingredients + servings → per-serving nutrition; a saved recipe becomes a normal food you can log or plan.
+- **Weekly nutrients**: daily average protein / fibre / carbs / fat vs target, with a tip when something runs low.
+- **Plateau check**: warns when the scale hasn't moved for ~2-3 weeks (never suggests going below the safe calorie floor).
+- **Dietitian report (PDF)** and **weekly summary email** (opt-in, Monday) under Profile → Reports & emails.
+- Server: new routes `/api/meal-plans`, `/api/recipes`, `/api/foods/parse`, `/api/foods/suggest`, `/api/progress/plateau`,
+  `/api/progress/weekly/email`, `/api/account/report.pdf`, `/api/widget/summary`. `npm run send-weekly` can run as a cron job;
+  the in-process scheduler can be disabled with WEEKLY_EMAIL_SCHEDULER=false.
+
+---
+
+# v8.2 — fibre, and move food between meals (web)
+
+- **Macros card:** Fibre now sits directly under Fat (target = 14 g per 1,000 kcal, same as mobile).
+- **Food log:** every entry has a "Move to…" menu, so breakfast food can go to lunch, dinner or snacks. Calories and macros are kept; meal totals update.
+
+---
+
 # v8.1 — one number, one place (web)
 
 The dashboard showed calories 3 times, steps 3 times, weight 2 times. Now each number appears once:

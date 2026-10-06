@@ -12,6 +12,9 @@ const { buildWeeklySummary } = require('../lib/weekly');
 const { dailyTarget } = require('../lib/energy');
 const { addDays, diffDays, todayUtc } = require('../lib/dates');
 const { materializeRecurring } = require('../lib/taskSeries');
+const { weeklyBundle, plateauFor, digestFor } = require('../lib/weeklyDigest');
+const { sendMail } = require('../lib/mailer');
+const { rateLimit } = require('../middleware/rateLimit');
 const v = require('../lib/validate');
 
 const router = express.Router();
@@ -78,16 +81,29 @@ router.get('/achievements', wrap(async (req, res) => {
   res.json({ success: true, ...buildAchievements({ days, totals, goals: profile?.goals, today }), totals });
 }));
 
-// Trailing 7 days ending on `end` (default: today) vs the 7 days before that.
+// Trailing 7 days ending on `end` (default: today) vs the 7 days before that, plus nutrient averages vs targets.
 router.get('/weekly', wrap(async (req, res) => {
   const end = req.query.end ? v.date(req.query.end, 'end') : todayUtc();
-  const start = addDays(end, -6);
-  const prevStart = addDays(start, -7);
-  const uid = req.user.id;
-  const [{ days }, profile] = await Promise.all([buildHistory(uid, prevStart, end), Profile.findOne({ userId: uid }).lean()]);
-  const previous = days.slice(0, 7);
-  const current = days.slice(7);
-  res.json({ success: true, ...buildWeeklySummary({ current, previous, goals: { ...(profile?.goals || {}), calorieTarget: dailyTarget(profile) } }) });
+  const profile = await Profile.findOne({ userId: req.user.id }).lean();
+  const { summary, nutrients } = await weeklyBundle(req.user.id, end, profile);
+  res.json({ success: true, ...summary, nutrients });
+}));
+
+// Is the scale moving the way the goal says it should? (needs ~3 weigh-ins over two weeks)
+router.get('/plateau', wrap(async (req, res) => {
+  const today = req.query.today ? v.date(req.query.today, 'today') : todayUtc();
+  const profile = await Profile.findOne({ userId: req.user.id }).lean();
+  res.json({ success: true, ...(await plateauFor(req.user.id, today, profile, dailyTarget(profile))) });
+}));
+
+// Email myself this week's summary right now (weekly emails themselves are opt-in via PATCH /api/profile { notify: { weeklyEmail } }).
+const emailLimiter = rateLimit({ windowMs: 60 * 60_000, max: 5, keyFn: (req) => `weekly-mail|${req.user?.id || req.ip}`, message: 'Too many emails. Try again later.' });
+router.post('/weekly/email', emailLimiter, wrap(async (req, res) => {
+  const end = req.body?.end ? v.date(req.body.end, 'end') : todayUtc();
+  const d = await digestFor(req.user.id, end);
+  if (!d) throw new HttpError(404, 'Account not found');
+  await sendMail({ to: d.user.email, subject: d.subject, text: d.text });
+  res.json({ success: true, message: `Sent to ${d.user.email}` });
 }));
 
 module.exports = router;

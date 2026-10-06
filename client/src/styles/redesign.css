@@ -180,3 +180,65 @@ button:active:not(:disabled) { transform: scale(0.98); }
   .hero2-minis { grid-column: 2; align-self: center; border-top: 0; padding-top: 0; padding-left: 34px; border-left: 1px solid var(--border); }
 }
 @media (max-width: 420px) { .hero2-head h2 { font-size: 22px; } }
+
+/* Food log row: kcal | "Move to…" | delete */
+.food-log-row { grid-template-columns: 1fr auto auto 44px; }
+.move-log-select {
+  min-height: 44px; max-width: 120px; padding: 0 8px; border-radius: 10px;
+  border: 1px solid var(--border); background: var(--surface-soft); color: inherit; font-size: 13px; cursor: pointer;
+}
+@media (max-width: 700px) {
+  .food-log-row { grid-template-columns: 1fr auto 44px; }
+  .food-log-row > div:nth-child(2) { grid-column: 1; grid-row: 2; flex-direction: row; gap: 10px; align-items: baseline; }
+  .move-log-select { grid-column: 2; grid-row: 1; }
+  .delete-log-button { grid-column: 3; grid-row: 1; }
+}
+
+/* Drag & drop between meals */
+.food-log-row[draggable="true"] { cursor: grab; }
+.food-log-row.dragging { opacity: .45; }
+.meal-log-section.drop-target { outline: 2px dashed var(--primary, #6c63ff); outline-offset: 2px; border-radius: 16px; background: color-mix(in srgb, var(--primary, #6c63ff) 8%, transparent); }
+.food-logger-links { display: inline-flex; gap: 8px; margin-left: 10px; flex-wrap: wrap; }
+
+/* Type-a-meal + suggestions */
+.text-logger-row { display: grid; grid-template-columns: 1fr auto auto; gap: 8px; }
+.text-logger-row input, .text-logger-row select, .text-logger-item input { min-height: 44px; padding: 0 12px; border-radius: 10px; border: 1px solid var(--border); background: var(--surface-soft); color: inherit; font-size: 15px; }
+.text-logger-results { display: grid; gap: 8px; margin-top: 12px; }
+.text-logger-item { display: grid; grid-template-columns: 1fr 90px auto 44px; gap: 8px; align-items: center; }
+.suggestion-list { display: flex; flex-wrap: wrap; gap: 8px; }
+.suggestion-chip { display: grid; text-align: left; gap: 2px; padding: 10px 14px; min-height: 44px; border-radius: 14px; border: 1px solid var(--border); background: var(--surface-soft); color: inherit; cursor: pointer; }
+.suggestion-chip small { opacity: .7; }
+.suggestion-chip:hover, .suggestion-chip:focus-visible { border-color: var(--primary, #6c63ff); }
+@media (max-width: 700px) { .text-logger-row { grid-template-columns: 1fr; } .text-logger-item { grid-template-columns: 1fr 80px auto 44px; } }
+
+/* Meal planner, recipes, food picker */
+.planner-toolbar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 14px; }
+.planner-toolbar strong { flex: 1; min-width: 160px; text-align: center; }
+.planner-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 14px; }
+.planner-day.today { outline: 2px solid var(--primary, #6c63ff); }
+.planner-slot { padding: 8px 0; border-top: 1px dashed var(--border); }
+.planner-slot-head { display: flex; justify-content: space-between; align-items: center; font-weight: 700; }
+.planner-item { display: flex; gap: 8px; align-items: center; padding: 6px 0; }
+.planner-item > span { flex: 1; display: grid; }
+.planner-item small { opacity: .7; }
+.planner-item.logged { opacity: .55; }
+.planner-item[draggable="true"] { cursor: grab; }
+.link-button { background: none; border: 0; color: var(--primary, #6c63ff); font-weight: 700; min-height: 44px; padding: 0 8px; cursor: pointer; }
+.food-picker { display: grid; gap: 8px; padding: 8px 0; }
+.food-picker input, .food-picker select, .recipe-form input, .recipe-form textarea { min-height: 44px; padding: 0 12px; border-radius: 10px; border: 1px solid var(--border); background: var(--surface-soft); color: inherit; font-size: 15px; }
+.recipe-form textarea { padding: 10px 12px; }
+.food-picker-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.food-picker-results { display: flex; flex-wrap: wrap; gap: 6px; max-height: 220px; overflow-y: auto; }
+.recipe-form { display: grid; gap: 10px; }
+.recipe-servings input { width: 90px; margin: 0 6px; }
+.recipe-preview { display: flex; flex-wrap: wrap; gap: 10px; padding: 10px 14px; border-radius: 12px; background: var(--surface-soft); }
+.shop-row { display: grid; grid-template-columns: 28px 1fr auto; gap: 8px; align-items: center; min-height: 44px; }
+.shop-row.done span { text-decoration: line-through; opacity: .55; }
+
+/* Weekly nutrients + plateau */
+.weekly-nutrients { margin-top: 14px; display: grid; gap: 8px; }
+.nutrient-row { display: grid; grid-template-columns: 70px 1fr 110px; gap: 10px; align-items: center; }
+.nutrient-row.low .progress-fill { background: #d6577a; }
+.nutrient-row.near .progress-fill { background: #e0a43a; }
+.plateau-card { border-left: 4px solid #e0a43a; }
+.plateau-card.wrong_direction { border-left-color: #d6577a; }

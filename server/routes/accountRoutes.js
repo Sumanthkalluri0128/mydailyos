@@ -8,13 +8,20 @@ const { rateLimit } = require('../middleware/rateLimit');
 const { wrap, HttpError } = require('../lib/http');
 const { toCsv } = require('../lib/csv');
 const v = require('../lib/validate');
+const Profile = require('../models/Profile');
+const FoodLog = require('../models/FoodLog');
+const { buildHistory } = require('../lib/progress');
+const { buildReportLines } = require('../lib/reportBuilder');
+const { buildPdf } = require('../lib/pdfReport');
+const { dailyTarget, expectedEnergy, macroTargets } = require('../lib/energy');
+const { addDays, diffDays, todayUtc } = require('../lib/dates');
 
 const router = express.Router();
 router.use(requireAuth);
 
 const PERSONAL_MODELS = [
   'Profile', 'WeightLog', 'WaterLog', 'Task', 'Habit', 'HabitLog', 'FoodLog', 'ActivityLog', 'WorkoutTemplate',
-  'HealthLog', 'Fast', 'SavedMeal',
+  'HealthLog', 'Fast', 'SavedMeal', 'MealPlan', 'Recipe',
 ];
 
 const passwordLimiter = rateLimit({
@@ -135,6 +142,27 @@ router.delete('/me', rateLimit({ windowMs: 60 * 60_000, max: 5, keyFn: (req) => 
 
   console.log(`Account ${id} deleted permanently`, deleted);
   res.json({ success: true, message: 'Account and all personal data deleted permanently' });
+}));
+
+// Printable report for a dietitian / doctor: targets, averages, a day-by-day table and the food diary. GET /api/account/report.pdf?from=&to=&diary=true
+router.get('/report.pdf', exportLimiter, wrap(async (req, res) => {
+  const uid = req.user.id;
+  const to = req.query.to ? v.date(req.query.to, 'to') : todayUtc();
+  const from = req.query.from ? v.date(req.query.from, 'from') : addDays(to, -29);
+  if (from > to || diffDays(from, to) > 92) throw new HttpError(400, 'Choose a range of up to 93 days');
+  const [user, profile, { days }, foodLogs] = await Promise.all([
+    User.findById(uid).select('name').lean(),
+    Profile.findOne({ userId: uid }).lean(),
+    buildHistory(uid, from, to),
+    req.query.diary === 'false' ? [] : FoodLog.find({ userId: uid, date: { $gte: from, $lte: to } }).sort({ date: 1, createdAt: 1 }).select('date mealType foodName consumedQuantity servingUnit nutritionTotal').lean(),
+  ]);
+  const calories = dailyTarget(profile), e = expectedEnergy(profile);
+  const targets = { calories, ...macroTargets(calories, profile?.currentWeightKg, e?.direction, profile?.goals?.proteinTarget) };
+  targets.carbs = targets.carbs;
+  const weighIns = days.filter((d) => d.weighIn);
+  const weight = weighIns.length > 1 ? { start: weighIns[0].weightKg, end: weighIns[weighIns.length - 1].weightKg, change: Math.round((weighIns[weighIns.length - 1].weightKg - weighIns[0].weightKg) * 10) / 10 } : null;
+  const pdf = buildPdf(buildReportLines({ user, profile, targets, days, foodLogs, from, to, weight }), { title: `FlexFit report ${from} to ${to}` });
+  res.set({ 'Content-Type': 'application/pdf', 'Content-Disposition': `attachment; filename="flexfit-report-${from}_${to}.pdf"`, 'Cache-Control': 'no-store' }).send(pdf);
 }));
 
 module.exports = router;

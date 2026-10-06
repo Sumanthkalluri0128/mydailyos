@@ -16,6 +16,7 @@ export default function Insights() {
   const [ach, setAch] = useState(null);
   const [weekly, setWeekly] = useState(null);
   const [showAll, setShowAll] = useState(false);
+  const [plateau, setPlateau] = useState(null);
 
   useEffect(() => {
     const today = getLocalDate();
@@ -23,11 +24,13 @@ export default function Insights() {
     Promise.all([
       apiFetch(`/api/progress/achievements?today=${today}`).then((r) => r.json()),
       apiFetch(`/api/progress/weekly?end=${today}`).then((r) => r.json()),
+      apiFetch(`/api/progress/plateau?today=${today}`).then((r) => r.json()).catch(() => null),
     ])
-      .then(([a, w]) => {
+      .then(([a, w, p]) => {
         if (!alive) return;
         if (a.success) setAch(a);
         if (w.success) setWeekly(w);
+        if (p?.success) setPlateau(p);
       })
       .catch(() => {});
     return () => { alive = false; };
@@ -72,6 +75,14 @@ export default function Insights() {
         </div>
       )}
 
+      {plateau && plateau.status !== "insufficient_data" && plateau.status !== "on_track" && (
+        <div className={`large-card plateau-card ${plateau.status}`}>
+          <h2>{plateau.status === "plateau" ? "⏸️ Weight plateau" : plateau.status === "wrong_direction" ? "↗️ Trend check" : "⚖️ Weight trend"}</h2>
+          <p>{plateau.message}</p>
+          <small>Trend: {plateau.slopeKgPerWeek > 0 ? "+" : ""}{plateau.slopeKgPerWeek} kg/week from {plateau.weighIns} weigh-ins</small>
+        </div>
+      )}
+
       {weekly && (
         <div className="large-card">
           <div className="section-header">
@@ -90,6 +101,20 @@ export default function Insights() {
             Active {weekly.activeDays}/7 days · water goal {weekly.goalDays.water}/7 · exercise goal {weekly.goalDays.exercise}/7
             {weekly.weight ? ` · weight ${weekly.weight.change > 0 ? "+" : ""}${weekly.weight.change} kg` : ""}
           </p>
+          {weekly.nutrients?.loggedDays > 0 && (
+            <div className="weekly-nutrients">
+              <h3>Daily average vs target</h3>
+              {weekly.nutrients.rows.map((r) => (
+                <div className={`nutrient-row ${r.status}`} key={r.key}>
+                  <span>{r.label}</span>
+                  <div className="progress-bar"><div className="progress-fill" style={{ width: `${Math.min(r.percentOfTarget || 0, 100)}%` }} /></div>
+                  <strong>{r.average} / {r.target} g</strong>
+                </div>
+              ))}
+              {weekly.nutrients.tip && <p className="card-description">💡 {weekly.nutrients.tip}</p>}
+              <small>Based on {weekly.nutrients.loggedDays} day{weekly.nutrients.loggedDays === 1 ? "" : "s"} with food logged.</small>
+            </div>
+          )}
           {weekly.bestDay && (
             <p className="best-day">🏆 Best day: <strong>{weekly.bestDay.date}</strong> — {weekly.bestDay.highlights.join(", ")}</p>
           )}

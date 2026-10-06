@@ -31,6 +31,11 @@ const schema = new mongoose.Schema(
       energy: { type: String, enum: ['kcal', 'kJ'], default: 'kcal' },
       volume: { type: String, enum: ['ml', 'oz'], default: 'ml' },
     },
+    // Optional emails. Off by default; `lastWeeklyEmail` is the Monday (YYYY-MM-DD) of the last week already sent, so it is never sent twice.
+    notify: {
+      weeklyEmail: { type: Boolean, default: false },
+      lastWeeklyEmail: { type: String, default: '' },
+    },
     // Existing accounts default to true so they are never pushed through first-run onboarding;
     // signup creates the profile with onboarded:false explicitly.
     onboarded: { type: Boolean, default: true },

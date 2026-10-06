@@ -23,6 +23,9 @@ const progressRoutes = require('./routes/progressRoutes');
 const healthRoutes = require('./routes/healthRoutes');
 const fastingRoutes = require('./routes/fastingRoutes');
 const savedMealRoutes = require('./routes/savedMealRoutes');
+const mealPlanRoutes = require('./routes/mealPlanRoutes');
+const recipeRoutes = require('./routes/recipeRoutes');
+const widgetRoutes = require('./routes/widgetRoutes');
 const { createGoogleRouter } = require('./routes/googleRoutes');
 
 
@@ -69,6 +72,9 @@ function createApp({ allowedOrigins = [] } = {}) {
   app.use('/api/health-logs', healthRoutes);
   app.use('/api/fasting', fastingRoutes);
   app.use('/api/saved-meals', savedMealRoutes);
+  app.use('/api/meal-plans', mealPlanRoutes);
+  app.use('/api/recipes', recipeRoutes);
+  app.use('/api/widget', widgetRoutes);
   app.use('/api/progress', progressRoutes);
   app.use('/api/history', progressRoutes); // backward-compatible alias for older builds
 

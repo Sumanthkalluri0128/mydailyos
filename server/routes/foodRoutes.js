@@ -6,6 +6,10 @@ const { requireAuth } = require('../middleware/auth');
 const { wrap, HttpError } = require('../lib/http');
 const v = require('../lib/validate');
 const { lookupBarcode, CODE_RE } = require('../lib/openFoodFacts');
+const Profile = require('../models/Profile');
+const { parseMealText } = require('../lib/foodParse');
+const { suggestFoods } = require('../lib/suggest');
+const { dailyTarget, expectedEnergy, macroTargets } = require('../lib/energy');
 
 const router = express.Router();
 router.use(requireAuth);
@@ -80,6 +84,40 @@ router.get('/recent', wrap(async (req, res) => {
   const foods = await Food.find({ _id: { $in: ids }, ...visibleTo(uid) }).select('+favoriteBy').lean();
   const byId = new Map(foods.map((f) => [String(f._id), f]));
   res.json({ success: true, foods: ids.map((id) => byId.get(id)).filter(Boolean).map((f) => present(f, uid)) });
+}));
+
+// POST /api/foods/parse  { text: "2 roti, dal, 1 cup rice" } -> matched foods with quantities (nothing is saved).
+router.post('/parse', wrap(async (req, res) => {
+  const text = v.string(req.body?.text, 'text', { max: 600, required: true });
+  const foods = await Food.find(visibleTo(req.user.id)).select('name brand servingSize servingUnit units userId').limit(4000).lean();
+  res.json({ success: true, ...parseMealText(text, foods) });
+}));
+
+// GET /api/foods/suggest?date=YYYY-MM-DD&mealType=lunch — foods that fit what's left today (calories, protein, fibre).
+router.get('/suggest', wrap(async (req, res) => {
+  const uid = req.user.id;
+  const date = v.date(req.query.date, 'date');
+  const [profile, logs, recentLogs] = await Promise.all([
+    Profile.findOne({ userId: uid }).lean(),
+    FoodLog.find({ userId: uid, date }).select('nutritionTotal').lean(),
+    FoodLog.find({ userId: uid }).sort({ createdAt: -1 }).limit(120).select('foodId').lean(),
+  ]);
+  const eaten = logs.reduce((a, l) => { const n = l.nutritionTotal || {}; a.calories += n.calories || 0; a.protein += n.protein || 0; a.fiber += n.fiber || 0; return a; }, { calories: 0, protein: 0, fiber: 0 });
+  const target = dailyTarget(profile);
+  const e = expectedEnergy(profile);
+  const macros = macroTargets(target, profile?.currentWeightKg, e?.direction, profile?.goals?.proteinTarget);
+  const remaining = { calories: target - eaten.calories, protein: macros.protein - eaten.protein, fiber: macros.fiber - eaten.fiber };
+  const foods = await Food.find(visibleTo(uid)).select('+favoriteBy').limit(4000).lean();
+  const mealType = ['breakfast', 'lunch', 'dinner', 'snacks'].includes(req.query.mealType) ? req.query.mealType : undefined;
+  const picks = suggestFoods(foods, remaining, {
+    mealType,
+    recentIds: new Set(recentLogs.map((l) => String(l.foodId))),
+    favoriteIds: new Set(foods.filter((f) => (f.favoriteBy || []).some((id) => String(id) === String(uid))).map((f) => String(f._id))),
+  });
+  res.json({
+    success: true, remaining: { calories: Math.round(remaining.calories), protein: Math.round(remaining.protein), fiber: Math.round(remaining.fiber) },
+    suggestions: picks.map((p) => ({ food: present(p.food, uid), reason: p.reason })),
+  });
 }));
 
 // GET /api/foods/barcode/:code — my/catalogue food with that barcode, else a draft from Open Food Facts (not saved).
