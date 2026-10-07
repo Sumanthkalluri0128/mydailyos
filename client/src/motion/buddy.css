@@ -131,3 +131,7 @@ html.ff-calm::view-transition-old(root),html.ff-calm::view-transition-new(root){
 @keyframes bdTwinkle{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.55}}
 .bd-m-sad .bd-hair{animation-duration:5s}
 @media (prefers-reduced-motion:reduce){.bd-hair,.bd-eyes,.bd-shine{animation:none}}
+
+/* rigged characters: still until hovered */
+.bd-rig{cursor:pointer;touch-action:manipulation;-webkit-tap-highlight-color:transparent}
+.bd-rig svg{display:block;overflow:visible;filter:drop-shadow(0 4px 5px rgba(31,35,64,.18))}

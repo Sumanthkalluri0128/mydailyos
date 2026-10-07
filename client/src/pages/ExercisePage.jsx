@@ -272,7 +272,7 @@ function ExercisePage({ onBack }) {
       <div className="page-header">
 
         <div>
-          <div className="bd-head"><h1>Exercise</h1><Buddy scene="lift" size={76} says="Let's lift!" /></div>
+          <div className="bd-head"><h1>Exercise</h1><Buddy scene="pullup" size={84} says="Hover me, then pull up!" /></div>
 
           <p>
             Track your activities and calories burned.

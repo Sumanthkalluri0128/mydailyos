@@ -117,3 +117,8 @@ Tests: `cd server && npm test`.
 
 ---
 
+
+## v12 - rigged characters, hover only
+- Characters are now skeleton-rigged (src/motion/rig.js): hips/torso/head + 2-bone IK arms and legs. Hands and feet are pinned to bars, ropes, holds and floor, so the whole body moves with them (pull ups, rope climb, push ups, wall climb, sit ups, squat-press, run, hike, jump, stretch, fight, meditate, sleep, drink, eat, study, victory, dance, wave, sad).
+- Characters only move while hovered (tap on touch screens, plays 4s). No idle loops, no wandering Roamers (removed from main.jsx).
+- Buddy.jsx keeps its API; scene can also be any rig activity name. New: RigBuddy.jsx, rig.js.
