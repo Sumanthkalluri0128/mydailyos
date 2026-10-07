@@ -1,4 +1,5 @@
 import { confirmAction } from "../utils/confirm";
+import Buddy, { BuddyEmpty } from "../motion/Buddy";
 import { notify } from "../utils/notify";
 import { apiFetch } from "../config/api";
 import { useEffect, useMemo, useState } from "react";
@@ -423,7 +424,7 @@ function FoodLogger({ date, onBack, goTo }) {
             </span>
           )}
 
-          <h1>Log Food</h1>
+          <div className="bd-head"><h1>Log Food</h1><Buddy scene="eat" size={76} says="What's on the plate?" /></div>
 
           <p>
             Add everything you ate today.
@@ -862,9 +863,7 @@ function FoodLogger({ date, onBack, goTo }) {
 
 
               {logs.length === 0 ? (
-                <p className="no-food">
-                  No food logged
-                </p>
+                <BuddyEmpty scene="sad" size={96} title="No food logged">Add something you ate.</BuddyEmpty>
               ) : (
                 logs.map((log) => (
                   <div

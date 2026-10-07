@@ -1,4 +1,5 @@
 import { notify } from "../utils/notify";
+import Buddy from "../motion/Buddy";
 import { apiFetch } from "../config/api";
 import { useEffect, useState } from "react";
 import { API_URL } from "../config";
@@ -318,7 +319,7 @@ function ProfilePage({ onBack }) {
             ← Back
           </button>
 
-          <h1>Profile & Goals</h1>
+          <div className="bd-head"><h1>Profile & Goals</h1><Buddy scene="wave" size={76} says="Hi there!" /></div>
 
           <p>
             Manage your body information

@@ -1,4 +1,5 @@
 import { confirmAction } from "../utils/confirm";
+import Buddy, { BuddyEmpty } from "../motion/Buddy";
 import { notify } from "../utils/notify";
 import { apiFetch } from "../config/api";
 import { useEffect, useState } from "react";
@@ -271,7 +272,7 @@ function ExercisePage({ onBack }) {
       <div className="page-header">
 
         <div>
-          <h1>Exercise</h1>
+          <div className="bd-head"><h1>Exercise</h1><Buddy scene="lift" size={76} says="Let's lift!" /></div>
 
           <p>
             Track your activities and calories burned.
@@ -563,20 +564,9 @@ function ExercisePage({ onBack }) {
 
         {logs.length === 0 ? (
 
-          <div className="empty-state">
-            <div>
-              🏃
-            </div>
-
-            <h3>
-              No exercise recorded
-            </h3>
-
-            <p>
-              Add your first activity
-              above.
-            </p>
-          </div>
+          <BuddyEmpty scene="sad" title="No exercise yet today">
+            Even 10 minutes counts. Add your first activity above and I will cheer you on!
+          </BuddyEmpty>
 
         ) : (
 

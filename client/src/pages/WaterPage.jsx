@@ -1,4 +1,5 @@
 import { confirmAction } from "../utils/confirm";
+import Buddy, { BuddyEmpty } from "../motion/Buddy";
 import { notify } from "../utils/notify";
 import { apiFetch } from "../config/api";
 import { useEffect, useState } from "react";
@@ -185,7 +186,7 @@ function WaterPage({ onBack }) {
             ← Back
           </button>
 
-          <h1>Water</h1>
+          <div className="bd-head"><h1>Water</h1><Buddy scene="drink" size={76} says="Sip time!" /></div>
 
           <p>
             Stay hydrated throughout the day.
@@ -321,9 +322,7 @@ function WaterPage({ onBack }) {
 
         {logs.length === 0 ? (
 
-          <p>
-            No water logged yet.
-          </p>
+          <BuddyEmpty scene="sad" size={96} title="No water yet">Grab a glass and log it.</BuddyEmpty>
 
         ) : (
 

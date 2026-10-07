@@ -8,7 +8,12 @@ import OfflineBanner from "./components/OfflineBanner";
 import ServerWakeBanner from "./components/ServerWakeBanner";
 import "./index.css";
 import "./styles/redesign.css"; // refines App.css without replacing it
-import "./motion/motion.css"; // animation kit: last so its press/reduced-motion rules win
+import "./motion/motion.css"; // older animation kit (mostly switched off, see buddy.css)
+import "./motion/buddy.css"; // Flex the mascot, tap marker, calm mode: last so it wins
+import { installTapMarker } from "./motion/tapMarker";
+
+installTapMarker();
+try { if (localStorage.getItem("ff_classic_motion") === "1") document.documentElement.classList.add("ff-classic"); } catch { /* ignore */ }
 
 // Apply the saved theme BEFORE anything renders, so the sign-in / reset pages (which render outside <App />) honour it too.
 try {

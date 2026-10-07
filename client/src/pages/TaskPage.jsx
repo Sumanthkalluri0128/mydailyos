@@ -1,4 +1,5 @@
 import { confirmAction } from "../utils/confirm";
+import Buddy, { BuddyEmpty } from "../motion/Buddy";
 import { AnimatedCheck } from "../motion/ActionKit";
 import { notify } from "../utils/notify";
 import { apiFetch } from "../config/api";
@@ -160,7 +161,7 @@ function TaskPage({ onBack }) {
         ← Back to Dashboard
       </button>
 
-      <h1>Tasks</h1>
+      <div className="bd-head"><h1>Tasks</h1><Buddy scene="task" size={76} says="Check 'em off!" /></div>
 
       <p>
         {completedTasks} of {tasks.length} tasks completed
@@ -270,7 +271,7 @@ function TaskPage({ onBack }) {
           </h2>
 
           {tasks.length === 0 ? (
-            <p>No tasks for this date.</p>
+            <BuddyEmpty scene="task" size={96} title="Nothing to do for this date">Add a task above.</BuddyEmpty>
           ) : (
             <div className="task-list">
 

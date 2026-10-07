@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import "./toast.css";
+import Buddy, { sceneForText } from "../motion/Buddy";
 
 export default function ToastHost() {
   const [toasts, setToasts] = useState([]);
@@ -39,15 +40,11 @@ export default function ToastHost() {
           className={`toast toast-${toast.type}`}
           role={toast.type === "error" ? "alert" : "status"}
         >
-          <span className="toast-icon" aria-hidden="true">
-            {toast.type === "success"
-              ? "✓"
-              : toast.type === "error"
-                ? "!"
-                : toast.type === "warning"
-                  ? "⚠"
-                  : "i"}
-          </span>
+          {toast.type === "success" || toast.type === "error" || toast.type === "warning" ? (
+            <Buddy scene={sceneForText(toast.message, toast.type)} size={46} label="" />
+          ) : (
+            <span className="toast-icon" aria-hidden="true">i</span>
+          )}
           <span className="toast-message">{toast.message}</span>
           <button
             type="button"

@@ -1,4 +1,5 @@
 import { confirmAction } from "../utils/confirm";
+import Buddy, { BuddyEmpty } from "../motion/Buddy";
 import StreakFlame from "../motion/StreakFlame";
 import { notify } from "../utils/notify";
 import { apiFetch } from "../config/api";
@@ -297,7 +298,7 @@ const [habitStats, setHabitStats] = useState({});
             ← Back
           </button>
 
-          <h1>Habits</h1>
+          <div className="bd-head"><h1>Habits</h1><Buddy scene="habit" size={76} says="Keep the streak!" /></div>
 
           <p>
             Build consistency one day at a time.
@@ -467,9 +468,7 @@ const [habitStats, setHabitStats] = useState({});
 
           {habits.length === 0 ? (
 
-            <p>
-              No habits created yet.
-            </p>
+            <BuddyEmpty scene="sad" size={96} title="No habits yet">Create one above and I will cheer every check-in.</BuddyEmpty>
 
           ) : (
 

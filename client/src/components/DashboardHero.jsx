@@ -1,5 +1,6 @@
 import { useEffect, useId, useRef, useState } from "react";
 import StreakFlame from "../motion/StreakFlame";
+import Buddy from "../motion/Buddy";
 import { buzz, fireConfetti, useCelebrateOnce } from "../motion/motion";
 import { apiFetch } from "../config/api";
 import { dayBalance } from "../utils/energy";
@@ -66,6 +67,13 @@ export default function DashboardHero({ profile, today, summary, activity, water
     meals: { breakfast: summary.meals.breakfast > 0, lunch: summary.meals.lunch > 0, dinner: summary.meals.dinner > 0 },
     waterMl: water.totalMl, waterTarget, steps, stepsTarget, exerciseMin, exerciseTarget, streak,
   });
+  // Which character greets you: disappointed if the day is ending with no workout, cheering when the goal is met.
+  const waterLow = waterTarget > 0 && water.totalMl / waterTarget < 0.4;
+  const buddyScene = exerciseTarget > 0 && exerciseMin >= exerciseTarget ? "cheer"
+    : hour >= 17 && exerciseMin === 0 ? "sad"
+    : hour >= 12 && waterLow ? "drink"
+    : hour < 11 && !(summary.meals.breakfast > 0) ? "eat"
+    : exerciseMin > 0 ? "lift" : "wave";
   const first = (profile?.name || "").trim().split(" ")[0];
   const dateText = new Date(`${today}T00:00:00`).toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" });
 
@@ -109,7 +117,7 @@ export default function DashboardHero({ profile, today, summary, activity, water
       </header>
 
       <div className={`coach coach-${coach.tone}`} role="status">
-        <span className="coach-emoji" aria-hidden="true">{coach.emoji}</span>
+        <span className="coach-buddy"><Buddy scene={buddyScene} size={62} /></span>
         <div>
           <strong>{coach.title}</strong>
           <span>{coach.text}</span>
@@ -148,10 +156,10 @@ export default function DashboardHero({ profile, today, summary, activity, water
       </div>
 
       <div className="quick" role="group" aria-label="Quick actions">
-        <button type="button" onClick={() => goTo("foodLogger")}><span>🍽️</span>Food</button>
-        <button type="button" className={waterOk ? "fx-pulse" : undefined} onClick={quickWater} disabled={adding}><span>{waterOk ? "✅" : "💧"}</span>{waterOk ? "Added" : "+250 ml"}</button>
-        <button type="button" onClick={() => goTo("exercise")}><span>🏃</span>Workout</button>
-        <button type="button" onClick={() => goTo("health")}><span>👟</span>Steps</button>
+        <button type="button" onClick={() => goTo("foodLogger")}><Buddy scene="eat" size={40} label="" />Food</button>
+        <button type="button" className={waterOk ? "fx-pulse" : undefined} onClick={quickWater} disabled={adding}><Buddy scene={waterOk ? "cheer" : "drink"} size={40} label="" />{waterOk ? "Added" : "+250 ml"}</button>
+        <button type="button" onClick={() => goTo("exercise")}><Buddy scene="lift" size={40} label="" />Workout</button>
+        <button type="button" onClick={() => goTo("health")}><Buddy scene="walk" size={40} label="" />Steps</button>
       </div>
     </section>
   );

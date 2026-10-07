@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import Buddy from "../motion/Buddy";
 import { apiFetch } from "../config/api";
 import { notify } from "../utils/notify";
 import { confirmAction } from "../utils/confirm";
@@ -100,10 +101,10 @@ export default function RecipesPage({ onBack }) {
 
   return (
     <div className="recipes-page">
-      <div className="food-logger-header"><div><button className="secondary-button" onClick={onBack}>← Back</button><h1>Recipes</h1><p>Combine ingredients once, then log or plan a serving in one tap.</p></div></div>
+      <div className="food-logger-header"><div><button className="secondary-button" onClick={onBack}>← Back</button><div className="bd-head"><h1>Recipes</h1><Buddy scene="chef" size={76} says="Let's cook!" /></div><p>Combine ingredients once, then log or plan a serving in one tap.</p></div></div>
       <div className="large-card">
         <button className="primary-button" onClick={() => setEditing({ ...blank })}>+ New recipe</button>
-        {!recipes.length && <p className="card-description">No recipes yet. Build one and it appears in your food list as “{`<name>`}” per serving.</p>}
+        {!recipes.length && <p className="card-description"><Buddy scene="chef" size={56} /> No recipes yet. Build one and it appears in your food list as “{`<name>`}” per serving.</p>}
         {recipes.map((r) => (
           <div className="planner-item" key={r._id}>
             <span><strong>{r.name}</strong><small>{r.servings} servings · {Math.round(r.perServing.calories)} kcal, {r.perServing.protein} g protein, {r.perServing.fiber} g fibre each</small></span>

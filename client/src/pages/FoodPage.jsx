@@ -1,4 +1,5 @@
 import { confirmAction } from "../utils/confirm";
+import Buddy from "../motion/Buddy";
 import { notify } from "../utils/notify";
 import { apiFetch } from "../config/api";
 import { useEffect, useState } from "react";
@@ -394,7 +395,7 @@ const [editingFood, setEditingFood] = useState(null);
           <p>Loading foods...</p>
         ) : foods.length === 0 ? (
           <div className="empty-state">
-            <div>🍽️</div>
+            <Buddy scene="eat" size={96} />
             <h3>No foods yet</h3>
             <p>
               Add your first food to start building your

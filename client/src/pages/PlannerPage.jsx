@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import Buddy from "../motion/Buddy";
 import { apiFetch } from "../config/api";
 import { notify } from "../utils/notify";
 import { confirmAction } from "../utils/confirm";
@@ -71,7 +72,7 @@ export default function PlannerPage({ onBack, goTo }) {
       <div className="food-logger-header">
         <div>
           <button className="secondary-button" onClick={onBack}>← Back</button>
-          <h1>Meal planner</h1>
+          <div className="bd-head"><h1>Meal planner</h1><Buddy scene="plan" size={76} says="Plan the week!" /></div>
           <p>Plan the week, log with one tap, and get a shopping list.</p>
         </div>
       </div>

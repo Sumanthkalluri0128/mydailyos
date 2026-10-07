@@ -2,6 +2,9 @@
 import { useEffect, useRef, useState } from "react";
 import { flushSync } from "react-dom";
 
+/** Older decorative effects (confetti, count-up, page transitions) are off unless localStorage ff_classic_motion=1. */
+export const classicMotion = () => { try { return localStorage.getItem("ff_classic_motion") === "1"; } catch { return false; } };
+
 export const prefersReducedMotion = () =>
   typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
 
@@ -10,10 +13,10 @@ export const buzz = (p = 12) => { try { if (!prefersReducedMotion()) navigator.v
 
 /** Rolls a number up to `value`. Returns the target immediately for reduced-motion users. */
 export function useCountUp(value, ms = 900) {
-  const [n, setN] = useState(prefersReducedMotion() ? value : 0);
+  const [n, setN] = useState(prefersReducedMotion() || !classicMotion() ? value : 0);
   const from = useRef(0);
   useEffect(() => {
-    if (prefersReducedMotion()) { setN(value); return; }
+    if (prefersReducedMotion() || !classicMotion()) { setN(value); return; }
     const start = performance.now(), a = from.current;
     let raf;
     const tick = (t) => {
@@ -32,7 +35,7 @@ const COLORS = ["#6847e8", "#e8476f", "#2587d9", "#20a46b", "#ffb020", "#ffffff"
 
 /** Canvas confetti from an element (or screen centre). Self-cleaning, ~1.8s. */
 export function fireConfetti({ from, count = 70, spread = Math.PI * 1.1 } = {}) {
-  if (prefersReducedMotion() || typeof document === "undefined") return;
+  if (prefersReducedMotion() || !classicMotion() || typeof document === "undefined") return;
   const dpr = window.devicePixelRatio || 1;
   const W = window.innerWidth, H = window.innerHeight;
   const cv = document.createElement("canvas");
@@ -62,7 +65,7 @@ export function fireConfetti({ from, count = 70, spread = Math.PI * 1.1 } = {}) 
 
 /** Cross-fades a state change with the View Transitions API when available; plain update otherwise. */
 export function withTransition(update) {
-  if (prefersReducedMotion() || !document.startViewTransition) return update();
+  if (prefersReducedMotion() || !classicMotion() || !document.startViewTransition) return update();
   document.startViewTransition(() => flushSync(update));
 }
 

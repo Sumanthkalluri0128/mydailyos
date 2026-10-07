@@ -1,3 +1,18 @@
+# v8.5 — characters instead of effects (web)
+
+- **Flex, a little bean mascot**, now acts out every feature (`client/src/motion/Buddy.jsx`): lifts dumbbells when you open **Exercise**, sips water on **Water**,
+  eats an apple on **Log Food**, steps on the scale on **Weight**, walks on **Steps**, checks off a clipboard on **Tasks**, flexes next to a flame on **Habits**,
+  cooks on **Recipes**, plans on a calendar in the **Planner**, points at a growing chart in **Progress**, waves on **Profile**.
+- **Disappointed Flex** (grey, under a rain cloud) shows when nothing is logged: no exercise, water, weight, food, habits. On the dashboard he appears
+  if it's after 5 pm and you haven't worked out; he cheers when the exercise goal is met, sips when water is low, eats when breakfast is missing.
+- **Toasts** show a matching character (cheering, drinking, lifting…; sad on errors) instead of a tick.
+- **Tap marker**: a dot and ring appear exactly where you click or touch (`motion/tapMarker.js`).
+- **Quick actions** on the dashboard use small moving characters instead of emoji.
+- **Calm mode**: the older decorative effects (confetti, count-up numbers, page slide-in, shimmer, ring pop, flame flicker, button ripples) are switched off.
+  To bring them back: `localStorage.setItem("ff_classic_motion","1")` and reload. Phones set to "Reduce motion" show still characters.
+
+---
+
 # v8.4 — speed, wake-up, accurate targets, a real weekly email (server 2.9.0)
 
 **Speed & wake-up**

@@ -1,4 +1,5 @@
 import { confirmAction } from "../utils/confirm";
+import Buddy, { BuddyEmpty } from "../motion/Buddy";
 import { notify } from "../utils/notify";
 import { apiFetch } from "../config/api";
 import { useEffect, useState } from "react";
@@ -292,7 +293,7 @@ function WeightPage({ onBack }) {
             ← Back
           </button>
 
-          <h1>Weight</h1>
+          <div className="bd-head"><h1>Weight</h1><Buddy scene="scale" size={76} says="Hop on!" /></div>
 
           <p>
             Track your weight over time.
@@ -324,9 +325,7 @@ function WeightPage({ onBack }) {
 
           </div>
         ) : (
-          <p>
-            No weight recorded yet.
-          </p>
+          <BuddyEmpty scene="scale" size={96} title="No weight recorded yet">Step on the scale and log it below.</BuddyEmpty>
         )}
 
       </div>
@@ -523,9 +522,7 @@ function WeightPage({ onBack }) {
 
         {logs.length === 0 ? (
 
-          <p>
-            No weight entries yet.
-          </p>
+          <BuddyEmpty scene="sad" size={96} title="No weight entries yet" />
 
         ) : (
 
