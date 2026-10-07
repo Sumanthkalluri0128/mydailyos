@@ -200,7 +200,8 @@ export default function Roamers() {
     const drawChar = (c, now) => {
       const s = size(), bob = c.state === "walk" ? Math.sin(c.phase * Math.PI * 2) * 3 : c.state === "sleep" ? Math.sin(c.phase * Math.PI * 2) * 1.5 : 0;
       const rig = solveRig({ x: c.x + s / 2, y: c.y + s * .72, phase: c.phase }, c.facing, c.state, s / 100);
-      const url = c.state === "walk" || c.state === "climb" ? walkStrip(c.who) : sprite(c.who, c.pose || poseFor(c.state));
+      const isWalkStrip = c.state === "walk" || c.state === "climb";
+      const url = isWalkStrip ? walkStrip(c.who) : sprite(c.who, c.pose || poseFor(c.state));
       const im = getImage(url);
       ctx.save(); ctx.translate(c.x + s / 2, c.y + s / 2 + bob); ctx.scale(c.facing, 1);
       if (c.state === "sleep") { ctx.globalAlpha = .95; ctx.rotate(Math.sin(now / 900) * .025); }
@@ -208,8 +209,18 @@ export default function Roamers() {
       if (c.state === "dodge") { ctx.translate(-5, 0); ctx.rotate(-.08); }
       if (c.state === "fight") { ctx.translate(0, Math.sin(now / 80) * 1.5); }
       ctx.shadowColor = SKIN[c.who].aura; ctx.shadowBlur = c.state === "attack" ? 16 : 6;
-      if (im && im.complete && im.naturalWidth) ctx.drawImage(im, -s / 2, -s / 2, s, s);
-      else { ctx.shadowBlur = 0; drawFallbackRig(ctx, { x: 0, y: 0 }, Object.fromEntries(Object.entries(rig).map(([k, p]) => [k, { x: p.x - (c.x + s / 2), y: p.y - (c.y + s / 2) }])), SKIN[c.who]); }
+      if (im && im.complete && im.naturalWidth) {
+        if (isWalkStrip && im.naturalWidth >= im.naturalHeight * 2) {
+          // The walk sheet is an 8-frame row of complete, rigid character stickers.
+          // Crop exactly one frame so the other seven characters are NEVER rendered.
+          const frames = 8;
+          const frame = Math.floor(c.phase * 1.15) % frames;
+          const fw = im.naturalWidth / frames;
+          ctx.drawImage(im, frame * fw, 0, fw, im.naturalHeight, -s / 2, -s / 2, s, s);
+        } else {
+          ctx.drawImage(im, -s / 2, -s / 2, s, s);
+        }
+      } else { ctx.shadowBlur = 0; drawFallbackRig(ctx, { x: 0, y: 0 }, Object.fromEntries(Object.entries(rig).map(([k, p]) => [k, { x: p.x - (c.x + s / 2), y: p.y - (c.y + s / 2) }])), SKIN[c.who]); }
       if (c.state === "sleep") { ctx.shadowBlur = 0; ctx.fillStyle = "#334155"; ctx.font = "800 14px system-ui"; ctx.fillText("z", s * .22, -s * .28); ctx.fillText("Z", s * .35, -s * .42); }
       ctx.restore();
     };

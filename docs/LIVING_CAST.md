@@ -14,3 +14,6 @@ The floating character layer is now a lightweight state-machine animation system
 - Reduced-motion/calm mode disables the living cast.
 
 The design deliberately avoids the previous detached-limb failure mode: pose animation changes the single character root/composite image rather than independently animating body parts.
+
+## Walk-strip rendering fix
+The 2048×256 walk sheet contains eight complete 256×256 composite character frames. The canvas renderer now uses `drawImage()` source cropping to render exactly one frame at a time; it never scales the entire strip into the character box. This prevents the eight-character duplication seen when the sheet is treated as a normal image.
