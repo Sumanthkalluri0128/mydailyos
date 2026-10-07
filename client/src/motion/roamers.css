@@ -6,19 +6,19 @@
 .rm-walk{animation:rm-walk .75s ease-in-out infinite}.rm-idle{animation:rm-idle 3s ease-in-out infinite}
 .rm-shake{animation:rm-shake .14s linear infinite}.rm-eat{animation:rm-eat .6s ease-in-out infinite}
 .rm-lift{animation:rm-lift 1s ease-in-out infinite}.rm-dance{animation:rm-dance .7s ease-in-out infinite}
-.rm-sleep{animation:rm-sleep 3.5s ease-in-out infinite}.rm-blink{animation:rm-blink .18s steps(2) infinite}
+.rm-snore{animation:rm-snore 3.5s ease-in-out infinite}.rm-lunge{animation:rm-lunge .55s ease-in-out infinite}.rm-dash{animation:rm-dash .22s ease-in-out infinite}.rm-blink{animation:rm-blink .18s steps(2) infinite}
 @keyframes rm-walk{50%{transform:translateY(-6px) rotate(3deg)}}@keyframes rm-idle{50%{transform:translateY(-3px)}}
 @keyframes rm-shake{25%{transform:translate(-4px,2px) rotate(-3deg)}75%{transform:translate(4px,-2px) rotate(3deg)}}
 @keyframes rm-eat{50%{transform:scale(1.07,.94)}}@keyframes rm-lift{50%{transform:translateY(-5px) scale(.97,1.05)}}
 @keyframes rm-dance{25%{transform:translateY(-12px) rotate(-8deg)}75%{transform:translateY(-12px) rotate(8deg)}}
-@keyframes rm-sleep{0%,100%{transform:rotate(-16deg) scale(1)}50%{transform:rotate(-16deg) scale(1.04)}}
+@keyframes rm-snore{50%{transform:scale(1.05)}}@keyframes rm-lunge{50%{transform:translateX(8px) rotate(4deg) scale(1.03)}}@keyframes rm-dash{50%{transform:translateY(-5px) skewX(-8deg) scaleX(1.07)}}
 @keyframes rm-blink{50%{opacity:.15}}
 .rm-say{position:absolute;left:50%;bottom:100%;transform:translateX(-50%);white-space:nowrap;padding:4px 10px;border-radius:12px;background:#fff;color:#111;font:800 12px/1.2 system-ui,sans-serif;box-shadow:0 2px 8px rgba(0,0,0,.25);z-index:3}
 /* ---- effects ---- */
 .fx{position:absolute;pointer-events:none;z-index:2}
 .fx i{display:block}
 .fx-charge{margin:-28px 0 0 -28px;animation:fx-grow var(--life) ease-out both}
-.fx-charge i,.fx-orb i{width:56px;height:56px;border-radius:50%;background:conic-gradient(#e0f7ff,#38bdf8,#fff,#0ea5e9,#e0f7ff);box-shadow:0 0 26px 8px #38bdf8;animation:fx-spin .22s linear infinite}
+.fx-charge i,.fx-orb i{width:56px;height:56px;border-radius:50%;background:conic-gradient(#fff,var(--c),#fff,var(--c),#fff);box-shadow:0 0 26px 8px var(--c);animation:fx-spin .22s linear infinite}
 .fx-orb{margin:-28px 0 0 -28px;animation:fx-fly var(--life) ease-in both}
 @keyframes fx-grow{from{transform:scale(.1)}to{transform:scale(1.1)}}
 @keyframes fx-fly{to{transform:translate(var(--dx),var(--dy))}}
@@ -44,3 +44,20 @@
 @media (max-width:640px){.rm-say{font-size:10px}.fx-burst b{font-size:11px}}
 .ff-calm .rm-layer{display:none}
 @media (prefers-reduced-motion:reduce){.rm-layer{display:none}}
+
+/* walking: one sprite cut into body, two arms and two legs that swing */
+.rm-walker{position:relative;display:block;filter:drop-shadow(0 6px 6px rgba(0,0,0,.28));animation:rm-bob .6s ease-in-out infinite}
+.rm-p{position:absolute;inset:0;width:100%;height:100%;user-select:none}
+.rm-body{clip-path:inset(0 0 24% 0);animation:rm-sway .6s ease-in-out infinite;transform-origin:50% 76%}
+.rm-arm-l{clip-path:inset(40% 70% 30% 4%);transform-origin:22% 40%;animation:rm-arm .6s ease-in-out infinite}
+.rm-arm-r{clip-path:inset(40% 4% 30% 70%);transform-origin:78% 40%;animation:rm-arm .6s ease-in-out -.3s infinite}
+.rm-leg-l{clip-path:inset(76% 48% 0 14%);transform-origin:36% 76%;animation:rm-leg .6s ease-in-out infinite}
+.rm-leg-r{clip-path:inset(76% 14% 0 48%);transform-origin:64% 76%;animation:rm-leg .6s ease-in-out -.3s infinite}
+@keyframes rm-bob{50%{transform:translateY(-5px)}}@keyframes rm-sway{25%{transform:rotate(2.5deg)}75%{transform:rotate(-2.5deg)}}
+@keyframes rm-arm{0%,100%{transform:rotate(-26deg)}50%{transform:rotate(26deg)}}
+@keyframes rm-leg{0%,100%{transform:rotate(28deg)}50%{transform:rotate(-28deg) translateY(-3px)}}
+.fx-rot-beam i{height:36px;margin-top:-18px;border-radius:18px;background:linear-gradient(90deg,#fff,#7dd3fc,#2563eb);box-shadow:0 0 26px 6px #38bdf8;transform-origin:0 50%;animation:fx-beam var(--life) ease-out var(--d) both}
+@keyframes fx-beam{0%{transform:scaleX(0)}30%,70%{transform:scaleX(1)}100%{transform:scaleX(1);opacity:0}}
+.fx-domain{left:0!important;top:0!important;width:100%;height:100%;z-index:1;pointer-events:none;
+  background:radial-gradient(2px 2px at 12% 22%,#fff,transparent),radial-gradient(2px 2px at 70% 30%,#c7d2fe,transparent),radial-gradient(3px 3px at 40% 70%,#fff,transparent),radial-gradient(2px 2px at 85% 75%,#fff,transparent),radial-gradient(2px 2px at 25% 85%,#a5b4fc,transparent),radial-gradient(circle at 50% 50%,#1e1b4b,#000 85%);animation:fx-domain var(--life) ease-in-out both}
+@keyframes fx-domain{0%{opacity:0}18%,78%{opacity:.82}100%{opacity:0}}

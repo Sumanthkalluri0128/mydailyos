@@ -275,309 +275,73 @@ function WeightPage({ onBack }) {
   // PAGE
   // ============================================================
 
+  const nudge = (delta) => {
+    const base = weight === "" ? (latestWeight ?? 70) : Number(weight);
+    setWeight((Math.max(1, base + delta)).toFixed(1));
+  };
+  const [showAll, setShowAll] = useState(false);
+  const shown = showAll ? logs : logs.slice(0, 6);
+  const good = weightChange !== null && weightChange !== 0 && (direction === "Gain" ? weightChange > 0 : weightChange < 0);
+
   return (
-    <div className="weight-page">
+    <div className="weight-page wt">
+      <div className="wt-top">
+        <button className="secondary-button" onClick={onBack}>← Back</button>
+        <Buddy scene="scale" size={64} says="Hop on!" />
+      </div>
 
-      {/* ====================================================== */}
-      {/* HEADER */}
-      {/* ====================================================== */}
-
-      <div className="weight-header">
-
-        <div>
-
-          <button
-            className="secondary-button"
-            onClick={onBack}
-          >
-            ← Back
-          </button>
-
-          <div className="bd-head"><h1>Weight</h1><Buddy scene="scale" size={76} says="Hop on!" /></div>
-
-          <p>
-            Track your weight over time.
-          </p>
-
+      <section className="wt-hero">
+        <div className="wt-now">
+          {latestWeight !== null ? (<><strong>{latestWeight.toFixed(1)}</strong><span>kg now</span></>) : (<BuddyEmpty scene="scale" size={84} title="No weight yet">Step on the scale and log it below.</BuddyEmpty>)}
+          {weightChange !== null && weightChange !== 0 && (
+            <em className={`wt-chip ${good ? "up" : "down"}`}>{weightChange < 0 ? "−" : "+"}{Math.abs(weightChange).toFixed(1)} kg since start</em>
+          )}
         </div>
-
-      </div>
-
-
-      {/* ====================================================== */}
-      {/* CURRENT WEIGHT */}
-      {/* ====================================================== */}
-
-      <div className="card">
-
-        <h2>Latest Weight</h2>
-
-        {latestWeight !== null ? (
-          <div className="weight-current">
-
-            <strong>
-              {latestWeight.toFixed(1)}
-            </strong>
-
-            <span>
-              kg
-            </span>
-
+        {latestWeight !== null && (
+          <div className="wt-stats">
+            <div><small>Start</small><b>{startingWeight.toFixed(1)}</b></div>
+            {hasTargetWeight ? (<>
+              <div><small>Target</small><b>{targetWeight.toFixed(1)}</b></div>
+              <div><small>{direction === "Maintain" ? "Goal" : "To go"}</small><b>{direction === "Maintain" ? "Hold" : remainingWeight.toFixed(1)}</b></div>
+            </>) : (<div className="wt-hint">Set a target weight in Profile to see goal progress.</div>)}
           </div>
-        ) : (
-          <BuddyEmpty scene="scale" size={96} title="No weight recorded yet">Step on the scale and log it below.</BuddyEmpty>
         )}
-
-      </div>
-
-
-      {/* ====================================================== */}
-      {/* PROGRESS SUMMARY */}
-      {/* ====================================================== */}
-
-      <div className="card">
-
-        <h2>Weight Progress</h2>
-
-        {latestWeight === null ? (
-
-          <p>
-            Log your first weight to start
-            tracking progress.
-          </p>
-
-        ) : (
-
-          <div>
-
-            <p>
-              <strong>
-                Starting weight:
-              </strong>{" "}
-              {startingWeight.toFixed(1)} kg
-            </p>
-
-            <p>
-              <strong>
-                Current weight:
-              </strong>{" "}
-              {latestWeight.toFixed(1)} kg
-            </p>
-
-            {weightChange !== null && (
-              <p>
-                <strong>
-                  Change:
-                </strong>{" "}
-                {Math.abs(weightChange).toFixed(1)} kg{" "}
-                {weightChange < 0
-                  ? "lost"
-                  : weightChange > 0
-                  ? "gained"
-                  : "no change"}
-              </p>
-            )}
-
-            {hasTargetWeight ? (
-
-              <>
-                <p>
-                  <strong>
-                    Target weight:
-                  </strong>{" "}
-                  {targetWeight.toFixed(1)} kg
-                </p>
-
-                <p>
-                  <strong>
-                    Goal:
-                  </strong>{" "}
-                  {direction === "Maintain"
-                    ? "Maintain"
-                    : `${direction} ${remainingWeight.toFixed(
-                        1
-                      )} kg`}
-                </p>
-
-                <div
-                  className="progress-bar"
-                  style={{
-                    marginTop: "16px",
-                  }}
-                >
-                  <div
-                    className="progress-fill"
-                    style={{
-                      width: `${goalProgress}%`,
-                    }}
-                  ></div>
-                </div>
-
-                <p>
-                  <strong>
-                    Progress:
-                  </strong>{" "}
-                  {Math.round(goalProgress)}%
-                </p>
-              </>
-
-            ) : (
-
-              <p>
-                Set a target weight in Profile
-                to track goal progress.
-              </p>
-
-            )}
-
-          </div>
-
+        {latestWeight !== null && hasTargetWeight && (
+          <div className="wt-bar" title={`${Math.round(goalProgress)}% of the way`}><i style={{ width: `${goalProgress}%` }} /><span>{Math.round(goalProgress)}%</span></div>
         )}
+      </section>
 
-      </div>
-
-
-      {/* ====================================================== */}
-      {/* ADD WEIGHT */}
-      {/* ====================================================== */}
-
-      <div className="card">
-
-        <h2>Log Today's Weight</h2>
-
-        <p>
-          Date: {today}
-        </p>
-
-        <form onSubmit={handleSubmit}>
-
-          <label>
-            Weight (kg)
-          </label>
-
-          <input
-            type="number"
-            min="1"
-            step="0.1"
-            placeholder="Example: 82.5"
-            value={weight}
-            onChange={(event) =>
-              setWeight(
-                event.target.value
-              )
-            }
-          />
-
-          <label>
-            Notes
-          </label>
-
-          <textarea
-            placeholder="Optional notes"
-            value={notes}
-            onChange={(event) =>
-              setNotes(
-                event.target.value
-              )
-            }
-          />
-
-          <button
-            type="submit"
-            className="primary-button"
-            disabled={loading}
-          >
-            {loading
-              ? "Saving..."
-              : "Save Weight"}
-          </button>
-
-        </form>
-
-      </div>
-
-
-      {/* ====================================================== */}
-      {/* HISTORY */}
-      {/* ====================================================== */}
-
-      <div className="card">
-
-        <div className="section-header">
-
-          <div>
-
-            <h2>
-              Weight History
-            </h2>
-
-            <p>
-              Your recorded measurements.
-            </p>
-
-          </div>
-
+      <form className="wt-log" onSubmit={handleSubmit}>
+        <div className="wt-log-head"><h2>Log today</h2><span className="wt-date">{today}</span></div>
+        <div className="wt-stepper">
+          <button type="button" onClick={() => nudge(-0.1)} aria-label="Down 0.1 kg">−</button>
+          <label><input type="number" inputMode="decimal" min="1" step="0.1" placeholder={latestWeight !== null ? latestWeight.toFixed(1) : "0.0"} value={weight} onChange={(e) => setWeight(e.target.value)} /><span>kg</span></label>
+          <button type="button" onClick={() => nudge(0.1)} aria-label="Up 0.1 kg">+</button>
         </div>
+        <input className="wt-note" type="text" placeholder="Note (optional): morning, after gym…" value={notes} onChange={(e) => setNotes(e.target.value)} />
+        <button type="submit" className="primary-button wt-save" disabled={loading || weight === ""}>{loading ? "Saving…" : "Save weight"}</button>
+      </form>
 
-
+      <section className="wt-history">
+        <h2>History</h2>
         {logs.length === 0 ? (
-
           <BuddyEmpty scene="sad" size={96} title="No weight entries yet" />
-
         ) : (
-
-          <div className="weight-list">
-
-            {logs.map((log) => (
-
-              <div
-                className="weight-log"
-                key={log._id}
-              >
-
-                <div>
-
-                  <strong>
-                    {Number(
-                      log.weightKg
-                    ).toFixed(1)}{" "}
-                    kg
-                  </strong>
-
-                  <small>
-                    {log.date}
-                  </small>
-
-                  {log.notes && (
-                    <small>
-                      {log.notes}
-                    </small>
-                  )}
-
-                </div>
-
-                <button
-                  className="delete-log-button"
-                  aria-label="Delete weight entry"
-                  onClick={() =>
-                    deleteWeight(
-                      log._id
-                    )
-                  }
-                >
-                  🗑️
-                </button>
-
-              </div>
-
-            ))}
-
-          </div>
-
+          <ul>
+            {shown.map((log, i) => {
+              const older = logs[i + 1], diff = older ? Number(log.weightKg) - Number(older.weightKg) : null;
+              return (
+                <li key={log._id}>
+                  <div><b>{Number(log.weightKg).toFixed(1)} kg</b><small>{log.date}{log.notes ? ` · ${log.notes}` : ""}</small></div>
+                  {diff !== null && diff !== 0 && <em className={diff < 0 ? "d-down" : "d-up"}>{diff < 0 ? "▼" : "▲"} {Math.abs(diff).toFixed(1)}</em>}
+                  <button className="delete-log-button" onClick={() => deleteWeight(log._id)} aria-label="Delete entry">✕</button>
+                </li>
+              );
+            })}
+          </ul>
         )}
-
-      </div>
-
+        {logs.length > 6 && <button type="button" className="secondary-button wt-more" onClick={() => setShowAll((v) => !v)}>{showAll ? "Show less" : `Show all ${logs.length}`}</button>}
+      </section>
     </div>
   );
 }
