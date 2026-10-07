@@ -1,31 +1,27 @@
 // The day's character, acting out each screen. Same API as before: <Buddy scene="lift" size={80} says="Let's lift!" />, <BuddyEmpty scene="sad" title="…">…</BuddyEmpty>.
-// Characters are skeleton-rigged (rig.js): hands/feet are pinned to bars, ropes and floor so the whole body moves together.
-// They stay still and only move while hovered (tapped on touch screens). Pass who="naruto" to pin one; scene can also be any rig activity:
-// pullup, rope, climb, pushup, situp, lift, run, hike, jump, stretch, fight, meditate, sleep, drink, eat, study, victory, dance, wave, sad, idle.
+// Which character you see depends on the day of the week (see chars.js); pass who="naruto" to pin one.
 import "./buddy.css";
 import "./characters.css";
-import { CHARS, dayChar } from "./chars";
-import { ACTS } from "./rig";
-import RigBuddy from "./RigBuddy";
+import { CHARS, dayChar, sprite } from "./chars";
 
-// scene (what the screen is about) -> rig activity
+// body = which idle motion the picture gets; dur = ms for half a cycle.
 export const SCENES = {
-  lift:   { label: "lifting weights",       act: "lift" },
-  sad:    { label: "feeling disappointed",  act: "sad" },
-  drink:  { label: "drinking water",        act: "drink" },
-  eat:    { label: "eating",                act: "eat" },
-  scale:  { label: "stepping on the scale", act: "idle" },
-  walk:   { label: "hiking",                act: "hike" },
-  task:   { label: "checking off tasks",    act: "study" },
-  plan:   { label: "planning the week",     act: "study" },
-  chart:  { label: "showing your progress", act: "victory" },
-  health: { label: "feeling healthy",       act: "stretch" },
-  chef:   { label: "cooking",               act: "eat" },
-  habit:  { label: "keeping the streak",    act: "pushup" },
-  cheer:  { label: "celebrating",           act: "victory" },
-  wave:   { label: "waving hello",          act: "wave" },
+  lift:   { label: "lifting weights",       body: "push",   dur: 600 },
+  sad:    { label: "feeling disappointed",  body: "slump",  dur: 1800 },
+  drink:  { label: "drinking water",        body: "bob",    dur: 900 },
+  eat:    { label: "eating",                body: "bob",    dur: 700 },
+  scale:  { label: "stepping on the scale", body: "wobble", dur: 600 },
+  walk:   { label: "walking",               body: "bounce", dur: 300 },
+  task:   { label: "checking off tasks",    body: "nod",    dur: 800 },
+  plan:   { label: "planning the week",     body: "nod",    dur: 800 },
+  chart:  { label: "showing your progress", body: "bob",    dur: 800 },
+  health: { label: "feeling healthy",       body: "beat",   dur: 450 },
+  chef:   { label: "cooking",               body: "bob",    dur: 450 },
+  habit:  { label: "keeping the streak",    body: "push",   dur: 700 },
+  cheer:  { label: "celebrating",           body: "jump",   dur: 260 },
+  wave:   { label: "waving hello",          body: "bob",    dur: 500 },
 };
-export const BUDDY_SCENES = [...Object.keys(SCENES), ...Object.keys(ACTS).filter((a) => !SCENES[a])];
+export const BUDDY_SCENES = Object.keys(SCENES);
 
 /** Picks a scene from a toast/message so each feature gets its own pose. */
 export function sceneForText(text = "", type = "success") {
@@ -43,10 +39,13 @@ export function sceneForText(text = "", type = "success") {
 }
 
 export default function Buddy({ scene = "wave", size = 96, says, className = "", label, who }) {
-  const sc = SCENES[scene];
-  const act = sc ? sc.act : ACTS[scene] ? scene : "wave";
+  const c = SCENES[scene] || SCENES.wave;
   const char = who || dayChar();
-  const buddy = <RigBuddy who={char} act={act} size={size} className={className} label={label ?? `${CHARS[char]} is ${sc ? sc.label : ACTS[act].label}`} />;
+  const buddy = (
+    <span className={`bd bdi ${className}`} style={{ width: size, height: size, "--bt": `${c.dur * 2}ms` }} role="img" aria-label={label || `${CHARS[char]} is ${c.label}`}>
+      <img className={`bdi-img bdi-${c.body}`} src={sprite(char, scene)} alt="" width={size} height={size} draggable="false" loading="lazy" decoding="async" />
+    </span>
+  );
   return says ? <span className="bd-row">{buddy}<span className="bd-says">{says}</span></span> : buddy;
 }
 
