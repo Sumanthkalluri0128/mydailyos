@@ -96,21 +96,36 @@ function Face({ mood }) {
   return (
     <g className={`bd-face bd-m-${mood}`}>
       <g className="bd-eyes">
-        <circle cx="51" cy="58" r="5.5" fill="#fff" /><circle cx="69" cy="58" r="5.5" fill="#fff" />
-        <circle className="bd-pupil" cx="51.5" cy="58.5" r="2.7" /><circle className="bd-pupil" cx="68.5" cy="58.5" r="2.7" />
+        {[51, 69].map((x) => (
+          <g key={x}>
+            <ellipse cx={x} cy="57" rx="6.4" ry="8" fill="#fff" />
+            <ellipse className="bd-pupil bd-iris" cx={x + 0.4} cy="58" rx="4.7" ry="6.4" />
+            <ellipse cx={x + 0.4} cy="59" rx="2.2" ry="3.4" fill="#1f2340" />
+            <circle className="bd-shine" cx={x - 1.4} cy="54.6" r="2" fill="#fff" />
+            <circle className="bd-shine bd-shine2" cx={x + 2.4} cy="61" r="1.1" fill="#fff" />
+          </g>
+        ))}
       </g>
-      <ellipse cx="44" cy="67" rx="4" ry="2.6" fill="#ff8fb1" opacity=".55" /><ellipse cx="76" cy="67" rx="4" ry="2.6" fill="#ff8fb1" opacity=".55" />
-      <path className="bd-brow bd-brow-strain" d="M44 51 L56 54 M76 51 L64 54" />
-      <path className="bd-brow bd-brow-sad" d="M44 55 L56 51 M76 55 L64 51" />
-      <path className="bd-mo bd-mo-smile" d="M52 70 Q60 78 68 70" />
-      <path className="bd-mo bd-mo-chew" d="M52 70 Q60 78 68 70" />
-      <path className="bd-mo bd-mo-sad" d="M52 76 Q60 68 68 76" />
-      <path className="bd-mo-fill bd-mo-open" d="M51 69 Q60 85 69 69 Z" />
-      <rect className="bd-mo-fill bd-mo-strain" x="53" y="70" width="14" height="6" rx="2" />
-      <ellipse className="bd-mo-fill bd-mo-wow" cx="60" cy="73" rx="3.5" ry="4.5" />
+      <ellipse cx="43" cy="68" rx="4" ry="2.4" fill="#ff8fb1" opacity=".6" /><ellipse cx="77" cy="68" rx="4" ry="2.4" fill="#ff8fb1" opacity=".6" />
+      <path className="bd-brow bd-brow-strain" d="M43 48 L56 52 M77 48 L64 52" />
+      <path className="bd-brow bd-brow-sad" d="M43 53 L56 48 M77 53 L64 48" />
+      <path className="bd-mo bd-mo-smile" d="M54 71 Q60 77 66 71" />
+      <path className="bd-mo bd-mo-chew" d="M54 71 Q60 77 66 71" />
+      <path className="bd-mo bd-mo-sad" d="M54 76 Q60 70 66 76" />
+      <path className="bd-mo-fill bd-mo-open" d="M52 70 Q60 84 68 70 Z" />
+      <rect className="bd-mo-fill bd-mo-strain" x="54" y="71" width="12" height="5" rx="2" />
+      <ellipse className="bd-mo-fill bd-mo-wow" cx="60" cy="73" rx="3" ry="4" />
     </g>
   );
 }
+
+// Spiky anime hair with a fringe; sways gently. Colour comes from the scene (--bd-hair), so every screen has its own character.
+const Hair = () => (
+  <g className="bd-hair">
+    <path className="bd-hair-fill" d="M37 58 C35 44 38 38 42 34 L37 19 L51 30 L58 11 L64 29 L77 15 L77 34 C82 38 85 46 83 58 L77 48 L72 57 L66 46 L60 56 L54 46 L48 57 L43 48 Z" />
+    <path d="M52 30 Q56 24 58 17" stroke="#fff" strokeOpacity=".35" strokeWidth="2.2" fill="none" strokeLinecap="round" />
+  </g>
+);
 
 // Props that live behind / in front of the character, per scene.
 const Cloud = () => (
@@ -177,7 +192,7 @@ export default function Buddy({ scene = "wave", size = 96, says, className = "",
   const c = SCENES[scene] || SCENES.wave;
   const Back = BACK[scene], Head = HEAD[scene], Extra = FACE_EXTRA[scene];
   const buddy = (
-    <span className={`bd bd-${scene} ${className}`} style={{ width: size, height: size }} role="img" aria-label={label || `Flex is ${c.label}`}>
+    <span className={`bd bd-${scene} ${className}`} style={{ width: size, height: size }} role="img" aria-label={label || `${c.name || "Flex"} is ${c.label}`}>
       <svg viewBox="0 0 120 120" width="100%" height="100%" aria-hidden="true">
         {scene !== "scale" && <ellipse className="bd-shadow" cx="60" cy="108" rx="26" ry="4" />}
         {Back && <Back />}
@@ -186,6 +201,7 @@ export default function Buddy({ scene = "wave", size = 96, says, className = "",
           <Leg x={68} swing={c.legs ? -c.legs : 0} dur={c.dur} move={!!c.legs} />
           <rect className="bd-body" x="38" y="40" width="44" height="54" rx="22" />
           <Face mood={c.mood} />
+          <Hair />
           {Head && <Head />}
           {Extra && <Extra />}
           <Arm side="L" pose={c.L} dur={c.dur} delay={c.swap ? c.dur : 0} />

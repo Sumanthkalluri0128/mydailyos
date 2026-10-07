@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import { flushSync } from "react-dom";
 
 /** Older decorative effects (confetti, count-up, page transitions) are off unless localStorage ff_classic_motion=1. */
-export const classicMotion = () => { try { return localStorage.getItem("ff_classic_motion") === "1"; } catch { return false; } };
+export const classicMotion = () => { try { return localStorage.getItem("ff_calm_motion") !== "1"; } catch { return true; } };
 
 export const prefersReducedMotion = () =>
   typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;

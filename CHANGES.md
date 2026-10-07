@@ -1,3 +1,13 @@
+# v8.6 — anime-style cast + animated world (web)
+
+- **New characters**: Flex is now an original anime-style character with spiky hair, big glossy eyes that blink and twinkle, and swaying hair. Every screen has its own look
+  (hair and eye colour change per scene: Exercise is a fiery orange lifter, Water is a blue-haired sipper, Recipes an orange chef, and so on). Same props: `<Buddy scene="lift" />`.
+- **Animated backdrop** (`motion/FunBackdrop.jsx`): drifting aurora glow, falling sakura petals, twinkling stars, shooting stars.
+- **Livelier UI** (`motion/fun.css`): glass cards that rise in one after another and lift on hover, gradient buttons with a shine sweep, gradient headings, mascot pop on hover.
+- **Fun motion is now the default.** For the calmer look: `localStorage.setItem("ff_calm_motion","1")` and reload. "Reduce motion" phones still get a still page.
+
+---
+
 # v8.5 — characters instead of effects (web)
 
 - **Flex, a little bean mascot**, now acts out every feature (`client/src/motion/Buddy.jsx`): lifts dumbbells when you open **Exercise**, sips water on **Water**,

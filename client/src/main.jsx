@@ -10,10 +10,12 @@ import "./index.css";
 import "./styles/redesign.css"; // refines App.css without replacing it
 import "./motion/motion.css"; // older animation kit (mostly switched off, see buddy.css)
 import "./motion/buddy.css"; // Flex the mascot, tap marker, calm mode: last so it wins
+import "./motion/fun.css"; // animated backdrop + lively UI motion
+import FunBackdrop from "./motion/FunBackdrop";
 import { installTapMarker } from "./motion/tapMarker";
 
 installTapMarker();
-try { if (localStorage.getItem("ff_classic_motion") === "1") document.documentElement.classList.add("ff-classic"); } catch { /* ignore */ }
+try { if (localStorage.getItem("ff_calm_motion") === "1") document.documentElement.classList.add("ff-calm"); } catch { /* ignore */ }
 
 // Apply the saved theme BEFORE anything renders, so the sign-in / reset pages (which render outside <App />) honour it too.
 try {
@@ -32,6 +34,7 @@ document.addEventListener("focusin", (event) => {
 
 ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>
+    <FunBackdrop />
     <ToastHost />
     <ConfirmHost />
     <ServerWakeBanner />

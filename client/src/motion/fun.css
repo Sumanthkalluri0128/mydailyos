@@ -1,0 +1,46 @@
+/* Backdrop + lively UI motion. Everything here is off for html.ff-calm and for "Reduce motion". */
+.fb{position:fixed;inset:0;z-index:-1;overflow:hidden;pointer-events:none}
+.fb-blob{position:absolute;border-radius:50%;filter:blur(70px);opacity:.38;will-change:transform}
+.fb-b1{width:46vmax;height:46vmax;left:-12vmax;top:-14vmax;background:#7c5cff;animation:fbDrift 22s ease-in-out infinite alternate}
+.fb-b2{width:40vmax;height:40vmax;right:-14vmax;top:18vh;background:#ff6fb1;animation:fbDrift 27s ease-in-out -6s infinite alternate-reverse}
+.fb-b3{width:38vmax;height:38vmax;left:20vw;bottom:-18vmax;background:#22d3ee;animation:fbDrift 31s ease-in-out -12s infinite alternate}
+[data-theme="dark"] .fb-blob{opacity:.26}
+@keyframes fbDrift{0%{transform:translate(0,0) scale(1)}50%{transform:translate(8vw,6vh) scale(1.15)}100%{transform:translate(-6vw,12vh) scale(.95)}}
+.fb-star{position:absolute;width:3px;height:3px;border-radius:50%;background:#fff;box-shadow:0 0 6px 2px rgba(124,92,255,.55);animation:fbTwinkle 3s ease-in-out infinite}
+@keyframes fbTwinkle{0%,100%{opacity:.15;transform:scale(.6)}50%{opacity:1;transform:scale(1.4)}}
+.fb-petal{position:absolute;top:-6vh;border-radius:80% 0 80% 0;background:linear-gradient(135deg,#ffc2dd,#ff8fb8);opacity:.75;animation:fbFall linear infinite}
+@keyframes fbFall{0%{transform:translate(0,-6vh) rotate(0)}25%{transform:translate(4vw,28vh) rotate(120deg)}50%{transform:translate(-3vw,58vh) rotate(240deg)}75%{transform:translate(5vw,84vh) rotate(330deg)}100%{transform:translate(0,112vh) rotate(420deg);opacity:0}}
+.fb-shoot{position:absolute;top:12%;left:78%;width:120px;height:2px;border-radius:2px;background:linear-gradient(90deg,rgba(255,255,255,0),#fff);opacity:0;transform:rotate(-35deg);animation:fbShoot 9s ease-in 2s infinite}
+.fb-shoot2{top:40%;left:95%;animation-delay:6s;animation-duration:13s}
+@keyframes fbShoot{0%,88%{opacity:0;transform:translate(0,0) rotate(-35deg)}90%{opacity:1}100%{opacity:0;transform:translate(-60vw,42vh) rotate(-35deg)}}
+
+/* cards: soft glass, rise-in, lift on hover */
+.card,.large-card,.food-form-card,.food-list-card,.logger-card,.today-log-card{background:color-mix(in srgb,var(--md-card) 90%,transparent);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px)}
+.app main>*,.app section>.card,.app .card{animation:funRise .6s cubic-bezier(.2,.8,.2,1) both}
+.app main>*:nth-child(2),.app .card:nth-child(2){animation-delay:.07s}.app main>*:nth-child(3),.app .card:nth-child(3){animation-delay:.14s}
+.app main>*:nth-child(4),.app .card:nth-child(4){animation-delay:.21s}.app main>*:nth-child(5),.app .card:nth-child(5){animation-delay:.28s}
+@keyframes funRise{from{opacity:0;transform:translateY(18px) scale(.98)}to{opacity:1;transform:none}}
+.card:hover,.large-card:hover{transform:translateY(-4px) rotate(-.15deg);box-shadow:0 14px 34px rgba(124,92,255,.22)}
+
+/* buttons: animated gradient + shine sweep */
+.primary-button{position:relative;overflow:hidden;background-image:linear-gradient(110deg,#7c5cff,#c04dff,#ff6fb1,#7c5cff);background-size:250% 100%;animation:funGrad 6s linear infinite;transition:transform .15s,box-shadow .2s}
+.primary-button::after{content:"";position:absolute;top:0;bottom:0;width:40%;left:-60%;background:linear-gradient(100deg,transparent,rgba(255,255,255,.45),transparent);transform:skewX(-20deg);animation:funShine 3.8s ease-in-out infinite}
+.primary-button:hover{transform:translateY(-2px) scale(1.03);box-shadow:0 10px 24px rgba(192,77,255,.4)}
+.primary-button:active{transform:scale(.96)}
+@keyframes funGrad{to{background-position:250% 0}}
+@keyframes funShine{0%,55%{left:-60%}100%{left:130%}}
+
+/* headings and mascots */
+h1{background:linear-gradient(90deg,#7c5cff,#ff6fb1,#22d3ee,#7c5cff);background-size:250% 100%;-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;animation:funGrad 8s linear infinite}
+.bd{filter:drop-shadow(0 6px 10px rgba(124,92,255,.28))}
+.bd:hover{animation:funPop .5s ease}
+@keyframes funPop{40%{transform:scale(1.18) rotate(-6deg)}70%{transform:scale(.95) rotate(3deg)}}
+
+/* switch it all off */
+html.ff-calm .fb{display:none}
+html.ff-calm .app main>*,html.ff-calm .app .card,html.ff-calm .primary-button,html.ff-calm .primary-button::after,html.ff-calm h1,html.ff-calm .bd:hover{animation:none}
+html.ff-calm h1{background:none;-webkit-text-fill-color:currentColor}
+@media (prefers-reduced-motion:reduce){
+  .fb-blob,.fb-star,.fb-petal,.fb-shoot,.app main>*,.app .card,.primary-button,.primary-button::after,h1,.bd:hover{animation:none!important}
+  .fb-petal,.fb-shoot{display:none}
+}

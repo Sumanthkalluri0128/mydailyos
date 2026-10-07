@@ -100,15 +100,34 @@
   .ff-tap b{animation:none;opacity:0}
 }
 
-/* Calm mode (default): switch off the older decorative effects. Set localStorage ff_classic_motion=1 to bring them back. */
-html:not(.ff-classic) .fx-page,html:not(.ff-classic) .fx-reveal,html:not(.ff-classic) .fx-skel::after,
-html:not(.ff-classic) .ring.is-pop svg,html:not(.ff-classic) .ring.is-pop::after,html:not(.ff-classic) .fxr.is-pop svg,html:not(.ff-classic) .fxr.is-pop::after,
-html:not(.ff-classic) .flame-body,html:not(.ff-classic) .flame-inner,html:not(.ff-classic) .flame-glow,html:not(.ff-classic) .flame-spark,html:not(.ff-classic) .flame-burst,
-html:not(.ff-classic) .fx-roll,html:not(.ff-classic) .fx-pulse,html:not(.ff-classic) .goal-rings.is-all-closed,html:not(.ff-classic) .fx-btn[data-s="done"]{animation:none!important}
-html:not(.ff-classic) .fx-ripple{display:none}
-html:not(.ff-classic) .ring-fill,html:not(.ff-classic) .fxr-fill{transition:none}
-html:not(.ff-classic) .quick button,html:not(.ff-classic) .mini,html:not(.ff-classic) .ring-btn,html:not(.ff-classic) .streak-chip,
-html:not(.ff-classic) .primary-button,html:not(.ff-classic) .secondary-button,html:not(.ff-classic) .profile-avatar{transition:background-color 160ms,border-color 160ms,opacity 160ms}
-html:not(.ff-classic) .quick button:active,html:not(.ff-classic) .mini:active,html:not(.ff-classic) .ring-btn:active,html:not(.ff-classic) .streak-chip:active,
-html:not(.ff-classic) .primary-button:active,html:not(.ff-classic) .secondary-button:active,html:not(.ff-classic) .profile-avatar:active{transform:none}
-html:not(.ff-classic)::view-transition-old(root),html:not(.ff-classic)::view-transition-new(root){animation:none}
+/* Calm mode (default): switch off the older decorative effects. Fun motion is now the default; localStorage ff_calm_motion=1 switches it off. */
+html.ff-calm .fx-page,html.ff-calm .fx-reveal,html.ff-calm .fx-skel::after,
+html.ff-calm .ring.is-pop svg,html.ff-calm .ring.is-pop::after,html.ff-calm .fxr.is-pop svg,html.ff-calm .fxr.is-pop::after,
+html.ff-calm .flame-body,html.ff-calm .flame-inner,html.ff-calm .flame-glow,html.ff-calm .flame-spark,html.ff-calm .flame-burst,
+html.ff-calm .fx-roll,html.ff-calm .fx-pulse,html.ff-calm .goal-rings.is-all-closed,html.ff-calm .fx-btn[data-s="done"]{animation:none!important}
+html.ff-calm .fx-ripple{display:none}
+html.ff-calm .ring-fill,html.ff-calm .fxr-fill{transition:none}
+html.ff-calm .quick button,html.ff-calm .mini,html.ff-calm .ring-btn,html.ff-calm .streak-chip,
+html.ff-calm .primary-button,html.ff-calm .secondary-button,html.ff-calm .profile-avatar{transition:background-color 160ms,border-color 160ms,opacity 160ms}
+html.ff-calm .quick button:active,html.ff-calm .mini:active,html.ff-calm .ring-btn:active,html.ff-calm .streak-chip:active,
+html.ff-calm .primary-button:active,html.ff-calm .secondary-button:active,html.ff-calm .profile-avatar:active{transform:none}
+html.ff-calm::view-transition-old(root),html.ff-calm::view-transition-new(root){animation:none}
+
+
+/* ---- anime-style cast: hair + eye colour per scene ---- */
+.bd{--bd-hair:#ff6fb1;--bd-iris:#38bdf8}
+.bd-lift{--bd-hair:#ff5a36;--bd-iris:#f59e0b}.bd-drink{--bd-hair:#38bdf8;--bd-iris:#2563eb}.bd-eat{--bd-hair:#84cc16;--bd-iris:#16a34a}
+.bd-scale{--bd-hair:#a78bfa;--bd-iris:#ec4899}.bd-walk{--bd-hair:#14b8a6;--bd-iris:#0ea5e9}.bd-task{--bd-hair:#facc15;--bd-iris:#8b5cf6}
+.bd-plan{--bd-hair:#fb7185;--bd-iris:#6366f1}.bd-chart{--bd-hair:#34d399;--bd-iris:#0891b2}.bd-health{--bd-hair:#f43f5e;--bd-iris:#ec4899}
+.bd-chef{--bd-hair:#fb923c;--bd-iris:#b45309}.bd-habit{--bd-hair:#f97316;--bd-iris:#dc2626}.bd-cheer{--bd-hair:#e879f9;--bd-iris:#22d3ee}
+.bd-sad{--bd-hair:#9aa3b5;--bd-iris:#64748b}
+.bd-hair-fill{fill:var(--bd-hair);stroke:rgba(31,35,64,.28);stroke-width:1.2;stroke-linejoin:round}
+.bd-iris{fill:var(--bd-iris)}
+.bd-hair{transform-origin:60px 44px;animation:bdHair 2.6s ease-in-out infinite}
+.bd-eyes{transform-origin:60px 57px;animation:bdBlink 4.2s infinite}
+.bd-shine{animation:bdTwinkle 2.2s ease-in-out infinite}.bd-shine2{animation-delay:-1.1s}
+@keyframes bdHair{0%,100%{transform:rotate(-2.2deg)}50%{transform:rotate(2.2deg) translateY(-.6px)}}
+@keyframes bdBlink{0%,92%,100%{transform:scaleY(1)}95%{transform:scaleY(.08)}}
+@keyframes bdTwinkle{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.55}}
+.bd-m-sad .bd-hair{animation-duration:5s}
+@media (prefers-reduced-motion:reduce){.bd-hair,.bd-eyes,.bd-shine{animation:none}}
