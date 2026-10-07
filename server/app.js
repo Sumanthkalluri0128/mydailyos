@@ -23,9 +23,9 @@ const progressRoutes = require('./routes/progressRoutes');
 const healthRoutes = require('./routes/healthRoutes');
 const fastingRoutes = require('./routes/fastingRoutes');
 const savedMealRoutes = require('./routes/savedMealRoutes');
+const emailRoutes = require('./routes/emailRoutes');
 const mealPlanRoutes = require('./routes/mealPlanRoutes');
 const recipeRoutes = require('./routes/recipeRoutes');
-const widgetRoutes = require('./routes/widgetRoutes');
 const { createGoogleRouter } = require('./routes/googleRoutes');
 
 
@@ -49,7 +49,7 @@ function createApp({ allowedOrigins = [] } = {}) {
   app.use(express.json({ limit: '100kb' }));
 
   app.get('/api/health', (req, res) =>
-    res.status(200).json({ success: true, status: 'healthy', service: 'FlexFit API', version: require('./package.json').version, timestamp: new Date().toISOString(), mail: require('./lib/mailer').mailStatus().provider || 'not-configured', google: require('./lib/googleClient').configured() ? 'configured' : 'not-configured' })
+    res.status(200).json({ success: true, status: 'healthy', service: 'FlexFit API', version: require('./package.json').version, db: require('mongoose').connection.readyState === 1 ? 'connected' : 'connecting', uptimeSec: Math.round(process.uptime()), timestamp: new Date().toISOString(), mail: require('./lib/mailer').mailStatus().provider || 'not-configured', google: require('./lib/googleClient').configured() ? 'configured' : 'not-configured' })
   );
   app.get('/api/version', (req, res) => res.status(200).json({ success: true, version: pkg.version, service: 'FlexFit API' }));
 
@@ -72,9 +72,9 @@ function createApp({ allowedOrigins = [] } = {}) {
   app.use('/api/health-logs', healthRoutes);
   app.use('/api/fasting', fastingRoutes);
   app.use('/api/saved-meals', savedMealRoutes);
+  app.use('/api/email', emailRoutes);
   app.use('/api/meal-plans', mealPlanRoutes);
   app.use('/api/recipes', recipeRoutes);
-  app.use('/api/widget', widgetRoutes);
   app.use('/api/progress', progressRoutes);
   app.use('/api/history', progressRoutes); // backward-compatible alias for older builds
 

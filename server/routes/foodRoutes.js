@@ -8,6 +8,7 @@ const v = require('../lib/validate');
 const { lookupBarcode, CODE_RE } = require('../lib/openFoodFacts');
 const Profile = require('../models/Profile');
 const { parseMealText } = require('../lib/foodParse');
+const { catalogueFoods } = require('../lib/foodCache');
 const { suggestFoods } = require('../lib/suggest');
 const { dailyTarget, expectedEnergy, macroTargets } = require('../lib/energy');
 
@@ -58,7 +59,7 @@ function parseFood(body = {}) {
 // GET /api/foods?search=&favorites=true&mine=true&limit=
 router.get('/', wrap(async (req, res) => {
   const uid = req.user.id;
-  const and = [visibleTo(uid)];
+  const and = [visibleTo(uid), { hidden: { $ne: true } }];
   if (req.query.search) {
     const rx = new RegExp(v.escapeRegex(String(req.query.search).trim().slice(0, 60)), 'i');
     and.push({ $or: [{ name: rx }, { brand: rx }] });
@@ -83,14 +84,14 @@ router.get('/recent', wrap(async (req, res) => {
   }
   const foods = await Food.find({ _id: { $in: ids }, ...visibleTo(uid) }).select('+favoriteBy').lean();
   const byId = new Map(foods.map((f) => [String(f._id), f]));
-  res.json({ success: true, foods: ids.map((id) => byId.get(id)).filter(Boolean).map((f) => present(f, uid)) });
+  res.json({ success: true, foods: ids.map((id) => byId.get(id)).filter((f) => f && !f.hidden).map((f) => present(f, uid)) });
 }));
 
 // POST /api/foods/parse  { text: "2 roti, dal, 1 cup rice" } -> matched foods with quantities (nothing is saved).
 router.post('/parse', wrap(async (req, res) => {
   const text = v.string(req.body?.text, 'text', { max: 600, required: true });
-  const foods = await Food.find(visibleTo(req.user.id)).select('name brand servingSize servingUnit units userId').limit(4000).lean();
-  res.json({ success: true, ...parseMealText(text, foods) });
+  const [shared, mine] = await Promise.all([catalogueFoods(Food), Food.find({ userId: req.user.id, hidden: { $ne: true } }).select('name brand servingSize servingUnit units userId').limit(2000).lean()]);
+  res.json({ success: true, ...parseMealText(text, [...mine, ...shared]) });
 }));
 
 // GET /api/foods/suggest?date=YYYY-MM-DD&mealType=lunch — foods that fit what's left today (calories, protein, fibre).
@@ -107,12 +108,17 @@ router.get('/suggest', wrap(async (req, res) => {
   const e = expectedEnergy(profile);
   const macros = macroTargets(target, profile?.currentWeightKg, e?.direction, profile?.goals?.proteinTarget);
   const remaining = { calories: target - eaten.calories, protein: macros.protein - eaten.protein, fiber: macros.fiber - eaten.fiber };
-  const foods = await Food.find(visibleTo(uid)).select('+favoriteBy').limit(4000).lean();
+  const [shared, mine, favs] = await Promise.all([
+    catalogueFoods(Food),
+    Food.find({ userId: uid, hidden: { $ne: true } }).limit(2000).lean(),
+    Food.find({ $or: [{ favoriteBy: uid }, { userId: uid, isFavorite: true }] }).select('_id').lean(),
+  ]);
+  const foods = [...mine, ...shared];
   const mealType = ['breakfast', 'lunch', 'dinner', 'snacks'].includes(req.query.mealType) ? req.query.mealType : undefined;
   const picks = suggestFoods(foods, remaining, {
     mealType,
     recentIds: new Set(recentLogs.map((l) => String(l.foodId))),
-    favoriteIds: new Set(foods.filter((f) => (f.favoriteBy || []).some((id) => String(id) === String(uid))).map((f) => String(f._id))),
+    favoriteIds: new Set(favs.map((f) => String(f._id))),
   });
   res.json({
     success: true, remaining: { calories: Math.round(remaining.calories), protein: Math.round(remaining.protein), fiber: Math.round(remaining.fiber) },

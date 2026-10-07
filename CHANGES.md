@@ -1,3 +1,29 @@
+# v8.4 — speed, wake-up, accurate targets, a real weekly email (server 2.9.0)
+
+**Speed & wake-up**
+- The server now starts answering immediately and connects to the database in the background (before, it waited for the
+  database *and* index building, so health checks and the apps' wake-up pings queued behind them).
+- "Waking up the server…" banner + an instant warm-up ping when the app opens. Keep-alive options in `docs/KEEP_AWAKE.md`
+  (a GitHub Actions workflow is included; UptimeRobot recommended).
+- Catalogue foods are cached in memory for "type what you ate" and suggestions (one read instead of one per request).
+- Other pages' code is prefetched when the browser is idle; moving a food between meals is instant; stale search answers are ignored.
+
+**Calculations** — see `docs/CALCULATIONS.md`
+- A lose goal can no longer be set above maintenance for small, low-activity people.
+- Computed protein is capped at 35 % of calories (your own protein target is still respected).
+- New sugar guide and sodium ceiling (sodium only when foods carry sodium data). New fixtures + tests in server, web and mobile.
+- `npm run audit-foods` checks the whole catalogue for internal consistency (0 issues in 484 foods; now a permanent test).
+
+**Weekly email, redesigned** — responsive HTML (plain-text fallback): week score, stat tiles, daily-calorie bars, goal streaks,
+nutrient bars, weight/plateau note, best day, one tip, "Open FlexFit" button, one-click unsubscribe (`/api/email/unsubscribe`).
+Set `PUBLIC_API_URL` (Render sets `RENDER_EXTERNAL_URL` itself) and `CLIENT_URL` so the links work. `npm run preview-email`
+writes `docs/email-preview.html`.
+
+**New features** — Eating-out estimates (with an optional range), recipe sharing, sugar/sodium rows, 7-day calorie strip,
+meal colour accents, drag-and-drop between meals. Widgets were removed.
+
+---
+
 # v8.3 — planner, recipes, text logging, suggestions, reports (web + server 2.8.0)
 
 - **Drag & drop** food between meals on the Log Food page (the "Move to…" menu still works on touch screens).
@@ -9,7 +35,7 @@
 - **Plateau check**: warns when the scale hasn't moved for ~2-3 weeks (never suggests going below the safe calorie floor).
 - **Dietitian report (PDF)** and **weekly summary email** (opt-in, Monday) under Profile → Reports & emails.
 - Server: new routes `/api/meal-plans`, `/api/recipes`, `/api/foods/parse`, `/api/foods/suggest`, `/api/progress/plateau`,
-  `/api/progress/weekly/email`, `/api/account/report.pdf`, `/api/widget/summary`. `npm run send-weekly` can run as a cron job;
+  `/api/progress/weekly/email`, `/api/account/report.pdf`. `npm run send-weekly` can run as a cron job;
   the in-process scheduler can be disabled with WEEKLY_EMAIL_SCHEDULER=false.
 
 ---

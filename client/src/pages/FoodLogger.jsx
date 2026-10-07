@@ -7,6 +7,7 @@ import FoodFormModal from "../components/FoodFormModal";
 import CalorieBalance from "../components/CalorieBalance";
 import TextLogger from "../components/TextLogger";
 import SmartSuggestions from "../components/SmartSuggestions";
+import EatingOut from "../components/EatingOut";
 const MEALS = [
   {
     id: "breakfast",
@@ -353,20 +354,22 @@ function FoodLogger({ date, onBack, goTo }) {
   // ============================================================
 
   const handleMoveLog = async (id, mealType) => {
+    const before = foodLogs;
+    setFoodLogs((cur) => cur.map((l) => (l._id === id ? { ...l, mealType } : l))); // instant: it appears in the new meal right away
     try {
       const response = await apiFetch(`${API_URL}/api/food-logs/${id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ mealType }),
       });
-      const data = await response.json();
       if (!response.ok) {
+        const data = await response.json().catch(() => ({}));
+        setFoodLogs(before);
         notify(data.message || "Could not move this food.", "error");
-        return;
       }
-      await fetchFoodLogs();
     } catch (error) {
       console.error("Failed to move food log:", error);
+      setFoodLogs(before);
       notify("Could not connect to the backend.", "error");
     }
   };
@@ -438,6 +441,7 @@ function FoodLogger({ date, onBack, goTo }) {
 
       <TextLogger date={date} defaultMeal={selectedMeal} onLogged={fetchFoodLogs} />
       <SmartSuggestions date={date} mealType={selectedMeal} refreshKey={foodLogs.length} onLogged={fetchFoodLogs} />
+      <EatingOut date={date} defaultMeal={selectedMeal} onLogged={fetchFoodLogs} />
 
       <div className="meal-selector">
 
@@ -819,6 +823,7 @@ function FoodLogger({ date, onBack, goTo }) {
 
           return (
             <div
+              data-meal={meal.id}
               className={`meal-log-section ${dropMeal === meal.id ? "drop-target" : ""}`}
               key={meal.id}
               onDragOver={(e) => { if (dragId) { e.preventDefault(); setDropMeal(meal.id); } }}

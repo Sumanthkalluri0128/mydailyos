@@ -57,9 +57,22 @@ const b64url = (buf) => Buffer.from(buf).toString('base64').replace(/\+/g, '-').
 const encodeHeader = (text) => (/^[\x20-\x7e]*$/.test(text) ? text : `=?UTF-8?B?${Buffer.from(text, 'utf8').toString('base64')}?=`);
 
 /** RFC 822 message for the Gmail API. From is left out on purpose: Gmail sets it to the authenticated account. */
-function buildRawMessage({ to, subject, text }) {
-  const headers = [`To: ${to}`, `Subject: ${encodeHeader(subject)}`, 'MIME-Version: 1.0', 'Content-Type: text/plain; charset=UTF-8', 'Content-Transfer-Encoding: base64'];
-  return b64url(`${headers.join('\r\n')}\r\n\r\n${Buffer.from(text, 'utf8').toString('base64')}`);
+function buildRawMessage({ to, subject, text, html, headers: extra }) {
+  const extraLines = Object.entries(extra || {}).map(([k, v]) => `${k}: ${String(v).replace(/[\r\n]+/g, ' ')}`);
+  const wrap64 = (str) => Buffer.from(str, 'utf8').toString('base64').replace(/(.{76})/g, '$1\r\n');
+  if (!html) {
+    const headers = [`To: ${to}`, `Subject: ${encodeHeader(subject)}`, 'MIME-Version: 1.0', 'Content-Type: text/plain; charset=UTF-8', 'Content-Transfer-Encoding: base64', ...extraLines];
+    return b64url(`${headers.join('\r\n')}\r\n\r\n${Buffer.from(text, 'utf8').toString('base64')}`);
+  }
+  // text + HTML versions: mail apps show the best one they can render.
+  const boundary = `ff_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 10)}`;
+  const headers = [`To: ${to}`, `Subject: ${encodeHeader(subject)}`, 'MIME-Version: 1.0', `Content-Type: multipart/alternative; boundary="${boundary}"`, ...extraLines];
+  const body = [
+    `--${boundary}`, 'Content-Type: text/plain; charset=UTF-8', 'Content-Transfer-Encoding: base64', '', wrap64(text),
+    `--${boundary}`, 'Content-Type: text/html; charset=UTF-8', 'Content-Transfer-Encoding: base64', '', wrap64(html),
+    `--${boundary}--`, '',
+  ].join('\r\n');
+  return b64url(`${headers.join('\r\n')}\r\n\r\n${body}`);
 }
 
 // The access token lives ~1 hour; reuse it instead of asking Google for a new one on every email.
@@ -95,13 +108,13 @@ function mailStatus(env = process.env) {
   return { provider, ready: !!provider };
 }
 
-async function sendVia(provider, { to, subject, text }, { env, fetchImpl, nodemailer }) {
+async function sendVia(provider, { to, subject, text, html, headers }, { env, fetchImpl, nodemailer }) {
   const from = env.MAIL_FROM || FROM_DEFAULT;
 
   if (provider === 'gmail') {
     const send = async () => {
       const token = await gmailAccessToken(fetchImpl, env);
-      await postJson(fetchImpl, 'https://gmail.googleapis.com/gmail/v1/users/me/messages/send', { Authorization: `Bearer ${token}` }, { raw: buildRawMessage({ to, subject, text }) });
+      await postJson(fetchImpl, 'https://gmail.googleapis.com/gmail/v1/users/me/messages/send', { Authorization: `Bearer ${token}` }, { raw: buildRawMessage({ to, subject, text, html, headers }) });
     };
     try { await send(); }
     catch (e) {
@@ -112,12 +125,12 @@ async function sendVia(provider, { to, subject, text }, { env, fetchImpl, nodema
   }
 
   if (provider === 'brevo') {
-    await postJson(fetchImpl, 'https://api.brevo.com/v3/smtp/email', { 'api-key': env.BREVO_API_KEY }, { sender: parseFrom(from), to: [{ email: to }], subject, textContent: text });
+    await postJson(fetchImpl, 'https://api.brevo.com/v3/smtp/email', { 'api-key': env.BREVO_API_KEY }, { sender: parseFrom(from), to: [{ email: to }], subject, textContent: text, ...(html ? { htmlContent: html } : {}), ...(headers ? { headers } : {}) });
     return;
   }
 
   if (provider === 'resend') {
-    await postJson(fetchImpl, 'https://api.resend.com/emails', { Authorization: `Bearer ${env.RESEND_API_KEY}` }, { from, to: [to], subject, text });
+    await postJson(fetchImpl, 'https://api.resend.com/emails', { Authorization: `Bearer ${env.RESEND_API_KEY}` }, { from, to: [to], subject, text, ...(html ? { html } : {}), ...(headers ? { headers } : {}) });
     return;
   }
 
@@ -129,11 +142,11 @@ async function sendVia(provider, { to, subject, text }, { env, fetchImpl, nodema
       greetingTimeout: TIMEOUT_MS,
       socketTimeout: TIMEOUT_MS,
     });
-    await transport.sendMail({ from, to, subject, text });
+    await transport.sendMail({ from, to, subject, text, ...(html ? { html } : {}), ...(headers ? { headers } : {}) });
   }
 }
 
-async function sendMail({ to, subject, text }, { env = process.env, fetchImpl = globalThis.fetch, nodemailer } = {}) {
+async function sendMail({ to, subject, text, html, headers }, { env = process.env, fetchImpl = globalThis.fetch, nodemailer } = {}) {
   const providers = providerList(env);
 
   if (!providers.length) {
@@ -148,7 +161,7 @@ async function sendMail({ to, subject, text }, { env = process.env, fetchImpl = 
   const failures = [];
   for (const provider of providers) {
     try {
-      await sendVia(provider, { to, subject, text }, { env, fetchImpl, nodemailer });
+      await sendVia(provider, { to, subject, text, html, headers }, { env, fetchImpl, nodemailer });
       if (failures.length) console.warn(`mail: sent via ${provider} after ${failures.map((f) => f.split(':')[0]).join(', ')} failed`);
       return true;
     } catch (e) {

@@ -242,3 +242,26 @@ button:active:not(:disabled) { transform: scale(0.98); }
 .nutrient-row.near .progress-fill { background: #e0a43a; }
 .plateau-card { border-left: 4px solid #e0a43a; }
 .plateau-card.wrong_direction { border-left-color: #d6577a; }
+
+/* Speed & responsiveness polish */
+button, a, select, summary, [role="button"], .suggestion-chip { touch-action: manipulation; } /* no 300 ms tap delay */
+.page-loading { min-height: 40vh; display: grid; place-items: center; color: var(--muted, #6b7090); }
+.page-loading::before { content: ""; width: 34px; height: 34px; border-radius: 50%; border: 3px solid var(--border, #e7e9f5); border-top-color: var(--primary, #6c63ff); animation: ff-spin .8s linear infinite; margin-bottom: 10px; }
+@keyframes ff-spin { to { transform: rotate(360deg); } }
+.planner-grid, .food-log-list { content-visibility: auto; contain-intrinsic-size: 600px; }
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; scroll-behavior: auto !important; } }
+@media (max-width: 480px) { .planner-grid { grid-template-columns: 1fr; } .planner-toolbar button { flex: 1 1 auto; } .text-logger-item { grid-template-columns: 1fr 76px 36px 44px; } }
+
+/* Meal colour accents, week strip, eating-out */
+.meal-log-section { border-left: 4px solid var(--meal, transparent); padding-left: 12px; }
+.meal-log-section[data-meal="breakfast"] { --meal: #f2b84b; }
+.meal-log-section[data-meal="lunch"] { --meal: #4fb286; }
+.meal-log-section[data-meal="dinner"] { --meal: #7a6ff0; }
+.meal-log-section[data-meal="snacks"] { --meal: #e8708a; }
+.week-strip { display: flex; gap: 8px; align-items: flex-end; height: 96px; margin: 14px 0; }
+.week-strip-col { flex: 1; height: 100%; display: flex; flex-direction: column; justify-content: flex-end; align-items: center; gap: 4px; }
+.week-strip-bar { width: 100%; border-radius: 6px 6px 0 0; background: var(--primary, #6c63ff); min-height: 4px; }
+.eating-out-toggle { margin: 4px 0 12px; min-height: 44px; }
+.eating-out-row { grid-template-columns: 2fr 1fr 1fr auto; }
+@media (max-width: 700px) { .eating-out-row { grid-template-columns: 1fr 1fr; } .eating-out-row input:first-child { grid-column: 1 / -1; } }
+.macro-row small { opacity: .6; font-weight: 400; }

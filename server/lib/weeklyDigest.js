@@ -6,9 +6,11 @@ const { buildHistory } = require('./progress');
 const { buildWeeklySummary, weekContaining } = require('./weekly');
 const { weeklyNutrients } = require('./nutrients');
 const { detectPlateau } = require('./plateau');
-const { dailyTarget, expectedEnergy, macroTargets } = require('./energy');
+const { dailyTarget, expectedEnergy, macroTargets, limitTargets, waterTargetMl } = require('./energy');
 const { addDays, weekday, todayUtc } = require('./dates');
 const { sendMail } = require('./mailer');
+const { renderWeeklyEmail } = require('./emailTemplate');
+const { unsubscribeUrl, appUrl } = require('./unsubscribe');
 
 /** Everything the digest (and the weekly screens) need for the 7 days ending on `end`. */
 async function weeklyBundle(userId, end, profile) {
@@ -17,9 +19,17 @@ async function weeklyBundle(userId, end, profile) {
   const target = dailyTarget(profile);
   const e = expectedEnergy(profile);
   const macros = macroTargets(target, profile?.currentWeightKg, e?.direction, profile?.goals?.proteinTarget);
-  const summary = buildWeeklySummary({ current: days.slice(7), previous: days.slice(0, 7), goals: { ...(profile?.goals || {}), calorieTarget: target } });
-  const nutrients = weeklyNutrients(days.slice(7), macros);
-  return { summary, nutrients, macros, target };
+  const g = profile?.goals || {};
+  const goals = {
+    ...g, calorieTarget: target,
+    proteinTarget: g.proteinTarget || macros.protein,
+    waterTargetMl: waterTargetMl(profile?.currentWeightKg) || g.waterTargetMl || null,
+    exerciseMinutesTarget: g.exerciseMinutesTarget || null,
+  };
+  const scoreKeys = ['calories', 'protein', 'water', ...(goals.exerciseMinutesTarget ? ['exercise'] : [])];
+  const summary = buildWeeklySummary({ current: days.slice(7), previous: days.slice(0, 7), goals });
+  const nutrients = weeklyNutrients(days.slice(7), macros, limitTargets(target));
+  return { summary, nutrients, macros, target, scoreKeys };
 }
 
 async function plateauFor(userId, today, profile, target) {
@@ -27,30 +37,15 @@ async function plateauFor(userId, today, profile, target) {
   return detectPlateau({ weights, profile: profile || {}, today, target });
 }
 
-function digestText({ name, summary, nutrients, plateau }) {
-  const s = summary, L = [];
-  L.push(`Hi ${name || 'there'},`, '', `Your week ${s.from} to ${s.to} on FlexFit:`, '');
-  L.push(`- Active on ${s.activeDays} of 7 days`);
-  L.push(`- Average intake: ${s.averages.calories} kcal/day, ${s.averages.protein} g protein`);
-  L.push(`- Exercise: ${s.totals.exerciseMinutes} min total, water ${Math.round(s.averages.waterMl)} ml/day`);
-  L.push(`- Goals hit: calories ${s.goalDays.calories}/7, protein ${s.goalDays.protein}/7, water ${s.goalDays.water}/7, exercise ${s.goalDays.exercise}/7`);
-  if (s.weight) L.push(`- Weight: ${s.weight.start} -> ${s.weight.end} kg (${s.weight.change > 0 ? '+' : ''}${s.weight.change})`);
-  if (nutrients.loggedDays) {
-    L.push('', 'Nutrients (daily average vs target):');
-    for (const r of nutrients.rows) L.push(`- ${r.label}: ${r.average} g of ${r.target} g (${r.percentOfTarget}%)`);
-    if (nutrients.tip) L.push('', `Tip: ${nutrients.tip}`);
-  }
-  if (plateau && plateau.status !== 'insufficient_data' && plateau.status !== 'on_track') L.push('', `Weight trend: ${plateau.message}`);
-  L.push('', 'Keep going - small, consistent days add up.', '', '- FlexFit');
-  return L.join('\n');
-}
-
 async function digestFor(userId, end) {
   const [profile, user] = await Promise.all([Profile.findOne({ userId }).lean(), User.findById(userId).select('name email').lean()]);
   if (!user) return null;
   const b = await weeklyBundle(userId, end, profile);
   const plateau = await plateauFor(userId, end, profile, b.target);
-  return { user, subject: `Your FlexFit week: ${b.summary.from} – ${b.summary.to}`, text: digestText({ name: user.name?.split(' ')[0], summary: b.summary, nutrients: b.nutrients, plateau }) };
+  const unsub = unsubscribeUrl(userId);
+  const mail = renderWeeklyEmail({ name: user.name, summary: b.summary, nutrients: b.nutrients, plateau, target: b.target, scoreKeys: b.scoreKeys, appUrl: appUrl(), unsubscribeUrl: unsub });
+  const headers = unsub ? { 'List-Unsubscribe': `<${unsub}>`, 'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click' } : undefined;
+  return { user, ...mail, headers };
 }
 
 /** Sends last week's (Mon–Sun) digest to everyone who opted in and hasn't received it yet. Safe to call repeatedly. */
@@ -62,7 +57,7 @@ async function sendWeeklyDigests({ today = todayUtc(), send = sendMail } = {}) {
     try {
       const d = await digestFor(p.userId, lastWeek.to);
       if (!d) continue;
-      await send({ to: d.user.email, subject: d.subject, text: d.text });
+      await send({ to: d.user.email, subject: d.subject, text: d.text, html: d.html, headers: d.headers });
       await Profile.updateOne({ userId: p.userId }, { $set: { 'notify.lastWeeklyEmail': lastWeek.from } });
       sent += 1;
     } catch (e) { failed += 1; console.warn('Weekly email failed:', e.message); }
@@ -70,4 +65,4 @@ async function sendWeeklyDigests({ today = todayUtc(), send = sendMail } = {}) {
   return { week: lastWeek, sent, failed };
 }
 
-module.exports = { weeklyBundle, plateauFor, digestText, digestFor, sendWeeklyDigests };
+module.exports = { weeklyBundle, plateauFor, digestFor, sendWeeklyDigests };

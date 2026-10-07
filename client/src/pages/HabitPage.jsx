@@ -1,4 +1,5 @@
 import { confirmAction } from "../utils/confirm";
+import StreakFlame from "../motion/StreakFlame";
 import { notify } from "../utils/notify";
 import { apiFetch } from "../config/api";
 import { useEffect, useState } from "react";
@@ -517,9 +518,7 @@ const [habitStats, setHabitStats] = useState({});
                           {habit.frequency}
                         </small>
                         <div className="habit-stats">
-  <span>
-    🔥 {stats.currentStreak} day streak
-  </span>
+  <span className="habit-streak"><StreakFlame streak={stats.currentStreak} compact /></span>
 
   <span>
     ✅ {stats.totalCompleted} completed

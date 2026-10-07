@@ -5,7 +5,7 @@ const r1 = (x) => Math.round(x * 10) / 10;
  * @param days    day rows from buildHistory (needs calories, protein, carbohydrates, fat, fiber)
  * @param targets { protein, carbs, fat, fiber }
  */
-function weeklyNutrients(days, targets) {
+function weeklyNutrients(days, targets, limits = null) {
   const logged = days.filter((d) => d.calories > 0);
   const n = logged.length;
   const avg = (k) => (n ? r1(logged.reduce((s, d) => s + (Number(d[k]) || 0), 0) / n) : 0);
@@ -27,7 +27,20 @@ function weeklyNutrients(days, targets) {
   const tip = worst
     ? (worst.key === 'fiber' ? 'Fibre is running low: add dal, vegetables, fruit with skin, oats or whole grains.' : 'Protein is running low: add eggs, paneer, curd, dal, soy or lean meat.')
     : null;
-  return { loggedDays: n, rows, tip };
+  // Ceilings (sugar, sodium): lower is better. Sodium only appears when logged foods actually carry sodium data
+  // (the shared catalogue has none), otherwise a perfect-looking 0 mg would be misleading.
+  const limitRows = [];
+  if (limits && n) {
+    const mk = (key, label, unit, limit, field, minDigits = 1) => {
+      const average = Math.round((logged.reduce((s, d) => s + (Number(d[field]) || 0), 0) / n) * minDigits) / minDigits;
+      const pct = limit ? Math.round((average / limit) * 100) : null;
+      return { key, label, unit, limit, average, percentOfLimit: pct, status: pct === null ? 'ok' : pct > 120 ? 'high' : pct > 100 ? 'near' : 'ok' };
+    };
+    if (limits.sugar) limitRows.push(mk('sugar', 'Sugar (total)', 'g', limits.sugar, 'sugar'));
+    const sodium = mk('sodium', 'Sodium', 'mg', limits.sodiumMg, 'sodium');
+    if (limits.sodiumMg && sodium.average > 0) limitRows.push(sodium);
+  }
+  return { loggedDays: n, rows, limits: limitRows, tip };
 }
 
 module.exports = { weeklyNutrients };

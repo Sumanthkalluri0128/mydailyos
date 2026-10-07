@@ -101,6 +101,19 @@ export default function Insights() {
             Active {weekly.activeDays}/7 days · water goal {weekly.goalDays.water}/7 · exercise goal {weekly.goalDays.exercise}/7
             {weekly.weight ? ` · weight ${weekly.weight.change > 0 ? "+" : ""}${weekly.weight.change} kg` : ""}
           </p>
+          {weekly.days?.length > 0 && (
+            <div className="week-strip" role="img" aria-label="Calories logged each day this week">
+              {weekly.days.map((d) => {
+                const max = Math.max(...weekly.days.map((x) => x.calories), 1);
+                return (
+                  <div key={d.date} className="week-strip-col" title={`${d.date}: ${d.calories} kcal`}>
+                    <div className="week-strip-bar" style={{ height: `${d.calories ? Math.max(8, (d.calories / max) * 100) : 4}%`, opacity: d.calories ? 1 : 0.25 }} />
+                    <small>{new Date(`${d.date}T00:00:00`).toLocaleDateString(undefined, { weekday: "narrow" })}</small>
+                  </div>
+                );
+              })}
+            </div>
+          )}
           {weekly.nutrients?.loggedDays > 0 && (
             <div className="weekly-nutrients">
               <h3>Daily average vs target</h3>
@@ -109,6 +122,13 @@ export default function Insights() {
                   <span>{r.label}</span>
                   <div className="progress-bar"><div className="progress-fill" style={{ width: `${Math.min(r.percentOfTarget || 0, 100)}%` }} /></div>
                   <strong>{r.average} / {r.target} g</strong>
+                </div>
+              ))}
+              {(weekly.nutrients.limits || []).map((r) => (
+                <div className={`nutrient-row ${r.status === "high" ? "low" : r.status === "near" ? "near" : ""}`} key={r.key}>
+                  <span>{r.label}</span>
+                  <div className="progress-bar"><div className="progress-fill" style={{ width: `${Math.min(r.percentOfLimit || 0, 100)}%` }} /></div>
+                  <strong>{r.average} / {r.limit} {r.unit}</strong>
                 </div>
               ))}
               {weekly.nutrients.tip && <p className="card-description">💡 {weekly.nutrients.tip}</p>}

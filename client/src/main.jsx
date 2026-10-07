@@ -5,8 +5,10 @@ import AuthGate from "./auth/AuthGate";
 import ToastHost from "./components/ToastHost";
 import ConfirmHost from "./components/ConfirmHost";
 import OfflineBanner from "./components/OfflineBanner";
+import ServerWakeBanner from "./components/ServerWakeBanner";
 import "./index.css";
-import "./styles/redesign.css"; // last: refines App.css without replacing it
+import "./styles/redesign.css"; // refines App.css without replacing it
+import "./motion/motion.css"; // animation kit: last so its press/reduced-motion rules win
 
 // Apply the saved theme BEFORE anything renders, so the sign-in / reset pages (which render outside <App />) honour it too.
 try {
@@ -27,6 +29,7 @@ ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>
     <ToastHost />
     <ConfirmHost />
+    <ServerWakeBanner />
     <OfflineBanner />
     <AuthGate>
       <App />

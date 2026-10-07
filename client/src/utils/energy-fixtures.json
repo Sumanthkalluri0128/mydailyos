@@ -3,78 +3,398 @@
   "plans": [
     {
       "name": "A: man, 30y 175cm 80kg moderate, wants 72kg at default pace",
-      "profile": { "age": 30, "sex": "male", "heightCm": 175, "currentWeightKg": 80, "activityLevel": "moderate", "goals": { "targetWeightKg": 72 } },
-      "expect": { "bmr": 1749, "tdee": 2711, "direction": "lose", "pace": 0.5, "gap": 550, "autoTarget": 2160, "calorieTarget": 2160, "mode": "auto", "atFloor": false, "baselineActivityKcal": 612 }
+      "profile": {
+        "age": 30,
+        "sex": "male",
+        "heightCm": 175,
+        "currentWeightKg": 80,
+        "activityLevel": "moderate",
+        "goals": {
+          "targetWeightKg": 72
+        }
+      },
+      "expect": {
+        "bmr": 1749,
+        "tdee": 2711,
+        "direction": "lose",
+        "pace": 0.5,
+        "gap": 550,
+        "autoTarget": 2160,
+        "calorieTarget": 2160,
+        "mode": "auto",
+        "atFloor": false,
+        "baselineActivityKcal": 612
+      }
     },
     {
       "name": "B: woman, 28y 160cm 55kg light, maintaining",
-      "profile": { "age": 28, "sex": "female", "heightCm": 160, "currentWeightKg": 55, "activityLevel": "light", "goals": { "targetWeightKg": 55 } },
-      "expect": { "bmr": 1249, "tdee": 1717, "direction": "maintain", "pace": 0.5, "gap": 0, "autoTarget": 1720, "calorieTarget": 1720, "mode": "auto", "atFloor": false, "baselineActivityKcal": 218 }
+      "profile": {
+        "age": 28,
+        "sex": "female",
+        "heightCm": 160,
+        "currentWeightKg": 55,
+        "activityLevel": "light",
+        "goals": {
+          "targetWeightKg": 55
+        }
+      },
+      "expect": {
+        "bmr": 1249,
+        "tdee": 1717,
+        "direction": "maintain",
+        "pace": 0.5,
+        "gap": 0,
+        "autoTarget": 1720,
+        "calorieTarget": 1720,
+        "mode": "auto",
+        "atFloor": false,
+        "baselineActivityKcal": 218
+      }
     },
     {
       "name": "C: woman, 45y 150cm 90kg sedentary, pace 1 kg/wk hits the safety floor",
-      "profile": { "age": 45, "sex": "female", "heightCm": 150, "currentWeightKg": 90, "activityLevel": "sedentary", "goals": { "targetWeightKg": 60, "weeklyPaceKg": 1 } },
-      "expect": { "bmr": 1452, "tdee": 1742, "direction": "lose", "pace": 1, "gap": 1100, "autoTarget": 1200, "calorieTarget": 1200, "mode": "auto", "atFloor": true, "baselineActivityKcal": 0 }
+      "profile": {
+        "age": 45,
+        "sex": "female",
+        "heightCm": 150,
+        "currentWeightKg": 90,
+        "activityLevel": "sedentary",
+        "goals": {
+          "targetWeightKg": 60,
+          "weeklyPaceKg": 1
+        }
+      },
+      "expect": {
+        "bmr": 1452,
+        "tdee": 1742,
+        "direction": "lose",
+        "pace": 1,
+        "gap": 1100,
+        "autoTarget": 1200,
+        "calorieTarget": 1200,
+        "mode": "auto",
+        "atFloor": true,
+        "baselineActivityKcal": 0
+      }
     },
     {
       "name": "D: sex 'other', 35y 170cm 70kg very active, gaining slowly",
-      "profile": { "age": 35, "sex": "other", "heightCm": 170, "currentWeightKg": 70, "activityLevel": "very_active", "goals": { "targetWeightKg": 75, "weeklyPaceKg": 0.25 } },
-      "expect": { "bmr": 1510, "tdee": 2604, "direction": "gain", "pace": 0.25, "gap": 275, "autoTarget": 2880, "calorieTarget": 2880, "mode": "auto", "atFloor": false, "baselineActivityKcal": 793 }
+      "profile": {
+        "age": 35,
+        "sex": "other",
+        "heightCm": 170,
+        "currentWeightKg": 70,
+        "activityLevel": "very_active",
+        "goals": {
+          "targetWeightKg": 75,
+          "weeklyPaceKg": 0.25
+        }
+      },
+      "expect": {
+        "bmr": 1510,
+        "tdee": 2604,
+        "direction": "gain",
+        "pace": 0.25,
+        "gap": 275,
+        "autoTarget": 2880,
+        "calorieTarget": 2880,
+        "mode": "auto",
+        "atFloor": false,
+        "baselineActivityKcal": 793
+      }
     },
     {
       "name": "E: typed-in target wins in manual mode, auto value is still reported",
-      "profile": { "age": 30, "sex": "male", "heightCm": 175, "currentWeightKg": 80, "activityLevel": "moderate", "goals": { "targetWeightKg": 72, "calorieMode": "manual", "calorieTarget": 2200 } },
-      "expect": { "tdee": 2711, "autoTarget": 2160, "calorieTarget": 2200, "mode": "manual" }
+      "profile": {
+        "age": 30,
+        "sex": "male",
+        "heightCm": 175,
+        "currentWeightKg": 80,
+        "activityLevel": "moderate",
+        "goals": {
+          "targetWeightKg": 72,
+          "calorieMode": "manual",
+          "calorieTarget": 2200
+        }
+      },
+      "expect": {
+        "tdee": 2711,
+        "autoTarget": 2160,
+        "calorieTarget": 2200,
+        "mode": "manual"
+      }
     },
     {
       "name": "F: a saved target is ignored in auto mode (that was the 'ghost setting' bug)",
-      "profile": { "age": 30, "sex": "male", "heightCm": 175, "currentWeightKg": 80, "activityLevel": "moderate", "goals": { "targetWeightKg": 72, "calorieTarget": 3500 } },
-      "expect": { "calorieTarget": 2160, "mode": "auto" }
+      "profile": {
+        "age": 30,
+        "sex": "male",
+        "heightCm": 175,
+        "currentWeightKg": 80,
+        "activityLevel": "moderate",
+        "goals": {
+          "targetWeightKg": 72,
+          "calorieTarget": 3500
+        }
+      },
+      "expect": {
+        "calorieTarget": 2160,
+        "mode": "auto"
+      }
+    },
+    {
+      "name": "E: man, 70y 160cm 52kg sedentary, wants 48kg — safety floor (1500) is above maintenance (1410), so a 'lose' goal must not exceed maintenance",
+      "profile": {
+        "age": 70,
+        "sex": "male",
+        "heightCm": 160,
+        "currentWeightKg": 52,
+        "activityLevel": "sedentary",
+        "goals": {
+          "targetWeightKg": 48
+        }
+      },
+      "expect": {
+        "bmr": 1175,
+        "tdee": 1410,
+        "direction": "lose",
+        "gap": 550,
+        "atFloor": true,
+        "autoTarget": 1410,
+        "calorieTarget": 1410,
+        "mode": "auto",
+        "baselineActivityKcal": 0
+      }
     }
   ],
   "targets": [
-    { "name": "incomplete profile falls back to the saved goal", "profile": { "age": 30, "goals": { "calorieTarget": 2050 } }, "expect": 2050 },
-    { "name": "nothing at all falls back to 1800", "profile": {}, "expect": 1800 },
-    { "name": "null profile falls back to 1800", "profile": null, "expect": 1800 }
+    {
+      "name": "incomplete profile falls back to the saved goal",
+      "profile": {
+        "age": 30,
+        "goals": {
+          "calorieTarget": 2050
+        }
+      },
+      "expect": 2050
+    },
+    {
+      "name": "nothing at all falls back to 1800",
+      "profile": {},
+      "expect": 1800
+    },
+    {
+      "name": "null profile falls back to 1800",
+      "profile": null,
+      "expect": 1800
+    }
   ],
   "balances": [
     {
       "name": "A, light activity below what the target already assumes -> no bonus",
-      "plan": 0, "day": { "eaten": 1500, "workout": 250, "steps": 350 },
-      "expect": { "target": 2160, "burned": 600, "bonus": 0, "budget": 2160, "remaining": 660, "net": 1211, "isDeficit": true }
+      "plan": 0,
+      "day": {
+        "eaten": 1500,
+        "workout": 250,
+        "steps": 350
+      },
+      "expect": {
+        "target": 2160,
+        "burned": 600,
+        "bonus": 0,
+        "budget": 2160,
+        "remaining": 660,
+        "net": 1211,
+        "isDeficit": true
+      }
     },
     {
       "name": "A, very active day -> only the excess earns food",
-      "plan": 0, "day": { "eaten": 2000, "workout": 500, "steps": 700 },
-      "expect": { "target": 2160, "burned": 1200, "bonus": 588, "budget": 2748, "remaining": 748, "net": 1299, "isDeficit": true }
+      "plan": 0,
+      "day": {
+        "eaten": 2000,
+        "workout": 500,
+        "steps": 700
+      },
+      "expect": {
+        "target": 2160,
+        "burned": 1200,
+        "bonus": 588,
+        "budget": 2748,
+        "remaining": 748,
+        "net": 1299,
+        "isDeficit": true
+      }
     },
     {
       "name": "A, over the budget",
-      "plan": 0, "day": { "eaten": 3000, "workout": 0, "steps": 0 },
-      "expect": { "target": 2160, "burned": 0, "bonus": 0, "budget": 2160, "remaining": -840, "net": -289, "isDeficit": false }
+      "plan": 0,
+      "day": {
+        "eaten": 3000,
+        "workout": 0,
+        "steps": 0
+      },
+      "expect": {
+        "target": 2160,
+        "burned": 0,
+        "bonus": 0,
+        "budget": 2160,
+        "remaining": -840,
+        "net": -289,
+        "isDeficit": false
+      }
     },
     {
       "name": "C (sedentary baseline 0) -> every burned kcal counts",
-      "plan": 2, "day": { "eaten": 1000, "workout": 200, "steps": 100 },
-      "expect": { "target": 1200, "burned": 300, "bonus": 300, "budget": 1500, "remaining": 500, "net": 1042, "isDeficit": true }
+      "plan": 2,
+      "day": {
+        "eaten": 1000,
+        "workout": 200,
+        "steps": 100
+      },
+      "expect": {
+        "target": 1200,
+        "burned": 300,
+        "bonus": 300,
+        "budget": 1500,
+        "remaining": 500,
+        "net": 1042,
+        "isDeficit": true
+      }
     }
   ],
   "balanceWithoutPlan": {
     "name": "no body data -> plain target minus eaten, nothing awarded for activity",
-    "profile": { "goals": { "calorieTarget": 2000 } },
-    "day": { "eaten": 1200, "workout": 300, "steps": 200 },
-    "expect": { "target": 2000, "burned": 500, "bonus": 0, "budget": 2000, "remaining": 800, "net": null, "isDeficit": null, "hasPlan": false }
+    "profile": {
+      "goals": {
+        "calorieTarget": 2000
+      }
+    },
+    "day": {
+      "eaten": 1200,
+      "workout": 300,
+      "steps": 200
+    },
+    "expect": {
+      "target": 2000,
+      "burned": 500,
+      "bonus": 0,
+      "budget": 2000,
+      "remaining": 800,
+      "net": null,
+      "isDeficit": null,
+      "hasPlan": false
+    }
   },
   "steps": [
-    { "steps": 10000, "weightKg": 70, "kcal": 350, "km": 7.62 },
-    { "steps": 0, "weightKg": 70, "kcal": 0, "km": 0 },
-    { "steps": 5000, "weightKg": null, "kcal": 175, "km": 3.81 },
-    { "steps": 8123, "weightKg": 82.4, "kcal": 335, "km": 6.19 }
+    {
+      "steps": 10000,
+      "weightKg": 70,
+      "kcal": 350,
+      "km": 7.62
+    },
+    {
+      "steps": 0,
+      "weightKg": 70,
+      "kcal": 0,
+      "km": 0
+    },
+    {
+      "steps": 5000,
+      "weightKg": null,
+      "kcal": 175,
+      "km": 3.81
+    },
+    {
+      "steps": 8123,
+      "weightKg": 82.4,
+      "kcal": 335,
+      "km": 6.19
+    }
   ],
   "water": [
-    { "weightKg": 70, "ml": 2450 },
-    { "weightKg": 40, "ml": 1500 },
-    { "weightKg": 150, "ml": 5000 },
-    { "weightKg": null, "ml": null }
+    {
+      "weightKg": 70,
+      "ml": 2450
+    },
+    {
+      "weightKg": 40,
+      "ml": 1500
+    },
+    {
+      "weightKg": 150,
+      "ml": 5000
+    },
+    {
+      "weightKg": null,
+      "ml": null
+    }
+  ],
+  "macros": [
+    {
+      "name": "120 kg person on 1800 kcal: protein capped at 35% of calories (158 g, not 192 g)",
+      "calories": 1800,
+      "weightKg": 120,
+      "direction": "lose",
+      "expect": {
+        "protein": 158,
+        "fat": 54,
+        "carbs": 171,
+        "fiber": 25
+      }
+    },
+    {
+      "name": "70 kg losing at 1800: 1.6 g/kg",
+      "calories": 1800,
+      "weightKg": 70,
+      "direction": "lose",
+      "expect": {
+        "protein": 112,
+        "fat": 54,
+        "carbs": 217,
+        "fiber": 25
+      }
+    },
+    {
+      "name": "70 kg gaining at 2600: 2.0 g/kg",
+      "calories": 2600,
+      "weightKg": 70,
+      "direction": "gain",
+      "expect": {
+        "protein": 140,
+        "fat": 78,
+        "carbs": 335,
+        "fiber": 36
+      }
+    },
+    {
+      "name": "own protein target is respected as typed",
+      "calories": 2000,
+      "weightKg": 70,
+      "direction": "lose",
+      "override": 150,
+      "expect": {
+        "protein": 150,
+        "fat": 60,
+        "carbs": 215,
+        "fiber": 28
+      }
+    }
+  ],
+  "limits": [
+    {
+      "calories": 2000,
+      "expect": {
+        "sodiumMg": 2000,
+        "sugar": 50
+      }
+    },
+    {
+      "calories": 1800,
+      "expect": {
+        "sodiumMg": 2000,
+        "sugar": 45
+      }
+    }
   ]
 }

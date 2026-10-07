@@ -46,6 +46,17 @@ export default function RecipesPage({ onBack }) {
     notify("Recipe saved — find it in your foods to log or plan.", "success");
     setEditing(null); load();
   };
+  // Plain text works anywhere (WhatsApp, notes, email). Uses the phone's share sheet when there is one, otherwise copies.
+  const share = async (r) => {
+    const text = `${r.name} — makes ${r.servings} servings\n` +
+      r.ingredients.map((i) => `• ${i.foodName}: ${i.quantity} ${i.servingUnit}`).join("\n") +
+      `\nPer serving: ${Math.round(r.perServing.calories)} kcal, ${r.perServing.protein} g protein, ${r.perServing.fiber} g fibre` +
+      (r.notes ? `\n\n${r.notes}` : "");
+    try {
+      if (navigator.share) await navigator.share({ title: r.name, text });
+      else { await navigator.clipboard.writeText(text); notify("Recipe copied.", "success"); }
+    } catch { /* cancelled */ }
+  };
   const remove = async (r) => {
     if (!(await confirmAction("Meals you already logged keep their numbers.", { title: `Delete “${r.name}”?`, confirmText: "Delete" }))) return;
     await apiFetch(`/api/recipes/${r._id}`, { method: "DELETE" }); load();
@@ -96,6 +107,7 @@ export default function RecipesPage({ onBack }) {
         {recipes.map((r) => (
           <div className="planner-item" key={r._id}>
             <span><strong>{r.name}</strong><small>{r.servings} servings · {Math.round(r.perServing.calories)} kcal, {r.perServing.protein} g protein, {r.perServing.fiber} g fibre each</small></span>
+            <button className="secondary-button" onClick={() => share(r)}>Share</button>
             <button className="secondary-button" onClick={() => edit(r)}>Edit</button>
             <button className="delete-log-button" aria-label={`Delete ${r.name}`} onClick={() => remove(r)}>✕</button>
           </div>

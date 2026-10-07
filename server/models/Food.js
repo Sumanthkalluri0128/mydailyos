@@ -21,6 +21,8 @@ const schema = new mongoose.Schema(
     // Household measures, e.g. { label: 'katori', quantity: 150 } => 1 katori = 150 (servingUnit).
     units: { type: [{ _id: false, label: { type: String, maxlength: 30 }, quantity: { type: Number, min: 0.01 } }], default: [] },
     notes: { type: String, default: '', maxlength: 500 },
+    // Internal placeholder food (e.g. "Quick add" for eating out). Never shown in lists, search or suggestions.
+    hidden: { type: Boolean, default: false },
     // Per-person favourites (a shared food can be a favourite for one person and not another).
     favoriteBy: { type: [mongoose.Schema.Types.ObjectId], default: [], select: false },
     // Legacy flag from before favourites were per-person. Still honoured for a person's own foods.

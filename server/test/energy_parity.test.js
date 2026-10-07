@@ -10,6 +10,8 @@ const fx = require('./fixtures/energy-fixtures.json');
 test('web client energy model == server energy model (fixtures + 3000 random people)', async () => {
   const web = await import(pathToFileURL(path.join(__dirname, '../../client/src/utils/energy.js')).href);
   for (const c of fx.plans) assert.deepEqual(JSON.parse(JSON.stringify(web.expectedEnergy(c.profile))), JSON.parse(JSON.stringify(server.expectedEnergy(c.profile))), c.name);
+  for (const c of fx.macros) assert.deepEqual(web.macroTargets(c.calories, c.weightKg, c.direction, c.override), server.macroTargets(c.calories, c.weightKg, c.direction, c.override), c.name);
+  for (const c of fx.limits) assert.deepEqual(web.limitTargets(c.calories), server.limitTargets(c.calories));
   let seed = 11; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
   const sexes = ['male', 'female', 'other', ''], acts = ['sedentary', 'light', 'moderate', 'very_active', 'extra_active'];
   for (let i = 0; i < 3000; i++) {

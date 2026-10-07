@@ -39,6 +39,18 @@ for (const c of fx.steps) {
 }
 for (const c of fx.water) test(`water target ${c.weightKg}kg`, () => assert.equal(E.waterTargetMl(c.weightKg), c.ml));
 
+for (const c of fx.macros) test(`macros: ${c.name}`, () => assert.deepEqual(E.macroTargets(c.calories, c.weightKg, c.direction, c.override), c.expect));
+for (const c of fx.limits) test(`limits at ${c.calories} kcal`, () => assert.deepEqual(E.limitTargets(c.calories), c.expect));
+
+test('a lose goal is never set above maintenance, and never below the floor unless maintenance itself is lower', () => {
+  let seed = 5; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+  for (let i = 0; i < 2000; i++) {
+    const w = 40 + rnd() * 80;
+    const e = E.expectedEnergy({ age: 18 + Math.floor(rnd() * 70), sex: rnd() < 0.5 ? 'male' : 'female', heightCm: 145 + Math.floor(rnd() * 50), currentWeightKg: w, activityLevel: 'sedentary', goals: { targetWeightKg: w - 10, weeklyPaceKg: [0.25, 0.5, 1][Math.floor(rnd() * 3)] } });
+    assert.ok(e.autoTarget <= e.tdee + 5, `target ${e.autoTarget} should not exceed maintenance ${e.tdee}`);
+  }
+});
+
 test('pace changes the target (the web used to ignore it)', () => {
   const base = { ...fx.plans[0].profile };
   const slow = E.expectedEnergy({ ...base, goals: { ...base.goals, weeklyPaceKg: 0.25 } }).calorieTarget;

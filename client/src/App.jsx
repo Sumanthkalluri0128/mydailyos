@@ -18,6 +18,8 @@ import CalorieBalance from "./components/CalorieBalance";
 import { waterTargetMl } from "./utils/energy";
 import { currentOwner } from "./utils/cacheOwner";
 import DashboardHero from "./components/DashboardHero";
+import { PageSkeleton } from "./motion/PageTransition";
+import { withTransition } from "./motion/motion";
 import MacroCard from "./components/MacroCard";
 
 import { getLocalDate } from "./utils/date";
@@ -87,9 +89,24 @@ function BrandHome({ onHome }) {
   );
 }
 
+// After the first screen is up, fetch the other pages' code in the background so tapping a tab is instant.
+const warmPages = () => Promise.all([
+  import("./pages/FoodLogger"), import("./pages/PlannerPage"), import("./pages/ProgressPage"), import("./pages/WaterPage"),
+  import("./pages/ExercisePage"), import("./pages/WeightPage"), import("./pages/ProfilePage"),
+]).catch(() => {});
+
 function App() {
-  const [currentPage, setCurrentPage] =
+  useEffect(() => {
+    if (typeof navigator !== "undefined" && navigator.connection?.saveData) return undefined; // respect Data Saver
+    const idle = window.requestIdleCallback || ((fn) => setTimeout(fn, 1500));
+    const handle = idle(warmPages);
+    return () => (window.cancelIdleCallback ? window.cancelIdleCallback(handle) : clearTimeout(handle));
+  }, []);
+
+  const [currentPage, setCurrentPageRaw] =
     useState("dashboard");
+  // Cross-fade between pages with the View Transitions API (falls back to the .fx-page CSS entrance).
+  const setCurrentPage = (page) => withTransition(() => setCurrentPageRaw(page));
 
   // Bumped when changes made offline finish syncing, so the dashboard reloads with the real numbers.
   const [syncTick, setSyncTick] = useState(0);
@@ -389,8 +406,8 @@ function App() {
         <ThemeToggle theme={theme} onToggle={toggleTheme} />
         </header>
 
-        <main className="dashboard">
-          <Suspense fallback={<div className="page-loading">Loading…</div>}>
+        <main key={currentPage} className="dashboard fx-page">
+          <Suspense fallback={<PageSkeleton variant="list" />}>
           <FoodLogger
             date={today}
             goTo={setCurrentPage}
@@ -416,8 +433,8 @@ function App() {
           <BrandHome onHome={() => setCurrentPage("dashboard")} />
           <ThemeToggle theme={theme} onToggle={toggleTheme} />
         </header>
-        <main className="dashboard">
-          <Suspense fallback={<div className="page-loading">Loading…</div>}>
+        <main key={currentPage} className="dashboard fx-page">
+          <Suspense fallback={<PageSkeleton variant="list" />}>
             <HealthPage onBack={() => setCurrentPage("dashboard")} />
           </Suspense>
         </main>
@@ -434,8 +451,8 @@ function App() {
         <ThemeToggle theme={theme} onToggle={toggleTheme} />
         </header>
 
-        <main className="dashboard">
-          <Suspense fallback={<div className="page-loading">Loading…</div>}>
+        <main key={currentPage} className="dashboard fx-page">
+          <Suspense fallback={<PageSkeleton variant="list" />}>
           <ExercisePage
             onBack={() =>
               setCurrentPage("dashboard")
@@ -461,8 +478,8 @@ function App() {
         <ThemeToggle theme={theme} onToggle={toggleTheme} />
         </header>
 
-        <main className="dashboard">
-          <Suspense fallback={<div className="page-loading">Loading…</div>}>
+        <main key={currentPage} className="dashboard fx-page">
+          <Suspense fallback={<PageSkeleton variant="list" />}>
           <TaskPage
             onBack={() =>
               setCurrentPage("dashboard")
@@ -488,8 +505,8 @@ function App() {
         <ThemeToggle theme={theme} onToggle={toggleTheme} />
         </header>
 
-        <main className="dashboard">
-          <Suspense fallback={<div className="page-loading">Loading…</div>}>
+        <main key={currentPage} className="dashboard fx-page">
+          <Suspense fallback={<PageSkeleton variant="list" />}>
           <HabitPage
             onBack={() =>
               setCurrentPage("dashboard")
@@ -515,8 +532,8 @@ function App() {
         <ThemeToggle theme={theme} onToggle={toggleTheme} />
         </header>
 
-        <main className="dashboard">
-          <Suspense fallback={<div className="page-loading">Loading…</div>}>
+        <main key={currentPage} className="dashboard fx-page">
+          <Suspense fallback={<PageSkeleton variant="list" />}>
           <WaterPage
             onBack={() =>
               setCurrentPage("dashboard")
@@ -542,8 +559,8 @@ function App() {
         <ThemeToggle theme={theme} onToggle={toggleTheme} />
         </header>
 
-        <main className="dashboard">
-          <Suspense fallback={<div className="page-loading">Loading…</div>}>
+        <main key={currentPage} className="dashboard fx-page">
+          <Suspense fallback={<PageSkeleton variant="list" />}>
           <WeightPage
             onBack={() =>
               setCurrentPage("dashboard")
@@ -569,8 +586,8 @@ function App() {
         <ThemeToggle theme={theme} onToggle={toggleTheme} />
         </header>
 
-        <main className="dashboard">
-          <Suspense fallback={<div className="page-loading">Loading…</div>}>
+        <main key={currentPage} className="dashboard fx-page">
+          <Suspense fallback={<PageSkeleton variant="list" />}>
           <ProfilePage
             onBack={() =>
               setCurrentPage("dashboard")
@@ -594,8 +611,8 @@ function App() {
           <BrandHome onHome={() => setCurrentPage("dashboard")} />
         <ThemeToggle theme={theme} onToggle={toggleTheme} />
         </header>
-        <main className="dashboard">
-          <Suspense fallback={<div className="page-loading">Loading…</div>}>
+        <main key={currentPage} className="dashboard fx-page">
+          <Suspense fallback={<PageSkeleton variant="list" />}>
           <ProgressPage onBack={() => setCurrentPage("dashboard")} />
         </Suspense>
         </main>
@@ -610,8 +627,8 @@ function App() {
           <BrandHome onHome={() => setCurrentPage("dashboard")} />
           <ThemeToggle theme={theme} onToggle={toggleTheme} />
         </header>
-        <main className="dashboard">
-          <Suspense fallback={<div className="page-loading">Loading…</div>}>
+        <main key={currentPage} className="dashboard fx-page">
+          <Suspense fallback={<PageSkeleton variant="list" />}>
             {currentPage === "planner"
               ? <PlannerPage onBack={() => setCurrentPage("dashboard")} goTo={setCurrentPage} />
               : <RecipesPage onBack={() => setCurrentPage("foodLogger")} />}
@@ -646,8 +663,8 @@ function App() {
 
         </header>
 
-        <main className="dashboard">
-          <Suspense fallback={<div className="page-loading">Loading…</div>}>
+        <main key={currentPage} className="dashboard fx-page">
+          <Suspense fallback={<PageSkeleton variant="list" />}>
           <FoodPage />
         </Suspense>
         </main>
@@ -801,7 +818,7 @@ function App() {
 
       </header>
 
-      <main className="dashboard">
+      <main key={currentPage} className="dashboard fx-page">
 
         {/* ==================================================== */}
         {/* WELCOME */}

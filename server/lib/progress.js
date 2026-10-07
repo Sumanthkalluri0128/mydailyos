@@ -21,6 +21,7 @@ const emptyDay = (date) => ({
   fat: 0,
   fiber: 0,
   sugar: 0,
+  sodium: 0,
   waterMl: 0,
   exerciseMinutes: 0,
   caloriesBurned: 0,
@@ -58,6 +59,7 @@ async function buildHistory(userId, from, to) {
     day.fat += Number(n.fat || 0);
     day.fiber += Number(n.fiber || 0);
     day.sugar += Number(n.sugar || 0);
+    day.sodium += Number(n.sodium || 0);
   }
   for (const log of activities) {
     const day = dayMap.get(log.date);

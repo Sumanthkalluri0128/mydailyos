@@ -1,4 +1,6 @@
-import { useId, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
+import StreakFlame from "../motion/StreakFlame";
+import { buzz, fireConfetti, useCelebrateOnce } from "../motion/motion";
 import { apiFetch } from "../config/api";
 import { dayBalance } from "../utils/energy";
 import { coachLine } from "../utils/coach";
@@ -6,13 +8,21 @@ import { coachLine } from "../utils/coach";
 const greeting = (h) => (h < 5 ? "Still up" : h < 12 ? "Good morning" : h < 17 ? "Good afternoon" : h < 22 ? "Good evening" : "Good night");
 const n = (v) => Math.round(Number(v) || 0).toLocaleString();
 
-function Ring({ size, stroke, pct, color, gradient, children, label }) {
+function Ring({ size, stroke, pct, color, gradient, children, label, celebrate = false }) {
   const id = useId();
+  const box = useRef(null);
   const r = (size - stroke) / 2;
   const circ = 2 * Math.PI * r;
   const fill = Math.max(0, Math.min(1, pct));
+  const [shown, setShown] = useState(0); // start empty so the sweep plays on mount
+  const [pop, setPop] = useState(false);
+  useEffect(() => { const f = requestAnimationFrame(() => setShown(fill)); return () => cancelAnimationFrame(f); }, [fill]);
+  useCelebrateOnce(label, celebrate && fill >= 1, () => {
+    setPop(true); buzz([18, 40, 18]); fireConfetti({ from: box.current, count: 60 });
+    setTimeout(() => setPop(false), 1300);
+  });
   return (
-    <div className="ring" style={{ width: size, height: size }} role="img" aria-label={label}>
+    <div ref={box} className={pop ? "ring is-pop" : "ring"} style={{ width: size, height: size, "--ring-color": color }} role="img" aria-label={label}>
       <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
         {gradient && (
           <defs>
@@ -26,7 +36,7 @@ function Ring({ size, stroke, pct, color, gradient, children, label }) {
         <circle
           cx={size / 2} cy={size / 2} r={r} fill="none" strokeLinecap="round" strokeWidth={stroke}
           stroke={gradient ? `url(#${id})` : color}
-          strokeDasharray={`${circ} ${circ}`} strokeDashoffset={circ * (1 - fill)}
+          strokeDasharray={`${circ} ${circ}`} strokeDashoffset={circ * (1 - shown)}
           transform={`rotate(-90 ${size / 2} ${size / 2})`} className="ring-fill"
         />
       </svg>
@@ -65,12 +75,22 @@ export default function DashboardHero({ profile, today, summary, activity, water
     { key: "exercise", icon: "🏃", label: "Exercise", value: exerciseMin, target: exerciseTarget, text: `${exerciseMin} min`, color: "var(--primary)", page: "exercise" },
   ];
 
+  // Jackpot: all three rings closed (fires once per day, after the last ring's own pop).
+  const allDone = minis.every((m) => m.target > 0 && m.value >= m.target);
+  useCelebrateOnce("all-rings", allDone, () => {
+    setTimeout(() => { fireConfetti({ count: 160, spread: Math.PI * 1.6 }); buzz([30, 60, 30, 60, 90]); }, 700);
+  });
+
+  const [waterOk, setWaterOk] = useState(false);
   const quickWater = async () => {
     if (adding) return;
     setAdding(true);
     try {
       const res = await apiFetch("/api/water", { method: "POST", body: JSON.stringify({ date: today, amountMl: 250 }) });
-      if (res.ok) onChanged?.();
+      if (res.ok) {
+        buzz([12, 30, 12]); setWaterOk(true); setTimeout(() => setWaterOk(false), 1100);
+        onChanged?.();
+      }
     } finally {
       setAdding(false);
     }
@@ -83,7 +103,7 @@ export default function DashboardHero({ profile, today, summary, activity, water
         <h2>{greeting(hour)}{first ? `, ${first}` : ""}</h2>
         {streak && (
           <button type="button" className="streak-chip" onClick={() => goTo("progress")} aria-label={streak.current > 0 ? `${streak.current} day streak` : "Start a streak"}>
-            <span>{streak.current > 0 ? "🔥" : "🌱"}</span><strong>{streak.current}</strong>
+            {streak.current > 0 ? <StreakFlame streak={streak.current} compact bare /> : <span>🌱</span>}<strong>{streak.current}</strong>
           </button>
         )}
       </header>
@@ -117,7 +137,7 @@ export default function DashboardHero({ profile, today, summary, activity, water
           const done = m.target > 0 && m.value >= m.target;
           return (
             <button key={m.key} type="button" className="mini" onClick={() => goTo(m.page)} aria-label={`${m.label}: ${m.text}${done ? ", goal reached" : ""}`}>
-              <Ring size={78} stroke={8} pct={m.target > 0 ? m.value / m.target : 0} color={m.color} label={m.label}>
+              <Ring size={78} stroke={8} pct={m.target > 0 ? m.value / m.target : 0} color={m.color} label={m.label} celebrate>
                 <span className="mini-icon">{done ? "✅" : m.icon}</span>
               </Ring>
               <strong>{m.text}</strong>
@@ -129,7 +149,7 @@ export default function DashboardHero({ profile, today, summary, activity, water
 
       <div className="quick" role="group" aria-label="Quick actions">
         <button type="button" onClick={() => goTo("foodLogger")}><span>🍽️</span>Food</button>
-        <button type="button" onClick={quickWater} disabled={adding}><span>💧</span>+250 ml</button>
+        <button type="button" className={waterOk ? "fx-pulse" : undefined} onClick={quickWater} disabled={adding}><span>{waterOk ? "✅" : "💧"}</span>{waterOk ? "Added" : "+250 ml"}</button>
         <button type="button" onClick={() => goTo("exercise")}><span>🏃</span>Workout</button>
         <button type="button" onClick={() => goTo("health")}><span>👟</span>Steps</button>
       </div>

@@ -102,7 +102,7 @@ router.post('/weekly/email', emailLimiter, wrap(async (req, res) => {
   const end = req.body?.end ? v.date(req.body.end, 'end') : todayUtc();
   const d = await digestFor(req.user.id, end);
   if (!d) throw new HttpError(404, 'Account not found');
-  await sendMail({ to: d.user.email, subject: d.subject, text: d.text });
+  await sendMail({ to: d.user.email, subject: d.subject, text: d.text, html: d.html, headers: d.headers });
   res.json({ success: true, message: `Sent to ${d.user.email}` });
 }));
 

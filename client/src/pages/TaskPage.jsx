@@ -1,4 +1,5 @@
 import { confirmAction } from "../utils/confirm";
+import { AnimatedCheck } from "../motion/ActionKit";
 import { notify } from "../utils/notify";
 import { apiFetch } from "../config/api";
 import { useEffect, useState } from "react";
@@ -283,16 +284,10 @@ function TaskPage({ onBack }) {
 
                   <div className="task-main">
 
-                    <input
-                      type="checkbox"
-                      checked={task.completed}
-                      onChange={() =>
-                        toggleTask(task._id)
-                      }
-                    />
+                    <AnimatedCheck checked={task.completed} onChange={() => toggleTask(task._id)} label={`Mark "${task.title}" ${task.completed ? "not done" : "done"}`} />
 
                     <div>
-                      <h3>{task.title}</h3>
+                      <h3 className={`fx-strike${task.completed ? " is-done" : ""}`}>{task.title}</h3>
 
                       {task.description && (
                         <p>{task.description}</p>

@@ -1,0 +1,96 @@
+/* FlexFit motion kit: tokens, keyframes, components. Import once from main.jsx. GPU-friendly: only transform/opacity/stroke-dashoffset animate. */
+:root{
+  --ff-ease-out:cubic-bezier(.22,1,.36,1);
+  --ff-ease-spring:cubic-bezier(.34,1.56,.64,1);
+  --ff-ease-inout:cubic-bezier(.65,0,.35,1);
+  --ff-tap:120ms; --ff-ui:240ms; --ff-reveal:600ms; --ff-hero:1100ms;
+  --fx-skel-a:rgba(120,120,150,.12); --fx-skel-b:rgba(120,120,150,.22);
+}
+
+/* 1. Goal rings */
+.fxr{position:relative;display:inline-block}
+.fxr svg{overflow:visible}
+.fxr-fill{transition:stroke-dashoffset var(--ff-hero) var(--ff-ease-out)}
+.fxr-check{stroke-dasharray:1;stroke-dashoffset:1;transition:stroke-dashoffset 380ms var(--ff-ease-out) 450ms}
+.fxr.is-done .fxr-check{stroke-dashoffset:0}
+.fxr.is-done .fxr-icon{opacity:0}
+.fxr-icon{transition:opacity 200ms}
+.fxr.is-pop svg{animation:fxrPop 700ms var(--ff-ease-spring)}
+.fxr.is-pop::after{content:"";position:absolute;inset:6px;border-radius:50%;border:3px solid var(--ring-color);opacity:0;animation:fxrShock 900ms var(--ff-ease-out) 200ms}
+@keyframes fxrPop{0%{transform:scale(1)}35%{transform:scale(1.14)}100%{transform:scale(1)}}
+@keyframes fxrShock{0%{opacity:.7;transform:scale(.9)}100%{opacity:0;transform:scale(1.7)}}
+.goal-rings.is-all-closed{animation:fxAllClosed 1400ms var(--ff-ease-out)}
+@keyframes fxAllClosed{0%,100%{filter:none}30%{filter:drop-shadow(0 0 18px rgba(104,71,232,.55))}}
+
+.ring.is-pop{position:relative}
+.ring.is-pop svg{animation:fxrPop 700ms var(--ff-ease-spring)}
+.ring.is-pop::after{content:"";position:absolute;inset:6px;border-radius:50%;border:3px solid var(--ring-color,#6847e8);opacity:0;animation:fxrShock 900ms var(--ff-ease-out) 200ms;pointer-events:none}
+
+/* 2. Streak flame */
+.flame{position:relative;display:inline-grid;place-items:center;width:calc(64px*var(--fs,1));height:calc(80px*var(--fs,1))}
+.flame svg{position:relative;z-index:1;width:100%;height:100%;overflow:visible}
+.flame-body{transform-origin:50% 100%;animation:flameFlicker calc(1.4s / var(--fspeed,1)) ease-in-out infinite;will-change:transform}
+.flame-inner{transform-origin:50% 100%;animation:flameFlicker calc(1s / var(--fspeed,1)) ease-in-out infinite reverse}
+.flame.is-out .flame-body,.flame.is-out .flame-inner{animation:none}
+.flame-glow{position:absolute;inset:-30%;border-radius:50%;background:radial-gradient(circle,var(--fglow,rgba(255,140,40,.45)),transparent 65%);opacity:var(--fglowo,.6);animation:flameGlow 2s ease-in-out infinite}
+.flame.is-bump .flame-body{animation:flameBump 900ms var(--ff-ease-spring)}
+.flame-spark{position:absolute;left:50%;bottom:55%;width:4px;height:4px;border-radius:50%;background:var(--fspark,#ffd36b);opacity:0;animation:sparkRise 1.8s ease-out infinite;animation-delay:var(--d,0s)}
+.flame-burst{position:absolute;left:50%;top:55%;width:5px;height:5px;border-radius:50%;background:var(--fspark,#ffd36b);animation:sparkBurst 800ms var(--ff-ease-out) forwards}
+.fx-roll{display:inline-block;animation:fxRoll 420ms var(--ff-ease-spring)}
+@keyframes flameFlicker{0%,100%{transform:scale(1,1) skewX(0)}25%{transform:scale(.97,1.05) skewX(-2deg)}50%{transform:scale(1.03,.97) skewX(1.5deg)}75%{transform:scale(.98,1.04) skewX(-1deg)}}
+@keyframes flameGlow{0%,100%{transform:scale(.92)}50%{transform:scale(1.08)}}
+@keyframes flameBump{0%{transform:scale(1)}40%{transform:scale(1.4,1.55)}100%{transform:scale(1)}}
+@keyframes sparkRise{0%{opacity:0;transform:translate(0,0)}15%{opacity:1}100%{opacity:0;transform:translate(var(--x,0px),-46px)}}
+@keyframes sparkBurst{0%{opacity:1;transform:translate(0,0) scale(1)}100%{opacity:0;transform:translate(calc(cos(var(--a))*var(--r)),calc(sin(var(--a))*var(--r))) scale(.2)}}
+@keyframes fxRoll{0%{opacity:0;transform:translateY(60%)}100%{opacity:1;transform:translateY(0)}}
+
+/* 3. Page + skeleton transitions */
+.fx-page{animation:fxPageIn 280ms var(--ff-ease-out) both}
+@keyframes fxPageIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+@supports (view-transition-name:none){ .fx-page{animation:none} }
+::view-transition-old(root){animation:fxFade 140ms var(--ff-ease-inout) reverse both}
+::view-transition-new(root){animation:fxFade 260ms var(--ff-ease-out) both}
+@keyframes fxFade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+.fx-skel{position:relative;overflow:hidden;background:var(--fx-skel-a);border-radius:var(--r,12px)}
+.fx-skel::after{content:"";position:absolute;inset:0;background:linear-gradient(90deg,transparent,var(--fx-skel-b),transparent);transform:translateX(-100%);animation:fxShimmer 1.4s ease-in-out infinite}
+@keyframes fxShimmer{to{transform:translateX(100%)}}
+.fx-reveal{animation:fxPageIn 420ms var(--ff-ease-out) both;animation-delay:calc(var(--i,0)*45ms)}
+
+/* 4. Action triggers */
+/* Global press feedback for existing buttons (no JSX changes needed) */
+.quick button,.mini,.ring-btn,.streak-chip,.primary-button,.secondary-button,.profile-avatar{transition:transform 320ms var(--ff-ease-spring),background-color 160ms,border-color 160ms,box-shadow 200ms,opacity 160ms}
+.quick button:not(:disabled):active,.mini:active,.ring-btn:active,.streak-chip:active,.primary-button:not(:disabled):active,.secondary-button:not(:disabled):active,.profile-avatar:active{transform:scale(.95);transition-duration:var(--ff-tap);transition-timing-function:var(--ff-ease-out)}
+.fx-pulse{animation:fxDone 500ms var(--ff-ease-spring)}
+.fx-btn{position:relative;overflow:hidden;display:inline-grid;transition:transform var(--ff-tap) var(--ff-ease-out),box-shadow var(--ff-ui)}
+.fx-btn:active{transform:scale(.95)}
+.fx-btn:not(:active){transition-timing-function:var(--ff-ease-spring);transition-duration:320ms}
+.fx-btn>.fx-state{grid-area:1/1;display:flex;align-items:center;justify-content:center;gap:6px;transition:opacity 180ms,transform 280ms var(--ff-ease-spring)}
+.fx-btn[data-s="idle"]>.fx-busy,.fx-btn[data-s="idle"]>.fx-done,.fx-btn[data-s="busy"]>.fx-idle,.fx-btn[data-s="busy"]>.fx-done,.fx-btn[data-s="done"]>.fx-idle,.fx-btn[data-s="done"]>.fx-busy{opacity:0;transform:translateY(8px) scale(.8);pointer-events:none}
+.fx-btn[data-s="done"]{animation:fxDone 500ms var(--ff-ease-spring)}
+@keyframes fxDone{40%{transform:scale(1.07)}}
+.fx-ripple{position:absolute;border-radius:50%;background:currentColor;opacity:.25;transform:scale(0);animation:fxRipple 600ms var(--ff-ease-out) forwards;pointer-events:none}
+@keyframes fxRipple{to{transform:scale(1);opacity:0}}
+.fx-spin{width:14px;height:14px;border-radius:50%;border:2px solid currentColor;border-right-color:transparent;animation:fxSpin .7s linear infinite}
+@keyframes fxSpin{to{transform:rotate(360deg)}}
+.fx-check{display:inline-grid;place-items:center;width:26px;height:26px;border-radius:50%;border:2px solid var(--fx-check-border,#b9b9c8);background:transparent;padding:0;cursor:pointer;transition:background var(--ff-ui),border-color var(--ff-ui),transform var(--ff-tap)}
+.fx-check:active{transform:scale(.88)}
+.fx-check svg{width:16px;height:16px}
+.fx-check path{stroke:#fff;stroke-width:3;fill:none;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:1;stroke-dashoffset:1;transition:stroke-dashoffset 280ms var(--ff-ease-out) 80ms}
+.fx-check[aria-checked="true"]{background:var(--fx-check-color,#20a46b);border-color:var(--fx-check-color,#20a46b);animation:fxCheckPop 420ms var(--ff-ease-spring)}
+.fx-check[aria-checked="true"] path{stroke-dashoffset:0}
+@keyframes fxCheckPop{40%{transform:scale(1.25)}}
+.fx-strike{background:linear-gradient(currentColor,currentColor) 0 55%/0 2px no-repeat;transition:background-size 320ms var(--ff-ease-out)}
+.fx-strike.is-done{background-size:100% 2px}
+.task-item.completed h3.fx-strike{text-decoration:none}
+.fx-focus{position:relative;display:inline-block}
+.fx-focus-arc{stroke-dasharray:1;stroke-dashoffset:0;animation-name:fxFocus;animation-timing-function:linear;animation-fill-mode:forwards}
+@keyframes fxFocus{to{stroke-dashoffset:1}}
+.fx-focus.is-start::after{content:"";position:absolute;inset:0;border-radius:50%;border:3px solid var(--fx-focus-color,#6847e8);animation:fxrShock 800ms var(--ff-ease-out)}
+
+@media (prefers-reduced-motion:reduce){
+  .ring.is-pop svg,.ring.is-pop::after,.fx-pulse{animation:none!important}
+  .quick button,.mini,.ring-btn,.streak-chip,.primary-button,.secondary-button,.profile-avatar{transition-duration:.01ms!important}
+  .fxr-fill,.fxr-check{transition:none}
+  .fxr.is-pop svg,.fxr.is-pop::after,.flame-body,.flame-inner,.flame-glow,.flame-spark,.flame-burst,.fx-skel::after,.fx-page,.fx-reveal,.fx-roll,.fx-btn[data-s="done"],.fx-check[aria-checked="true"],.goal-rings.is-all-closed{animation:none!important}
+  .fx-btn,.fx-btn>.fx-state,.fx-check{transition-duration:.01ms!important}
+}

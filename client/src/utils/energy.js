@@ -53,7 +53,9 @@ function expectedEnergy(p) {
   const gap = direction === 'maintain' ? 0 : Math.round((pace * KCAL_PER_KG) / 7);
   const floor = p.sex === 'male' ? 1500 : 1200; // never a crash diet
   const raw = direction === 'lose' ? tdee - gap : direction === 'gain' ? tdee + gap : tdee;
-  const autoTarget = Math.round(Math.max(floor, raw) / 10) * 10;
+  // Never below the safety floor — and when the goal is to lose, never above maintenance (the floor could otherwise push a small,
+  // low-activity person into a surplus).
+  const autoTarget = Math.round((direction === 'lose' ? Math.min(Math.max(floor, raw), tdee) : Math.max(floor, raw)) / 10) * 10;
 
   const manual = goals.calorieMode === 'manual' && n(goals.calorieTarget) > 0;
   return {
@@ -117,10 +119,21 @@ function waterTargetMl(weightKg) {
 
 /** Macro targets that add up to the calorie target: protein by body weight (or the saved goal), fat ~27%, carbs the rest. */
 function macroTargets(calorieTarget, weightKg, direction, proteinOverride) {
-  const protein = Math.round(n(proteinOverride) || n(weightKg) * (direction === 'gain' ? 2 : 1.6));
+  // Protein: the person's own number if set, otherwise 1.6 g/kg (2.0 when gaining) — capped at 35 % of calories,
+  // the top of the accepted macronutrient range, so a large body on a modest budget doesn't get an extreme target.
+  const protein = Math.round(n(proteinOverride) || Math.min(n(weightKg) * (direction === 'gain' ? 2 : 1.6), (calorieTarget * 0.35) / 4));
   const fat = Math.round((calorieTarget * 0.27) / 9);
   const carbs = Math.max(0, Math.round((calorieTarget - protein * 4 - fat * 9) / 4));
   return { protein, fat, carbs, fiber: Math.round((calorieTarget / 1000) * 14) };
+}
+
+
+/**
+ * Soft ceilings (not goals): sodium 2,000 mg/day (WHO) and sugar at 10 % of calories (WHO guideline for FREE sugars;
+ * logged sugar also includes the natural sugar in fruit and milk, so treat the sugar figure as a guide, not a rule).
+ */
+function limitTargets(calorieTarget) {
+  return { sodiumMg: 2000, sugar: Math.round((n(calorieTarget) * 0.1) / 4) };
 }
 
 /** Weeks to reach the goal weight at the chosen pace (null when there's nothing to lose or gain). */
@@ -145,5 +158,5 @@ function calorieBalance(energy, eaten, burned) {
 export {
   ACTIVITY_MULTIPLIER, KCAL_PER_KG, KCAL_PER_STEP_PER_KG, DEFAULT_TARGET,
   bmr, goalDirection, expectedEnergy, dailyTarget, dayBalance,
-  stepCalories, stepDistanceKm, waterTargetMl, macroTargets, weeksToGoal, estimateBurn, calorieBalance,
+  stepCalories, stepDistanceKm, waterTargetMl, macroTargets, limitTargets, weeksToGoal, estimateBurn, calorieBalance,
 };

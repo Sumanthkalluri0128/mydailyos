@@ -32,6 +32,31 @@ router.get('/summary', wrap(async (req, res) => {
   res.json({ success: true, summary });
 }));
 
+// Eating out / "I don't have the exact food": log an estimate. Optionally give a range (e.g. 600–900 kcal) — the midpoint is
+// logged and the range is kept in the note. Uses one hidden placeholder food per person so every log still points at a food.
+router.post('/quick', wrap(async (req, res) => {
+  const uid = req.user.id;
+  const date = v.date(req.body?.date);
+  const mealType = v.oneOf(req.body?.mealType, 'mealType', MEALS);
+  const name = v.string(req.body?.name, 'name', { max: 80, required: true });
+  const num = (key, opts = {}) => v.number(req.body?.[key], key, { min: 0, max: 10000, required: false, def: 0, ...opts });
+  const low = num('caloriesLow'), high = num('caloriesHigh');
+  let calories = num('calories', { required: false, def: 0 });
+  if (!calories && low && high) calories = Math.round((low + high) / 2);
+  if (!(calories > 0)) throw new HttpError(400, 'Enter an estimated calorie amount');
+  if ((low || high) && !(low <= calories && calories <= (high || calories))) throw new HttpError(400, 'The estimate must sit inside the range');
+  const total = { calories, protein: num('protein'), carbohydrates: num('carbohydrates'), fat: num('fat'), fiber: num('fiber'), sugar: num('sugar'), sodium: num('sodium') };
+
+  let base = await Food.findOne({ userId: uid, hidden: true, name: 'Quick add' });
+  if (!base) base = await Food.create({ userId: uid, hidden: true, name: 'Quick add', servingSize: 1, servingUnit: 'serving', calories: 0, units: [{ label: 'serving', quantity: 1 }], notes: 'Placeholder for estimated entries' });
+  const note = low && high ? `Estimate ${Math.round(low)}–${Math.round(high)} kcal` : 'Estimate';
+  const { doc, duplicate } = await createOnce(FoodLog, uid, v.clientId(req.body?.clientId), {
+    foodId: base._id, date, mealType, foodName: name, baseServingSize: 1, servingUnit: 'serving', consumedQuantity: 1, servings: 1,
+    nutritionPerServing: total, nutritionTotal: total, notes: note,
+  });
+  res.status(duplicate ? 200 : 201).json({ success: true, log: doc, duplicate });
+}));
+
 router.post('/', wrap(async (req, res) => {
   const date = v.date(req.body?.date);
   const mealType = v.oneOf(req.body?.mealType, 'mealType', MEALS);
