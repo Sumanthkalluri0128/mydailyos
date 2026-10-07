@@ -3,7 +3,7 @@
 // login = greeters (they look away while you type your password), signup = recruiters (patrol and spar beside the form).
 import { useEffect, useRef, useState } from "react";
 import "./roamers.css";
-import { CHARS, sprite } from "./chars";
+import { CHARS, sprite, walkStrip } from "./chars";
 
 const KEYS = Object.keys(CHARS);
 const rnd = (a, b) => a + Math.random() * (b - a);
@@ -24,10 +24,9 @@ const ROUT = {
 const SOLO = { morning: ["habit", "drink", "wave", "scale"], noon: ["eat", "drink", "task"], afternoon: ["task", "plan", "walk", "habit"], evening: ["dance", "habit", "wave"], night: ["sleep"] };
 const DUO = { morning: ["habit", "habit", "drink", "fight"], noon: ["eat", "eat", "fight"], afternoon: ["fight", "task", "fight"], evening: ["fight", "fight", "dance"], night: ["sleep"] };
 
-function Sprite({ src, walk, anim, size }) {
+function Sprite({ src, who, walk, anim, size }) {
   if (!walk) return <img className={`rm-img rm-${anim}`} src={src} width={size} height={size} alt="" draggable="false" />;
-  const I = (c) => <img className={`rm-p ${c}`} src={src} alt="" draggable="false" />; // one sprite, cut into body / 2 arms / 2 legs that swing
-  return <span className="rm-walker" style={{ width: size, height: size }}>{I("rm-body")}{I("rm-arm rm-arm-l")}{I("rm-arm rm-arm-r")}{I("rm-leg rm-leg-l")}{I("rm-leg rm-leg-r")}</span>;
+  return <span className="rm-strip" style={{ width: size, height: size, backgroundImage: `url(${walkStrip(who)})` }} />; // baked walk cycle
 }
 
 export default function Roamers() {
@@ -216,7 +215,7 @@ export default function Roamers() {
           style={{ transform: `translate(${m.x}px, ${m.y}px)`, transition: `transform ${m.dur}s ease-in-out, opacity .4s`, "--sz": `${size}px` }}>
           {m.say && <span className="rm-say">{m.say}</span>}
           <span className="rm-f" style={{ transform: `scaleX(${m.flip})` }}>
-            <Sprite src={sprite(m.who, m.pose)} walk={m.pose === "walk" && m.anim === "walk"} anim={m.anim} size={size} />
+            <Sprite src={sprite(m.who, m.pose)} who={m.who} walk={m.pose === "walk" && m.anim === "walk"} anim={m.anim} size={size} />
           </span>
         </button>
       ))}

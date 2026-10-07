@@ -12,3 +12,6 @@ export function sprite(who, scene) {
   const ok = (HAS[who] || BASE).includes(scene) ? scene : FALLBACK[scene] || "task";
   return `${import.meta.env.BASE_URL}chars/${who}-${ok}.webp`;
 }
+
+// Baked 8-frame walk cycle (legs stride, arms swing) for each character.
+export const walkStrip = (who) => `${import.meta.env.BASE_URL}chars/${who}-walkstrip.webp`;
