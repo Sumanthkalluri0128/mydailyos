@@ -18,6 +18,7 @@ import CalorieBalance from "./components/CalorieBalance";
 import { waterTargetMl } from "./utils/energy";
 import { currentOwner } from "./utils/cacheOwner";
 import DashboardHero from "./components/DashboardHero";
+import BuddyStage from "./motion/BuddyStage";
 import { PageSkeleton } from "./motion/PageTransition";
 import { withTransition } from "./motion/motion";
 import MacroCard from "./components/MacroCard";
@@ -835,6 +836,8 @@ function App() {
           onChanged={() => setSyncTick((t) => t + 1)}
           streak={streak}
         />
+
+        <BuddyStage />
 
         <section className="stats-grid two">
 

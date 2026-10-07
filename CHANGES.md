@@ -1,3 +1,14 @@
+# v8.7 — your characters, one per day, plus a fighting / dancing stage
+
+- **Characters** (Zoro, Naruto, Luffy, Jin-Woo) replace the bean and the anime-hair version everywhere `Buddy` is used (toasts, empty states, page headers, quick actions).
+  **One character hosts each day**: Sun Zoro, Mon Naruto, Tue Luffy, Wed Jin-Woo, Thu Zoro, Fri Naruto, Sat Luffy (`chars` file). Pin one with `who="naruto"`.
+- Naruto and Luffy have 7 poses, so scenes they don't have (plan, chart, health, chef, habit, cheer, wave) borrow the closest pose.
+- **Stage** (`BuddyStage`) between sections on the dashboard / home: today's character plus a random rival. Every few seconds they fight (charge, clash, POW!, retreat),
+  dance (hop, sway, flip, music notes) or hang out. Tap the stage to start a fight or a dance.
+- Pictures live in `client/public/chars`. Calm mode / "Reduce motion" show still pictures.
+
+---
+
 # v8.6 — anime-style cast + animated world (web)
 
 - **New characters**: Flex is now an original anime-style character with spiky hair, big glossy eyes that blink and twinkle, and swaying hair. Every screen has its own look

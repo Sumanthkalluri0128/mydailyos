@@ -1,0 +1,38 @@
+/* Character images: idle motions per scene (Buddy) and the fight / dance stage (BuddyStage). */
+.bdi{display:inline-flex;align-items:flex-end;justify-content:center;flex:none;line-height:0}
+.bdi-img{object-fit:contain;transform-origin:50% 100%;animation-duration:var(--bt,1200ms);animation-iteration-count:infinite;animation-timing-function:ease-in-out;user-select:none;-webkit-user-drag:none}
+.bdi-bob{animation-name:bdiBob}.bdi-push{animation-name:bdiPush}.bdi-slump{animation-name:bdiSlump}.bdi-wobble{animation-name:bdiWobble}
+.bdi-bounce{animation-name:bdiBounce}.bdi-nod{animation-name:bdiNod}.bdi-beat{animation-name:bdiBeat}.bdi-jump{animation-name:bdiJump}
+@keyframes bdiBob{0%,100%{transform:translateY(0) scale(1,1)}50%{transform:translateY(-3%) scale(1.02,.98)}}
+@keyframes bdiPush{0%,100%{transform:scale(1,1)}50%{transform:scale(1.05,.95) translateY(2%)}}
+@keyframes bdiSlump{0%,100%{transform:scale(1,1)}50%{transform:scale(1.01,.965)}}
+@keyframes bdiWobble{0%,100%{transform:rotate(-2.5deg)}50%{transform:rotate(2.5deg)}}
+@keyframes bdiBounce{0%,100%{transform:translateY(0) rotate(-1deg)}50%{transform:translateY(-7%) rotate(1deg)}}
+@keyframes bdiNod{0%,100%{transform:translateY(0) rotate(0)}50%{transform:translateY(2%) rotate(1.5deg)}}
+@keyframes bdiBeat{0%,100%{transform:scale(1)}50%{transform:scale(1.045)}}
+@keyframes bdiJump{0%,100%{transform:translateY(0) scale(1.03,.97)}50%{transform:translateY(-12%) scale(.97,1.04)}}
+
+.bds{display:flex;flex-direction:column;align-items:center;gap:4px;margin:6px auto;padding:10px 12px 8px;max-width:620px;border-radius:22px;cursor:pointer;user-select:none;
+  background:linear-gradient(120deg,rgba(124,92,255,.14),rgba(255,111,177,.14),rgba(34,211,238,.14));border:1px solid rgba(124,92,255,.22)}
+.bds-row{position:relative;display:flex;justify-content:center;align-items:flex-end;gap:var(--gap);height:calc(var(--sz) * 1.05);width:100%}
+.bds-c{display:inline-flex;transition:transform .36s cubic-bezier(.3,1.5,.5,1)}
+.bds-f{display:inline-flex;transform-origin:50% 100%}
+.bds-img{object-fit:contain;transform-origin:50% 100%;filter:drop-shadow(0 8px 10px rgba(31,35,64,.25));-webkit-user-drag:none}
+.bds-idle{animation:bdiBob 2.4s ease-in-out infinite}
+.bds-run{animation:bdiBounce .24s ease-in-out infinite}
+.bds-shake{animation:bdsShake .16s linear infinite}
+.bds-dance{animation:bdsHop .42s ease-in-out infinite}
+.bds-dance2{animation:bdsSway .84s ease-in-out infinite}
+@keyframes bdsShake{0%,100%{transform:translate(0,0) rotate(0)}25%{transform:translate(-3px,1px) rotate(-3deg)}75%{transform:translate(3px,-1px) rotate(3deg)}}
+@keyframes bdsHop{0%,100%{transform:translateY(0) scale(1.04,.94) rotate(-4deg)}50%{transform:translateY(-16%) scale(.96,1.06) rotate(4deg)}}
+@keyframes bdsSway{0%,100%{transform:rotate(-8deg) translateY(0)}25%{transform:rotate(0) translateY(-10%)}50%{transform:rotate(8deg) translateY(0)}75%{transform:rotate(0) translateY(-10%)}}
+.bds-hit{position:absolute;left:50%;top:6%;translate:-50% 0;display:flex;flex-direction:column;align-items:center;font-size:calc(var(--sz) * .42);line-height:1;animation:bdsPop .48s ease-out both;pointer-events:none}
+.bds-hit b{font:900 calc(var(--sz) * .17)/1 Inter,Arial,sans-serif;color:#fff;-webkit-text-stroke:3px #e8476f;paint-order:stroke fill;letter-spacing:.02em}
+@keyframes bdsPop{0%{transform:scale(.2) rotate(-18deg);opacity:0}45%{transform:scale(1.25) rotate(6deg);opacity:1}100%{transform:scale(1) rotate(0);opacity:.95}}
+.bds-notes{position:absolute;left:50%;top:0;translate:-50% 0;display:flex;gap:calc(var(--sz) * .25);font-size:calc(var(--sz) * .26);color:#7c5cff;pointer-events:none}
+.bds-notes i{font-style:normal;animation:bdsNote 1.6s ease-out infinite}.bds-notes i:nth-child(2){animation-delay:.5s;color:#ff6fb1}.bds-notes i:nth-child(3){animation-delay:1s;color:#22d3ee}
+@keyframes bdsNote{0%{transform:translateY(30%) scale(.6);opacity:0}30%{opacity:1}100%{transform:translateY(-70%) rotate(18deg) scale(1.1);opacity:0}}
+.bds-cap{font-size:13px;font-weight:800;letter-spacing:.02em;color:var(--text,#1f2340);opacity:.8}
+
+html.ff-calm .bdi-img,html.ff-calm .bds-img,html.ff-calm .bds-notes i,html.ff-calm .bds-hit{animation:none}
+@media (prefers-reduced-motion:reduce){.bdi-img,.bds-img,.bds-notes i,.bds-hit{animation:none!important}.bds-c{transition:none}}
