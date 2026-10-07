@@ -1,0 +1,24 @@
+.rm-layer{position:fixed;inset:0;pointer-events:none;z-index:40;overflow:hidden}
+.rm-c{position:absolute;left:0;top:0;width:var(--sz);height:var(--sz);padding:0;border:0;background:none;cursor:pointer;pointer-events:auto;
+  transition:transform 1.8s cubic-bezier(.45,.05,.25,1);-webkit-tap-highlight-color:transparent}
+.rm-f{display:block;transition:transform .25s}
+.rm-img{display:block;filter:drop-shadow(0 6px 6px rgba(0,0,0,.28));user-select:none}
+.rm-run{animation:rm-run .32s ease-in-out infinite}
+.rm-shake{animation:rm-shake .12s linear infinite}
+.rm-eat{animation:rm-eat .5s ease-in-out infinite}
+.rm-lift{animation:rm-lift .8s ease-in-out infinite}
+.rm-dance{animation:rm-dance .5s ease-in-out infinite}
+.rm-idle{animation:rm-idle 2.4s ease-in-out infinite}
+@keyframes rm-run{50%{transform:translateY(-8px) rotate(4deg)}}
+@keyframes rm-shake{25%{transform:translate(-4px,2px) rotate(-3deg)}75%{transform:translate(4px,-2px) rotate(3deg)}}
+@keyframes rm-eat{50%{transform:scale(1.08,.93)}}
+@keyframes rm-lift{50%{transform:translateY(-6px) scale(.96,1.06)}}
+@keyframes rm-dance{25%{transform:translateY(-12px) rotate(-8deg)}75%{transform:translateY(-12px) rotate(8deg)}}
+@keyframes rm-idle{50%{transform:translateY(-3px)}}
+.rm-say{position:absolute;left:50%;bottom:100%;transform:translateX(-50%);white-space:nowrap;padding:3px 9px;border-radius:12px;
+  background:#fff;color:#111;font:800 12px/1.2 system-ui,sans-serif;box-shadow:0 2px 8px rgba(0,0,0,.25)}
+.rm-burst{position:absolute;inset:-14%;border-radius:50%;background:radial-gradient(circle,var(--fx) 0,transparent 68%);opacity:.65;animation:rm-pulse .35s ease-in-out infinite}
+@keyframes rm-pulse{50%{transform:scale(1.25);opacity:.9}}
+@media (max-width:640px){.rm-say{font-size:10px}}
+.ff-calm .rm-img,.ff-calm .rm-burst{animation:none}
+@media (prefers-reduced-motion:reduce){.rm-img,.rm-burst{animation:none}.rm-c{transition-duration:.01s}}

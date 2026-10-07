@@ -12,6 +12,7 @@ import "./motion/motion.css"; // older animation kit (mostly switched off, see b
 import "./motion/buddy.css"; // Flex the mascot, tap marker, calm mode: last so it wins
 import "./motion/fun.css"; // animated backdrop + lively UI motion
 import FunBackdrop from "./motion/FunBackdrop";
+import Roamers from "./motion/Roamers";
 import { installTapMarker } from "./motion/tapMarker";
 
 installTapMarker();
@@ -35,6 +36,7 @@ document.addEventListener("focusin", (event) => {
 ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>
     <FunBackdrop />
+    <Roamers />
     <ToastHost />
     <ConfirmHost />
     <ServerWakeBanner />
