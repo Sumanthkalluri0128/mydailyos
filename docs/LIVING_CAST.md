@@ -1,16 +1,15 @@
-# FlexFit Living Cast 3.0
+# FlexFit Living Cast 4.0
 
-The Living Cast is a lightweight, pointer-transparent animation overlay.
+The Living Cast is a lightweight, pointer-events-none overlay limited to two characters.
 
-## Behavior
-- Maximum 2 characters visible at once.
-- Characters maintain a collision/separation radius during normal roaming; they never sit on top of one another.
-- Characters can walk, idle, sleep, eat, dance, meditate, jump, climb UI ledges, climb a rope from bottom to top, and climb a procedural mountain path.
-- When two awake characters meet, they stop at a deliberate fighting distance and alternate attacks instead of overlapping.
-- Combat includes punch, kick, dash, block, dodge, and character-specific special effects: Rasengan, Kamehameha, Gear Attack, Shadow Strike, Three Sword Slash, and Domain.
-- Special effects are mathematically anchored to the same character root. The character itself remains one complete sprite, so arms/legs/head cannot detach.
-- The web version uses one HTML5 Canvas and requestAnimationFrame. No game engine is required.
-- `pointer-events:none` keeps the page underneath clickable.
+## Animation rules
+- Characters are rendered as one complete sprite; no body parts are independently positioned.
+- State changes are deliberate and slow. A character does not randomly swap to a different activity image every frame.
+- Walking, rope climbing and mountain climbing use the same 8-frame walk cycle at a controlled cadence.
+- Rope climbing takes roughly 9–12 seconds and moves continuously from the bottom toward the top.
+- Mountain climbing takes roughly 9–13 seconds and follows a smooth eased path.
+- Characters are kept apart by a minimum separation distance except during a deliberately staged fight, where they stop at a fixed combat distance.
+- Fights use a fixed fight sprite plus whole-body anticipation/lunge/dodge transforms and anchored effects. Special attacks originate from the character root/hand anchor without detaching limbs.
 
-## Character rigidity
-The walk cycle is cropped from the 8-frame composite walk strip. Only one 256px frame is sampled per animation frame. Combat never splits the source sprite into separate DOM/canvas body parts.
+## Activities
+Idle/breathing, walking, rope climbing, mountain climbing, jumping, dancing, eating, meditating, sleeping, and staged character-vs-character combat.
