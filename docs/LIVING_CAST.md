@@ -1,19 +1,16 @@
-# FlexFit Living Cast 2.0
+# FlexFit Living Cast 3.0
 
-The floating character layer is now a lightweight state-machine animation system.
+The Living Cast is a lightweight, pointer-transparent animation overlay.
 
-- Maximum two visible characters.
-- Web uses one fixed HTML5 Canvas with `pointer-events:none`.
-- Mobile uses one absolute overlay whose animated character roots are also non-interactive.
-- Characters are rendered as one composite sprite under a single rigid root. Arms, legs, head and torso are never independently positioned.
-- A locked mathematical rig is used for joint/hit-point calculations and a connected-vector fallback if a sprite is unavailable.
-- States: idle/breathing, walking, climbing, sleeping/resting, fighting, attacking and dodging.
-- Two nearby characters can automatically enter a short alternating fight sequence.
-- Web climbing can target the viewport edges and visible cards/buttons/sections.
-- Mobile climbing uses the screen edges.
-- Reduced-motion/calm mode disables the living cast.
+## Behavior
+- Maximum 2 characters visible at once.
+- Characters maintain a collision/separation radius during normal roaming; they never sit on top of one another.
+- Characters can walk, idle, sleep, eat, dance, meditate, jump, climb UI ledges, climb a rope from bottom to top, and climb a procedural mountain path.
+- When two awake characters meet, they stop at a deliberate fighting distance and alternate attacks instead of overlapping.
+- Combat includes punch, kick, dash, block, dodge, and character-specific special effects: Rasengan, Kamehameha, Gear Attack, Shadow Strike, Three Sword Slash, and Domain.
+- Special effects are mathematically anchored to the same character root. The character itself remains one complete sprite, so arms/legs/head cannot detach.
+- The web version uses one HTML5 Canvas and requestAnimationFrame. No game engine is required.
+- `pointer-events:none` keeps the page underneath clickable.
 
-The design deliberately avoids the previous detached-limb failure mode: pose animation changes the single character root/composite image rather than independently animating body parts.
-
-## Walk-strip rendering fix
-The 2048×256 walk sheet contains eight complete 256×256 composite character frames. The canvas renderer now uses `drawImage()` source cropping to render exactly one frame at a time; it never scales the entire strip into the character box. This prevents the eight-character duplication seen when the sheet is treated as a normal image.
+## Character rigidity
+The walk cycle is cropped from the 8-frame composite walk strip. Only one 256px frame is sampled per animation frame. Combat never splits the source sprite into separate DOM/canvas body parts.
