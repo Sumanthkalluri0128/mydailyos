@@ -1,266 +1,328 @@
-import { useEffect, useRef } from "react";
+// Living cast. Usually 2 characters (sometimes 1) roam the whole page and behave by time of day:
+//  morning  : runs, push-ups, squats, planks, weigh-ins, rope climbs      noon     : meals, swimming, studying macros
+//  afternoon: rope climbs, cycling, parkour over the page's cards, spars  evening  : parkour, power-ups, level-ups, big fights
+//  night    : one character sleeps.   Two-character scenes: fights, running races, rope-climb races, parkour.
+// Login / signup get their own behaviour (greeters / recruiters). Tap a character for a trick. Submit buttons trigger a celebration.
+import { useEffect, useRef, useState } from "react";
 import "./roamers.css";
-import { sprite, walkStrip } from "./chars";
+import { CHARS, ROPE_X, sprite, walkStrip, runStrip } from "./chars";
 
-// FlexFit Living Cast 4.0
-// IMPORTANT: each hero is rendered as one complete sprite. Activities animate the
-// whole rooted character; no arm/leg/head is ever detached or independently positioned.
-const WHO = ["zoro", "naruto", "luffy", "jinwoo", "goku", "gojo"];
-const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
-const rand = (a, b) => a + Math.random() * (b - a);
-const pick = (a) => a[(Math.random() * a.length) | 0];
-const reduced = () => document.documentElement.classList.contains("ff-calm") || window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+const KEYS = Object.keys(CHARS);
+const rnd = (a, b) => a + Math.random() * (b - a);
+const pick = (a) => a[Math.floor(Math.random() * a.length)];
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+const calm = () => document.documentElement.classList.contains("ff-calm") || window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+const slot = () => { const h = new Date().getHours(); return h >= 22 || h < 5 ? "night" : h < 10 ? "morning" : h < 14 ? "noon" : h < 18 ? "afternoon" : "evening"; };
+const authEl = () => document.querySelector(".auth-shell");
+const CONF = ["#f43f5e", "#f59e0b", "#22c55e", "#38bdf8", "#a855f7", "#facc15"];
 
-const POWER = {
-  zoro: { color: "#4ade80", name: "THREE SWORD SLASH", kind: "slash" },
-  naruto: { color: "#38bdf8", name: "RASENGAN", kind: "rasengan" },
-  luffy: { color: "#ef4444", name: "GEAR ATTACK", kind: "gear" },
-  jinwoo: { color: "#a855f7", name: "SHADOW STRIKE", kind: "shadow" },
-  goku: { color: "#f59e0b", name: "KAMEHAMEHA", kind: "beam" },
-  gojo: { color: "#818cf8", name: "DOMAIN", kind: "domain" },
+const EAT = { zoro: "Sake and rice. Perfect.", naruto: "Ichiraku ramen!", luffy: "MEEEAT!!", jinwoo: "Restoring HP…", goku: "Need. More. Food.", gojo: "Sweets break~" };
+const ROUT = {
+  habit: { pose: "habit", anim: "idle", say: () => "Focus. Breathe. Train." }, drink: { pose: "drink", anim: "eat", say: () => "Hydration check!" },
+  eat: { pose: "eat", anim: "eat", say: (w) => EAT[w] }, task: { pose: "task", anim: "idle", say: () => "Ticking off tasks" },
+  plan: { pose: "plan", anim: "idle", say: () => "Planning the week" }, dance: { pose: "dance", anim: "dance", say: () => "♪ ♫ ♪" },
+  wave: { pose: "wave", anim: "idle", say: () => "Keep your streak alive!" }, scale: { pose: "scale", anim: "idle", say: () => "Weigh-in time" },
+  sleep: { pose: "sleep", anim: "snore", say: () => "zZz…" }, walk: { pose: "walk", anim: "walk", say: () => "" },
+  pushup: { pose: "pushup", anim: "press", say: () => "Push-ups! 1… 2… 3…" }, squat: { pose: "squat", anim: "squat", say: () => "Squats! Feel the burn" },
+  plank: { pose: "plank", anim: "tremble", say: () => "Hold it… hold it…" }, study: { pose: "study", anim: "idle", say: () => "Studying macros…" },
+  workout: { pose: "workout", anim: "lift", say: () => "One more rep!" },
+  powerup: { pose: "powerup", anim: "pulse", say: () => "POWER UP!!", fx: "power" }, levelup: { pose: "levelup", anim: "rise", say: () => "LEVEL UP!", fx: "level" },
+  victory: { pose: "victory", anim: "dance", say: () => "Victory!", fx: "win" },
+};
+const SOLO = {
+  morning: ["run", "pushup", "squat", "plank", "scale", "rope", "drink", "workout"], noon: ["eat", "drink", "study", "swim", "task"],
+  afternoon: ["rope", "cycle", "parkour", "task", "run", "study"], evening: ["parkour", "powerup", "levelup", "rope", "dance", "swim", "victory"], night: ["sleep"],
+};
+const DUO = {
+  morning: ["race", "pushup", "squat", "ropeRace", "drink"], noon: ["eat", "eat", "swim", "study"],
+  afternoon: ["fight", "ropeRace", "parkour", "race", "fight"], evening: ["fight", "fight", "parkour", "ropeRace", "dance", "powerup"], night: ["sleep"],
 };
 
-const imageCache = new Map();
-function getImage(url) {
-  if (!url) return null;
-  if (imageCache.has(url)) return imageCache.get(url);
-  const im = new Image();
-  im.decoding = "async";
-  im.src = url;
-  imageCache.set(url, im);
-  return im;
-}
-
-function activityScene(c) {
-  // Do NOT randomly swap images while an activity is running.
-  if (["walk", "rope", "mountain", "ledge", "jump"].includes(c.state)) return "walk";
-  if (["fightReady", "punch", "kick", "power", "dash", "dodge", "block"].includes(c.state)) return "fight";
-  if (c.state === "sleep" || c.state === "tired") return "sleep";
-  if (c.state === "dance") return "dance";
-  if (c.state === "eat") return "eat";
-  if (c.state === "meditate") return "habit";
-  if (c.state === "victory") return "cheer";
-  if (c.state === "scale") return "scale";
-  return "walk";
+function Sprite({ src, who, pose, anim, size }) {
+  if (anim === "walk" && (pose === "walk" || pose === "run")) // baked 8-frame cycles: legs stride, arms swing
+    return <span className={`rm-strip${pose === "run" ? " run" : ""}`} style={{ width: size, height: size, backgroundImage: `url(${pose === "run" ? runStrip(who) : walkStrip(who)})` }} />;
+  return <img className={`rm-img rm-${anim}`} src={src} width={size} height={size} alt="" draggable="false" />;
 }
 
 export default function Roamers() {
-  const canvasRef = useRef(null);
-  const charsRef = useRef([]);
-  const fxRef = useRef([]);
-  const fightLock = useRef(false);
-  const timers = useRef(new Set());
+  const size = useRef(typeof window !== "undefined" && window.innerWidth < 640 ? 70 : 96).current;
+  const [cast, setCast] = useState(() => KEYS.map((who) => ({ who, x: -300, y: 200, dur: 0, ease: "e", pose: "walk", anim: "idle", flip: 1, say: "", on: false, air: null })));
+  const [fxs, setFxs] = useState([]);
+  const [ropes, setRopes] = useState([]);
+  const api = useRef({});
 
   useEffect(() => {
-    if (reduced()) return undefined;
-    const canvas = canvasRef.current;
-    const ctx = canvas.getContext("2d", { alpha: true });
-    let alive = true;
-    let raf = 0;
-    let last = performance.now();
-    const size = () => window.innerWidth < 640 ? 84 : 108;
+    if (calm()) return undefined;
+    let alive = true, fighting = false, airN = 0, rid = 0;
+    const lock = new Set(), ON = new Set(), P = {};
+    KEYS.forEach((k) => { P[k] = { x: -300, y: 200 }; });
+    const W = () => window.innerWidth, H = () => window.innerHeight;
+    const set = (who, p) => alive && setCast((c) => c.map((m) => (m.who === who ? { ...m, ...p } : m)));
+    const spot = () => ({ x: rnd(16, Math.max(90, W() - size - 16)), y: rnd(90, Math.max(150, H() - size - 20)) });
+    const C = (w) => ({ x: P[w].x + size / 2, y: P[w].y + size / 2 });
+    const say = (w, s, ms = 2400) => { set(w, { say: s }); setTimeout(() => set(w, { say: "" }), ms); };
+    const fx = (o, ms) => { const id = Math.random(); setFxs((f) => [...f, { id, ...o }]); setTimeout(() => setFxs((f) => f.filter((x) => x.id !== id)), ms); };
+    const burst = (p, c, w) => fx({ t: "burst", x: p.x, y: p.y, c, w }, 700);
+    const confetti = (p) => fx({ t: "confetti", x: p.x, y: p.y, p: Array.from({ length: 22 }, () => ({ dx: rnd(-170, 170), dy: rnd(-190, 120), r: rnd(-540, 540), c: pick(CONF), d: rnd(0, 150) })) }, 1900);
+    const quake = () => { document.body.classList.add("rm-quake"); setTimeout(() => document.body.classList.remove("rm-quake"), 700); }; //#web
+    const platforms = () => [...document.querySelectorAll(".card, .logger-card, .wt-hero, .wt-log, .wt-history, .profile-section, section")].map((e) => e.getBoundingClientRect()).filter((r) => r.width > 150 && r.top > 72 && r.top < H() - size - 40 && r.left < W() - 80); //#web
+    //#mob const quake = () => {}; const platforms = () => [];
+    const addRope = (x) => { const id = ++rid; setRopes((r) => [...r, { id, x }]); return id; };
+    const delRope = (id) => { setRopes((r) => r.map((q) => (q.id === id ? { ...q, out: true } : q))); setTimeout(() => setRopes((r) => r.filter((q) => q.id !== id)), 900); };
 
-    const resize = () => {
-      const dpr = Math.min(2, window.devicePixelRatio || 1);
-      canvas.width = Math.floor(innerWidth * dpr);
-      canvas.height = Math.floor(innerHeight * dpr);
-      canvas.style.width = `${innerWidth}px`;
-      canvas.style.height = `${innerHeight}px`;
-      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    const move = async (w, to, pose = "walk", speed = 55, anim = "walk") => {
+      const d = Math.hypot(to.x - P[w].x, to.y - P[w].y), dur = Math.max(1.2, d / speed);
+      set(w, { x: to.x, y: to.y, dur, ease: "e", pose, anim, flip: to.x < P[w].x ? -1 : 1 });
+      P[w] = { x: to.x, y: to.y };
+      await sleep(dur * 1000 + 60); set(w, { anim: "idle" });
     };
-    resize();
-    addEventListener("resize", resize);
-
-    const later = (fn, ms) => {
-      const id = setTimeout(() => { timers.current.delete(id); fn(); }, ms);
-      timers.current.add(id);
-      return id;
+    // a real jump: straight travel underneath, an arc (and optional flips) on top, squash on landing
+    const jump = async (w, to, h = 110, flips = 0, pose = "cheer") => {
+      const d = Math.hypot(to.x - P[w].x, to.y - P[w].y), ms = Math.max(750, Math.min(1500, 520 + d * 1.1)), dir = to.x < P[w].x ? -1 : 1;
+      set(w, { x: to.x, y: to.y, dur: ms / 1000, ease: "l", pose, anim: "idle", flip: dir, air: { n: ++airN, h, ms, rot: flips * 360 * dir } });
+      P[w] = { x: to.x, y: to.y }; await sleep(ms + 30);
+      set(w, { air: null, ease: "e", anim: "land" }); await sleep(260); set(w, { anim: "idle" });
     };
-    const fx = (f) => fxRef.current.push({ ...f, t: performance.now(), life: f.life || 700 });
+    const knock = async (a, d) => {
+      const nx = Math.min(Math.max(P[d].x + (P[d].x >= P[a].x ? 1 : -1) * 60, 10), W() - size - 10);
+      P[d] = { ...P[d], x: nx }; set(d, { x: nx, dur: 0.5, ease: "e", anim: "shake", pose: "sad" });
+      await sleep(900); set(d, { anim: "idle", pose: "wave" });
+    };
+    const arm = (c, t, delay = 0, dy = 0, life = 1200) => fx({ t: "arm", x: c.x, y: c.y + dy, len: Math.hypot(t.x - c.x, t.y - c.y), r: (Math.atan2(t.y - c.y, t.x - c.x) * 180) / Math.PI, delay, life }, life + delay);
+    const rush = (img, s, t, delay, life, cls) => fx({ t: "rush", cls, img, x: s.x, y: s.y, dx: t.x - s.x, dy: t.y - s.y, delay, life }, life + delay);
+    const stance = (a) => set(a, { pose: "fight", anim: "lunge" });
 
-    const makeChar = (who, side) => {
-      const s = size();
-      const y = rand(100, Math.max(120, innerHeight - s - 60));
-      return {
-        id: `${who}-${Math.random()}`, who, x: side < 0 ? -s : innerWidth + s, y,
-        tx: rand(30, innerWidth - s - 30), ty: y,
-        state: "walk", stateAt: performance.now(), stateUntil: performance.now() + rand(7000, 11000),
-        speed: rand(22, 34), facing: side < 0 ? 1 : -1, phase: Math.random() * 10,
-        walkClock: Math.random() * 1.5, energy: 1, visible: true, activitySeed: Math.random(),
-        frame: 0, rope: null, mountain: null, ledge: null,
-        combat: null,
+    const MOVE = {
+      naruto: [
+        async (a, t, d) => { const c = C(a), h = { x: c.x, y: c.y - size * 0.1 }; stance(a); say(a, "Rasengan!", 3200);
+          fx({ t: "charge", x: h.x, y: h.y, life: 1400 }, 1400); await sleep(1400);
+          fx({ t: "orb", x: h.x, y: h.y, dx: t.x - h.x, dy: t.y - h.y, life: 1100 }, 1100); await sleep(1050); burst(t, "#38bdf8", "BOOM!"); if (d) await knock(a, d); },
+        async (a, t, d) => { const c = C(a); say(a, "Shadow Clone Jutsu!", 3400); burst(c, "#cbd5e1", "POOF!");
+          [[-70, -25], [70, -25], [0, 55]].forEach(([ox, oy], i) => rush(sprite("naruto", "walk"), { x: c.x + ox, y: c.y + oy }, t, 500 + i * 350, 1500, "clone"));
+          await sleep(2300); burst(t, "#f59e0b", "WHAM!"); if (d) await knock(a, d); },
+      ],
+      luffy: [
+        async (a, t, d) => { const c = C(a); stance(a); say(a, "Gum-Gum Pistol!", 2800); await sleep(800); arm(c, t); await sleep(520); burst(t, "#ef4444", "PISTOL!"); if (d) await knock(a, d); },
+        async (a, t, d) => { const c = C(a); stance(a); say(a, "Gum-Gum Bazooka!", 3000); await sleep(900); arm(c, t, 0, -16); arm(c, t, 0, 16); await sleep(540); burst(t, "#f97316", "BAZOOKA!"); if (d) await knock(a, d); },
+        async (a, t, d) => { const c = C(a); set(a, { pose: "fight", anim: "shake" }); say(a, "Gum-Gum Gatling!", 3400); await sleep(700);
+          for (let i = 0; i < 5; i++) { arm(c, { x: t.x + rnd(-30, 30), y: t.y + rnd(-40, 40) }, 0, rnd(-14, 14), 520); await sleep(260); burst({ x: t.x + rnd(-30, 30), y: t.y + rnd(-30, 30) }, "#ef4444", "!"); }
+          if (d) await knock(a, d); },
+      ],
+      zoro: [
+        async (a, t, d) => { const dir = t.x >= C(a).x ? 1 : -1; say(a, "Santoryu… Oni Giri!", 3400); stance(a); await sleep(1000);
+          await move(a, { x: t.x - size / 2 - dir * size * 0.55, y: t.y - size / 2 }, "fight", 130, "dash");
+          [-38, 0, 38].forEach((r, i) => fx({ t: "slash", x: t.x, y: t.y, r, c: "#22c55e", delay: i * 170 }, 420 + i * 170)); await sleep(600);
+          await move(a, { x: t.x - size / 2 + dir * size * 0.7, y: t.y - size / 2 }, "fight", 170, "dash"); if (d) await knock(a, d); },
+        async (a, t, d) => { const c = C(a); stance(a); say(a, "108 Pound Phoenix!", 3000); await sleep(1000);
+          fx({ t: "crescent", x: c.x, y: c.y, dx: t.x - c.x, dy: t.y - c.y, ang: (Math.atan2(t.y - c.y, t.x - c.x) * 180) / Math.PI + 90, life: 1000 }, 1000); await sleep(950); burst(t, "#22c55e", "SLASH!"); if (d) await knock(a, d); },
+      ],
+      jinwoo: [
+        async (a, t, d) => { const c = C(a); stance(a); say(a, "Arise!", 3200);
+          [[-80, 10], [0, -50], [80, 10]].forEach(([ox, oy], i) => rush(sprite("jinwoo", "walk"), { x: c.x + ox, y: c.y + oy }, t, i * 250, 2000, "shade"));
+          await sleep(2300); burst(t, "#8b5cf6", "SHADOW ARMY!"); if (d) await knock(a, d); },
+        async (a, t, d) => { const dir = t.x >= C(a).x ? 1 : -1; say(a, "Shadow Exchange!", 3000); set(a, { anim: "blink" }); await sleep(900);
+          await move(a, { x: t.x - size / 2 - dir * size * 0.6, y: t.y - size / 2 }, "fight", 220, "dash");
+          [-28, 28].forEach((r, i) => fx({ t: "slash", x: t.x, y: t.y, r, c: "#a78bfa", delay: i * 180 }, 450 + i * 180)); await sleep(600); burst(t, "#8b5cf6", "STRIKE!"); if (d) await knock(a, d); },
+      ],
+      goku: [
+        async (a, t, d) => { const c = C(a), dir = t.x >= c.x ? 1 : -1, h = { x: c.x + dir * size * 0.3, y: c.y }; stance(a); say(a, "Ka-me-ha-me-HAAA!", 3600);
+          fx({ t: "charge", x: h.x, y: h.y, c: "#60a5fa", life: 1500 }, 1500); await sleep(1500);
+          fx({ t: "beam", x: h.x, y: h.y, len: Math.hypot(t.x - h.x, t.y - h.y), r: (Math.atan2(t.y - h.y, t.x - h.x) * 180) / Math.PI, life: 1500 }, 1500); await sleep(500); burst(t, "#38bdf8", "KAMEHAMEHA!"); await sleep(500); if (d) await knock(a, d); },
+        async (a, t, d) => { const dir = t.x >= C(a).x ? 1 : -1; say(a, "Instant Transmission!", 3200); set(a, { anim: "blink" }); await sleep(900);
+          await move(a, { x: t.x - size / 2 - dir * size * 0.6, y: t.y - size / 2 }, "fight", 220, "dash");
+          for (let i = 0; i < 4; i++) { burst({ x: t.x + rnd(-26, 26), y: t.y + rnd(-30, 30) }, "#f59e0b", "HYAH!"); await sleep(260); } if (d) await knock(a, d); },
+      ],
+      gojo: [
+        async (a, t, d) => { const c = C(a); stance(a); say(a, "Hollow Purple!", 3200);
+          fx({ t: "charge", x: c.x, y: c.y, c: "#a855f7", life: 1500 }, 1500); await sleep(1500);
+          fx({ t: "orb", x: c.x, y: c.y, c: "#a855f7", dx: t.x - c.x, dy: t.y - c.y, life: 1100 }, 1100); await sleep(1050); burst(t, "#a855f7", "PURPLE!"); if (d) await knock(a, d); },
+        async (a, t, d) => { stance(a); say(a, "Domain Expansion: Unlimited Void!", 3600); fx({ t: "domain", x: 0, y: 0, life: 2600 }, 2600);
+          await sleep(900); if (d) set(d, { pose: "sad", anim: "shake" }); await sleep(1500); burst(t, "#6366f1", "VOID!"); if (d) await knock(a, d); },
+      ],
+    };
+
+    // ---- solo activities ----
+    const routine = async (w, kind, ms) => {
+      const R = ROUT[kind];
+      const to = kind === "sleep" ? { x: rnd(20, W() - size - 20), y: H() - size - 16 } : spot();
+      await move(w, to, "walk", 50);
+      set(w, { pose: R.pose, anim: R.anim, say: R.say(w) });
+      const c = C(w);
+      if (R.fx === "power") { burst(c, "#f59e0b", "POWER UP!"); quake(); fx({ t: "charge", x: c.x, y: c.y, c: "#f59e0b", life: 1400 }, 1400); }
+      if (R.fx === "level") { burst(c, "#facc15", "LEVEL UP!"); confetti(c); }
+      if (R.fx === "win") { confetti({ x: c.x, y: c.y - 30 }); set(w, { air: { n: ++airN, h: 70, ms: 700, rot: 0 } }); setTimeout(() => set(w, { air: null }), 760); }
+      await sleep(ms || (kind === "sleep" ? 14000 : rnd(6000, 9000))); set(w, { say: "" });
+    };
+    const runLaps = async (w) => {
+      const y = rnd(H() * 0.3, H() - size - 24); set(w, { y, dur: 0 }); P[w] = { ...P[w], y }; await sleep(60);
+      for (let i = 0; i < 3; i++) { const to = { x: i % 2 ? 10 : W() - size - 10, y: y + (i - 1) * 22 }; say(w, `Lap ${i + 1}!`, 1500); await move(w, to, "run", 170); burst({ x: to.x + size / 2, y: to.y + size * 0.85 }, "#cbd5e1", "💨"); }
+    };
+    const ride = async (w, pose, line, anim) => {
+      const y = pose === "swim" ? H() - size - 8 : rnd(H() * 0.4, H() - size - 14);
+      set(w, { y, dur: 0 }); P[w] = { ...P[w], y }; await sleep(60); say(w, line, 2200);
+      await move(w, { x: P[w].x < W() / 2 ? W() - size - 12 : 12, y }, pose, 70, anim);
+      say(w, pose === "swim" ? "Refreshing!" : "Wheee!", 1800); await move(w, { x: P[w].x < W() / 2 ? W() - size - 12 : 12, y }, pose, 70, anim);
+    };
+    const ropeClimb = async (w) => { // bottom → top (hand over hand), cheer, top → bottom, backflip off
+      const x = rnd(W() * 0.15, W() * 0.85), bottom = H() - size - 8, top = 46, id = addRope(x); let flip = 1;
+      const lx = () => x - (flip > 0 ? ROPE_X[w] : 1 - ROPE_X[w]) * size;
+      const climb = async (to) => { const dir = to < P[w].y ? -1 : 1; while (alive && (dir < 0 ? P[w].y > to : P[w].y < to)) {
+        flip = -flip; const ny = P[w].y + dir * Math.min(34, Math.abs(to - P[w].y)); P[w] = { x: lx(), y: ny };
+        set(w, { x: P[w].x, y: ny, dur: 0.5, ease: "e", flip, pose: "rope", anim: "climb" }); await sleep(540); } };
+      await sleep(1000); await move(w, { x: x - ROPE_X[w] * size, y: bottom }, "walk", 60);
+      say(w, "Bottom to top!", 2000); await climb(top);
+      set(w, { anim: "idle" }); say(w, "Made it!", 2000); burst({ x: x, y: top + size * 0.4 }, "#facc15", "TOP!"); confetti({ x, y: top + 40 }); await sleep(1800);
+      say(w, "Now back down!", 2000); await climb(bottom - 130);
+      await jump(w, { x: Math.min(Math.max(x + rnd(-170, 170) - size / 2, 10), W() - size - 10), y: bottom }, 70, 1, "victory"); say(w, "Stuck the landing!", 1800);
+      delRope(id); await sleep(900);
+    };
+    const ropeRace = async (a, b) => {
+      const xs = [W() * rnd(0.22, 0.38), W() * rnd(0.62, 0.78)], ids = xs.map(addRope), bottom = H() - size - 8, top = 46, who = [a, b]; let over = null;
+      await sleep(1000); await Promise.all(who.map((w, i) => move(w, { x: xs[i] - ROPE_X[w] * size, y: bottom }, "walk", 65)));
+      say(a, "Race you to the top!", 2200); say(b, "You're on!", 2200); await sleep(2400); say(a, "3… 2… 1… GO!", 1800); await sleep(1900);
+      const climber = async (w, i) => { let flip = 1; const rate = rnd(0.8, 1.25); set(w, { pose: "rope" });
+        while (alive && !over && P[w].y > top) { flip = -flip; const ny = Math.max(top, P[w].y - 34), lx = xs[i] - (flip > 0 ? ROPE_X[w] : 1 - ROPE_X[w]) * size; P[w] = { x: lx, y: ny };
+          set(w, { x: lx, y: ny, dur: 0.45, ease: "e", flip, anim: "climb" }); await sleep((480 / rate) * (Math.random() < 0.2 ? 1.7 : 1)); }
+        if (!over && P[w].y <= top) over = w; };
+      await Promise.all(who.map(climber)); const win = over || a, lose = win === a ? b : a;
+      set(win, { anim: "idle", say: "I win!" }); set(lose, { anim: "idle", pose: "rope", say: "So close!" }); confetti({ x: C(win).x, y: C(win).y }); burst(C(win), "#facc15", "WINNER!"); await sleep(2200);
+      who.forEach((w) => { P[w] = { ...P[w], y: bottom }; set(w, { y: bottom, dur: 1.4, ease: "e", say: "" }); }); await sleep(1600); ids.forEach(delRope); await sleep(700);
+    };
+    const parkour = async (w) => { // hop from card to card across the page, then flip back down to the floor
+      let spots = platforms().sort(() => Math.random() - 0.5).slice(0, 3).map((r) => ({ x: Math.min(Math.max(r.left + rnd(8, Math.max(9, r.width - size - 8)), 6), W() - size - 6), y: r.top - size + 8 }));
+      if (spots.length < 2) spots = Array.from({ length: 3 }, () => ({ x: rnd(30, W() - size - 30), y: rnd(H() * 0.3, H() - size - 30) }));
+      await move(w, { x: spots[0].x, y: H() - size - 12 }, "walk", 70);
+      for (const s of spots) { say(w, pick(["Hup!", "Hya!", "Parkour!", "Whoa!"]), 1200); await jump(w, s, Math.min(190, 70 + Math.abs(s.y - P[w].y) * 0.4), Math.random() < 0.4 ? 1 : 0); await sleep(650); }
+      set(w, { pose: "victory", anim: "dance", say: "Nailed it!" }); confetti({ x: C(w).x, y: C(w).y - 30 }); await sleep(1600);
+      await jump(w, { x: rnd(40, W() - size - 40), y: H() - size - 12 }, 130, 1);
+    };
+    const race = async (a, b) => {
+      const ly = Math.min(H() - size - 20, Math.max(100, H() * 0.4)), lane = [ly, Math.min(H() - size - 12, ly + size * 0.9)], end = W() - size - 20;
+      await Promise.all([move(a, { x: 20, y: lane[0] }, "walk", 60), move(b, { x: 20, y: lane[1] }, "walk", 60)]);
+      say(a, "Ready…", 1200); await sleep(1300); say(b, "Set…", 1200); await sleep(1300); say(a, "GO!", 1200);
+      const sa = rnd(130, 175), sb = rnd(130, 175), win = sa >= sb ? a : b, lose = win === a ? b : a;
+      await Promise.all([move(a, { x: end, y: lane[0] }, "run", sa), move(b, { x: end, y: lane[1] }, "run", sb)]);
+      set(win, { pose: "victory", anim: "dance", say: "Winner!" }); confetti(C(win)); set(lose, { pose: "sad", anim: "shake", say: "Rematch!" }); await sleep(2800);
+    };
+    const doKind = (w, kind) => kind === "rope" ? ropeClimb(w) : kind === "parkour" ? parkour(w) : kind === "run" ? runLaps(w) : kind === "cycle" ? ride(w, "cycle", "Ring ring!", "ride") : kind === "swim" ? ride(w, "swim", "Splash!", "swimbob") : routine(w, kind);
+
+    const fight = async (a, b) => {
+      fighting = true;
+      const mid = { x: rnd(W() * 0.35, W() * 0.6), y: rnd(H() * 0.35, H() * 0.6) }, gap = Math.min(280, W() * 0.4);
+      const place = () => Promise.all([move(a, { x: mid.x - gap / 2 - size / 2, y: mid.y }, "walk", 55), move(b, { x: mid.x + gap / 2 - size / 2, y: mid.y }, "walk", 55)]).then(() => { set(a, { flip: 1 }); set(b, { flip: -1 }); });
+      await place(); say(a, "Let's settle this!"); stance(a); await sleep(1500); say(b, "Bring it on!"); stance(b); await sleep(1800);
+      let att = a, def = b;
+      for (let i = 0; i < 4; i++) { await pick(MOVE[att])(att, C(def), def); [att, def] = [def, att]; await sleep(800); await place(); }
+      set(a, { pose: "cheer", anim: "dance" }); say(a, "Good fight!", 3000); set(b, { pose: "wave", anim: "idle" }); say(b, "Rematch later!", 3000);
+      await sleep(3200); fighting = false;
+    };
+
+    // a click on a primary button = celebration: confetti + everyone on screen cheers
+    const celebrate = (p) => { if (fighting) return; confetti(p);
+      ON.forEach((w) => { if (lock.has(w)) return; set(w, { pose: "victory", anim: "dance", say: pick(["Logged! 🎉", "Nice work!", "Streak alive!", "Keep it up!"]), air: { n: ++airN, h: 60, ms: 700, rot: 0 } }); setTimeout(() => set(w, { air: null }), 760); }); };
+    const onClick = (e) => { const b = e.target.closest?.("button.primary-button, button[type=submit], .add-log-button"); if (!b) return; const r = b.getBoundingClientRect(); celebrate({ x: r.left + r.width / 2, y: r.top }); }; //#web
+    document.addEventListener("click", onClick, true); //#web
+    //#mob let seenCheer = 0; const cheerWatch = setInterval(() => { if (AUTH.cheerAt && AUTH.cheerAt !== seenCheer) { seenCheer = AUTH.cheerAt; celebrate({ x: W() / 2, y: H() * 0.78 }); } }, 400);
+
+    // ---- login / signup: the cast reacts to the form ----
+    const authScene = async () => {
+      const [L, R] = [...KEYS].sort(() => Math.random() - 0.5).slice(0, 2);
+      const spots = () => {
+        const el = authEl(); if (!el) return null;
+        const r = (el.querySelector(".auth-card") || el).getBoundingClientRect();
+        if (r.left > size + 18 && W() - r.right > size + 18) { const y = Math.min(H() - size - 12, Math.max(70, r.top + r.height * 0.5)); return { L: { x: r.left - size - 10, y }, R: { x: r.right + 10, y } }; }
+        const y = Math.max(52, r.top - size * 0.7); return { L: { x: 6, y }, R: { x: W() - size - 6, y } }; // narrow screens: peek over the card's top corners
       };
-    };
-
-    const setState = (c, state, duration) => {
-      const now = performance.now();
-      c.state = state; c.stateAt = now; c.stateUntil = now + duration;
-      c.walkClock = 0;
-    };
-
-    const chooseActivity = (c) => {
-      const s = size();
-      if (c.energy < .18) {
-        c.tx = clamp(c.x, 10, innerWidth - s - 10); c.ty = innerHeight - s - 24;
-        setState(c, "sleep", rand(6500, 10000));
-        return;
-      }
-      const r = Math.random();
-      if (r < .16) {
-        c.rope = { x: rand(45, innerWidth - 45), top: rand(90, Math.max(120, innerHeight * .28)), bottom: innerHeight - s - 28 };
-        c.x = c.rope.x - s / 2; c.y = c.rope.bottom;
-        c.rope.fromBottom = true;
-        c.rope.dir = -1;
-        setState(c, "rope", rand(8500, 11500));
-        return;
-      }
-      if (r < .28) {
-        const left = rand(30, Math.max(35, innerWidth - 240));
-        c.mountain = { left, base: innerHeight - s - 28, peakX: left + rand(90, 190), peakY: rand(110, Math.max(150, innerHeight * .48)) };
-        setState(c, "mountain", rand(9000, 12500));
-        return;
-      }
-      if (r < .36) { setState(c, "dance", rand(4200, 6500)); return; }
-      if (r < .43) { setState(c, "eat", rand(3500, 5200)); return; }
-      if (r < .50) { setState(c, "meditate", rand(4200, 6500)); return; }
-      if (r < .57) { setState(c, "jump", rand(1800, 2400)); c.tx = clamp(c.x + rand(-160, 160), 15, innerWidth-s-15); c.ty = clamp(c.y - rand(50, 120), 80, innerHeight-s-25); return; }
-      c.tx = rand(25, Math.max(30, innerWidth - s - 25));
-      c.ty = rand(90, Math.max(100, innerHeight - s - 45));
-      setState(c, "walk", rand(7500, 12000));
-    };
-
-    const separate = (a, b, minDist) => {
-      const ax = a.x + size()/2, ay = a.y + size()/2, bx = b.x + size()/2, by = b.y + size()/2;
-      let dx = bx - ax, dy = by - ay, d = Math.hypot(dx, dy);
-      if (!d) { dx = 1; dy = 0; d = 1; }
-      if (d >= minDist) return;
-      const push = (minDist - d) * 0.52, nx = dx/d, ny = dy/d;
-      a.x -= nx*push; a.y -= ny*push; b.x += nx*push; b.y += ny*push;
-    };
-
-    const startFight = (a, b) => {
-      if (fightLock.current || a.state === "sleep" || b.state === "sleep") return;
-      fightLock.current = true;
-      const s = size();
-      const y = clamp((a.y+b.y)/2, 100, innerHeight-s-40);
-      const mid = clamp((a.x+b.x)/2, s*1.4, innerWidth-s*1.4);
-      a.x = mid-s*0.92; b.x = mid+s*0.02; a.y = b.y = y;
-      a.facing = 1; b.facing = -1;
-      a.combat = { role: "a", phase: 0, total: 7 };
-      b.combat = { role: "b", phase: 0, total: 7 };
-      setState(a, "fightReady", 900); setState(b, "fightReady", 900);
-
-      const phases = ["punch","dodge","kick","block","punch","dodge","power"];
-      let i = 0;
-      const next = () => {
-        if (!alive) return;
-        if (i >= phases.length) {
-          setState(a, "victory", 1800); setState(b, "tired", 2600);
-          a.energy = clamp(a.energy-.18,0,1); b.energy = clamp(b.energy-.28,0,1);
-          later(() => { fightLock.current=false; a.combat=b.combat=null; chooseActivity(a); chooseActivity(b); }, 2200);
-          return;
+      [L, R].forEach((w, i) => { P[w] = { x: i ? W() + 30 : -size - 30, y: H() * 0.5 }; ON.add(w); set(w, { on: true, x: P[w].x, y: P[w].y, dur: 0, say: "" }); });
+      await sleep(80);
+      let s = spots(); if (!s) return;
+      await Promise.all([move(L, s.L, "run", 120), move(R, s.R, "run", 120)]); set(L, { flip: 1 }); set(R, { flip: -1 });
+      let lastInput = 0; const onInput = () => { lastInput = Date.now(); }; document.addEventListener("input", onInput, true);
+      let prev = "", tick = 0;
+      const GREET = [["wave", "cheer"], ["task", "wave"], ["dance", "dance"], ["habit", "wave"]];
+      while (alive && authEl()) {
+        const el = authEl(), m = el.dataset.mode || "login";
+        const st = el.querySelector(".auth-error") ? "error" : document.activeElement?.type === "password" ? "pw" : Date.now() - lastInput < 1500 ? "typing" : "idle";
+        const key = m + st;
+        s = spots() || s;
+        if (m === "forgot") set(R, { on: false });
+        if (key !== prev || (st === "idle" && tick % 8 === 0)) {
+          const first = key !== prev; prev = key;
+          if (m !== "forgot") set(R, { on: true });
+          if (st === "error") { set(L, { pose: "sad", anim: "shake", say: "Hmm, check that…", flip: 1 }); set(R, { pose: "sad", anim: "shake", say: "Try again!", flip: -1 }); }
+          else if (st === "pw") { set(L, { pose: "habit", anim: "idle", say: "Not looking! 🙈", flip: -1 }); set(R, { pose: "habit", anim: "idle", say: "Eyes closed!", flip: 1 }); }
+          else if (st === "typing") { set(L, { pose: "cheer", anim: "dance", say: m === "signup" ? "Great name!" : "Nice!", flip: 1 }); set(R, { pose: "cheer", anim: "dance", say: "Keep going!", flip: -1 }); }
+          else if (m === "forgot") { set(L, { pose: tick % 2 ? "wave" : "sad", anim: "idle", say: "No worries, we'll help!", flip: 1 }); }
+          else if (m === "login") { const [pa, pb] = first ? ["wave", "cheer"] : pick(GREET); set(L, { pose: pa, anim: pa === "dance" ? "dance" : "idle", say: first ? "Welcome back!" : "", flip: 1 }); set(R, { pose: pb, anim: pb === "dance" ? "dance" : "idle", say: first ? "Ready to train?" : "", flip: -1 });
+            if (!first && tick % 16 === 8) jump(pick([L, R]), { x: P[L].x, y: P[L].y }, 80, 1, "cheer").catch(() => {}); }
+          else { // signup: recruiters patrol up and down the form, then spar to show what training looks like
+            if (first || tick % 16 === 0) { say(L, "Join the crew!"); say(R, "Day one starts now!"); }
+            if (tick % 16 === 8) { set(L, { pose: "fight", anim: "lunge", say: "Train with us!", flip: 1 }); set(R, { pose: "fight", anim: "lunge", flip: -1 }); burst({ x: s.L.x + size * 1.1, y: s.L.y + size * 0.4 }, "#f59e0b", "HYAH!"); }
+            else { move(L, { x: s.L.x, y: Math.min(H() - size - 10, Math.max(70, s.L.y + rnd(-90, 90))) }, "walk", 32); move(R, { x: s.R.x, y: Math.min(H() - size - 10, Math.max(70, s.R.y + rnd(-90, 90))) }, "walk", 32); }
+          }
         }
-        const attacker = i%2===0 ? a : b;
-        const defender = attacker===a ? b : a;
-        const mode = phases[i];
-        attacker.facing = defender.x > attacker.x ? 1 : -1;
-        defender.facing = -attacker.facing;
-        setState(attacker, mode, mode === "power" ? 1450 : 850);
-        setState(defender, i%3===0 ? "dodge" : "block", 850);
-        attacker.combat.phase = i; defender.combat.phase = i;
-        const sx = attacker.x + s*(attacker.facing>0 ? .78 : .22);
-        const sy = attacker.y + s*.38;
-        const tx = defender.x + s*(attacker.facing>0 ? .22 : .78);
-        const ty = defender.y + s*.32;
-        if (mode === "power") {
-          const p = POWER[attacker.who];
-          fx({kind:"power",x:sx,y:sy,tx,ty,color:p.color,label:p.name,power:p.kind,life:1250});
-        } else if (mode === "kick") fx({kind:"arc",x:sx,y:sy+18,tx,ty,color:POWER[attacker.who].color,life:620});
-        else fx({kind:"strike",x:sx,y:sy,tx,ty,color:POWER[attacker.who].color,life:540});
-        if (i%2===1 || mode==="power") fx({kind:"impact",x:tx,y:ty,color:POWER[attacker.who].color,text:pick(["POW!","BAM!","WHAM!"]),life:650});
-        attacker.energy=clamp(attacker.energy-.035,0,1); defender.energy=clamp(defender.energy-.045,0,1);
-        i++; later(next, mode === "power" ? 1500 : 920);
-      };
-      later(next, 950);
+        await sleep(500); tick++;
+      }
+      document.removeEventListener("input", onInput, true);
+      await Promise.all([L, R].map((w, i) => move(w, { x: i ? W() + 40 : -size - 40, y: P[w].y }, "run", 120)));
+      [L, R].forEach((w) => { ON.delete(w); set(w, { on: false, say: "" }); });
     };
 
-    const update = (c, dt, now) => {
-      const s = size();
-      c.energy = clamp(c.energy + dt*.008, 0, 1);
-      c.phase += dt * (["walk","mountain","rope"].includes(c.state) ? 4.0 : 1.8);
-      if (now >= c.stateUntil && !fightLock.current) chooseActivity(c);
-
-      if (["sleep","eat","dance","meditate","victory","tired","fightReady","punch","kick","power","dodge","block"].includes(c.state)) return;
-
-      if (c.state === "rope" && c.rope) {
-        const p = clamp((now-c.stateAt)/(c.stateUntil-c.stateAt),0,1);
-        c.y = c.rope.bottom + (c.rope.top-c.rope.bottom)*p;
-        c.x = c.rope.x-s/2;
-        c.facing = -1;
-        c.energy = clamp(c.energy-.0015*dt*60,0,1);
-        return;
-      }
-      if (c.state === "mountain" && c.mountain) {
-        const p = clamp((now-c.stateAt)/(c.stateUntil-c.stateAt),0,1);
-        const ease = p*p*(3-2*p);
-        c.x = c.mountain.left + (c.mountain.peakX-c.mountain.left)*ease;
-        c.y = c.mountain.base + (c.mountain.peakY-c.mountain.base)*ease;
-        c.facing = c.mountain.peakX >= c.mountain.left ? 1 : -1;
-        return;
-      }
-
-      const dx=c.tx-c.x, dy=c.ty-c.y, d=Math.hypot(dx,dy);
-      if(d>2){ const step=c.speed*dt; c.x += dx/d*Math.min(step,d); c.y += dy/d*Math.min(step,d); if(Math.abs(dx)>2)c.facing=dx>0?1:-1; }
-      c.x=clamp(c.x,-s,innerWidth); c.y=clamp(c.y,70,innerHeight-s+6);
-      if(["walk","jump","rope","mountain"].includes(c.state)) c.walkClock += dt;
-      if(c.walkClock>.14){c.walkClock=0;c.frame=(c.frame+1)%8;}
-    };
-
-    const drawEnvironment = () => {
-      const s=size();
-      for(const c of charsRef.current){
-        ctx.save();
-        if(c.state==="rope"&&c.rope){ctx.strokeStyle="rgba(100,116,139,.55)";ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(c.rope.x,c.rope.top);ctx.lineTo(c.rope.x,c.rope.bottom+s);ctx.stroke();ctx.lineWidth=2;for(let y=c.rope.top;y<c.rope.bottom;y+=28){ctx.beginPath();ctx.moveTo(c.rope.x-7,y);ctx.lineTo(c.rope.x+7,y+7);ctx.stroke();}}
-        if(c.state==="mountain"&&c.mountain){const m=c.mountain;ctx.fillStyle="rgba(71,85,105,.09)";ctx.strokeStyle="rgba(71,85,105,.30)";ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(m.left-110,m.base+s);ctx.lineTo(m.peakX,m.peakY);ctx.lineTo(m.left+260,m.base+s);ctx.closePath();ctx.fill();ctx.stroke();ctx.beginPath();ctx.moveTo(m.left+45,m.base);ctx.lineTo(m.peakX-15,m.peakY+55);ctx.lineTo(m.peakX+60,m.peakY+20);ctx.stroke();}
-        ctx.restore();
+    const director = async () => {
+      await sleep(900);
+      while (alive) {
+        if (authEl()) { await authScene(); continue; }
+        const sl = slot(), n = sl === "night" || Math.random() < 0.3 ? 1 : 2;
+        const who = [...KEYS].sort(() => Math.random() - 0.5).slice(0, n);
+        const fromLeft = Math.random() < 0.5;
+        who.forEach((w, i) => { const x = fromLeft ? -size - 30 - i * 60 : W() + 30 + i * 60; P[w] = { x, y: rnd(120, H() - size - 40) }; ON.add(w); set(w, { on: true, x: P[w].x, y: P[w].y, dur: 0, say: "", air: null }); });
+        await sleep(80);
+        if (n === 2) { const k = pick(DUO[sl]); if (k === "fight") await fight(who[0], who[1]); else if (k === "race") await race(who[0], who[1]); else if (k === "ropeRace") await ropeRace(who[0], who[1]); else await Promise.all(who.map((w) => doKind(w, k))); }
+        else await doKind(who[0], pick(SOLO[sl]));
+        await Promise.all(who.map((w) => move(w, { x: Math.random() < 0.5 ? -size - 40 : W() + 40, y: P[w].y }, "walk", 55)));
+        who.forEach((w) => { ON.delete(w); set(w, { on: false, say: "" }); });
+        await sleep(authEl() ? 200 : rnd(3000, 6000));
       }
     };
 
-    const drawFx = now => {
-      fxRef.current=fxRef.current.filter(f=>now-f.t<f.life);
-      for(const f of fxRef.current){const p=clamp((now-f.t)/f.life,0,1),q=1-p;ctx.save();ctx.globalAlpha=q;
-        if(f.kind==="impact"){ctx.fillStyle=f.color;ctx.font="900 16px system-ui";ctx.textAlign="center";ctx.fillText(f.text,f.x,f.y-24*p);ctx.strokeStyle=f.color;ctx.lineWidth=3;for(let k=0;k<8;k++){const a=k*Math.PI/4;ctx.beginPath();ctx.moveTo(f.x+Math.cos(a)*8,f.y+Math.sin(a)*8);ctx.lineTo(f.x+Math.cos(a)*(25+20*p),f.y+Math.sin(a)*(25+20*p));ctx.stroke();}}
-        else if(f.kind==="strike"||f.kind==="arc"){const t=Math.min(1,p*1.35),x=f.x+(f.tx-f.x)*t,y=f.y+(f.ty-f.y)*t;ctx.strokeStyle=f.color;ctx.lineWidth=f.kind==="arc"?9:6;ctx.beginPath();ctx.moveTo(f.x,f.y);ctx.lineTo(x,y);ctx.stroke();ctx.beginPath();ctx.arc(x,y,7+14*t,0,Math.PI*2);ctx.stroke();}
-        else if(f.kind==="power"){const t=clamp(p*1.12,0,1),x=f.x+(f.tx-f.x)*t,y=f.y+(f.ty-f.y)*t;ctx.strokeStyle=f.color;ctx.fillStyle=f.color;ctx.lineCap="round";ctx.lineWidth=f.power==="beam"?15:7;ctx.globalAlpha=.25*q;ctx.beginPath();ctx.moveTo(f.x,f.y);ctx.lineTo(x,y);ctx.stroke();ctx.globalAlpha=.9*q;ctx.lineWidth=f.power==="beam"?5:7;ctx.beginPath();ctx.moveTo(f.x,f.y);ctx.lineTo(x,y);ctx.stroke();ctx.shadowColor=f.color;ctx.shadowBlur=18;ctx.beginPath();ctx.arc(x,y,f.power==="rasengan"?16+7*Math.sin(now/55):13+7*Math.sin(now/65),0,Math.PI*2);ctx.fill();ctx.shadowBlur=0;ctx.font="900 10px system-ui";ctx.textAlign="center";ctx.fillText(f.label,f.tx,f.ty+30);if(f.power==="slash"){ctx.strokeStyle=f.color;ctx.lineWidth=5;for(let k=-1;k<=1;k++){ctx.beginPath();ctx.moveTo(x-30,y+18*k);ctx.lineTo(x+24,y-24+18*k);ctx.stroke();}}}
-        ctx.restore();}
+    api.current.poke = async (w) => { // tap: stroll somewhere new, then a trick: signature move, backflip or power-up
+      if (lock.has(w) || fighting || authEl()) return; lock.add(w);
+      await move(w, spot(), "walk", 80);
+      const c = C(w), dir = c.x > W() / 2 ? -1 : 1, t = { x: c.x + dir * 240, y: c.y }; set(w, { flip: dir });
+      const trick = pick(["move", "move", "flip", "power"]);
+      if (trick === "move") await pick(MOVE[w])(w, t, null);
+      else if (trick === "flip") { say(w, "Watch this!", 1500); await jump(w, { x: Math.min(Math.max(P[w].x + dir * 200, 10), W() - size - 10), y: P[w].y }, 150, 2); }
+      else { const R = ROUT.powerup; set(w, { pose: R.pose, anim: R.anim, say: R.say(w) }); burst(c, "#f59e0b", "POWER UP!"); quake(); await sleep(2200); }
+      set(w, { pose: "victory", anim: "dance" }); await sleep(1600); set(w, { pose: "walk", anim: "idle" }); lock.delete(w);
     };
+    director();
+    return () => { alive = false; document.removeEventListener("click", onClick, true); };
+  }, [size]);
 
-    const drawChar=(c,now)=>{
-      const s=size(), scene=activityScene(c), isWalk=["walk","rope","mountain","ledge","jump"].includes(c.state);
-      const url=isWalk?walkStrip(c.who):sprite(c.who,scene); const im=getImage(url);
-      ctx.save();ctx.translate(c.x+s/2,c.y+s/2);ctx.scale(c.facing,1);
-      let bob=0,scale=1,rot=0;
-      if(c.state==="walk"||c.state==="mountain") bob=Math.sin(c.phase)*1.5;
-      if(c.state==="rope") {bob=Math.sin(c.phase*.7)*1.2;rot=.025*Math.sin(c.phase);}
-      if(c.state==="sleep"){bob=Math.sin(now/900)*.7;rot=.025*Math.sin(now/900);scale=.98+.015*Math.sin(now/900);}
-      if(c.state==="dance"){bob=Math.sin(now/180)*3;rot=.08*Math.sin(now/230);scale=1+.025*Math.sin(now/180);}
-      if(c.state==="jump"){const p=clamp((now-c.stateAt)/(c.stateUntil-c.stateAt),0,1);bob=-Math.sin(p*Math.PI)*14;scale=1+.02*Math.sin(p*Math.PI);}
-      if(["punch","kick","power"].includes(c.state)){const p=clamp((now-c.stateAt)/(c.stateUntil-c.stateAt),0,1),strike=Math.sin(p*Math.PI);bob=-strike*2;ctx.translate(strike*(c.state==="power"?12:7),0);rot=(c.state==="kick"?.08:.035)*Math.sin(p*Math.PI);scale=1+.025*strike;}
-      if(c.state==="dodge"){ctx.translate(-4,0);rot=-.14;scale=.98;}
-      ctx.translate(0,bob);ctx.rotate(rot);ctx.scale(scale,scale);
-      ctx.shadowColor=POWER[c.who].color;ctx.shadowBlur=["power","victory"].includes(c.state)?16:0;
-      if(im&&im.complete&&im.naturalWidth){if(isWalk&&im.naturalWidth>=im.naturalHeight*4){const fw=im.naturalWidth/8;ctx.drawImage(im,c.frame*fw,0,fw,im.naturalHeight,-s/2,-s/2,s,s);}else ctx.drawImage(im,-s/2,-s/2,s,s);}
-      ctx.restore();
-    };
+  const fxView = (f) => {
+    const st = { left: f.x, top: f.y, "--dx": `${f.dx || 0}px`, "--dy": `${f.dy || 0}px`, "--life": `${f.life || 600}ms`, "--d": `${f.delay || 0}ms`, "--c": f.c || "#38bdf8", "--ang": `${f.ang || 0}deg`, "--w": `${size * 0.8}px` };
+    if (["arm", "slash", "beam"].includes(f.t)) return <span key={f.id} className={`fx fx-rot fx-rot-${f.t}`} style={{ ...st, transform: `rotate(${f.r}deg)` }}><i style={{ width: f.len }} /></span>;
+    if (f.t === "burst") return <span key={f.id} className="fx fx-burst" style={st}><b>{f.w}</b></span>;
+    if (f.t === "confetti") return <span key={f.id} className="fx fx-confetti" style={st}>{f.p.map((q, i) => <i key={i} style={{ "--dx": `${q.dx}px`, "--dy": `${q.dy + 150}px`, "--r": `${q.r}deg`, background: q.c, animationDelay: `${q.d}ms` }} />)}</span>;
+    if (f.t === "rush") return <span key={f.id} className={`fx fx-rush fx-${f.cls}`} style={st}><img src={f.img} alt="" draggable="false" /></span>;
+    return <span key={f.id} className={`fx fx-${f.t}`} style={st}><i /></span>;
+  };
 
-    const spawn=()=>{if(charsRef.current.length>=2)return;const used=new Set(charsRef.current.map(c=>c.who));const pool=WHO.filter(w=>!used.has(w));const n=Math.min(2-charsRef.current.length,Math.random()<.55?2:1);for(let i=0;i<n;i++)charsRef.current.push(makeChar(pool[i%pool.length],i===0?-1:1));};
-
-    const tick=now=>{if(!alive)return;const dt=Math.min(.033,(now-last)/1000);last=now;spawn();for(const c of charsRef.current)update(c,dt,now);
-      if(charsRef.current.length===2&&!fightLock.current){const [a,b]=charsRef.current;separate(a,b,size()*1.45);const d=Math.hypot((a.x-b.x),(a.y-b.y));if(d<size()*2.15&&d>size()*1.38&&a.state==="walk"&&b.state==="walk"){a.tx=b.x;b.tx=a.x;if(Math.random()<dt*.12)startFight(a,b);}}
-      ctx.clearRect(0,0,innerWidth,innerHeight);drawEnvironment();drawFx(now);for(const c of charsRef.current)drawChar(c,now);raf=requestAnimationFrame(tick);};
-    spawn();raf=requestAnimationFrame(tick);
-    return()=>{alive=false;cancelAnimationFrame(raf);removeEventListener("resize",resize);timers.current.forEach(clearTimeout);timers.current.clear();charsRef.current=[];fxRef.current=[];};
-  },[]);
-
-  return <canvas ref={canvasRef} className="rm-canvas" aria-hidden="true"/>;
+  return (
+    <div className="rm-layer" aria-hidden="true">
+      {ropes.map((q) => <span key={q.id} className={`rm-rope${q.out ? " out" : ""}`} style={{ left: q.x }} />)}
+      {cast.map((m) => (
+        <button key={m.who} type="button" tabIndex={-1} title={CHARS[m.who]} className={`rm-c${m.on ? " on" : ""}`} onClick={() => api.current.poke?.(m.who)}
+          style={{ transform: `translate(${m.x}px, ${m.y}px)`, transition: `transform ${m.dur}s ${m.ease === "l" ? "linear" : "ease-in-out"}, opacity .4s`, "--sz": `${size}px` }}>
+          {m.say && <span className="rm-say">{m.say}</span>}
+          <span key={m.air ? m.air.n : "g"} className={m.air ? "rm-air" : "rm-ground"} style={m.air ? { "--h": `${m.air.h}px`, "--ms": `${m.air.ms}ms`, "--rot": `${m.air.rot}deg` } : undefined}>
+            <span className="rm-f" style={{ transform: `scaleX(${m.flip})` }}>
+              <Sprite src={sprite(m.who, m.pose)} who={m.who} pose={m.pose} anim={m.anim} size={size} />
+            </span>
+          </span>
+        </button>
+      ))}
+      {fxs.map(fxView)}
+    </div>
+  );
 }
