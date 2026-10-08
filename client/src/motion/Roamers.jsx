@@ -31,22 +31,22 @@ const ROUT = {
 };
 const SOLO = {
   morning: ["run", "pushup", "squat", "plank", "scale", "rope", "drink", "workout"], noon: ["eat", "drink", "study", "swim", "task"],
-  afternoon: ["rope", "cycle", "parkour", "task", "run", "study"], evening: ["parkour", "powerup", "levelup", "rope", "dance", "swim", "victory"], night: ["sleep"],
+  afternoon: ["rope", "cycle", "parkour", "task", "run", "study", "follow"], evening: ["parkour", "powerup", "levelup", "rope", "dance", "swim", "victory", "follow"], night: ["sleep"],
 };
 const DUO = {
   morning: ["race", "pushup", "squat", "ropeRace", "drink"], noon: ["eat", "eat", "swim", "study"],
   afternoon: ["fight", "ropeRace", "parkour", "race", "fight"], evening: ["fight", "fight", "parkour", "ropeRace", "dance", "powerup"], night: ["sleep"],
 };
 
-function Sprite({ src, who, pose, anim, size }) {
-  if (anim === "walk" && (pose === "walk" || pose === "run")) // baked 8-frame cycles: legs stride, arms swing
-    return <span className={`rm-strip${pose === "run" ? " run" : ""}`} style={{ width: size, height: size, backgroundImage: `url(${pose === "run" ? runStrip(who) : walkStrip(who)})` }} />;
+function Sprite({ src, who, pose, anim, size, cyc }) {
+  if (anim === "walk" && (pose === "walk" || pose === "run")) // baked 16-frame cycle (thigh+knee, shoulder+elbow, head bob, hair lag); --cyc = seconds per stride so feet don't slide
+    return <span className="rm-strip" style={{ width: size, height: size, "--cyc": `${cyc}s`, backgroundImage: `url(${pose === "run" ? runStrip(who) : walkStrip(who)})` }} />;
   return <img className={`rm-img rm-${anim}`} src={src} width={size} height={size} alt="" draggable="false" />;
 }
 
 export default function Roamers() {
   const size = useRef(typeof window !== "undefined" && window.innerWidth < 640 ? 70 : 96).current;
-  const [cast, setCast] = useState(() => KEYS.map((who) => ({ who, x: -300, y: 200, dur: 0, ease: "e", pose: "walk", anim: "idle", flip: 1, say: "", on: false, air: null })));
+  const [cast, setCast] = useState(() => KEYS.map((who) => ({ who, x: -300, y: 200, dur: 0, ease: "e", cyc: 0.8, pose: "walk", anim: "idle", flip: 1, say: "", on: false, air: null })));
   const [fxs, setFxs] = useState([]);
   const [ropes, setRopes] = useState([]);
   const api = useRef({});
@@ -70,18 +70,26 @@ export default function Roamers() {
     const addRope = (x) => { const id = ++rid; setRopes((r) => [...r, { id, x }]); return id; };
     const delRope = (id) => { setRopes((r) => r.map((q) => (q.id === id ? { ...q, out: true } : q))); setTimeout(() => setRopes((r) => r.filter((q) => q.id !== id)), 900); };
 
+    const dust = (p) => fx({ t: "dust", x: p.x, y: p.y }, 750);
+    const cur = { x: -1, y: -1 };
+    const onMove = (e) => { cur.x = e.clientX; cur.y = e.clientY; }; window.addEventListener("pointermove", onMove, { passive: true }); //#web
     const move = async (w, to, pose = "walk", speed = 55, anim = "walk") => {
-      const d = Math.hypot(to.x - P[w].x, to.y - P[w].y), dur = Math.max(1.2, d / speed);
-      set(w, { x: to.x, y: to.y, dur, ease: "e", pose, anim, flip: to.x < P[w].x ? -1 : 1 });
+      const from = { ...P[w] }, d = Math.hypot(to.x - from.x, to.y - from.y), dur = Math.max(1.2, d / speed), flip = to.x < from.x ? -1 : 1;
+      const gait = pose === "walk" || pose === "run", cyc = Math.min(1.3, Math.max(0.4, (size * (pose === "run" ? 1.0 : 0.55)) / Math.max(speed, 20)));
+      if (gait && d > 30) { set(w, { pose: "idle", anim: "crouch", flip }); await sleep(150); }   // anticipation: dip before the first step
+      set(w, { x: to.x, y: to.y, dur, ease: "e", pose, anim, flip, cyc });
       P[w] = { x: to.x, y: to.y };
-      await sleep(dur * 1000 + 60); set(w, { anim: "idle" });
+      const t0 = Date.now(), dt = pose === "run" ? setInterval(() => { const k = Math.min(1, (Date.now() - t0) / (dur * 1000)), e = k < 0.5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2; dust({ x: from.x + (to.x - from.x) * e + size / 2, y: from.y + (to.y - from.y) * e + size * 0.92 }); }, 240) : 0;
+      await sleep(dur * 1000 + 60); if (dt) clearInterval(dt);
+      if (d > 30) { set(w, { anim: "settle" }); await sleep(230); }                                  // settle: small overshoot on stopping
+      set(w, { anim: "idle" });
     };
     // a real jump: straight travel underneath, an arc (and optional flips) on top, squash on landing
     const jump = async (w, to, h = 110, flips = 0, pose = "cheer") => {
       const d = Math.hypot(to.x - P[w].x, to.y - P[w].y), ms = Math.max(750, Math.min(1500, 520 + d * 1.1)), dir = to.x < P[w].x ? -1 : 1;
       set(w, { x: to.x, y: to.y, dur: ms / 1000, ease: "l", pose, anim: "idle", flip: dir, air: { n: ++airN, h, ms, rot: flips * 360 * dir } });
       P[w] = { x: to.x, y: to.y }; await sleep(ms + 30);
-      set(w, { air: null, ease: "e", anim: "land" }); await sleep(260); set(w, { anim: "idle" });
+      set(w, { air: null, ease: "e", anim: "land" }); dust({ x: P[w].x + size * 0.3, y: P[w].y + size * 0.92 }); dust({ x: P[w].x + size * 0.7, y: P[w].y + size * 0.92 }); await sleep(260); set(w, { anim: "idle" });
     };
     const knock = async (a, d) => {
       const nx = Math.min(Math.max(P[d].x + (P[d].x >= P[a].x ? 1 : -1) * 60, 10), W() - size - 10);
@@ -141,6 +149,10 @@ export default function Roamers() {
       ],
     };
 
+    const hold = async (w, ms, look = true) => { const t0 = Date.now(); let side = 0;   // stand around naturally: look at the cursor if it's near, otherwise glance about now and then
+      while (alive && Date.now() - t0 < ms) { await sleep(Math.min(700, Math.max(50, ms - (Date.now() - t0)))); if (!look) continue;
+        if (cur.x >= 0 && Math.abs(cur.x - C(w).x) < 460) { const f = cur.x < C(w).x ? -1 : 1; if (f !== side) { side = f; set(w, { flip: f }); } }
+        else if (Math.random() < 0.15) set(w, { flip: Math.random() < 0.5 ? -1 : 1 }); } };
     // ---- solo activities ----
     const routine = async (w, kind, ms) => {
       const R = ROUT[kind];
@@ -151,7 +163,7 @@ export default function Roamers() {
       if (R.fx === "power") { burst(c, "#f59e0b", "POWER UP!"); quake(); fx({ t: "charge", x: c.x, y: c.y, c: "#f59e0b", life: 1400 }, 1400); }
       if (R.fx === "level") { burst(c, "#facc15", "LEVEL UP!"); confetti(c); }
       if (R.fx === "win") { confetti({ x: c.x, y: c.y - 30 }); set(w, { air: { n: ++airN, h: 70, ms: 700, rot: 0 } }); setTimeout(() => set(w, { air: null }), 760); }
-      await sleep(ms || (kind === "sleep" ? 14000 : rnd(6000, 9000))); set(w, { say: "" });
+      await hold(w, ms || (kind === "sleep" ? 14000 : rnd(6000, 9000)), !["pushup", "squat", "plank", "sleep", "powerup", "levelup", "victory", "eat", "drink"].includes(kind)); set(w, { say: "" });
     };
     const runLaps = async (w) => {
       const y = rnd(H() * 0.3, H() - size - 24); set(w, { y, dur: 0 }); P[w] = { ...P[w], y }; await sleep(60);
@@ -196,6 +208,14 @@ export default function Roamers() {
       set(w, { pose: "victory", anim: "dance", say: "Nailed it!" }); confetti({ x: C(w).x, y: C(w).y - 30 }); await sleep(1600);
       await jump(w, { x: rnd(40, W() - size - 40), y: H() - size - 12 }, 130, 1);
     };
+    const follow = async (w) => { if (cur.x < 0) return routine(w, "wave");   // trots after the mouse pointer
+      say(w, "Wait for me!", 2000);
+      for (let i = 0; i < 4 && alive; i++) { const to = { x: Math.min(Math.max(cur.x + rnd(-120, 120) - size / 2, 10), W() - size - 10), y: Math.min(Math.max(cur.y - size * 0.6 + rnd(-40, 40), 70), H() - size - 12) }; await move(w, to, "walk", 85); set(w, { flip: cur.x < C(w).x ? -1 : 1 }); await sleep(900); }
+      set(w, { pose: "cheer", anim: "dance", say: "Caught up!" }); await sleep(1500); };
+    const meet = async (a, b) => { const mid = { x: rnd(W() * 0.3, W() * 0.6), y: rnd(H() * 0.35, H() * 0.65) }, gap = size * 1.1;
+      await Promise.all([move(a, { x: mid.x - gap, y: mid.y }), move(b, { x: mid.x + gap, y: mid.y })]);
+      set(a, { flip: 1, pose: "wave", anim: "idle", say: pick(["Hey!", "Morning!", "You again?"]) }); set(b, { flip: -1, pose: "wave", anim: "idle", say: pick(["Hey hey!", "Ready to train?", "Good to see you!"]) });
+      await sleep(2400); set(a, { say: "" }); set(b, { say: "" }); };
     const race = async (a, b) => {
       const ly = Math.min(H() - size - 20, Math.max(100, H() * 0.4)), lane = [ly, Math.min(H() - size - 12, ly + size * 0.9)], end = W() - size - 20;
       await Promise.all([move(a, { x: 20, y: lane[0] }, "walk", 60), move(b, { x: 20, y: lane[1] }, "walk", 60)]);
@@ -204,7 +224,7 @@ export default function Roamers() {
       await Promise.all([move(a, { x: end, y: lane[0] }, "run", sa), move(b, { x: end, y: lane[1] }, "run", sb)]);
       set(win, { pose: "victory", anim: "dance", say: "Winner!" }); confetti(C(win)); set(lose, { pose: "sad", anim: "shake", say: "Rematch!" }); await sleep(2800);
     };
-    const doKind = (w, kind) => kind === "rope" ? ropeClimb(w) : kind === "parkour" ? parkour(w) : kind === "run" ? runLaps(w) : kind === "cycle" ? ride(w, "cycle", "Ring ring!", "ride") : kind === "swim" ? ride(w, "swim", "Splash!", "swimbob") : routine(w, kind);
+    const doKind = (w, kind) => kind === "follow" ? follow(w) : kind === "rope" ? ropeClimb(w) : kind === "parkour" ? parkour(w) : kind === "run" ? runLaps(w) : kind === "cycle" ? ride(w, "cycle", "Ring ring!", "ride") : kind === "swim" ? ride(w, "swim", "Splash!", "swimbob") : routine(w, kind);
 
     const fight = async (a, b) => {
       fighting = true;
@@ -277,7 +297,7 @@ export default function Roamers() {
         const fromLeft = Math.random() < 0.5;
         who.forEach((w, i) => { const x = fromLeft ? -size - 30 - i * 60 : W() + 30 + i * 60; P[w] = { x, y: rnd(120, H() - size - 40) }; ON.add(w); set(w, { on: true, x: P[w].x, y: P[w].y, dur: 0, say: "", air: null }); });
         await sleep(80);
-        if (n === 2) { const k = pick(DUO[sl]); if (k === "fight") await fight(who[0], who[1]); else if (k === "race") await race(who[0], who[1]); else if (k === "ropeRace") await ropeRace(who[0], who[1]); else await Promise.all(who.map((w) => doKind(w, k))); }
+        if (n === 2) { const k = pick(DUO[sl]); if (k === "fight") await fight(who[0], who[1]); else if (k === "race") await race(who[0], who[1]); else if (k === "ropeRace") await ropeRace(who[0], who[1]); else { if (k !== "sleep" && Math.random() < 0.55) await meet(who[0], who[1]); await Promise.all(who.map((w) => doKind(w, k))); } }
         else await doKind(who[0], pick(SOLO[sl]));
         await Promise.all(who.map((w) => move(w, { x: Math.random() < 0.5 ? -size - 40 : W() + 40, y: P[w].y }, "walk", 55)));
         who.forEach((w) => { ON.delete(w); set(w, { on: false, say: "" }); });
@@ -295,8 +315,11 @@ export default function Roamers() {
       else { const R = ROUT.powerup; set(w, { pose: R.pose, anim: R.anim, say: R.say(w) }); burst(c, "#f59e0b", "POWER UP!"); quake(); await sleep(2200); }
       set(w, { pose: "victory", anim: "dance" }); await sleep(1600); set(w, { pose: "walk", anim: "idle" }); lock.delete(w);
     };
+    const hovering = new Set();
+    api.current.hover = async (w) => { if (!ON.has(w) || lock.has(w) || fighting || authEl() || hovering.has(w)) return; hovering.add(w);   // point at one and it greets you
+      set(w, { pose: "wave", anim: "idle", say: pick(["Hey!", "Oh, hi!", "👋", "Need a hand?"]), air: { n: ++airN, h: 34, ms: 520, rot: 0 } }); setTimeout(() => set(w, { air: null }), 560); await sleep(2200); hovering.delete(w); };
     director();
-    return () => { alive = false; document.removeEventListener("click", onClick, true); };
+    return () => { alive = false; document.removeEventListener("click", onClick, true); window.removeEventListener("pointermove", onMove); };
   }, [size]);
 
   const fxView = (f) => {
@@ -308,16 +331,18 @@ export default function Roamers() {
     return <span key={f.id} className={`fx fx-${f.t}`} style={st}><i /></span>;
   };
 
+  const vh = typeof window !== "undefined" ? window.innerHeight : 800;
   return (
     <div className="rm-layer" aria-hidden="true">
       {ropes.map((q) => <span key={q.id} className={`rm-rope${q.out ? " out" : ""}`} style={{ left: q.x }} />)}
       {cast.map((m) => (
-        <button key={m.who} type="button" tabIndex={-1} title={CHARS[m.who]} className={`rm-c${m.on ? " on" : ""}`} onClick={() => api.current.poke?.(m.who)}
-          style={{ transform: `translate(${m.x}px, ${m.y}px)`, transition: `transform ${m.dur}s ${m.ease === "l" ? "linear" : "ease-in-out"}, opacity .4s`, "--sz": `${size}px` }}>
+        <button key={m.who} type="button" tabIndex={-1} title={CHARS[m.who]} className={`rm-c${m.on ? " on" : ""}`} onClick={() => api.current.poke?.(m.who)} onMouseEnter={() => api.current.hover?.(m.who)}
+          style={{ zIndex: Math.round(m.y), transformOrigin: "50% 100%", transform: `translate(${m.x}px, ${m.y}px) scale(${(0.82 + 0.28 * Math.min(1, Math.max(0, m.y / vh))).toFixed(3)})`, transition: `transform ${m.dur}s ${m.ease === "l" ? "linear" : "ease-in-out"}, opacity .4s`, "--sz": `${size}px` }}>
+          <span className="rm-shadow" />
           {m.say && <span className="rm-say">{m.say}</span>}
           <span key={m.air ? m.air.n : "g"} className={m.air ? "rm-air" : "rm-ground"} style={m.air ? { "--h": `${m.air.h}px`, "--ms": `${m.air.ms}ms`, "--rot": `${m.air.rot}deg` } : undefined}>
             <span className="rm-f" style={{ transform: `scaleX(${m.flip})` }}>
-              <Sprite src={sprite(m.who, m.pose)} who={m.who} pose={m.pose} anim={m.anim} size={size} />
+              <span key={m.pose} className="rm-pop"><Sprite src={sprite(m.who, m.pose)} who={m.who} pose={m.pose} anim={m.anim} size={size} cyc={m.cyc} /></span>
             </span>
           </span>
         </button>
