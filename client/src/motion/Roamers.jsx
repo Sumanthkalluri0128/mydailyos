@@ -6,6 +6,7 @@
 import { useEffect, useRef, useState } from "react";
 import "./roamers.css";
 import { CHARS, sprite, walkStrip, runStrip, climbStrip } from "./chars";
+import Character3D from "./Character3D";
 
 const KEYS = Object.keys(CHARS);
 const rnd = (a, b) => a + Math.random() * (b - a);
@@ -17,7 +18,7 @@ const authEl = () => document.querySelector(".auth-shell");
 const CONF = ["#f43f5e", "#f59e0b", "#22c55e", "#38bdf8", "#a855f7", "#facc15"];
 const PETAL = ["#fbcfe8", "#f9a8d4", "#fda4af", "#fecdd3", "#ffffff"];
 
-const EAT = { zoro: "Sake and rice. Perfect.", naruto: "Ichiraku ramen!", luffy: "MEEEAT!!", jinwoo: "Restoring HP…", goku: "Need. More. Food.", gojo: "Sweets break~" };
+const EAT = { zoro: "Rice and training fuel.", naruto: "Ramen break!", luffy: "MEEEAT!!", jinwoo: "Restoring HP…", asta: "Protein and persistence!", gojo: "Sweets break~" };
 const ROUT = {
   habit: { pose: "habit", anim: "idle", say: () => "Focus. Breathe. Train." }, drink: { pose: "drink", anim: "eat", say: () => "Hydration check!" },
   eat: { pose: "eat", anim: "eat", say: (w) => EAT[w] }, task: { pose: "task", anim: "idle", say: () => "Ticking off tasks" },
@@ -40,12 +41,16 @@ const DUO = {
 };
 
 const K = 1.19; // cycle frames are drawn with the body at ~84% of the frame (room for limbs): scale up so they match the still sprites
-function Sprite({ src, who, pose, anim, size, cyc, rev }) {
+function Sprite({ src, who, pose, anim, size, cyc, rev, active }) {
+  return <Character3D who={who} pose={pose} anim={anim} size={size} active={active} />;
+  /* Sticker renderer retained below for emergency rollback; the 3D renderer is the active path. */
+  /*
   if (anim === "walk" && (pose === "walk" || pose === "run" || pose === "climb")) { // baked 16-frame cycles: alternating legs, arm swing / reach, weight shift, head bob
     const s2 = size * K;
     return <span className={`rm-strip${rev ? " rev" : ""}`} style={{ width: s2, height: s2, left: -(s2 - size) / 2, top: -(s2 - size), "--cyc": `${cyc}s`, backgroundImage: `url(${pose === "run" ? runStrip(who) : pose === "climb" ? climbStrip(who) : walkStrip(who)})` }} />;
   }
   return <img className={`rm-img rm-${anim}`} src={src} width={size} height={size} alt="" draggable="false" />;
+  */
 }
 
 export default function Roamers() {
@@ -102,7 +107,7 @@ export default function Roamers() {
       await sleep(900); set(d, { anim: "idle", pose: "wave" });
     };
     const arm = (c, t, delay = 0, dy = 0, life = 1200) => fx({ t: "arm", x: c.x, y: c.y + dy, len: Math.hypot(t.x - c.x, t.y - c.y), r: (Math.atan2(t.y - c.y, t.x - c.x) * 180) / Math.PI, delay, life }, life + delay);
-    const rush = (img, s, t, delay, life, cls) => fx({ t: "rush", cls, img, x: s.x, y: s.y, dx: t.x - s.x, dy: t.y - s.y, delay, life }, life + delay);
+    const rush = (img, s, t, delay, life, cls) => fx({ t: "rush", cls, x: s.x, y: s.y, dx: t.x - s.x, dy: t.y - s.y, delay, life, c: cls === "shade" ? "#8b5cf6" : "#60a5fa" }, life + delay);
     const stance = (a) => set(a, { pose: "fight", anim: "lunge" });
 
     const MOVE = {
@@ -120,6 +125,10 @@ export default function Roamers() {
         async (a, t, d) => { const c = C(a); set(a, { pose: "fight", anim: "shake" }); say(a, "Gum-Gum Gatling!", 3400); await sleep(700);
           for (let i = 0; i < 5; i++) { arm(c, { x: t.x + rnd(-30, 30), y: t.y + rnd(-40, 40) }, 0, rnd(-14, 14), 520); await sleep(260); burst({ x: t.x + rnd(-30, 30), y: t.y + rnd(-30, 30) }, "#ef4444", "!"); }
           if (d) await knock(a, d); },
+      ],
+      asta: [
+        async (a, t, d) => { const c = C(a); stance(a); say(a, "Black Divider!", 3000); await sleep(800); [-30, 0, 30].forEach((r, i) => fx({ t: "slash", x: t.x, y: t.y, r, c: "#25252b", delay: i * 140 }, 500 + i * 140)); await sleep(650); burst(t, "#c72d35", "DIVIDER!"); if (d) await knock(a, d); },
+        async (a, t, d) => { const c = C(a); stance(a); say(a, "Demon-Slayer strike!", 3000); await move(a, { x: t.x - size, y: t.y }, "fight", 145, "dash"); fx({ t: "crescent", x: c.x, y: c.y, dx: t.x - c.x, dy: t.y - c.y, ang: (Math.atan2(t.y - c.y, t.x - c.x) * 180) / Math.PI + 90, c: "#c72d35", life: 800 }, 800); if (d) await knock(a, d); },
       ],
       zoro: [
         async (a, t, d) => { const dir = t.x >= C(a).x ? 1 : -1; say(a, "Santoryu… Oni Giri!", 3400); stance(a); await sleep(1000);
@@ -345,7 +354,7 @@ export default function Roamers() {
     if (["arm", "slash", "beam"].includes(f.t)) return <span key={f.id} className={`fx fx-rot fx-rot-${f.t}`} style={{ ...st, transform: `rotate(${f.r}deg)` }}><i style={{ width: f.len }} /></span>;
     if (f.t === "burst") return <span key={f.id} className="fx fx-burst" style={st}><b>{f.w}</b></span>;
     if (f.t === "confetti") return <span key={f.id} className="fx fx-confetti" style={st}>{f.p.map((q, i) => <i key={i} className={q.petal ? "petal" : ""} style={{ "--dx": `${q.dx}px`, "--dy": `${q.dy + 150}px`, "--r": `${q.r}deg`, background: q.c, animationDelay: `${q.d}ms` }} />)}</span>;
-    if (f.t === "rush") return <span key={f.id} className={`fx fx-rush fx-${f.cls}`} style={st}><img src={f.img} alt="" draggable="false" /></span>;
+    if (f.t === "rush") return <span key={f.id} className={`fx fx-rush fx-${f.cls}`} style={{ ...st, "--c": f.c || "#60a5fa" }}><i /></span>;
     return <span key={f.id} className={`fx fx-${f.t}`} style={st}><i /></span>;
   };
 
@@ -360,7 +369,7 @@ export default function Roamers() {
           {m.say && <span className="rm-say">{m.say}</span>}
           <span key={m.air ? m.air.n : "g"} className={m.air ? "rm-air" : "rm-ground"} style={m.air ? { "--h": `${m.air.h}px`, "--ms": `${m.air.ms}ms`, "--rot": `${m.air.rot}deg` } : undefined}>
             <span className="rm-f" style={{ transform: `scaleX(${m.flip})` }}>
-              <span key={m.pose} className="rm-pop"><Sprite src={sprite(m.who, m.pose)} who={m.who} pose={m.pose} anim={m.anim} size={size} cyc={m.cyc} rev={m.rev} /></span>
+              <span key={m.pose} className="rm-pop"><Sprite src={sprite(m.who, m.pose)} who={m.who} pose={m.pose} anim={m.anim} size={size} cyc={m.cyc} rev={m.rev} active={m.on} /></span>
             </span>
           </span>
         </button>

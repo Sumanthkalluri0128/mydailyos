@@ -37,9 +37,8 @@
 .fx-burst b{font:900 14px system-ui,sans-serif;color:#fff;text-shadow:0 0 4px #000,0 2px 0 #000;white-space:nowrap}
 @keyframes fx-burst{0%{transform:scale(.2);opacity:1}60%{opacity:1}100%{transform:scale(1.5);opacity:0}}
 .fx-rush{margin:calc(var(--w)/-2) 0 0 calc(var(--w)/-2);width:var(--w);animation:fx-rush var(--life) ease-in var(--d) both}
-.fx-rush img{width:100%;display:block}
-.fx-shade img{filter:brightness(0) drop-shadow(0 0 8px #8b5cf6) drop-shadow(0 0 14px #6d28d9)}
-.fx-clone img{opacity:.85;filter:drop-shadow(0 0 6px #fbbf24)}
+.fx-rush i{display:block;width:100%;aspect-ratio:.72;border:3px solid var(--c);border-radius:48% 48% 36% 36%;background:linear-gradient(180deg,transparent,color-mix(in srgb,var(--c) 22%,transparent));box-shadow:0 0 18px var(--c);animation:fx-rush-glow .55s ease-in-out infinite alternate}
+@keyframes fx-rush-glow{to{filter:brightness(1.5);transform:scale(.94)}}
 @keyframes fx-rush{0%{opacity:0;transform:translate(0,22px) scale(.5)}22%{opacity:.9;transform:translate(0,0) scale(1)}50%{opacity:.9;transform:translate(0,0) scale(1)}100%{opacity:.9;transform:translate(var(--dx),var(--dy)) scale(.9)}}
 @media (max-width:640px){.rm-say{font-size:10px}.fx-burst b{font-size:11px}}
 .ff-calm .rm-layer{display:none}
@@ -103,3 +102,7 @@ body.rm-quake #root{animation:rm-quake .12s linear 5}
 .rm-dangle{animation:rm-dangle .9s ease-in-out infinite;transform-origin:50% 10%}
 @keyframes rm-dangle{0%,100%{transform:rotate(-9deg)}50%{transform:rotate(9deg)}}
 .fx-confetti i.petal{width:10px;height:14px;border-radius:70% 0 70% 0;animation-duration:2.6s}
+
+/* Real-time 3D canvas: transparent so the character belongs in the existing UI. */
+.rm-3d-host { position: relative; overflow: visible; isolation: isolate; }
+.rm-3d-host canvas { display:block; width:100%; height:100%; overflow:visible; }
