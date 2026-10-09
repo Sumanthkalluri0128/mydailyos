@@ -2,10 +2,11 @@
 // Tap the stage to start something. Fights: charge, clash (shake + POW), retreat. Dances: hop, sway, flip, music notes.
 import { useEffect, useMemo, useState } from "react";
 import "./characters.css";
-import { CHARS, dayChar, sprite } from "./chars";
+import { CHARS, dayChar, sprite, wallOf } from "./chars";
+import Slab from "./Slab";
 
-const IDLE = { zoro: "wave", jinwoo: "wave", naruto: "task", luffy: "task" };
-const DANCE = { zoro: ["cheer", "wave"], jinwoo: ["cheer", "wave"], naruto: ["task", "walk"], luffy: ["task", "walk"] };
+const IDLE = { zoro: "wave", jinwoo: "wave", naruto: "task", luffy: "task", goku: "wave", gojo: "wave" };
+const DANCE = { zoro: ["cheer", "wave"], jinwoo: ["cheer", "wave"], naruto: ["task", "walk"], luffy: ["task", "walk"], goku: ["cheer", "wave"], gojo: ["cheer", "wave"] };
 const WORDS = ["POW!", "BAM!", "WHAM!", "KAPOW!", "CLANG!"];
 const rnd = (a, b) => a + Math.random() * (b - a);
 const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
@@ -56,8 +57,10 @@ export default function BuddyStage({ size = 120, className = "" }) {
       <div className="bds-row">
         {view.map((v, i) => (
           <span key={v.who} className="bds-c" style={{ transform: `translateX(${v.tx}px)` }}>
-            <span className="bds-f" style={{ transform: `scaleX(${v.flip})` }}>
-              <img className={`bds-img bds-${v.anim}`} src={sprite(v.who, v.s)} alt="" width={size} height={size} draggable="false" />
+            <span className="bds-f">
+              <span className={`bds-img bds-${v.anim}`} style={{ width: size, height: size }}>
+                <Slab size={size} yaw={v.flip === 1 ? 0 : 180} lean={-v.flip * (v.anim === "run" ? 26 : 12)} look={10} face={<img className="bdi-pic" src={sprite(v.who, v.s)} alt="" width={size} height={size} draggable="false" />} wall={<img className="bdi-pic" src={wallOf(sprite(v.who, v.s))} alt="" width={size} height={size} draggable="false" />} />
+              </span>
             </span>
           </span>
         ))}

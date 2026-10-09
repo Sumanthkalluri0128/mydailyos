@@ -1,17 +1,17 @@
 .rm-layer{position:fixed;inset:0;pointer-events:none;z-index:40;overflow:hidden}
 .rm-c{position:absolute;left:0;top:0;width:var(--sz);height:var(--sz);padding:0;border:0;background:none;opacity:0;pointer-events:none;cursor:pointer;-webkit-tap-highlight-color:transparent}
 .rm-c.on{opacity:1;pointer-events:auto}
-.rm-f{display:block;transition:transform .3s}
-.rm-img{display:block;filter:drop-shadow(0 6px 6px rgba(0,0,0,.28));user-select:none;transform-origin:50% 90%}
+.rm-body{display:block;transform-origin:50% 100%}
+.rm-img{display:block;user-select:none;-webkit-user-drag:none}
 .rm-walk{animation:rm-walk .75s ease-in-out infinite}.rm-idle{animation:rm-idle 3s ease-in-out infinite}
 .rm-shake{animation:rm-shake .14s linear infinite}.rm-eat{animation:rm-eat .6s ease-in-out infinite}
 .rm-lift{animation:rm-lift 1s ease-in-out infinite}.rm-dance{animation:rm-dance .7s ease-in-out infinite}
 .rm-snore{animation:rm-snore 3.5s ease-in-out infinite}.rm-lunge{animation:rm-lunge .55s ease-in-out infinite}.rm-dash{animation:rm-dash .22s ease-in-out infinite}.rm-blink{animation:rm-blink .18s steps(2) infinite}
-@keyframes rm-walk{50%{transform:translateY(-6px) rotate(3deg)}}@keyframes rm-idle{50%{transform:translateY(-3px)}}
+@keyframes rm-walk{50%{transform:translateY(-6px) rotate(calc(3deg * var(--fl,1)))}}@keyframes rm-idle{50%{transform:translateY(-3px)}}
 @keyframes rm-shake{25%{transform:translate(-4px,2px) rotate(-3deg)}75%{transform:translate(4px,-2px) rotate(3deg)}}
 @keyframes rm-eat{50%{transform:scale(1.07,.94)}}@keyframes rm-lift{50%{transform:translateY(-5px) scale(.97,1.05)}}
 @keyframes rm-dance{25%{transform:translateY(-12px) rotate(-8deg)}75%{transform:translateY(-12px) rotate(8deg)}}
-@keyframes rm-snore{50%{transform:scale(1.05)}}@keyframes rm-lunge{50%{transform:translateX(8px) rotate(4deg) scale(1.03)}}@keyframes rm-dash{50%{transform:translateY(-5px) skewX(-8deg) scaleX(1.07)}}
+@keyframes rm-snore{50%{transform:scale(1.05)}}@keyframes rm-lunge{50%{transform:translateX(calc(8px * var(--fl,1))) rotate(calc(4deg * var(--fl,1))) scale(1.03)}}@keyframes rm-dash{50%{transform:translateY(-5px) skewX(calc(-8deg * var(--fl,1))) scaleX(1.07)}}
 @keyframes rm-blink{50%{opacity:.15}}
 .rm-say{position:absolute;left:50%;bottom:100%;transform:translateX(-50%);white-space:nowrap;padding:4px 10px;border-radius:12px;background:#fff;color:#111;font:800 12px/1.2 system-ui,sans-serif;box-shadow:0 2px 8px rgba(0,0,0,.25);z-index:3}
 /* ---- effects ---- */
@@ -37,15 +37,16 @@
 .fx-burst b{font:900 14px system-ui,sans-serif;color:#fff;text-shadow:0 0 4px #000,0 2px 0 #000;white-space:nowrap}
 @keyframes fx-burst{0%{transform:scale(.2);opacity:1}60%{opacity:1}100%{transform:scale(1.5);opacity:0}}
 .fx-rush{margin:calc(var(--w)/-2) 0 0 calc(var(--w)/-2);width:var(--w);animation:fx-rush var(--life) ease-in var(--d) both}
-.fx-rush i{display:block;width:100%;aspect-ratio:.72;border:3px solid var(--c);border-radius:48% 48% 36% 36%;background:linear-gradient(180deg,transparent,color-mix(in srgb,var(--c) 22%,transparent));box-shadow:0 0 18px var(--c);animation:fx-rush-glow .55s ease-in-out infinite alternate}
-@keyframes fx-rush-glow{to{filter:brightness(1.5);transform:scale(.94)}}
+.fx-rush img{width:100%;display:block}
+.fx-shade img{filter:brightness(0) drop-shadow(0 0 8px #8b5cf6) drop-shadow(0 0 14px #6d28d9)}
+.fx-clone img{opacity:.85;filter:drop-shadow(0 0 6px #fbbf24)}
 @keyframes fx-rush{0%{opacity:0;transform:translate(0,22px) scale(.5)}22%{opacity:.9;transform:translate(0,0) scale(1)}50%{opacity:.9;transform:translate(0,0) scale(1)}100%{opacity:.9;transform:translate(var(--dx),var(--dy)) scale(.9)}}
 @media (max-width:640px){.rm-say{font-size:10px}.fx-burst b{font-size:11px}}
 .ff-calm .rm-layer{display:none}
 @media (prefers-reduced-motion:reduce){.rm-layer{display:none}}
 
 /* walking: 8 baked frames per character (smooth leg stride + arm swing), stepped like a sprite sheet */
-.rm-strip{display:block;background-size:800% 100%;background-repeat:no-repeat;filter:drop-shadow(0 6px 6px rgba(0,0,0,.28));animation:rm-frames .72s step-end infinite,rm-bob .72s ease-in-out infinite}
+.rm-strip{display:block;background-size:800% 100%;background-repeat:no-repeat;animation:rm-frames .72s step-end infinite,rm-bob .72s ease-in-out infinite}
 @keyframes rm-frames{0%{background-position:0 0}12.5%{background-position:14.2857% 0}25%{background-position:28.5714% 0}37.5%{background-position:42.8571% 0}50%{background-position:57.1429% 0}62.5%{background-position:71.4286% 0}75%{background-position:85.7143% 0}87.5%{background-position:100% 0}}
 @keyframes rm-bob{50%{transform:translateY(-4px)}}
 .fx-rot-beam i{height:36px;margin-top:-18px;border-radius:18px;background:linear-gradient(90deg,#fff,#7dd3fc,#2563eb);box-shadow:0 0 26px 6px #38bdf8;transform-origin:0 50%;animation:fx-beam var(--life) ease-out var(--d) both}
@@ -60,9 +61,11 @@
 .rm-swimbob{animation:rm-swim .9s ease-in-out infinite}.rm-climb{animation:rm-climb .5s ease-in-out infinite}.rm-land{animation:rm-land .26s ease-out both}
 @keyframes rm-press{50%{transform:translateY(7px) scaleY(.94)}}@keyframes rm-squat{50%{transform:translateY(8px) scale(1.04,.88)}}
 @keyframes rm-tremble{25%{transform:translate(-1.5px,0)}75%{transform:translate(1.5px,1px)}}
-@keyframes rm-pulse2{50%{transform:scale(1.1);filter:drop-shadow(0 0 14px #f59e0b)}}
+@keyframes rm-pulse2{50%{transform:scale(1.1)}}
+.rm-pulse::before{content:"";position:absolute;inset:-6%;border-radius:50%;background:radial-gradient(circle,rgba(251,191,36,.75),rgba(245,158,11,0) 68%);animation:rm-halo .5s ease-in-out infinite}
+@keyframes rm-halo{0%,100%{opacity:.25;transform:scale(.8)}50%{opacity:.9;transform:scale(1.15)}}
 @keyframes rm-rise{50%{transform:translateY(-22px) scale(1.08)}}@keyframes rm-ride{25%{transform:translateY(-3px) rotate(-3deg)}75%{transform:translateY(-3px) rotate(3deg)}}
-@keyframes rm-swim{50%{transform:translateY(-4px) rotate(-2deg)}}@keyframes rm-climb{50%{transform:translateY(-3px) rotate(2deg)}}
+@keyframes rm-swim{50%{transform:translateY(-4px) rotate(-2deg)}}@keyframes rm-climb{50%{transform:translateY(-3px) rotate(calc(2deg * var(--fl,1)))}}
 @keyframes rm-land{0%{transform:scale(1.18,.78)}100%{transform:scale(1)}}
 .rm-strip.run{animation:rm-frames .45s step-end infinite,rm-bob .45s ease-in-out infinite}
 /* real jumps: arc + optional flips */
@@ -90,8 +93,15 @@ body.rm-quake #root{animation:rm-quake .12s linear 5}
 @keyframes rm-settle{0%{transform:scale(1.05,.93)}60%{transform:scale(.985,1.03)}100%{transform:scale(1,1)}}
 .rm-pop{display:block;transform-origin:50% 100%;animation:rm-pop .16s ease-out}
 @keyframes rm-pop{from{opacity:.55;transform:scale(.93)}to{opacity:1;transform:scale(1)}}
-.rm-shadow{position:absolute;left:14%;right:14%;bottom:-2px;height:14%;border-radius:50%;background:radial-gradient(ellipse at center,rgba(0,0,0,.34),rgba(0,0,0,0) 70%);pointer-events:none}
-.rm-f,.rm-air,.rm-ground{position:relative;z-index:1}
+.rm-air,.rm-ground{position:relative;z-index:1}
+/* ---- ground shadows: silhouette cast on the floor + contact shadow; both stay on the floor while the figure jumps ---- */
+.rm-gs{position:absolute;left:0;right:0;bottom:0;height:0;pointer-events:none;transform-origin:50% 100%}
+.rm-contact{position:absolute;left:18%;right:18%;bottom:-5px;height:11%;border-radius:50%;background:radial-gradient(ellipse at center,rgba(0,0,0,.55),rgba(0,0,0,.18) 55%,rgba(0,0,0,0) 72%)}
+.rm-cast{position:absolute;left:0;bottom:0;width:100%;height:var(--sz);transform-origin:50% 100%;transform:translateY(1px) skewX(-52deg) scaleY(.26);opacity:.30}
+.rm-castf{display:block;width:100%;height:100%}
+.rm-cast .rm-img,.rm-cast .rm-strip{filter:brightness(0) blur(1.8px)}
+.rm-gs.air{animation:rm-gs-hop var(--ms,700ms) linear both}
+@keyframes rm-gs-hop{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.42;transform:scale(.7)}}
 .fx-dust i{width:14px;height:14px;margin:-7px 0 0 -7px;border-radius:50%;background:rgba(210,210,220,.75);animation:fx-dust .7s ease-out both}
 @keyframes fx-dust{to{opacity:0;transform:translate(-6px,-10px) scale(1.7)}}
 
@@ -102,7 +112,4 @@ body.rm-quake #root{animation:rm-quake .12s linear 5}
 .rm-dangle{animation:rm-dangle .9s ease-in-out infinite;transform-origin:50% 10%}
 @keyframes rm-dangle{0%,100%{transform:rotate(-9deg)}50%{transform:rotate(9deg)}}
 .fx-confetti i.petal{width:10px;height:14px;border-radius:70% 0 70% 0;animation-duration:2.6s}
-
-/* Real-time 3D canvas: transparent so the character belongs in the existing UI. */
-.rm-3d-host { position: relative; overflow: visible; isolation: isolate; }
-.rm-3d-host canvas { display:block; width:100%; height:100%; overflow:visible; }
+.rm-pulse{position:relative}
