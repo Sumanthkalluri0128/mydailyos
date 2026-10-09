@@ -17,7 +17,7 @@ export default function Character3D({ who, pose = 'idle', anim = 'idle', size = 
     const manifest = CHARACTER_3D_MANIFEST[who] || CHARACTER_3D_MANIFEST.gojo;
     const scene = new THREE.Scene();
     const camera = new THREE.PerspectiveCamera(32, 1, 0.1, 100);
-    camera.position.set(0, 1.0, 3.8); camera.lookAt(0, 0.78, 0);
+    camera.position.set(0, 0.92, 4.45); camera.lookAt(0, 0.82, 0);
     const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true, powerPreference: 'low-power' });
     renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.5));
     renderer.setSize(size, size, false); renderer.outputColorSpace = THREE.SRGBColorSpace;
@@ -27,7 +27,7 @@ export default function Character3D({ who, pose = 'idle', anim = 'idle', size = 
     scene.add(new THREE.HemisphereLight(0xe9f2ff, 0x343044, 2.2));
     const key = new THREE.DirectionalLight(0xffffff, 3.1); key.position.set(-3, 5, 5); key.castShadow = true; scene.add(key);
     const rim = new THREE.DirectionalLight(manifest.accent, 1.8); rim.position.set(3, 2, -3); scene.add(rim);
-    const shadow = new THREE.Mesh(new THREE.CircleGeometry(0.65, 32), new THREE.MeshBasicMaterial({ color: 0x171827, transparent: true, opacity: 0.19, depthWrite: false }));
+    const shadow = new THREE.Mesh(new THREE.CircleGeometry(0.48, 32), new THREE.MeshBasicMaterial({ color: 0x171827, transparent: true, opacity: 0.19, depthWrite: false }));
     shadow.rotation.x = -Math.PI / 2; shadow.position.y = -0.49; scene.add(shadow);
     parts = buildProceduralCharacter(THREE, scene, who);
     // Preserve the model's animation clips in a closure because glTF scene nodes do not expose them.

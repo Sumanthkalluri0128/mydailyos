@@ -33,6 +33,12 @@ export function buildProceduralCharacter(THREE, scene, who = 'gojo') {
   const torso = new THREE.Group(); torso.position.y = 1.82; root.add(torso);
   ball(THREE, torso, outfit, [0, 0, 0], [0.36, 0.48, 0.23]);
   ball(THREE, torso, accent, [0, 0.04, 0.232], [0.055, 0.30, 0.025], 12);
+  // Neck, shoulders and pelvis visually join the limbs so the fallback reads as one body.
+  const neck = new THREE.Mesh(new THREE.CylinderGeometry(0.105, 0.12, 0.22, 14), skin);
+  neck.position.set(0, 0.48, 0); neck.castShadow = true; torso.add(neck);
+  ball(THREE, root, outfit, [0, 1.12, 0], [0.29, 0.20, 0.20], 16);
+  ball(THREE, torso, outfit, [-0.36, 0.25, 0], [0.14, 0.15, 0.16], 14);
+  ball(THREE, torso, outfit, [0.36, 0.25, 0], [0.14, 0.15, 0.16], 14);
   const head = new THREE.Group(); head.position.set(0, 0.66, 0); torso.add(head);
   ball(THREE, head, skin, [0, 0, 0], [0.265, 0.30, 0.235], 20);
   ball(THREE, head, hair, [0, 0.20, -0.005], [0.275, 0.16, 0.245], 16);
@@ -80,21 +86,21 @@ export function buildProceduralCharacter(THREE, scene, who = 'gojo') {
     ball(THREE, torso, accent, [0.22, -0.06, 0.20], [0.045, 0.045, 0.035]);
   }
   const parts = { root, torso, head, leftArm, rightArm, leftForearm, rightForearm, leftLeg, rightLeg, who };
-  root.scale.setScalar(0.94); root.position.y = -0.5; scene.add(root);
+  root.scale.setScalar(0.78); root.position.y = -0.5; scene.add(root);
   return parts;
 }
 export function animateProceduralCharacter(parts, anim = 'idle', pose = 'idle', t = 0) {
   const walk = anim === 'walk' || pose === 'walk' || pose === 'run' || pose === 'climb' || anim === 'dash';
   const fast = pose === 'run' || anim === 'dash';
-  const rate = fast ? 11.5 : 6.4; const swing = walk ? Math.sin(t * rate) : 0;
+  const rate = fast ? 8.8 : 5.2; const swing = walk ? Math.sin(t * rate) : 0;
   parts.leftLeg.rotation.x = swing * (walk ? 0.62 : 0.02);
   parts.rightLeg.rotation.x = -swing * (walk ? 0.62 : 0.02);
   parts.leftArm.rotation.x = -swing * (walk ? 0.52 : 0.08);
   parts.rightArm.rotation.x = swing * (walk ? 0.52 : 0.08);
   parts.leftForearm.rotation.x = walk ? -0.18 : 0.02;
   parts.rightForearm.rotation.x = walk ? -0.18 : 0.02;
-  parts.root.position.y = -0.5 + (walk ? Math.abs(Math.sin(t * rate * 2)) * 0.045 : Math.sin(t * 2.2) * 0.025);
-  parts.root.rotation.y = walk ? Math.sin(t * rate) * 0.10 : Math.sin(t * 0.55) * 0.06;
+  parts.root.position.y = -0.5 + (walk ? Math.abs(Math.sin(t * rate * 2)) * (fast ? 0.025 : 0.012) : Math.sin(t * 1.8) * 0.008);
+  parts.root.rotation.y = 0; parts.torso.rotation.y = walk ? Math.sin(t * rate) * 0.035 : Math.sin(t * 0.55) * 0.025;
   parts.torso.rotation.x = 0; parts.torso.rotation.z = 0; parts.head.rotation.x = 0;
   if (anim === 'dance' || pose === 'dance' || pose === 'victory' || pose === 'cheer') {
     parts.leftArm.rotation.z = 0.8 + Math.sin(t * 7) * 0.3; parts.rightArm.rotation.z = -0.8 - Math.sin(t * 7) * 0.3;
