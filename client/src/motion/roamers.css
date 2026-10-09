@@ -95,3 +95,11 @@ body.rm-quake #root{animation:rm-quake .12s linear 5}
 .rm-f,.rm-air,.rm-ground{position:relative;z-index:1}
 .fx-dust i{width:14px;height:14px;margin:-7px 0 0 -7px;border-radius:50%;background:rgba(210,210,220,.75);animation:fx-dust .7s ease-out both}
 @keyframes fx-dust{to{opacity:0;transform:translate(-6px,-10px) scale(1.7)}}
+
+/* ---- v15: front-facing cycles, climbing, drag ---- */
+.rm-strip{position:relative}
+.rm-strip.rev{animation-direction:reverse}
+.rm-c{touch-action:none;cursor:grab}.rm-c:active{cursor:grabbing}
+.rm-dangle{animation:rm-dangle .9s ease-in-out infinite;transform-origin:50% 10%}
+@keyframes rm-dangle{0%,100%{transform:rotate(-9deg)}50%{transform:rotate(9deg)}}
+.fx-confetti i.petal{width:10px;height:14px;border-radius:70% 0 70% 0;animation-duration:2.6s}
