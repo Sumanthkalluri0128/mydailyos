@@ -2,6 +2,7 @@
 
 - Characters no longer greet/wave when the pointer moves over them and no longer show a name tooltip (`Roamers.jsx`).
 - Mascot hover "pop" animation removed (`fun.css`).
+- The floating side characters (`<Roamers />` in `main.jsx`) are no longer mounted.
 
 ---
 
