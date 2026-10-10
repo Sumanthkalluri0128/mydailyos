@@ -57,19 +57,38 @@ function parseFood(body = {}) {
 }
 
 // GET /api/foods?search=&favorites=true&mine=true&limit=
+// Search matches every word typed (so "idli chutney" or "chicken biryani" finds it), and the best matches come first:
+// foods that start with what you typed, then ones with a word that starts with it, then my own and favourite foods.
 router.get('/', wrap(async (req, res) => {
   const uid = req.user.id;
   const and = [visibleTo(uid), { hidden: { $ne: true } }];
-  if (req.query.search) {
-    const rx = new RegExp(v.escapeRegex(String(req.query.search).trim().slice(0, 60)), 'i');
+  const raw = String(req.query.search || '').trim().slice(0, 60).toLowerCase();
+  const words = raw.split(/\s+/).filter(Boolean).slice(0, 5);
+  for (const w of words) {
+    const rx = new RegExp(v.escapeRegex(w), 'i');
     and.push({ $or: [{ name: rx }, { brand: rx }] });
   }
   if (req.query.mine === 'true') and.push({ userId: uid });
   if (req.query.favorites === 'true') and.push({ $or: [{ favoriteBy: uid }, { userId: uid, isFavorite: true }] });
   const limit = Math.min(Math.max(parseInt(req.query.limit, 10) || 500, 1), 1000);
 
-  const foods = await Food.find({ $and: and }).select('+favoriteBy').sort({ name: 1 }).limit(limit).lean();
-  res.json({ success: true, foods: foods.map((f) => present(f, uid)) });
+  // With a search, pull a wider candidate set and rank it; without one, keep the simple A–Z order.
+  const found = await Food.find({ $and: and }).select('+favoriteBy').sort({ name: 1 }).limit(words.length ? Math.max(limit, 300) : limit).lean();
+  let foods = found.map((f) => present(f, uid));
+  if (words.length) {
+    const score = (f) => {
+      const n = String(f.name).toLowerCase();
+      let s = 0;
+      if (n === raw) s += 100;
+      else if (n.startsWith(raw)) s += 60;
+      else if (n.split(/[^a-z0-9]+/).some((t) => t.startsWith(words[0]))) s += 30;
+      if (f.isCustom) s += 6;
+      if (f.isFavorite) s += 8;
+      return s - Math.min(n.length, 60) / 100; // shorter, simpler names win ties
+    };
+    foods = foods.map((f) => ({ f, s: score(f) })).sort((a, b) => b.s - a.s).map((x) => x.f).slice(0, limit);
+  }
+  res.json({ success: true, foods });
 }));
 
 // GET /api/foods/recent — foods I logged lately, newest first (for one-tap "log again").

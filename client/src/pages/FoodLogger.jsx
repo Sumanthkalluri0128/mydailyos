@@ -2,7 +2,7 @@ import { confirmAction } from "../utils/confirm";
 import Buddy, { BuddyEmpty } from "../motion/Buddy";
 import { notify } from "../utils/notify";
 import { apiFetch } from "../config/api";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { API_URL } from "../config";
 import FoodFormModal from "../components/FoodFormModal";
 import CalorieBalance from "../components/CalorieBalance";
@@ -79,6 +79,11 @@ function FoodLogger({ date, onBack, goTo }) {
     useState(true);
 
   const [saving, setSaving] = useState(false);
+  const [recent, setRecent] = useState([]);
+  const [showExtras, setShowExtras] = useState(false);
+  const [showAll, setShowAll] = useState(false);
+  const [openMeals, setOpenMeals] = useState({});
+  const searchSeq = useRef(0);
 
   // Add-a-new-food modal (so a missing food can be created without leaving this screen)
   const [showAddFood, setShowAddFood] = useState(false);
@@ -87,28 +92,40 @@ function FoodLogger({ date, onBack, goTo }) {
   // LOAD SAVED FOODS
   // ============================================================
 
+  // The catalogue is big (700+ foods), so it is searched on the server as you type; what you see before typing is your recent foods.
   const fetchFoods = async () => {
     try {
       setLoadingFoods(true);
-
-      const response = await apiFetch(
-        `${API_URL}/api/foods`
-      );
-
+      const response = await apiFetch(`${API_URL}/api/foods/recent`);
       const data = await response.json();
-
-      if (data.success) {
-        setFoods(data.foods);
-      }
+      if (data.success) setRecent(data.foods);
     } catch (error) {
-      console.error(
-        "Failed to fetch foods:",
-        error
-      );
+      console.error("Failed to fetch recent foods:", error);
     } finally {
       setLoadingFoods(false);
     }
   };
+
+  // Debounced server-side search; answers that arrive after a newer keystroke are ignored.
+  useEffect(() => {
+    if (selectedFood) return undefined;
+    const value = search.trim();
+    if (!value) { setFoods([]); setShowAll(false); return undefined; }
+    setLoadingFoods(true);
+    const id = ++searchSeq.current;
+    const t = setTimeout(async () => {
+      try {
+        const r = await apiFetch(`${API_URL}/api/foods?search=${encodeURIComponent(value)}&limit=40`);
+        const d = await r.json();
+        if (d.success && id === searchSeq.current) setFoods(d.foods);
+      } catch (error) {
+        console.error("Food search failed:", error);
+      } finally {
+        if (id === searchSeq.current) setLoadingFoods(false);
+      }
+    }, 250);
+    return () => clearTimeout(t);
+  }, [search, selectedFood]);
 
   // ============================================================
   // LOAD TODAY'S FOOD LOGS
@@ -142,26 +159,9 @@ function FoodLogger({ date, onBack, goTo }) {
   // SEARCH FOODS
   // ============================================================
 
-  const filteredFoods = useMemo(() => {
-    const value = search
-      .trim()
-      .toLowerCase();
-
-    if (!value) {
-      return foods;
-    }
-
-    return foods.filter((food) => {
-      return (
-        food.name
-          .toLowerCase()
-          .includes(value) ||
-        (food.brand || "")
-          .toLowerCase()
-          .includes(value)
-      );
-    });
-  }, [foods, search]);
+  const searching = search.trim().length > 0;
+  const filteredFoods = useMemo(() => (searching ? foods : recent), [foods, recent, searching]);
+  const visibleFoods = showAll ? filteredFoods : filteredFoods.slice(0, 8);
 
   // ============================================================
   // CALCULATE PREVIEW
@@ -433,49 +433,25 @@ function FoodLogger({ date, onBack, goTo }) {
 
       </div>
 
-      <CalorieBalance refreshKey={`${foodLogs.length}|${foodLogs.reduce((t, l) => t + Number(l.nutritionTotal?.calories || 0), 0)}`} />
+      <CalorieBalance compact refreshKey={`${foodLogs.length}|${foodLogs.reduce((t, l) => t + Number(l.nutritionTotal?.calories || 0), 0)}`} />
 
-
-      {/* ====================================================== */}
-      {/* MEAL SELECTOR */}
-      {/* ====================================================== */}
-
-      <TextLogger date={date} defaultMeal={selectedMeal} onLogged={fetchFoodLogs} />
-      <SmartSuggestions date={date} mealType={selectedMeal} refreshKey={foodLogs.length} onLogged={fetchFoodLogs} />
-      <EatingOut date={date} defaultMeal={selectedMeal} onLogged={fetchFoodLogs} />
-
+      {/* Which meal? Chosen once — everything below logs to it. */}
       <div className="meal-selector">
-
-        {MEALS.map((meal) => (
-          <button
-            key={meal.id}
-            className={
-              selectedMeal === meal.id
-                ? "meal-button active"
-                : "meal-button"
-            }
-            onClick={() =>
-              setSelectedMeal(meal.id)
-            }
-          >
-            <span>
-              {meal.emoji}
-            </span>
-
-            <strong>
-              {meal.label}
-            </strong>
-          </button>
-        ))}
-
+        {MEALS.map((meal) => {
+          const kc = Math.round(getMealCalories(meal.id));
+          return (
+            <button
+              key={meal.id}
+              className={selectedMeal === meal.id ? "meal-button active" : "meal-button"}
+              onClick={() => { setSelectedMeal(meal.id); setSelectedFood(null); resetServing(); }}
+            >
+              <span>{meal.emoji}</span>
+              <strong>{meal.label}</strong>
+              <small className="meal-kcal">{kc ? `${kc} kcal` : "—"}</small>
+            </button>
+          );
+        })}
       </div>
-
-      <div className="serving-chips">
-        <button type="button" className="chip" onClick={copyYesterday}>
-          ⟲ Same {selectedMeal} as yesterday
-        </button>
-      </div>
-
 
       {/* ====================================================== */}
       {/* ADD FOOD CARD */}
@@ -521,13 +497,23 @@ function FoodLogger({ date, onBack, goTo }) {
         </div>
 
 
+        {!selectedFood && (
+          <div className="serving-chips logger-quick">
+            <button type="button" className="chip" onClick={copyYesterday}>⟲ Same {selectedMeal} as yesterday</button>
+            <button type="button" className="chip" onClick={() => setShowExtras((v) => !v)}>{showExtras ? "− Fewer options" : "＋ Type a meal · Eating out · Suggestions"}</button>
+          </div>
+        )}
+
         {/* Food list */}
 
         {!selectedFood && (
           <div className="logger-food-list">
 
-            {loadingFoods ? (
+            {!searching && recent.length > 0 && <p className="logger-list-label">Recent — tap to add</p>}
+            {loadingFoods && filteredFoods.length === 0 ? (
               <p>Loading foods...</p>
+            ) : !searching && recent.length === 0 ? (
+              <div className="logger-empty"><p>Start typing to search 700+ Indian and everyday foods — or add your own.</p></div>
             ) : filteredFoods.length === 0 ? (
               <div className="logger-empty">
                 <div>🍽️</div>
@@ -547,7 +533,7 @@ function FoodLogger({ date, onBack, goTo }) {
                 </button>
               </div>
             ) : (
-              filteredFoods.map(
+              visibleFoods.map(
                 (food) => (
                   <button
                     key={food._id}
@@ -592,6 +578,9 @@ function FoodLogger({ date, onBack, goTo }) {
               )
             )}
 
+            {!loadingFoods && filteredFoods.length > visibleFoods.length && (
+              <button type="button" className="secondary-button logger-show-all" onClick={() => setShowAll(true)}>Show all {filteredFoods.length} ›</button>
+            )}
           </div>
         )}
 
@@ -799,6 +788,14 @@ function FoodLogger({ date, onBack, goTo }) {
       </div>
 
 
+      {showExtras && (
+        <div className="logger-extras">
+          <TextLogger date={date} defaultMeal={selectedMeal} onLogged={fetchFoodLogs} />
+          <EatingOut date={date} defaultMeal={selectedMeal} onLogged={fetchFoodLogs} />
+          <SmartSuggestions date={date} mealType={selectedMeal} refreshKey={foodLogs.length} onLogged={fetchFoodLogs} />
+        </div>
+      )}
+
       {/* ====================================================== */}
       {/* TODAY'S LOG */}
       {/* ====================================================== */}
@@ -821,6 +818,8 @@ function FoodLogger({ date, onBack, goTo }) {
         {MEALS.map((meal) => {
           const logs =
             getMealLogs(meal.id);
+          const isOpen = selectedMeal === meal.id || !!openMeals[meal.id];
+          if (!isOpen && logs.length === 0 && !dragId) return null; // empty, unselected meals stay out of the way
 
           return (
             <div
@@ -838,7 +837,7 @@ function FoodLogger({ date, onBack, goTo }) {
               }}
             >
 
-              <div className="meal-log-header">
+              <div className="meal-log-header" role="button" tabIndex={0} onClick={() => setOpenMeals((o) => ({ ...o, [meal.id]: !isOpen }))} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") setOpenMeals((o) => ({ ...o, [meal.id]: !isOpen })); }}>
 
                 <div>
                   <span>
@@ -862,7 +861,7 @@ function FoodLogger({ date, onBack, goTo }) {
               </div>
 
 
-              {logs.length === 0 ? (
+              {!isOpen ? null : logs.length === 0 ? (
                 <BuddyEmpty scene="sad" size={96} title="No food logged">Add something you ate.</BuddyEmpty>
               ) : (
                 logs.map((log) => (

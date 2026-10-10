@@ -8,7 +8,7 @@ import GoalBar from "./GoalBar";
 // "How much should I eat for my weight, and where am I today?" Uses the ONE shared energy model (same numbers as the
 // mobile app and the server): only activity beyond what the daily target already assumes earns extra food.
 // Fetches its own data; change `refreshKey` after logging food, exercise or steps to reload it.
-export default function CalorieBalance({ refreshKey = 0, collapsible = false, showProgress = true }) {
+export default function CalorieBalance({ refreshKey = 0, collapsible = false, showProgress = true, compact = false }) {
   const [state, setState] = useState({ loading: true, profile: null, eaten: 0, workout: 0, stepKcal: 0 });
 
   useEffect(() => {
@@ -77,6 +77,33 @@ export default function CalorieBalance({ refreshKey = 0, collapsible = false, sh
       </div>
     </>
   );
+  if (compact) {
+    const left = b.budget - b.eaten;
+    return (
+      <div className="card balance-card balance-compact">
+        <div className="balance-line"><span>Eaten today</span><strong>{n(b.eaten)} / {n(b.budget)} kcal</strong></div>
+        <GoalBar value={b.eaten} target={b.budget} unit="kcal" color="#e8823a" overIsBad />
+        <p className="balance-sub balance-compact-sub">
+          {left >= 0 ? `${n(left)} kcal left` : `${n(-left)} kcal over`} · eat about <strong>{n(b.target)} kcal</strong> a day {goal}
+          {deficit ? ` · deficit ${n(Math.abs(b.net))} kcal so far` : ` · surplus ${n(Math.abs(b.net))} kcal so far`}
+        </p>
+        <details className="plan-details">
+          <summary>How is this worked out? <span className="plan-chevron" aria-hidden="true">⌄</span></summary>
+          <div className="balance-rows">
+            <div><span>{e.mode === "manual" ? "Daily target (yours)" : "Daily target (what to eat)"}</span><strong>{n(b.target)} kcal</strong></div>
+            <div><span>Maintenance (what you burn)</span><strong>{n(e.tdee)} kcal</strong></div>
+            <div><span>Activity today (workouts {n(state.workout)} + steps {n(state.stepKcal)})</span><strong>{n(b.burned)} kcal</strong></div>
+            <div><span>Already counted in your target</span><strong>− {n(Math.min(b.burned, e.baselineActivityKcal))} kcal</strong></div>
+            <div><span>Extra food earned by activity</span><strong>+ {n(b.bonus)} kcal</strong></div>
+          </div>
+          <div className={`balance-result ${deficit ? "deficit" : "surplus"}`}>
+            <strong>{deficit ? "Calorie deficit" : "Calorie surplus"}: {n(Math.abs(b.net))} kcal</strong>
+            <span>{deficit ? "Below" : "Above"} what you burn today (maintenance + extra activity − food) ≈ {b.fatKg.toFixed(2)} kg of body {deficit ? "fat lost" : "weight gained"} if every day were like this.</span>
+          </div>
+        </details>
+      </div>
+    );
+  }
   if (collapsible) {
     return (
       <details className="card balance-card plan-details">

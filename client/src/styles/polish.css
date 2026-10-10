@@ -54,3 +54,16 @@
 /* ---------- Exercise / shared forms ---------- */
 .card form{display:grid;gap:12px}.card form input,.card form select,.card form textarea{width:100%;box-sizing:border-box}
 @media (max-width:520px){.wt-stats{grid-template-columns:repeat(3,minmax(0,1fr))}.wt-stats b{font-size:1rem}}
+
+/* ---- Log Food: compact layout ---- */
+.meal-button{display:flex;flex-direction:column;align-items:center;gap:1px;line-height:1.15}
+.meal-button .meal-kcal{font-size:11px;opacity:.75;font-weight:600}
+.balance-compact{padding:16px 18px!important}
+.balance-compact .balance-sub{margin:8px 0 6px;font-size:13px}
+.balance-compact summary{cursor:pointer;font-size:13px;font-weight:700;color:var(--primary,#6c63ff);list-style:none}
+.balance-compact summary::-webkit-details-marker{display:none}
+.logger-quick{margin:8px 0 4px;display:flex;flex-wrap:wrap;gap:6px}
+.logger-list-label{margin:6px 0 2px;font-size:12px;font-weight:800;opacity:.65;text-transform:uppercase;letter-spacing:.04em}
+.logger-show-all{width:100%;margin-top:8px}
+.logger-extras{display:grid;gap:12px;margin:12px 0}
+.meal-log-header[role=button]{cursor:pointer}

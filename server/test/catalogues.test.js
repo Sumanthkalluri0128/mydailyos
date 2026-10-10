@@ -38,7 +38,7 @@ test('exercise catalogue: Cult.fit formats present with plausible METs and uniqu
 
 test('seeding only inserts missing items and never overwrites or deletes', async () => {
   const ops = [];
-  const model = { updateOne: async (filter, update, opts) => { ops.push({ filter, update, opts }); return { upsertedCount: 1 }; }, deleteMany: async () => { throw new Error('must never delete'); } };
+  const model = { updateOne: async (filter, update, opts) => { ops.push({ filter, update, opts }); return { upsertedCount: 1 }; }, bulkWrite: async (list) => { for (const { updateOne: u } of list) ops.push({ filter: u.filter, update: u.update, opts: { upsert: u.upsert } }); return { upsertedCount: list.length }; }, deleteMany: async () => { throw new Error('must never delete'); } };
   const f = await seedFoods(model);
   const a = await seedActivities(model);
   assert.equal(f.total, CATALOGUE.length);

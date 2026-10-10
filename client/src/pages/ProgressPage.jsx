@@ -208,14 +208,31 @@ function ProgressPage({ onBack }) {
     }
   };
 
-  const applyCustom = () => {
-    if (!from || !to || from > to) {
-      notify("Please select a valid date range.", "error");
-      return;
-    }
+  const MAX_RANGE_DAYS = 800; // the server's limit for one history request
+  const applyRange = (f, t) => {
+    const a = parseDate(f), b = parseDate(t);
+    if (!a || !b) { notify("Pick both a From and a To date.", "error"); return; }
+    if (f > t) { notify("The From date must be on or before the To date.", "error"); return; }
+    if ((b - a) / 86400000 > MAX_RANGE_DAYS) { notify(`Choose a range of up to ${MAX_RANGE_DAYS} days (about 2 years).`, "error"); return; }
     setMode("custom");
-    setAnchor(from);
-    loadHistory(from, to, from);
+    setFrom(f);
+    setTo(t);
+    setAnchor(f);
+    loadHistory(f, t, t);
+  };
+  const applyCustom = () => applyRange(from, to);
+  const presetRange = (key) => {
+    const today = getLocalDate();
+    const t = parseDate(today);
+    const fmt = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+    const back = (n) => { const d = new Date(t); d.setDate(d.getDate() - n); return fmt(d); };
+    if (key === "7") return [back(6), today];
+    if (key === "30") return [back(29), today];
+    if (key === "90") return [back(89), today];
+    if (key === "mtd") return [fmt(new Date(t.getFullYear(), t.getMonth(), 1)), today];
+    if (key === "lastmonth") return [fmt(new Date(t.getFullYear(), t.getMonth() - 1, 1)), fmt(new Date(t.getFullYear(), t.getMonth(), 0))];
+    if (key === "ytd") return [fmt(new Date(t.getFullYear(), 0, 1)), today];
+    return [back(364), today];
   };
 
   const selectMode = (nextMode) => {
@@ -286,6 +303,12 @@ function ProgressPage({ onBack }) {
 
         {mode === "custom" ? (
           <div className="date-range-controls">
+            <div className="serving-chips" style={{ width: "100%" }}>
+              {[["7", "7 days"], ["30", "30 days"], ["90", "90 days"], ["mtd", "This month"], ["lastmonth", "Last month"], ["ytd", "Year to date"], ["year", "1 year"]].map(([k, label]) => {
+                const [f, t] = presetRange(k);
+                return <button key={k} type="button" className={from === f && to === t ? "chip active" : "chip"} onClick={() => applyRange(f, t)}>{label}</button>;
+              })}
+            </div>
             <label>From<input type="date" value={from} onChange={(e) => setFrom(e.target.value)} /></label>
             <label>To<input type="date" value={to} onChange={(e) => setTo(e.target.value)} /></label>
             <button className="primary-button" onClick={applyCustom}>Apply range</button>

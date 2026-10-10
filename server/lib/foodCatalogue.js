@@ -156,16 +156,20 @@ function toFood(row) {
 // Merge the extended Indian catalogue, de-duplicating by normalised name (the first definition wins).
 const norm = (n) => String(n).toLowerCase().replace(/[^a-z0-9]+/g, '');
 const seen = new Set();
-const CATALOGUE = [...ROWS, ...require('./indianFoods'), ...require('./indianFoods2')]
+const CATALOGUE = [...ROWS, ...require('./indianFoods'), ...require('./indianFoods2'), ...require('./indianFoods3')]
   .filter((r) => { const k = norm(r[0]); if (seen.has(k)) return false; seen.add(k); return true; })
   .map(toFood);
 
-/** Adds any catalogue food that's missing (matched by name). Never overwrites or removes anything. */
+/** Adds any catalogue food that's missing (matched by name). Never overwrites or removes anything.
+ *  One bulk round-trip instead of one query per food, so a bigger catalogue doesn't slow down a cold start. */
 async function seedFoods(Food = require('../models/Food')) {
+  const ops = CATALOGUE.map((f) => ({
+    updateOne: { filter: { name: f.name, userId: null }, update: { $setOnInsert: { ...f, userId: null } }, upsert: true },
+  }));
   let added = 0;
-  for (const f of CATALOGUE) {
-    const r = await Food.updateOne({ name: f.name, userId: null }, { $setOnInsert: { ...f, userId: null } }, { upsert: true });
-    if (r.upsertedCount) added += 1;
+  for (let i = 0; i < ops.length; i += 300) {
+    const r = await Food.bulkWrite(ops.slice(i, i + 300), { ordered: false });
+    added += r.upsertedCount || 0;
   }
   return { added, total: CATALOGUE.length };
 }

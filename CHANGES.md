@@ -1,3 +1,13 @@
+# v16 - fixes (web + server)
+
+- **Foods:** +278 Indian home-cooked dishes (Telugu, Tamil, Kerala, Bengali, Gujarati, Maharashtrian, Punjabi, Rajasthani…) and outside food (restaurant, Indo-Chinese, McDonald's / KFC / Domino's / Subway, drinks, packaged snacks). 762 foods total, all passing the audit script. Seeding is now one bulk call, so a cold start is not slower.
+- **Food search** matches every word typed and ranks best matches first; the web Log Food page searches on the server instead of downloading the whole list.
+- **Log Food page:** compact calorie bar, one meal selector with kcal, one search box with recents, Today's food right under it; Type-a-meal / Eating out / Suggestions behind one button.
+- **Server sleeping:** the server pings its own public URL every 4 min while awake, Render health check added, GitHub keep-alive now every 5 min.
+- **Progress → Custom:** quick ranges and validation (From <= To, 800 days max).
+
+---
+
 # v15.1 - hover images removed
 
 - Characters no longer greet/wave when the pointer moves over them and no longer show a name tooltip (`Roamers.jsx`).
