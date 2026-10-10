@@ -1,12 +1,3 @@
-# v15 - 3D characters
-
-The roaming characters, `Buddy` and `BuddyStage` are now physical 3D figures instead of flat stickers.
-
-- `client/src/motion/Slab.jsx` + `slab.css` (new): stacks each sprite in layers inside a CSS 3D scene. Front/back = art, middle = dark edge silhouette (`public/chars/walls/`). Turns around through edge-on, leans 3/4 toward travel direction, idle sway, tilts toward the pointer. Honors `ff-calm` and prefers-reduced-motion.
-- `Roamers.jsx` / `roamers.css`: figures use Slab; flat drop-shadow replaced by a contact shadow + a silhouette shadow cast on the floor that stays down while jumping. Power-up glow is now a halo (a CSS filter would flatten the 3D scene).
-- All sprites re-baked with bevel lighting (`tools/bake3d.py`, originals in `tools/chars-src/`). Re-bake: `python3 tools/bake3d.py tools/chars-src client/public/chars` (also writes `chars/walls/`). Cache-bust bumped to `?v=16`.
-- Fix: `BuddyStage` lookup tables lacked goku/gojo (would crash on those days). It is currently unused.
-
 # v8.7 — your characters, one per day, plus a fighting / dancing stage
 
 - **Characters** (Zoro, Naruto, Luffy, Jin-Woo) replace the bean and the anime-hair version everywhere `Buddy` is used (toasts, empty states, page headers, quick actions).
@@ -126,3 +117,6 @@ Tests: `cd server && npm test`.
 
 ---
 
+
+## v15 – 3D characters
+- 3D sprites: all 2D stickers removed (201 files per app). Characters are now 3D Goku renders (23 poses + walk/run/climb strips). Only Goku has 3D art, so the cast is Goku only; duo scenes (fights/races) stay dormant until a second 3D character is added. See tools/3d-sprites.

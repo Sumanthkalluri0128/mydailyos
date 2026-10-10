@@ -1,25 +1,29 @@
-// The cast. Sprites live in public/chars/<who>-<scene>.webp (cut from the sticker sheets).
+// The cast. Sprites are 3D renders in public/chars/<who>-<pose>.webp, cut from the 3D sheet by tools/3d-sprites/build_sprites.py.
+// A scene (what the character is doing) maps to one of those poses; several scenes can share a pose.
 const V = "?v=16"; // bump when sprites change so browsers never mix old art with new code
-export const CHARS = { zoro: "Zoro", naruto: "Naruto", luffy: "Luffy", jinwoo: "Jin-Woo", goku: "Goku", gojo: "Gojo" };
-export const DAY_ORDER = ["zoro", "naruto", "luffy", "jinwoo", "goku", "gojo", "luffy"]; // Sun..Sat
-const BASE = ["sad", "drink", "eat", "scale", "walk", "task", "habit", "cheer", "wave", "fight", "dance", "sleep", "idle", "run", "workout", "pushup", "squat", "plank", "rope", "cycle", "swim", "study", "powerup", "victory", "levelup", "climb", "blink"];
-const HAS = {
-  zoro: [...BASE, "lift", "plan", "chart", "health", "chef"], jinwoo: [...BASE, "lift", "plan", "chart", "health", "chef"],
-  naruto: [...BASE, "lift", "plan"], luffy: [...BASE, "lift", "plan"], goku: BASE, gojo: [...BASE, "plan"],
+export const CHARS = { goku: "Goku" };
+export const DAY_ORDER = ["goku", "goku", "goku", "goku", "goku", "goku", "goku"]; // Sun..Sat (one character for now)
+
+const POSE = {
+  goku: {
+    blink: "stand", idle: "stand", health: "stand", scale: "stand", wave: "stand", walk: "stand",
+    task: "thumbsup", chart: "thumbsup", plan: "crossed",
+    cheer: "jump", dance: "joy", victory: "cheer", climb: "cheer", rope: "cheer",
+    eat: "ramen", chef: "ramen", drink: "drink", sleep: "sleep", study: "read", habit: "meditate",
+    lift: "barbell", workout: "barbell", pushup: "pushup", plank: "pushup", squat: "crouch", sad: "crouch",
+    run: "sprint", swim: "dash", cycle: "nimbus", dash: "dash",
+    fight: "stance", punch: "punch", kick: "kick", flypunch: "flypunch", powerup: "kame", kame: "kame", levelup: "ssj", ssj: "ssj",
+  },
 };
-const FALLBACK = { blink: "idle", climb: "rope", workout: "lift", victory: "cheer", levelup: "cheer", powerup: "fight", idle: "wave", run: "walk", plan: "task", chart: "task", health: "drink", chef: "eat", lift: "habit", fight: "walk", dance: "cheer", sleep: "sad", habit: "cheer", cheer: "wave", wave: "task" };
-// The dark, hard-edged silhouette that forms the thick edge of the 3D figure (baked next to each sprite in chars/walls/).
-export const wallOf = (url) => url.replace("/chars/", "/chars/walls/");
 export const dayChar = (d = new Date()) => DAY_ORDER[d.getDay()];
 export function sprite(who, scene) {
-  const ok = (HAS[who] || BASE).includes(scene) ? scene : FALLBACK[scene] || "task";
-  return `${import.meta.env.BASE_URL}chars/${who}-${ok}.webp${V}`;
+  const set = POSE[who] || POSE.goku;
+  return `${import.meta.env.BASE_URL}chars/${who in POSE ? who : "goku"}-${set[scene] || set.task || "stand"}.webp${V}`;
 }
 
-// Baked 8-frame walk cycle (legs stride, arms swing) for each character.
+// Baked 16-frame cycles (walk: feet take turns lifting; run: leaning sprint; climb: hand-over-hand reach), built from the 3D poses.
 export const walkStrip = (who) => `${import.meta.env.BASE_URL}chars/${who}-walkstrip.webp${V}`;
-
 export const runStrip = (who) => `${import.meta.env.BASE_URL}chars/${who}-runstrip.webp${V}`;
 export const climbStrip = (who) => `${import.meta.env.BASE_URL}chars/${who}-climbstrip.webp${V}`;
-// Where the rope sits inside each character's rope-climb sprite (fraction of the sprite width), so the on-screen rope lines up with it.
-export const ROPE_X = {"jinwoo": 0.445, "naruto": 0.535, "luffy": 0.578, "zoro": 0.504, "goku": 0.523, "gojo": 0.5};
+// Where the rope sits inside each character's climb frames (fraction of the frame width), so the on-screen rope lines up with it.
+export const ROPE_X = { goku: 0.5 };

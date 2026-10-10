@@ -5,8 +5,7 @@
 // Login / signup get their own behaviour (greeters / recruiters). Tap a character for a trick. Submit buttons trigger a celebration.
 import { useEffect, useRef, useState } from "react";
 import "./roamers.css";
-import { CHARS, sprite, walkStrip, runStrip, climbStrip, wallOf } from "./chars";
-import Slab, { Flat } from "./Slab";
+import { CHARS, sprite, walkStrip, runStrip, climbStrip } from "./chars";
 
 const KEYS = Object.keys(CHARS);
 const rnd = (a, b) => a + Math.random() * (b - a);
@@ -18,7 +17,7 @@ const authEl = () => document.querySelector(".auth-shell");
 const CONF = ["#f43f5e", "#f59e0b", "#22c55e", "#38bdf8", "#a855f7", "#facc15"];
 const PETAL = ["#fbcfe8", "#f9a8d4", "#fda4af", "#fecdd3", "#ffffff"];
 
-const EAT = { zoro: "Sake and rice. Perfect.", naruto: "Ichiraku ramen!", luffy: "MEEEAT!!", jinwoo: "Restoring HP…", goku: "Need. More. Food.", gojo: "Sweets break~" };
+const EAT = { goku: "Need. More. Food." };
 const ROUT = {
   habit: { pose: "habit", anim: "idle", say: () => "Focus. Breathe. Train." }, drink: { pose: "drink", anim: "eat", say: () => "Hydration check!" },
   eat: { pose: "eat", anim: "eat", say: (w) => EAT[w] }, task: { pose: "task", anim: "idle", say: () => "Ticking off tasks" },
@@ -41,32 +40,12 @@ const DUO = {
 };
 
 const K = 1.19; // cycle frames are drawn with the body at ~84% of the frame (room for limbs): scale up so they match the still sprites
-const GAIT = (pose, anim) => anim === "walk" && (pose === "walk" || pose === "run" || pose === "climb");
-// One flat picture of the figure (a still, or one baked 16-frame cycle). The slab stacks copies of this to give it thickness.
-function Face({ src, who, pose, anim, size, cyc, rev, wall }) {
-  const U = (u) => (wall ? wallOf(u) : u);
-  if (GAIT(pose, anim)) { // baked 16-frame cycles: alternating legs, arm swing / reach, weight shift, head bob
+function Sprite({ src, who, pose, anim, size, cyc, rev }) {
+  if (anim === "walk" && (pose === "walk" || pose === "run" || pose === "climb")) { // baked 16-frame cycles: alternating legs, arm swing / reach, weight shift, head bob
     const s2 = size * K;
-    return <span className={`rm-strip${rev ? " rev" : ""}`} style={{ width: s2, height: s2, left: -(s2 - size) / 2, top: -(s2 - size), "--cyc": `${cyc}s`, backgroundImage: `url(${U(pose === "run" ? runStrip(who) : pose === "climb" ? climbStrip(who) : walkStrip(who))})` }} />;
+    return <span className={`rm-strip${rev ? " rev" : ""}`} style={{ width: s2, height: s2, left: -(s2 - size) / 2, top: -(s2 - size), "--cyc": `${cyc}s`, backgroundImage: `url(${pose === "run" ? runStrip(who) : pose === "climb" ? climbStrip(who) : walkStrip(who)})` }} />;
   }
-  return <img className="rm-img" src={U(src)} width={size} height={size} alt="" draggable="false" />;
-}
-// How far the figure is turned toward the viewer (3/4 view): more when it is travelling, so it reads as a solid object at any moment.
-const LEAN = { walk: 22, dash: 26, ride: 20, swimbob: 18, lunge: 16 };
-function Figure({ m, size }) {
-  const face = <Face src={sprite(m.who, m.pose)} who={m.who} pose={m.pose} anim={m.anim} size={size} cyc={m.cyc} rev={m.rev} />;
-  const lean = -m.flip * (m.pose === "sleep" ? 6 : LEAN[m.anim] || 12);
-  return <Slab size={size} face={face} wall={<Face src={sprite(m.who, m.pose)} who={m.who} pose={m.pose} anim={m.anim} size={size} cyc={m.cyc} rev={m.rev} wall />} yaw={m.flip === 1 ? 0 : 180} lean={lean} look={m.pose === "sleep" || m.pose === "climb" ? 0 : 16} sway={m.anim !== "walk" && m.anim !== "dash"} />;
-}
-// A shadow thrown on the floor by the figure's own silhouette (long, soft, falling away from the light) plus a tight contact shadow under the feet.
-function GroundShadow({ m, size }) {
-  const face = <Face src={sprite(m.who, m.pose)} who={m.who} pose={m.pose} anim={m.anim} size={size} cyc={m.cyc} rev={m.rev} />;
-  return (
-    <span key={m.air ? m.air.n : "g"} className={`rm-gs${m.air ? " air" : ""}`} style={m.air ? { "--ms": `${m.air.ms}ms` } : undefined}>
-      <span className="rm-contact" />
-      <span className="rm-cast"><span className="rm-castf" style={{ transform: `scaleX(${m.flip})` }}><Flat size={size} face={face} /></span></span>
-    </span>
-  );
+  return <img className={`rm-img rm-${anim}`} src={src} width={size} height={size} alt="" draggable="false" />;
 }
 
 export default function Roamers() {
@@ -127,51 +106,14 @@ export default function Roamers() {
     const stance = (a) => set(a, { pose: "fight", anim: "lunge" });
 
     const MOVE = {
-      naruto: [
-        async (a, t, d) => { const c = C(a), h = { x: c.x, y: c.y - size * 0.1 }; stance(a); say(a, "Rasengan!", 3200);
-          fx({ t: "charge", x: h.x, y: h.y, life: 1400 }, 1400); await sleep(1400);
-          fx({ t: "orb", x: h.x, y: h.y, dx: t.x - h.x, dy: t.y - h.y, life: 1100 }, 1100); await sleep(1050); burst(t, "#38bdf8", "BOOM!"); if (d) await knock(a, d); },
-        async (a, t, d) => { const c = C(a); say(a, "Shadow Clone Jutsu!", 3400); burst(c, "#cbd5e1", "POOF!");
-          [[-70, -25], [70, -25], [0, 55]].forEach(([ox, oy], i) => rush(sprite("naruto", "walk"), { x: c.x + ox, y: c.y + oy }, t, 500 + i * 350, 1500, "clone"));
-          await sleep(2300); burst(t, "#f59e0b", "WHAM!"); if (d) await knock(a, d); },
-      ],
-      luffy: [
-        async (a, t, d) => { const c = C(a); stance(a); say(a, "Gum-Gum Pistol!", 2800); await sleep(800); arm(c, t); await sleep(520); burst(t, "#ef4444", "PISTOL!"); if (d) await knock(a, d); },
-        async (a, t, d) => { const c = C(a); stance(a); say(a, "Gum-Gum Bazooka!", 3000); await sleep(900); arm(c, t, 0, -16); arm(c, t, 0, 16); await sleep(540); burst(t, "#f97316", "BAZOOKA!"); if (d) await knock(a, d); },
-        async (a, t, d) => { const c = C(a); set(a, { pose: "fight", anim: "shake" }); say(a, "Gum-Gum Gatling!", 3400); await sleep(700);
-          for (let i = 0; i < 5; i++) { arm(c, { x: t.x + rnd(-30, 30), y: t.y + rnd(-40, 40) }, 0, rnd(-14, 14), 520); await sleep(260); burst({ x: t.x + rnd(-30, 30), y: t.y + rnd(-30, 30) }, "#ef4444", "!"); }
-          if (d) await knock(a, d); },
-      ],
-      zoro: [
-        async (a, t, d) => { const dir = t.x >= C(a).x ? 1 : -1; say(a, "Santoryu… Oni Giri!", 3400); stance(a); await sleep(1000);
-          await move(a, { x: t.x - size / 2 - dir * size * 0.55, y: t.y - size / 2 }, "fight", 130, "dash");
-          [-38, 0, 38].forEach((r, i) => fx({ t: "slash", x: t.x, y: t.y, r, c: "#22c55e", delay: i * 170 }, 420 + i * 170)); await sleep(600);
-          await move(a, { x: t.x - size / 2 + dir * size * 0.7, y: t.y - size / 2 }, "fight", 170, "dash"); if (d) await knock(a, d); },
-        async (a, t, d) => { const c = C(a); stance(a); say(a, "108 Pound Phoenix!", 3000); await sleep(1000);
-          fx({ t: "crescent", x: c.x, y: c.y, dx: t.x - c.x, dy: t.y - c.y, ang: (Math.atan2(t.y - c.y, t.x - c.x) * 180) / Math.PI + 90, life: 1000 }, 1000); await sleep(950); burst(t, "#22c55e", "SLASH!"); if (d) await knock(a, d); },
-      ],
-      jinwoo: [
-        async (a, t, d) => { const c = C(a); stance(a); say(a, "Arise!", 3200);
-          [[-80, 10], [0, -50], [80, 10]].forEach(([ox, oy], i) => rush(sprite("jinwoo", "walk"), { x: c.x + ox, y: c.y + oy }, t, i * 250, 2000, "shade"));
-          await sleep(2300); burst(t, "#8b5cf6", "SHADOW ARMY!"); if (d) await knock(a, d); },
-        async (a, t, d) => { const dir = t.x >= C(a).x ? 1 : -1; say(a, "Shadow Exchange!", 3000); set(a, { anim: "blink" }); await sleep(900);
-          await move(a, { x: t.x - size / 2 - dir * size * 0.6, y: t.y - size / 2 }, "fight", 220, "dash");
-          [-28, 28].forEach((r, i) => fx({ t: "slash", x: t.x, y: t.y, r, c: "#a78bfa", delay: i * 180 }, 450 + i * 180)); await sleep(600); burst(t, "#8b5cf6", "STRIKE!"); if (d) await knock(a, d); },
-      ],
       goku: [
-        async (a, t, d) => { const c = C(a), dir = t.x >= c.x ? 1 : -1, h = { x: c.x + dir * size * 0.3, y: c.y }; stance(a); say(a, "Ka-me-ha-me-HAAA!", 3600);
+        async (a, t, d) => { const c = C(a), dir = t.x >= c.x ? 1 : -1, h = { x: c.x + dir * size * 0.3, y: c.y }; set(a, { pose: "kame", anim: "lunge" }); say(a, "Ka-me-ha-me-HAAA!", 3600);
           fx({ t: "charge", x: h.x, y: h.y, c: "#60a5fa", life: 1500 }, 1500); await sleep(1500);
           fx({ t: "beam", x: h.x, y: h.y, len: Math.hypot(t.x - h.x, t.y - h.y), r: (Math.atan2(t.y - h.y, t.x - h.x) * 180) / Math.PI, life: 1500 }, 1500); await sleep(500); burst(t, "#38bdf8", "KAMEHAMEHA!"); await sleep(500); if (d) await knock(a, d); },
         async (a, t, d) => { const dir = t.x >= C(a).x ? 1 : -1; say(a, "Instant Transmission!", 3200); set(a, { anim: "blink" }); await sleep(900);
-          await move(a, { x: t.x - size / 2 - dir * size * 0.6, y: t.y - size / 2 }, "fight", 220, "dash");
+          await move(a, { x: t.x - size / 2 - dir * size * 0.6, y: t.y - size / 2 }, "dash", 220, "dash");
+          set(a, { pose: "punch", anim: "lunge" });
           for (let i = 0; i < 4; i++) { burst({ x: t.x + rnd(-26, 26), y: t.y + rnd(-30, 30) }, "#f59e0b", "HYAH!"); await sleep(260); } if (d) await knock(a, d); },
-      ],
-      gojo: [
-        async (a, t, d) => { const c = C(a); stance(a); say(a, "Hollow Purple!", 3200);
-          fx({ t: "charge", x: c.x, y: c.y, c: "#a855f7", life: 1500 }, 1500); await sleep(1500);
-          fx({ t: "orb", x: c.x, y: c.y, c: "#a855f7", dx: t.x - c.x, dy: t.y - c.y, life: 1100 }, 1100); await sleep(1050); burst(t, "#a855f7", "PURPLE!"); if (d) await knock(a, d); },
-        async (a, t, d) => { stance(a); say(a, "Domain Expansion: Unlimited Void!", 3600); fx({ t: "domain", x: 0, y: 0, life: 2600 }, 2600);
-          await sleep(900); if (d) set(d, { pose: "sad", anim: "shake" }); await sleep(1500); burst(t, "#6366f1", "VOID!"); if (d) await knock(a, d); },
       ],
     };
 
@@ -274,17 +216,17 @@ export default function Roamers() {
 
     // ---- login / signup: the cast reacts to the form ----
     const authScene = async () => {
-      const [L, R] = [...KEYS].sort(() => Math.random() - 0.5).slice(0, 2);
+      const [L, R] = [...KEYS].sort(() => Math.random() - 0.5).slice(0, 2), duo = [L, R].filter(Boolean);   // one character (no R) is fine: a single greeter
       const spots = () => {
         const el = authEl(); if (!el) return null;
         const r = (el.querySelector(".auth-card") || el).getBoundingClientRect();
         if (r.left > size + 18 && W() - r.right > size + 18) { const y = Math.min(H() - size - 12, Math.max(70, r.top + r.height * 0.5)); return { L: { x: r.left - size - 10, y }, R: { x: r.right + 10, y } }; }
         const y = Math.max(52, r.top - size * 0.7); return { L: { x: 6, y }, R: { x: W() - size - 6, y } }; // narrow screens: peek over the card's top corners
       };
-      [L, R].forEach((w, i) => { P[w] = { x: i ? W() + 30 : -size - 30, y: H() * 0.5 }; ON.add(w); set(w, { on: true, x: P[w].x, y: P[w].y, dur: 0, say: "" }); });
+      duo.forEach((w, i) => { P[w] = { x: i ? W() + 30 : -size - 30, y: H() * 0.5 }; ON.add(w); set(w, { on: true, x: P[w].x, y: P[w].y, dur: 0, say: "" }); });
       await sleep(80);
       let s = spots(); if (!s) return;
-      await Promise.all([move(L, s.L, "run", 120), move(R, s.R, "run", 120)]); set(L, { flip: 1 }); set(R, { flip: -1 });
+      await Promise.all([move(L, s.L, "run", 120), R && move(R, s.R, "run", 120)]); set(L, { flip: 1 }); set(R, { flip: -1 });
       let lastInput = 0; const onInput = () => { lastInput = Date.now(); }; document.addEventListener("input", onInput, true);
       let prev = "", tick = 0;
       const GREET = [["wave", "cheer"], ["task", "wave"], ["dance", "dance"], ["habit", "wave"]];
@@ -302,25 +244,25 @@ export default function Roamers() {
           else if (st === "typing") { set(L, { pose: "cheer", anim: "dance", say: m === "signup" ? "Great name!" : "Nice!", flip: 1 }); set(R, { pose: "cheer", anim: "dance", say: "Keep going!", flip: -1 }); }
           else if (m === "forgot") { set(L, { pose: tick % 2 ? "wave" : "sad", anim: "idle", say: "No worries, we'll help!", flip: 1 }); }
           else if (m === "login") { const [pa, pb] = first ? ["wave", "cheer"] : pick(GREET); set(L, { pose: pa, anim: pa === "dance" ? "dance" : "idle", say: first ? "Welcome back!" : "", flip: 1 }); set(R, { pose: pb, anim: pb === "dance" ? "dance" : "idle", say: first ? "Ready to train?" : "", flip: -1 });
-            if (!first && tick % 16 === 8) jump(pick([L, R]), { x: P[L].x, y: P[L].y }, 80, 1, "cheer").catch(() => {}); }
+            if (!first && tick % 16 === 8) jump(pick(duo), { x: P[L].x, y: P[L].y }, 80, 1, "cheer").catch(() => {}); }
           else { // signup: recruiters patrol up and down the form, then spar to show what training looks like
             if (first || tick % 16 === 0) { say(L, "Join the crew!"); say(R, "Day one starts now!"); }
             if (tick % 16 === 8) { set(L, { pose: "fight", anim: "lunge", say: "Train with us!", flip: 1 }); set(R, { pose: "fight", anim: "lunge", flip: -1 }); burst({ x: s.L.x + size * 1.1, y: s.L.y + size * 0.4 }, "#f59e0b", "HYAH!"); }
-            else { move(L, { x: s.L.x, y: Math.min(H() - size - 10, Math.max(70, s.L.y + rnd(-90, 90))) }, "walk", 32); move(R, { x: s.R.x, y: Math.min(H() - size - 10, Math.max(70, s.R.y + rnd(-90, 90))) }, "walk", 32); }
+            else { move(L, { x: s.L.x, y: Math.min(H() - size - 10, Math.max(70, s.L.y + rnd(-90, 90))) }, "walk", 32); R && move(R, { x: s.R.x, y: Math.min(H() - size - 10, Math.max(70, s.R.y + rnd(-90, 90))) }, "walk", 32); }
           }
         }
         await sleep(500); tick++;
       }
       document.removeEventListener("input", onInput, true);
-      await Promise.all([L, R].map((w, i) => move(w, { x: i ? W() + 40 : -size - 40, y: P[w].y }, "run", 120)));
-      [L, R].forEach((w) => { ON.delete(w); set(w, { on: false, say: "" }); });
+      await Promise.all(duo.map((w, i) => move(w, { x: i ? W() + 40 : -size - 40, y: P[w].y }, "run", 120)));
+      duo.forEach((w) => { ON.delete(w); set(w, { on: false, say: "" }); });
     };
 
     const director = async () => {
       await sleep(900);
       while (alive) {
         if (authEl()) { await authScene(); continue; }
-        const sl = slot(), n = sl === "night" || Math.random() < 0.3 ? 1 : 2;
+        const sl = slot(), n = sl === "night" || KEYS.length < 2 || Math.random() < 0.3 ? 1 : 2;
         const who = [...KEYS].sort(() => Math.random() - 0.5).slice(0, n);
         const fromLeft = Math.random() < 0.5;
         who.forEach((w, i) => { const x = fromLeft ? -size - 30 - i * 60 : W() + 30 + i * 60; P[w] = { x, y: rnd(120, H() - size - 40) }; ON.add(w); set(w, { on: true, x: P[w].x, y: P[w].y, dur: 0, say: "", air: null }); });
@@ -377,11 +319,11 @@ export default function Roamers() {
       {cast.map((m) => (
         <button key={m.who} type="button" tabIndex={-1} title={CHARS[m.who]} className={`rm-c${m.on ? " on" : ""}`} onPointerDown={(e) => api.current.dragStart?.(m.who, e.clientX, e.clientY)} onClick={() => { if (api.current.wasDrag) { api.current.wasDrag = false; return; } api.current.poke?.(m.who); }} onMouseEnter={() => api.current.hover?.(m.who)}
           style={{ zIndex: Math.round(m.y), transformOrigin: "50% 100%", transform: `translate(${m.x}px, ${m.y}px) scale(${(0.82 + 0.28 * Math.min(1, Math.max(0, m.y / vh))).toFixed(3)})`, transition: `transform ${m.dur}s ${m.ease === "l" ? "linear" : m.ease === "i" ? "cubic-bezier(.5,0,.9,.6)" : "ease-in-out"}, opacity .4s`, "--sz": `${size}px` }}>
-          {m.pose !== "climb" && <GroundShadow m={m} size={size} />}
+          {m.pose !== "climb" && <span className="rm-shadow" />}
           {m.say && <span className="rm-say">{m.say}</span>}
           <span key={m.air ? m.air.n : "g"} className={m.air ? "rm-air" : "rm-ground"} style={m.air ? { "--h": `${m.air.h}px`, "--ms": `${m.air.ms}ms`, "--rot": `${m.air.rot}deg` } : undefined}>
-            <span className={`rm-body${GAIT(m.pose, m.anim) ? "" : ` rm-${m.anim}`}`} style={{ "--fl": m.flip }}>
-              <span key={m.pose} className="rm-pop"><Figure m={m} size={size} /></span>
+            <span className="rm-f" style={{ transform: `scaleX(${m.flip})` }}>
+              <span key={m.pose} className="rm-pop"><Sprite src={sprite(m.who, m.pose)} who={m.who} pose={m.pose} anim={m.anim} size={size} cyc={m.cyc} rev={m.rev} /></span>
             </span>
           </span>
         </button>
