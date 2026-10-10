@@ -9,7 +9,8 @@ const { wrap, HttpError } = require('../lib/http');
 const { buildHistory, getDayDetails, lifetimeTotals } = require('../lib/progress');
 const { buildAchievements } = require('../lib/achievements');
 const { buildWeeklySummary } = require('../lib/weekly');
-const { dailyTarget } = require('../lib/energy');
+const { dailyTarget, expectedEnergy, macroTargets, waterTargetMl } = require('../lib/energy');
+const { buildCoach } = require('../lib/weeklyCoach');
 const { addDays, diffDays, todayUtc } = require('../lib/dates');
 const { materializeRecurring } = require('../lib/taskSeries');
 const { weeklyBundle, plateauFor, digestFor } = require('../lib/weeklyDigest');
@@ -67,7 +68,29 @@ router.get('/day/:date', dayHandler((req) => req.params.date));
 router.get('/streaks', wrap(async (req, res) => {
   const today = v.date(req.query.today);
   const dates = await FoodLog.distinct('date', { userId: req.user.id });
-  res.json({ success: true, streaks: computeStreaks(dates, today) });
+  res.json({ success: true, streaks: computeStreaks(dates, today, { freeze: true }) });
+}));
+
+// Weekly coach: 1–2 things to change, this week's boss-fight challenge, and a review for the weekly screen.
+router.get('/coach', wrap(async (req, res) => {
+  const today = req.query.today ? v.date(req.query.today, 'today') : todayUtc();
+  const uid = req.user.id;
+  const [profile, history, rows] = await Promise.all([
+    Profile.findOne({ userId: uid }).lean(),
+    buildHistory(uid, addDays(today, -20), today),
+    FoodLog.find({ userId: uid, date: { $gt: addDays(today, -7), $lte: today } }).select('date mealType nutritionTotal').lean(),
+  ]);
+  const target = dailyTarget(profile);
+  const e = expectedEnergy(profile);
+  const macros = macroTargets(target, profile?.currentWeightKg, e?.direction, profile?.goals?.proteinTarget);
+  const goals = profile?.goals || {};
+  const targets = {
+    calories: target || null, protein: macros?.protein || null,
+    waterMl: goals.waterTargetMl || waterTargetMl(profile?.currentWeightKg) || null,
+    exerciseMinutes: goals.exerciseMinutesTarget || null, steps: goals.stepsTarget || null,
+  };
+  const meals = rows.map((l) => ({ date: l.date, mealType: l.mealType, calories: Number(l.nutritionTotal?.calories || 0) }));
+  res.json({ success: true, ...buildCoach({ days: history.days, meals, targets, today }) });
 }));
 
 router.get('/achievements', wrap(async (req, res) => {

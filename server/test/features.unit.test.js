@@ -70,3 +70,23 @@ test('food catalogue is well-formed', () => {
     for (const u of f.units) assert.ok(u.label && u.quantity > 0, `${f.name} unit`);
   }
 });
+
+test('streak freeze bridges one missed day per week, never two in a row', () => {
+  const f = { freeze: true };
+  assert.equal(computeStreaks(['2026-10-01', '2026-10-02', '2026-10-03', '2026-10-05'], '2026-10-05', f).current, 4, 'one missed day is frozen');
+  assert.deepEqual(computeStreaks(['2026-10-01', '2026-10-02', '2026-10-03', '2026-10-05'], '2026-10-05', f).frozen, ['2026-10-04']);
+  assert.equal(computeStreaks(['2026-10-01', '2026-10-02', '2026-10-05'], '2026-10-05', f).current, 1, 'two missed days in a row break it');
+  assert.equal(computeStreaks(['2026-10-01', '2026-10-03', '2026-10-05'], '2026-10-05', f).current, 2, 'only one freeze per week');
+  assert.equal(computeStreaks(['2026-10-01', '2026-10-02', '2026-10-03'], '2026-10-05').current, 0, 'without freeze a missed day still breaks');
+});
+
+test('weekly coach: protein tip, boss fight and review', () => {
+  const { buildCoach } = require('../lib/weeklyCoach');
+  const days = [];
+  for (let i = 0; i < 21; i++) { const d = new Date(Date.UTC(2026, 9, 10) - (20 - i) * 86400000).toISOString().slice(0, 10); days.push({ date: d, calories: 1500, protein: 50, waterMl: 3000, exerciseMinutes: i % 2 ? 30 : 0, steps: 6000 }); }
+  const out = buildCoach({ days, meals: [], targets: { calories: 1600, protein: 100, waterMl: 3000, steps: 8000 }, today: '2026-10-10' });
+  assert.ok(out.tips.length >= 1 && out.tips.length <= 2);
+  assert.ok(out.tips.some((t) => t.id.startsWith('protein')));
+  assert.ok(['workout', 'water', 'logging'].includes(out.challenge.type));
+  assert.ok(out.review.score >= 0 && out.review.score <= 100);
+});

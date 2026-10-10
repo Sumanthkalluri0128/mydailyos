@@ -21,6 +21,10 @@ export const SCENES = {
   habit:  { label: "keeping the streak",    body: "push",   dur: 700 },
   cheer:  { label: "celebrating",           body: "jump",   dur: 260 },
   wave:   { label: "waving hello",          body: "bob",    dur: 500 },
+  powerup: { label: "powering up",          body: "jump",   dur: 320 },
+  victory: { label: "celebrating a win",    body: "jump",   dur: 280 },
+  levelup: { label: "levelling up",         body: "beat",   dur: 420 },
+  fight:  { label: "ready to fight",        body: "push",   dur: 450 },
 };
 export const BUDDY_SCENES = Object.keys(SCENES);
 

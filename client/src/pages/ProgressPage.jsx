@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import Buddy from "../motion/Buddy";
 import { API_URL } from "../config";
 import { apiFetch } from "../config/api";
+import WeeklyCoach from "../components/WeeklyCoach";
 import { getLocalDate } from "../utils/date";
 import { notify } from "../utils/notify";
 
@@ -284,6 +285,8 @@ function ProgressPage({ onBack }) {
         </div>
         <button className="secondary-button" onClick={onBack}>← Dashboard</button>
       </div>
+
+      <WeeklyCoach />
 
       <section className="progress-toolbar card">
         <div className="period-mode-row">

@@ -67,3 +67,16 @@
 .logger-show-all{width:100%;margin-top:8px}
 .logger-extras{display:grid;gap:12px;margin:12px 0}
 .meal-log-header[role=button]{cursor:pointer}
+
+/* ---- Weekly coach ---- */
+.weekly-coach{display:grid;gap:12px;margin:0 0 16px}
+.wc-review,.wc-boss{display:flex;align-items:center;gap:14px}
+.wc-review h3,.wc-boss h3,.wc-tips h3{margin:2px 0 4px}
+.wc-tip{display:flex;gap:10px;margin:10px 0}
+.wc-tip span{font-size:24px}
+.wc-tip p{margin:2px 0 0;opacity:.75}
+.wc-boss{border:2px solid var(--primary,#6c63ff)}
+.wc-boss.won{border-color:#22a06b}
+.wc-hp{height:12px;border-radius:6px;background:rgba(127,127,127,.2);overflow:hidden;margin:10px 0 6px}
+.wc-hp span{display:block;height:100%;background:#e5484d}
+.wc-boss.won .wc-hp span{background:#22a06b}

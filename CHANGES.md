@@ -1,3 +1,11 @@
+# v17 - coaching (web + server)
+
+- `GET /api/progress/coach`: weekly review, tips and boss-fight challenge (lib/weeklyCoach.js). Shown at the top of Progress on web.
+- **Streak freeze** for the logging streak: one missed day per Mon-Sun week is bridged (never two in a row).
+- Boss, victory and power-up poses added to the web Buddy.
+
+---
+
 # v16 - fixes (web + server)
 
 - **Foods:** +278 Indian home-cooked dishes (Telugu, Tamil, Kerala, Bengali, Gujarati, Maharashtrian, Punjabi, Rajasthani…) and outside food (restaurant, Indo-Chinese, McDonald's / KFC / Domino's / Subway, drinks, packaged snacks). 762 foods total, all passing the audit script. Seeding is now one bulk call, so a cold start is not slower.
