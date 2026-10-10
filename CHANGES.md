@@ -1,3 +1,11 @@
+# v18 - calorie tracking (web + server)
+
+- /api/progress/coach now also returns weekBudget and maintenance (lib/adaptiveTdee.js) and a swap tip (lib/swaps.js).
+- /api/foods/recent returns usualQuantity; /api/food-logs/quick accepts padPct (0-30).
+- Protein-first food suggestions; same cards and buffer toggle on web.
+
+---
+
 # v17 - coaching (web + server)
 
 - `GET /api/progress/coach`: weekly review, tips and boss-fight challenge (lib/weeklyCoach.js). Shown at the top of Progress on web.

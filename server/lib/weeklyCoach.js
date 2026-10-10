@@ -1,6 +1,8 @@
 // "What to change this week": 1–2 specific, kind suggestions from the last 7 logged days, a weekly "boss fight" challenge, and a
 // short review (score + mood) for the animated weekly screen. Pure — the route supplies days, meal rows and targets.
 const { addDays, weekday } = require('./dates');
+const { swapFor } = require('./swaps');
+const { adaptiveMaintenance } = require('./adaptiveTdee');
 
 const WHO = ['gojo', 'goku', 'zoro', 'naruto', 'luffy', 'jinwoo'];
 const avg = (a) => (a.length ? a.reduce((s, x) => s + x, 0) / a.length : 0);
@@ -13,7 +15,7 @@ const isWeekend = (d) => [0, 6].includes(weekday(d));
  * @param meals    [{date, mealType, calories}] food entries of the last 7 days
  * @param targets  {calories, protein, waterMl, exerciseMinutes, steps}
  */
-function buildCoach({ days, meals = [], targets = {}, today }) {
+function buildCoach({ days, meals = [], foods = [], targets = {}, today, expectedTdee = null }) {
   const week = days.filter((d) => d.date > addDays(today, -7) && d.date <= today);
   const logged = week.filter((d) => d.calories > 0);
   const tips = [];
@@ -40,6 +42,14 @@ function buildCoach({ days, meals = [], targets = {}, today }) {
     if (t.calories && cAvg < t.calories * 0.65) add({ id: 'under', icon: '⚠️', title: 'You may be eating too little', detail: `Logged days average ${r(cAvg)} kcal against a ${r(t.calories)} kcal target. Very low days often lead to binges; are some meals missing from the log?`, impact: 90 });
     if (t.waterMl && week.filter((d) => d.waterMl >= t.waterMl).length < 3) add({ id: 'water', icon: '💧', title: 'Water goal hit on few days', detail: `Goal reached ${week.filter((d) => d.waterMl >= t.waterMl).length} of 7 days. A glass with each meal gets you most of the way.`, impact: 45 });
     if (t.steps && avg(week.map((d) => d.steps || 0)) < t.steps * 0.6 && week.some((d) => d.steps)) add({ id: 'steps', icon: '👟', title: 'Steps are well below goal', detail: `${r(avg(week.map((d) => d.steps || 0)))} a day vs ${r(t.steps)}. A 15-minute walk after lunch adds about 1,500.`, impact: 40 });
+  }
+  // Biggest realistic swap among the foods eaten most often this week.
+  if (logged.length >= 4) {
+    const counts = new Map();
+    for (const f of foods) { const e = counts.get(f.name) || { n: 0, kcal: 0 }; e.n += 1; e.kcal += f.calories; counts.set(f.name, e); }
+    let best = null;
+    for (const [name, e] of counts) { const sw = swapFor(name); if (!sw) continue; const weekly = sw.saves * Math.min(e.n, 4); if (!best || weekly > best.weekly) best = { name, sw, weekly, n: e.n }; }
+    if (best && best.weekly >= 150) add({ id: 'swap', icon: '🔁', title: `Swap ${best.name}`, detail: `You logged it ${best.n}× this week. Try ${best.sw.to}: ${best.sw.why}, saving roughly ${best.sw.saves} kcal each time.`, impact: Math.min(80, best.weekly / 10) });
   }
   tips.sort((a, b) => b.impact - a.impact);
 
@@ -69,7 +79,19 @@ function buildCoach({ days, meals = [], targets = {}, today }) {
     headline: mood === 'celebrate' ? 'What a week!' : mood === 'good' ? 'Solid week — keep it rolling' : 'A fresh week is a fresh start',
     text: mood === 'celebrate' ? 'You showed up and it shows. Keep the same rhythm.' : mood === 'good' ? 'You are building the habit. One small change below will help most.' : 'Progress is not a straight line. Start with just one thing from the list below.',
   };
-  return { tips: tips.slice(0, 2), challenge, review };
+  // ---- weekly budget: a heavy day can borrow from the rest of the week. Days you did not log count as "on budget", never as spare calories.
+  let weekBudget = null;
+  if (targets.calories) {
+    const before = [];
+    for (let d = monday; d < today; d = addDays(d, 1)) { const row = days.find((x) => x.date === d); before.push(row && row.calories > 0 ? row.calories : targets.calories); }
+    const budget = targets.calories * 7;
+    const used = before.reduce((a, b) => a + b, 0);
+    const daysLeft = 7 - before.length; // today + the rest of the week
+    const perDay = Math.round((budget - used) / daysLeft);
+    weekBudget = { budget: r(budget), usedBeforeToday: r(used), daysLeft, perDayLeft: perDay, dailyTarget: r(targets.calories), diffPerDay: perDay - r(targets.calories) };
+  }
+  const maintenance = adaptiveMaintenance(days, expectedTdee);
+  return { tips: tips.slice(0, 2), challenge, review, weekBudget, maintenance };
 }
 
 module.exports = { buildCoach };

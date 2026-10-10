@@ -77,8 +77,8 @@ router.get('/coach', wrap(async (req, res) => {
   const uid = req.user.id;
   const [profile, history, rows] = await Promise.all([
     Profile.findOne({ userId: uid }).lean(),
-    buildHistory(uid, addDays(today, -20), today),
-    FoodLog.find({ userId: uid, date: { $gt: addDays(today, -7), $lte: today } }).select('date mealType nutritionTotal').lean(),
+    buildHistory(uid, addDays(today, -34), today),
+    FoodLog.find({ userId: uid, date: { $gt: addDays(today, -7), $lte: today } }).select('date mealType foodName nutritionTotal').lean(),
   ]);
   const target = dailyTarget(profile);
   const e = expectedEnergy(profile);
@@ -90,7 +90,8 @@ router.get('/coach', wrap(async (req, res) => {
     exerciseMinutes: goals.exerciseMinutesTarget || null, steps: goals.stepsTarget || null,
   };
   const meals = rows.map((l) => ({ date: l.date, mealType: l.mealType, calories: Number(l.nutritionTotal?.calories || 0) }));
-  res.json({ success: true, ...buildCoach({ days: history.days, meals, targets, today }) });
+  const foods = rows.map((l) => ({ name: l.foodName, calories: Number(l.nutritionTotal?.calories || 0) }));
+  res.json({ success: true, ...buildCoach({ days: history.days, meals, foods, targets, today, expectedTdee: e?.tdee || null }) });
 }));
 
 router.get('/achievements', wrap(async (req, res) => {

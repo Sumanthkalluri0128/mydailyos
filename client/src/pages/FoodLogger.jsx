@@ -218,7 +218,10 @@ function FoodLogger({ date, onBack, goTo }) {
   const handleSelectFood = (food) => {
     setSelectedFood(food);
 
-    setServings("1");
+    // Start from what you usually eat of this food (typical logged amount, nearest half serving).
+    const usual = Number(food.usualQuantity) || 0;
+    const per = Number(food.servingSize) || 1;
+    setServings(String(usual > 0 ? Math.min(6, Math.max(0.5, Math.round((usual / per) * 2) / 2)) : 1));
     setServeSize(String(food.servingSize));
 
     setSearch(food.name);

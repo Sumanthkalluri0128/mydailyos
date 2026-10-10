@@ -94,7 +94,10 @@ router.get('/', wrap(async (req, res) => {
 // GET /api/foods/recent — foods I logged lately, newest first (for one-tap "log again").
 router.get('/recent', wrap(async (req, res) => {
   const uid = req.user.id;
-  const logs = await FoodLog.find({ userId: uid }).sort({ createdAt: -1 }).limit(80).select('foodId').lean();
+  const logs = await FoodLog.find({ userId: uid }).sort({ createdAt: -1 }).limit(120).select('foodId consumedQuantity').lean();
+  const qty = new Map(); // foodId -> quantities you actually logged
+  for (const l of logs) { const k = String(l.foodId); if (!qty.has(k)) qty.set(k, []); qty.get(k).push(Number(l.consumedQuantity) || 0); }
+  const usual = (k) => { const a = (qty.get(k) || []).filter((x) => x > 0).sort((x, y) => x - y); return a.length >= 2 ? a[Math.floor(a.length / 2)] : null; };
   const ids = [];
   for (const l of logs) {
     const id = String(l.foodId);
@@ -103,7 +106,7 @@ router.get('/recent', wrap(async (req, res) => {
   }
   const foods = await Food.find({ _id: { $in: ids }, ...visibleTo(uid) }).select('+favoriteBy').lean();
   const byId = new Map(foods.map((f) => [String(f._id), f]));
-  res.json({ success: true, foods: ids.map((id) => byId.get(id)).filter((f) => f && !f.hidden).map((f) => present(f, uid)) });
+  res.json({ success: true, foods: ids.map((id) => byId.get(id)).filter((f) => f && !f.hidden).map((f) => ({ ...present(f, uid), usualQuantity: usual(String(f._id)) })) });
 }));
 
 // POST /api/foods/parse  { text: "2 roti, dal, 1 cup rice" } -> matched foods with quantities (nothing is saved).

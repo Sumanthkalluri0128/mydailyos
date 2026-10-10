@@ -45,11 +45,14 @@ router.post('/quick', wrap(async (req, res) => {
   if (!calories && low && high) calories = Math.round((low + high) / 2);
   if (!(calories > 0)) throw new HttpError(400, 'Enter an estimated calorie amount');
   if ((low || high) && !(low <= calories && calories <= (high || calories))) throw new HttpError(400, 'The estimate must sit inside the range');
+  // Optional safety buffer (0–30%): restaurant food hides oil and big portions, so estimates tend to be low.
+  const pad = v.number(req.body?.padPct, 'padPct', { min: 0, max: 30, required: false, def: 0 });
+  if (pad > 0) calories = Math.round(calories * (1 + pad / 100));
   const total = { calories, protein: num('protein'), carbohydrates: num('carbohydrates'), fat: num('fat'), fiber: num('fiber'), sugar: num('sugar'), sodium: num('sodium') };
 
   let base = await Food.findOne({ userId: uid, hidden: true, name: 'Quick add' });
   if (!base) base = await Food.create({ userId: uid, hidden: true, name: 'Quick add', servingSize: 1, servingUnit: 'serving', calories: 0, units: [{ label: 'serving', quantity: 1 }], notes: 'Placeholder for estimated entries' });
-  const note = low && high ? `Estimate ${Math.round(low)}–${Math.round(high)} kcal` : 'Estimate';
+  const note = (low && high ? `Estimate ${Math.round(low)}–${Math.round(high)} kcal` : 'Estimate') + (pad > 0 ? ` +${Math.round(pad)}% buffer` : '');
   const { doc, duplicate } = await createOnce(FoodLog, uid, v.clientId(req.body?.clientId), {
     foodId: base._id, date, mealType, foodName: name, baseServingSize: 1, servingUnit: 'serving', consumedQuantity: 1, servings: 1,
     nutritionPerServing: total, nutritionTotal: total, notes: note,

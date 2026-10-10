@@ -80,3 +80,6 @@
 .wc-hp{height:12px;border-radius:6px;background:rgba(127,127,127,.2);overflow:hidden;margin:10px 0 6px}
 .wc-hp span{display:block;height:100%;background:#e5484d}
 .wc-boss.won .wc-hp span{background:#22a06b}
+.wc-budget strong{font-size:22px;display:block;margin:6px 0}
+.wc-bad{color:#e5484d}.wc-good{color:#22a06b}
+.eo-pad{display:flex;gap:8px;align-items:center;margin:8px 0;font-size:13px;opacity:.85}

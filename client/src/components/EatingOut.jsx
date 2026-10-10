@@ -12,6 +12,7 @@ export default function EatingOut({ date, defaultMeal = "dinner", onLogged }) {
   const [high, setHigh] = useState("");
   const [meal, setMeal] = useState(defaultMeal);
   const [busy, setBusy] = useState(false);
+  const [pad, setPad] = useState(true); // restaurant food hides oil and big portions: add 15% by default
 
   const lo = Number(low), hi = Number(high);
   const mid = lo > 0 && hi >= lo ? Math.round((lo + hi) / 2) : lo > 0 && !hi ? lo : 0;
@@ -22,11 +23,11 @@ export default function EatingOut({ date, defaultMeal = "dinner", onLogged }) {
     try {
       const res = await apiFetch("/api/food-logs/quick", {
         method: "POST",
-        body: JSON.stringify({ date, mealType: meal, name: name.trim(), calories: mid, caloriesLow: hi ? lo : 0, caloriesHigh: hi || 0, clientId: `eo-${Date.now()}-${Math.random().toString(36).slice(2, 7)}` }),
+        body: JSON.stringify({ date, mealType: meal, name: name.trim(), calories: mid, caloriesLow: hi ? lo : 0, caloriesHigh: hi || 0, padPct: pad ? 15 : 0, clientId: `eo-${Date.now()}-${Math.random().toString(36).slice(2, 7)}` }),
       });
       const d = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(d.message || "Could not log that");
-      notify(`Logged ~${mid} kcal to ${meal}.`, "success");
+      notify(`Logged ~${pad ? Math.round(mid * 1.15) : mid} kcal to ${meal}.`, "success");
       setName(""); setLow(""); setHigh(""); setOpen(false);
       onLogged?.();
     } catch (e) { notify(e.message, "error"); } finally { setBusy(false); }
@@ -44,6 +45,7 @@ export default function EatingOut({ date, defaultMeal = "dinner", onLogged }) {
         <select value={meal} onChange={(e) => setMeal(e.target.value)} aria-label="Meal">{MEALS.map(([id, l]) => <option key={id} value={id}>{l}</option>)}</select>
       </div>
       {mid > 0 && <p className="card-description">Will log about <strong>{mid} kcal</strong>{hi ? ` (range ${lo}–${hi})` : ""}. Tip: restaurant portions are usually bigger than home portions — lean toward the higher number when unsure.</p>}
+      <label className="eo-pad"><input type="checkbox" checked={pad} onChange={(e) => setPad(e.target.checked)} /> Add a 15% safety buffer for hidden oil and bigger portions (recommended)</label>
       <button className="primary-button" disabled={busy || !valid} onClick={save}>Log estimate</button>
     </div>
   );

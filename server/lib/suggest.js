@@ -17,6 +17,8 @@ function suggestFoods(foods, remaining, { mealType, recentIds = new Set(), favor
   const fLeft = Math.max(0, Number(remaining.fiber) || 0);
   if (kcalLeft < 40) return [];
   const hint = MEAL_HINT[mealType];
+  // Protein-first: when much of the calories you have left must be protein (e.g. 40 g protein in 400 kcal), reward protein per calorie.
+  const tight = kcalLeft > 0 ? Math.min(1, (pLeft * 4) / kcalLeft / 0.5) : 0;
   const scored = [];
   for (const f of foods) {
     const kcal = Number(f.calories) || 0;
@@ -26,6 +28,7 @@ function suggestFoods(foods, remaining, { mealType, recentIds = new Set(), favor
     const fiberFill = fLeft ? Math.min(fiber / fLeft, 0.5) : 0;
     const density = (protein * 4 + fiber * 6) / Math.max(kcal, 30); // nutrients per calorie
     let score = proteinFill * 2 + fiberFill * 1.5 + Math.min(density, 1.2) * 0.8;
+    score += tight * Math.min((protein * 4) / Math.max(kcal, 30), 0.8); // up to +0.8 for very protein-dense foods
     if (hint && hint.test(f.name)) score += 0.25;
     if (favoriteIds.has(String(f._id))) score += 0.2;
     if (recentIds.has(String(f._id))) score += 0.15;               // familiar foods are more likely to be eaten
