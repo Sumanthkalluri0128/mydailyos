@@ -1,8 +1,9 @@
 // The day's character, acting out each screen. Same API as before: <Buddy scene="lift" size={80} says="Let's lift!" />, <BuddyEmpty scene="sad" title="…">…</BuddyEmpty>.
-// Which character you see depends on the day of the week (see chars.js); pass who="goku" to pin one.
+// Which character you see depends on the day of the week (see chars.js); pass who="naruto" to pin one.
 import "./buddy.css";
 import "./characters.css";
-import { CHARS, dayChar, sprite } from "./chars";
+import { CHARS, dayChar, sprite, wallOf } from "./chars";
+import Slab from "./Slab";
 
 // body = which idle motion the picture gets; dur = ms for half a cycle.
 export const SCENES = {
@@ -43,7 +44,9 @@ export default function Buddy({ scene = "wave", size = 96, says, className = "",
   const char = who || dayChar();
   const buddy = (
     <span className={`bd bdi ${className}`} style={{ width: size, height: size, "--bt": `${c.dur * 2}ms` }} role="img" aria-label={label || `${CHARS[char]} is ${c.label}`}>
-      <img className={`bdi-img bdi-${c.body}`} src={sprite(char, scene)} alt="" width={size} height={size} draggable="false" loading="lazy" decoding="async" />
+      <span className={`bdi-img bdi-${c.body}`} style={{ width: size, height: size }}>
+        <Slab size={size} lean={-9} look={12} face={<img className="bdi-pic" src={sprite(char, scene)} alt="" width={size} height={size} draggable="false" loading="lazy" decoding="async" />} wall={<img className="bdi-pic" src={wallOf(sprite(char, scene))} alt="" width={size} height={size} draggable="false" loading="lazy" decoding="async" />} />
+      </span>
     </span>
   );
   return says ? <span className="bd-row">{buddy}<span className="bd-says">{says}</span></span> : buddy;

@@ -1,6 +1,6 @@
 /* Character images: idle motions per scene (Buddy) and the fight / dance stage (BuddyStage). */
 .bdi{display:inline-flex;align-items:flex-end;justify-content:center;flex:none;line-height:0}
-.bdi-img{object-fit:contain;transform-origin:50% 100%;animation-duration:var(--bt,1200ms);animation-iteration-count:infinite;animation-timing-function:ease-in-out;user-select:none;-webkit-user-drag:none}
+.bdi-img{display:block;transform-origin:50% 100%;animation-duration:var(--bt,1200ms);animation-iteration-count:infinite;animation-timing-function:ease-in-out;user-select:none;-webkit-user-drag:none}
 .bdi-bob{animation-name:bdiBob}.bdi-push{animation-name:bdiPush}.bdi-slump{animation-name:bdiSlump}.bdi-wobble{animation-name:bdiWobble}
 .bdi-bounce{animation-name:bdiBounce}.bdi-nod{animation-name:bdiNod}.bdi-beat{animation-name:bdiBeat}.bdi-jump{animation-name:bdiJump}
 @keyframes bdiBob{0%,100%{transform:translateY(0) scale(1,1)}50%{transform:translateY(-3%) scale(1.02,.98)}}
@@ -17,7 +17,8 @@
 .bds-row{position:relative;display:flex;justify-content:center;align-items:flex-end;gap:var(--gap);height:calc(var(--sz) * 1.05);width:100%}
 .bds-c{display:inline-flex;transition:transform .36s cubic-bezier(.3,1.5,.5,1)}
 .bds-f{display:inline-flex;transform-origin:50% 100%}
-.bds-img{object-fit:contain;transform-origin:50% 100%;filter:drop-shadow(0 8px 10px rgba(31,35,64,.25));-webkit-user-drag:none}
+.bds-img{display:block;transform-origin:50% 100%;filter:drop-shadow(0 8px 10px rgba(31,35,64,.25))}
+.bdi-pic{display:block;object-fit:contain;-webkit-user-drag:none;user-select:none}
 .bds-idle{animation:bdiBob 2.4s ease-in-out infinite}
 .bds-run{animation:bdiBounce .24s ease-in-out infinite}
 .bds-shake{animation:bdsShake .16s linear infinite}

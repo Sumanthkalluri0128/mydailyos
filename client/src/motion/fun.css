@@ -33,14 +33,13 @@
 /* headings and mascots */
 h1{background:linear-gradient(90deg,#7c5cff,#ff6fb1,#22d3ee,#7c5cff);background-size:250% 100%;-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;animation:funGrad 8s linear infinite}
 .bd{filter:drop-shadow(0 6px 10px rgba(124,92,255,.28))}
-.bd:hover{animation:funPop .5s ease}
 @keyframes funPop{40%{transform:scale(1.18) rotate(-6deg)}70%{transform:scale(.95) rotate(3deg)}}
 
 /* switch it all off */
 html.ff-calm .fb{display:none}
-html.ff-calm .app main>*,html.ff-calm .app .card,html.ff-calm .primary-button,html.ff-calm .primary-button::after,html.ff-calm h1,html.ff-calm .bd:hover{animation:none}
+html.ff-calm .app main>*,html.ff-calm .app .card,html.ff-calm .primary-button,html.ff-calm .primary-button::after,html.ff-calm h1,html.ff-calm .bd{animation:none}
 html.ff-calm h1{background:none;-webkit-text-fill-color:currentColor}
 @media (prefers-reduced-motion:reduce){
-  .fb-blob,.fb-star,.fb-petal,.fb-shoot,.app main>*,.app .card,.primary-button,.primary-button::after,h1,.bd:hover{animation:none!important}
+  .fb-blob,.fb-star,.fb-petal,.fb-shoot,.app main>*,.app .card,.primary-button,.primary-button::after,h1{animation:none!important}
   .fb-petal,.fb-shoot{display:none}
 }
