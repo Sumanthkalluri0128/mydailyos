@@ -1,4 +1,4 @@
-// Floating 3D Asta: a toon-shaded model that hovers in the corner and does workout moves.
+// Floating 3D Goku: a toon-shaded model that hovers in the corner and does workout moves.
 // Click / tap to switch exercise. Hidden in calm mode or when the user prefers reduced motion.
 // three.js is loaded lazily so it never slows the first paint.
 import { useEffect, useRef, useState } from "react";
@@ -18,7 +18,7 @@ function pose(i, p) {
 }
 const calm = () => document.documentElement.classList.contains("ff-calm") || window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
 
-export default function FloatingAsta({ src = "/models/asta.glb", size = 240 }) {
+export default function FloatingAsta({ src = "/models/goku.glb", size = 240 }) {
   const box = useRef(null);
   const exRef = useRef(0);
   const [label, setLabel] = useState("Idle");
@@ -38,10 +38,10 @@ export default function FloatingAsta({ src = "/models/asta.glb", size = 240 }) {
       el.appendChild(renderer.domElement);
       const scene = new THREE.Scene();
       const cam = new THREE.PerspectiveCamera(38, 1, 0.1, 50); cam.position.set(0, 0.2, 9);
-      scene.add(new THREE.AmbientLight(0xffffff, 0.6));
+      scene.add(new THREE.AmbientLight(0xffffff, 0.9));
       const key = new THREE.DirectionalLight(0xffffff, 1.1); key.position.set(3, 4, 5); scene.add(key);
-      const r1 = new THREE.DirectionalLight(0xff4d8d, 1.5); r1.position.set(-5, 2, -4); scene.add(r1);
-      const r2 = new THREE.DirectionalLight(0x3de0ff, 1.5); r2.position.set(5, 1, -4); scene.add(r2);
+      const r1 = new THREE.DirectionalLight(0xff4d8d, 0.6); r1.position.set(-5, 2, -4); scene.add(r1);
+      const r2 = new THREE.DirectionalLight(0x3de0ff, 0.6); r2.position.set(5, 1, -4); scene.add(r2);
       const fl = new THREE.Group(), ex = new THREE.Group(), model = new THREE.Group();
       scene.add(fl); fl.add(ex); ex.add(model);
       const grad = new THREE.DataTexture(new Uint8Array([70, 150, 255]), 3, 1, THREE.RedFormat);
@@ -50,6 +50,7 @@ export default function FloatingAsta({ src = "/models/asta.glb", size = 240 }) {
         if (dead) return;
         g.scene.traverse((o) => { if (o.isMesh) {
           const m = o.material;
+          if (m.name === "Power_Pole_Sheathed") { o.visible = false; return; } // keep only the extended staff
           o.material = new THREE.MeshToonMaterial({ color: m.color ? m.color.clone() : 0xffffff, map: m.map || null,
             vertexColors: !!o.geometry.attributes.color, gradientMap: grad, side: THREE.DoubleSide });
         } });
@@ -81,7 +82,7 @@ export default function FloatingAsta({ src = "/models/asta.glb", size = 240 }) {
   if (hidden) return null;
   const next = () => { exRef.current = (exRef.current + 1) % EX.length; setLabel(EX[exRef.current].n); };
   return (
-    <button type="button" className="fa-wrap" onClick={next} aria-label={`Asta: ${label}. Tap to change exercise`}
+    <button type="button" className="fa-wrap" onClick={next} aria-label={`Goku: ${label}. Tap to change exercise`}
       style={{ width: size, height: size }}>
       <span ref={box} className="fa-canvas" />
       <span className="fa-tag">{label}</span>
