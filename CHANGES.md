@@ -1,3 +1,11 @@
+# v22 - macro ranges + scanner fix (web + server)
+
+- **Barcode import (Open Food Facts):** sodium is stored in grams per 100 g, but some products are typed in milligrams or with impossible numbers, which produced a food the server refused ("sodium must be between 0 and 100000"). Values are now normalised and clamped (sodium unit mix-ups, kJ typed as kcal, negatives, macros above 100 g per 100 g), and saving a food no longer fails because of a sodium problem.
+- **Macro ranges** (lib/energy.js macroRanges, same in web and mobile): protein 1.2-2.0 g/kg within 10-35% of calories, fat 20-35%, carbs 130 g / 35% up to 65%, fibre goal up to 50 g.
+- docs: FlexFit-Architecture.md
+
+---
+
 # v21 - design pass + water amounts (web)
 
 - **Water quick add:** hover (or focus, or long-press on touch) the "+250 ml" button for 250 ml / 500 ml / 1 L; a click still adds 250 ml.

@@ -37,6 +37,16 @@ function parseUnits(raw) {
   }));
 }
 
+/** Sodium in mg per serving. Accepts "1,200", " 450 mg" and a stray unit mix-up instead of rejecting the whole food:
+ *  commas/units are stripped, negatives become 0, and a value above the 100,000 mg limit is treated as micrograms-by-mistake. */
+function sodiumMg(raw) {
+  if (raw === undefined || raw === null || raw === '') return 0;
+  let n = typeof raw === 'number' ? raw : Number(String(raw).replace(/,/g, '').replace(/[^0-9.\-eE]/g, ''));
+  if (!Number.isFinite(n) || n < 0) return 0;
+  while (n > 100000) n /= 1000;
+  return Math.round(n * 10) / 10;
+}
+
 function parseFood(body = {}) {
   const num = (k, o = {}) => v.number(body[k], k, { min: 0, max: 100000, required: false, def: 0, ...o });
   return {
@@ -50,7 +60,7 @@ function parseFood(body = {}) {
     fat: num('fat'),
     fiber: num('fiber'),
     sugar: num('sugar'),
-    sodium: num('sodium'),
+    sodium: sodiumMg(body.sodium),
     barcode: v.string(body.barcode, 'barcode', { max: 20 }),
     units: parseUnits(body.units),
     notes: v.string(body.notes, 'notes', { max: 500 }),

@@ -127,6 +127,35 @@ function macroTargets(calorieTarget, weightKg, direction, proteinOverride) {
   return { protein, fat, carbs, fiber: Math.round((calorieTarget / 1000) * 14) };
 }
 
+/**
+ * Healthy minimum and maximum per day for each macro, so you aim for a RANGE instead of one number. The goal (from macroTargets)
+ * always sits inside it.
+ *   protein  1.2 g/kg minimum while losing or gaining (1.0 maintaining; the 0.8 g/kg RDA is a bare floor, not an aim for active people),
+ *            up to 2.0 g/kg (2.2 when gaining), never above 35 % of calories and never below 10 % (the accepted macronutrient range).
+ *   fat      20-35 % of calories (accepted range).
+ *   carbs    at least 130 g (the RDA that covers the brain) and 35 % of calories, up to 65 % (the usual range is 45-65 %; the lower
+ *            floor leaves room for the higher protein used when cutting).
+ *   fibre    14 g per 1,000 kcal (goal = minimum) up to about 50 g, beyond which gut discomfort becomes common.
+ */
+function macroRanges(calorieTarget, weightKg, direction, proteinOverride) {
+  const kcal = n(calorieTarget), w = n(weightKg);
+  const goal = macroTargets(kcal, w, direction, proteinOverride);
+  const pMin = Math.max(Math.round(w * (direction === 'maintain' ? 1.0 : 1.2)), Math.round((kcal * 0.10) / 4));
+  const pMax = Math.max(pMin, Math.min(Math.round(w * (direction === 'gain' ? 2.2 : 2.0)), Math.round((kcal * 0.35) / 4)));
+  const span = (min, max, g) => ({ min: Math.min(min, g), max: Math.max(max, g), goal: g });
+  return {
+    protein: span(pMin, pMax, goal.protein),
+    fat: span(Math.round((kcal * 0.20) / 9), Math.round((kcal * 0.35) / 9), goal.fat),
+    carbs: span(Math.max(130, Math.round((kcal * 0.35) / 4)), Math.round((kcal * 0.65) / 4), goal.carbs),
+    fiber: span(goal.fiber, Math.max(50, goal.fiber), goal.fiber),
+  };
+}
+
+/** 'low' | 'ok' | 'high' for a value against a { min, max } range. */
+function rangeStatus(value, range) {
+  const v = n(value);
+  return v < range.min ? 'low' : v > range.max ? 'high' : 'ok';
+}
 
 /**
  * Soft ceilings (not goals): sodium 2,000 mg/day (WHO) and sugar at 10 % of calories (WHO guideline for FREE sugars;
@@ -147,5 +176,5 @@ function weeksToGoal(currentKg, targetKg, pace = 0.5) {
 module.exports = {
   ACTIVITY_MULTIPLIER, KCAL_PER_KG, KCAL_PER_STEP_PER_KG, DEFAULT_TARGET,
   bmr, goalDirection, expectedEnergy, dailyTarget, dayBalance,
-  stepCalories, stepDistanceKm, waterTargetMl, macroTargets, limitTargets, weeksToGoal,
+  stepCalories, stepDistanceKm, waterTargetMl, macroTargets, macroRanges, rangeStatus, limitTargets, weeksToGoal,
 };
