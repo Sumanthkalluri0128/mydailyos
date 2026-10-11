@@ -428,7 +428,7 @@ function FoodLogger({ date, onBack, goTo }) {
             </span>
           )}
 
-          <div className="bd-head"><h1>Log Food</h1><Buddy scene="eat" size={76} says="What's on the plate?" /></div>
+          <div className="bd-head"><h1>Log Food</h1><Buddy who="luffy" scene="eat" size={76} says="What's on the plate?" /></div>
 
           <p>
             Add everything you ate today.

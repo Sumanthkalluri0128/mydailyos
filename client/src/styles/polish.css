@@ -57,7 +57,7 @@
 
 /* ---- Log Food: compact layout ---- */
 .meal-button{display:flex;flex-direction:column;align-items:center;gap:1px;line-height:1.15}
-.meal-button .meal-kcal{font-size:11px;opacity:.75;font-weight:600}
+.meal-button .meal-kcal{font-size:12px;opacity:.75;font-weight:600}
 .balance-compact{padding:16px 18px!important}
 .balance-compact .balance-sub{margin:8px 0 6px;font-size:13px}
 .balance-compact summary{cursor:pointer;font-size:13px;font-weight:700;color:var(--primary,#6c63ff);list-style:none}
@@ -97,3 +97,66 @@
 .account-form.data-controls .data-actions .secondary-button{margin-left:auto}
 .account-form.data-controls .toggle-row{display:flex}
 .account-form.data-controls > .secondary-button{align-self:flex-start}
+
+/* ---- Water quick-add menu ---- */
+.quick-water{position:relative;display:flex;flex:1}
+.quick-water>button{flex:1}
+.water-menu{position:absolute;left:50%;bottom:calc(100% + 6px);transform:translateX(-50%);display:flex;gap:6px;padding:8px;border-radius:16px;background:var(--surface,#fff);border:1px solid var(--border,#ddd);box-shadow:0 12px 30px rgba(60,40,120,.22);z-index:30;animation:wm-pop .14s ease-out}
+.water-menu::after{content:"";position:absolute;left:0;right:0;top:100%;height:10px} /* keeps hover alive across the gap */
+.water-menu button{min-height:44px;min-width:70px;padding:0 14px;border-radius:12px;border:1px solid var(--primary,#6c63ff);background:transparent;color:var(--primary,#6c63ff);font-weight:800;cursor:pointer;white-space:nowrap}
+.water-menu button:hover,.water-menu button:focus-visible{background:var(--primary,#6c63ff);color:#fff}
+@keyframes wm-pop{from{opacity:0;transform:translate(-50%,6px)}to{opacity:1;transform:translate(-50%,0)}}
+
+/* =====================================================================================
+   Design pass: type, controls, buttons, spacing, calmer background, layout, states
+   ===================================================================================== */
+:root{--sp-1:4px;--sp-2:8px;--sp-3:12px;--sp-4:16px;--sp-5:24px;--sp-6:32px}
+
+/* 1. Readable text: nothing below 12px; secondary text darker so it holds up on the gradient */
+small,.eyebrow,.card-description,.balance-sub,.muted,.hint{font-size:max(12.5px,.8em)}
+.card-description,.balance-sub,.muted,.hint{color:var(--text-muted)}
+[data-theme="dark"] .card-description,[data-theme="dark"] .muted{color:#b8bdd0}
+
+/* 2. One look for form controls (:where keeps this overridable by page rules) */
+:where(select,textarea,input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=file]):not([type=hidden])){
+  min-height:44px;border:1.5px solid var(--border,#cfd3e0);border-radius:12px;background:var(--surface,#fff);color:var(--text);font:inherit;padding:0 14px}
+:where(textarea){padding:12px 14px;min-height:88px}
+:where(input[type=checkbox],input[type=radio]){width:20px;height:20px;accent-color:var(--primary,#6c63ff);flex:none}
+:where(select,input,textarea):focus-visible{outline:none;border-color:var(--primary,#6c63ff);box-shadow:var(--ring,0 0 0 3px rgba(108,99,255,.3))}
+
+/* 3 + 7. Buttons: one primary per area, secondary clearly secondary, 44px minimum */
+.primary-button,.secondary-button,.chip{min-height:44px}
+.secondary-button{background:var(--surface,#fff);border:1.5px solid var(--border,#cfd3e0);color:var(--text);font-weight:700;border-radius:14px;transition:border-color .15s,background .15s,color .15s}
+.secondary-button:hover:not(:disabled){border-color:var(--primary,#6c63ff);color:var(--primary,#6c63ff);background:color-mix(in srgb,var(--primary,#6c63ff) 8%,var(--surface,#fff))}
+.secondary-button:disabled{opacity:.55;cursor:not-allowed}
+.delete-log-button,.icon-button{min-width:44px;min-height:44px}
+button:focus-visible,.chip:focus-visible{outline:none;box-shadow:var(--ring,0 0 0 3px rgba(108,99,255,.3))}
+
+/* 4. Spacing rhythm: cards and their content use the same scale */
+.card{padding:var(--sp-5)}
+.card + .card,.card + section,section + .card{margin-top:var(--sp-4)}
+.card h2,.card h3{margin-top:0;margin-bottom:var(--sp-2)}
+
+/* 5. Calmer background: softer blobs, and a frosted panel behind the main content so text never sits on the gradient */
+.fb-blob{opacity:.22}
+[data-theme="dark"] .fb-blob{opacity:.1}
+.app main{background:color-mix(in srgb,var(--surface,#fff) 70%,transparent);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);border-radius:28px;padding:var(--sp-4)}
+/* dark mode: a calm solid background instead of blobs and petals */
+[data-theme="dark"] .fb-blob,[data-theme="dark"] .fb-petal,[data-theme="dark"] .fb-star,[data-theme="dark"] .fb-shoot{display:none}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .fb-blob,:root:not([data-theme="light"]) .fb-petal{display:none}}
+
+/* 8 + 11. Log Food: sticky meal selector, clear selected states */
+.meal-selector{position:sticky;top:8px;z-index:20;padding:6px;border-radius:22px;background:color-mix(in srgb,var(--surface,#fff) 90%,transparent);-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px)}
+.meal-button.active,.chip.active{background:var(--primary,#6c63ff)!important;color:#fff!important;border-color:var(--primary,#6c63ff)!important;box-shadow:0 4px 12px rgba(108,99,255,.35)}
+.meal-button.active .meal-kcal{opacity:.9}
+
+/* 10. Wider screens: add food on the left, today's food on the right */
+@media (min-width:1100px){
+  .food-logger-page{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);gap:var(--sp-4) var(--sp-5);align-items:start;max-width:1400px}
+  .food-logger-page>.food-logger-header,.food-logger-page>.balance-card,.food-logger-page>.meal-selector{grid-column:1 / -1}
+  .food-logger-page>.logger-card,.food-logger-page>.logger-extras{grid-column:1}
+  .food-logger-page>.today-log-card{grid-column:2;grid-row:4 / span 2;position:sticky;top:84px;max-height:calc(100vh - 110px);overflow:auto}
+}
+
+/* Status never by colour alone */
+.wc-bad,.wc-good{font-weight:800}

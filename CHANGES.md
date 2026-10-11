@@ -1,3 +1,12 @@
+# v21 - design pass + water amounts (web)
+
+- **Water quick add:** hover (or focus, or long-press on touch) the "+250 ml" button for 250 ml / 500 ml / 1 L; a click still adds 250 ml.
+- **Styles (styles/polish.css):** nothing below 12 px, one look for selects/inputs/checkboxes, clearer secondary buttons with hover, 44 px minimum targets, a spacing scale, softer background blobs with a frosted panel behind content, solid dark mode without blobs, filled selected states.
+- **Log Food:** sticky meal selector; two columns on screens 1100 px and wider (add food left, today's food right).
+- **A character per page** (Luffy food, Goku exercise, Zoro steps, Naruto water, Gojo progress).
+
+---
+
 # v20 - tidy-ups (web + server)
 
 - **Log Food:** the foods list appears only while you click into the search box or type.

@@ -186,7 +186,7 @@ function WaterPage({ onBack }) {
             ← Back
           </button>
 
-          <div className="bd-head"><h1>Water</h1><Buddy scene="drink" size={76} says="Sip time!" /></div>
+          <div className="bd-head"><h1>Water</h1><Buddy who="naruto" scene="drink" size={76} says="Sip time!" /></div>
 
           <p>
             Stay hydrated throughout the day.

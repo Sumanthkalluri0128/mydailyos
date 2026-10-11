@@ -120,7 +120,7 @@ button:active:not(:disabled) { transform: scale(0.98); }
 .ring-center > span { margin-top: 4px; font-size: 13px; font-weight: 700; color: var(--text-muted); }
 
 .hero2-stats { margin: 0; display: grid; gap: 14px; }
-.hero2-stats dt { font-size: 11px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-muted); }
+.hero2-stats dt { font-size:12px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-muted); }
 .hero2-stats dd { margin: 2px 0 0; font-size: 26px; font-weight: 800; letter-spacing: -0.02em; }
 .hero2-stats dd small { font-size: 13px; font-weight: 600; color: var(--text-muted); letter-spacing: 0; }
 .hero2-stats em { display: block; font-style: normal; font-size: 12px; color: var(--text-muted); margin-top: 1px; }

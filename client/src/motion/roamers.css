@@ -41,7 +41,7 @@
 .fx-shade img{filter:brightness(0) drop-shadow(0 0 8px #8b5cf6) drop-shadow(0 0 14px #6d28d9)}
 .fx-clone img{opacity:.85;filter:drop-shadow(0 0 6px #fbbf24)}
 @keyframes fx-rush{0%{opacity:0;transform:translate(0,22px) scale(.5)}22%{opacity:.9;transform:translate(0,0) scale(1)}50%{opacity:.9;transform:translate(0,0) scale(1)}100%{opacity:.9;transform:translate(var(--dx),var(--dy)) scale(.9)}}
-@media (max-width:640px){.rm-say{font-size:10px}.fx-burst b{font-size:11px}}
+@media (max-width:640px){.rm-say{font-size:12px}.fx-burst b{font-size:12px}}
 .ff-calm .rm-layer{display:none}
 @media (prefers-reduced-motion:reduce){.rm-layer{display:none}}
 

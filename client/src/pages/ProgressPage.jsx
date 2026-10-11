@@ -280,7 +280,7 @@ function ProgressPage({ onBack }) {
       <div className="page-heading-row">
         <div>
           <p className="eyebrow">Progress & history</p>
-          <div className="bd-head"><h2>See your journey clearly 📈</h2><Buddy scene="chart" size={76} says="Look at you go!" /></div>
+          <div className="bd-head"><h2>See your journey clearly 📈</h2><Buddy who="gojo" scene="chart" size={76} says="Look at you go!" /></div>
           <p>Choose Day, Week, Month or Year. The date range automatically follows your selection.</p>
         </div>
         <button className="secondary-button" onClick={onBack}>← Dashboard</button>

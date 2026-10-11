@@ -46,7 +46,7 @@ export default function WeeklyCoach() {
         <div className="card wc-budget">
           <h3>Weekly calorie budget</h3>
           <p>{wb.budget.toLocaleString()} kcal for the week · {wb.usedBeforeToday.toLocaleString()} counted so far (days you did not log count as on budget).</p>
-          <strong className={wb.diffPerDay < 0 ? "wc-bad" : "wc-good"}>{wb.perDayLeft.toLocaleString()} kcal/day</strong>
+          <strong className={wb.diffPerDay < 0 ? "wc-bad" : "wc-good"}>{wb.diffPerDay < 0 ? "▼ " : wb.diffPerDay > 0 ? "▲ " : "● "}{wb.perDayLeft.toLocaleString()} kcal/day</strong>
           <p>{wb.diffPerDay === 0 ? "Right on your daily target" : wb.diffPerDay < 0 ? `${Math.abs(wb.diffPerDay)} below your usual ${wb.dailyTarget.toLocaleString()} target` : `${wb.diffPerDay} above your usual ${wb.dailyTarget.toLocaleString()} target`} for the next {wb.daysLeft} day{wb.daysLeft === 1 ? "" : "s"} to finish the week on budget.</p>
         </div>
       )}

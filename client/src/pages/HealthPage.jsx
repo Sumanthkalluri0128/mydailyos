@@ -73,7 +73,7 @@ export default function HealthPage({ onBack }) {
   return (
     <div className="large-card health-page">
       <button className="back-button" onClick={onBack}>← Back</button>
-      <div className="bd-head"><h1>Health &amp; Steps</h1><Buddy scene="walk" size={76} says="Let's move!" /></div>
+      <div className="bd-head"><h1>Health &amp; Steps</h1><Buddy who="zoro" scene="walk" size={76} says="Let's move!" /></div>
       <p>Steps, sleep, vitals and body measurements. For tracking only — not medical advice.</p>
 
       <div className="serving-chips">

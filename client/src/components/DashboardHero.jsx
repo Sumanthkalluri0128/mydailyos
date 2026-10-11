@@ -90,11 +90,15 @@ export default function DashboardHero({ profile, today, summary, activity, water
   });
 
   const [waterOk, setWaterOk] = useState(false);
-  const quickWater = async () => {
+  const [waterMenu, setWaterMenu] = useState(false);
+  const holdTimer = useRef(null);
+  const held = useRef(false);
+  const quickWater = async (amountMl = 250) => {
+    setWaterMenu(false);
     if (adding) return;
     setAdding(true);
     try {
-      const res = await apiFetch("/api/water", { method: "POST", body: JSON.stringify({ date: today, amountMl: 250 }) });
+      const res = await apiFetch("/api/water", { method: "POST", body: JSON.stringify({ date: today, amountMl }) });
       if (res.ok) {
         buzz([12, 30, 12]); setWaterOk(true); setTimeout(() => setWaterOk(false), 1100);
         onChanged?.();
@@ -157,7 +161,27 @@ export default function DashboardHero({ profile, today, summary, activity, water
 
       <div className="quick" role="group" aria-label="Quick actions">
         <button type="button" onClick={() => goTo("foodLogger")}><Buddy scene="eat" size={40} label="" />Food</button>
-        <button type="button" className={waterOk ? "fx-pulse" : undefined} onClick={quickWater} disabled={adding}><Buddy scene={waterOk ? "cheer" : "drink"} size={40} label="" />{waterOk ? "Added" : "+250 ml"}</button>
+        {/* Hover (or keyboard focus, or a long press on touch screens) opens 250 ml / 500 ml / 1 L; a plain click still adds 250 ml. */}
+        <div className={`quick-water${waterMenu ? " open" : ""}`}
+          onMouseLeave={() => setWaterMenu(false)}
+          onBlur={(e) => { if (!e.currentTarget.contains(e.relatedTarget)) setWaterMenu(false); }}
+          onKeyDown={(e) => { if (e.key === "Escape") setWaterMenu(false); }}>
+          <button type="button" className={waterOk ? "fx-pulse" : undefined} disabled={adding} aria-haspopup="menu" aria-expanded={waterMenu}
+            onClick={() => { if (held.current) { held.current = false; return; } quickWater(250); }}
+            onMouseEnter={() => setWaterMenu(true)}
+            onTouchStart={() => { held.current = false; holdTimer.current = setTimeout(() => { held.current = true; setWaterMenu(true); }, 400); }}
+            onTouchEnd={() => clearTimeout(holdTimer.current)} onTouchMove={() => clearTimeout(holdTimer.current)}
+            onContextMenu={(e) => { e.preventDefault(); setWaterMenu(true); }}>
+            <Buddy scene={waterOk ? "cheer" : "drink"} size={40} label="" />{waterOk ? "Added" : "+250 ml"}
+          </button>
+          {waterMenu && (
+            <div className="water-menu" role="menu" aria-label="Choose how much water">
+              {[["250 ml", 250], ["500 ml", 500], ["1 L", 1000]].map(([label, ml]) => (
+                <button key={label} type="button" role="menuitem" onClick={() => quickWater(ml)}>{label}</button>
+              ))}
+            </div>
+          )}
+        </div>
         <button type="button" onClick={() => goTo("exercise")}><Buddy scene="lift" size={40} label="" />Workout</button>
         <button type="button" onClick={() => goTo("health")}><Buddy scene="walk" size={40} label="" />Steps</button>
       </div>
