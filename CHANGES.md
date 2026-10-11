@@ -1,3 +1,12 @@
+# v19 - six more features (web + server)
+
+- POST /api/foods/photo (own 7 MB JSON limit, 6 requests/min/user, needs ANTHROPIC_API_KEY; optional PHOTO_MODEL).
+- GET /api/foods/dish-range; search and meal parsing understand Indian-language food words (lib/foodAliases.js).
+- Recipes: portionsLeft, POST /api/recipes/:id/cook and /eat.
+- Web: photo button in "Type a meal", dish sizes in Eating out, meal prep rows on Recipes.
+
+---
+
 # v18 - calorie tracking (web + server)
 
 - /api/progress/coach now also returns weekBudget and maintenance (lib/adaptiveTdee.js) and a swap tip (lib/swaps.js).

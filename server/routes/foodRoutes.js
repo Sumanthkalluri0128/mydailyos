@@ -10,6 +10,7 @@ const Profile = require('../models/Profile');
 const { parseMealText } = require('../lib/foodParse');
 const { catalogueFoods } = require('../lib/foodCache');
 const { suggestFoods } = require('../lib/suggest');
+const { expandWord, englishify } = require('../lib/foodAliases');
 const { dailyTarget, expectedEnergy, macroTargets } = require('../lib/energy');
 
 const router = express.Router();
@@ -65,7 +66,8 @@ router.get('/', wrap(async (req, res) => {
   const raw = String(req.query.search || '').trim().slice(0, 60).toLowerCase();
   const words = raw.split(/\s+/).filter(Boolean).slice(0, 5);
   for (const w of words) {
-    const rx = new RegExp(v.escapeRegex(w), 'i');
+    // "annam", "perugu", "kodi"... also match rice, curd, chicken (see lib/foodAliases.js)
+    const rx = new RegExp(expandWord(w).map(v.escapeRegex).join('|'), 'i');
     and.push({ $or: [{ name: rx }, { brand: rx }] });
   }
   if (req.query.mine === 'true') and.push({ userId: uid });
@@ -109,11 +111,27 @@ router.get('/recent', wrap(async (req, res) => {
   res.json({ success: true, foods: ids.map((id) => byId.get(id)).filter((f) => f && !f.hidden).map((f) => ({ ...present(f, uid), usualQuantity: usual(String(f._id)) })) });
 }));
 
+// GET /api/foods/dish-range?q=chicken biryani — typical small / regular / large calories for a restaurant dish, to fill an eating-out estimate.
+router.get('/dish-range', wrap(async (req, res) => {
+  const raw = String(req.query.q || '').trim().slice(0, 60).toLowerCase();
+  const words = raw.split(/\s+/).filter(Boolean).slice(0, 4);
+  if (!words.length) return res.json({ success: true, dishes: [] });
+  const and = [visibleTo(req.user.id), { hidden: { $ne: true } }, { calories: { $gte: 80 } }];
+  for (const w of words) and.push({ name: new RegExp(expandWord(w).map(v.escapeRegex).join('|'), 'i') });
+  const found = await Food.find({ $and: and }).select('name calories servingSize servingUnit').limit(40).lean();
+  const round10 = (n) => Math.round(n / 10) * 10;
+  const dishes = found
+    .sort((a, b) => (/restaurant|plate|full/i.test(b.name) ? 1 : 0) - (/restaurant|plate|full/i.test(a.name) ? 1 : 0) || a.name.length - b.name.length)
+    .slice(0, 5)
+    .map((f) => ({ name: f.name, regular: round10(f.calories), small: round10(f.calories * 0.75), large: round10(f.calories * 1.4) }));
+  res.json({ success: true, dishes });
+}));
+
 // POST /api/foods/parse  { text: "2 roti, dal, 1 cup rice" } -> matched foods with quantities (nothing is saved).
 router.post('/parse', wrap(async (req, res) => {
   const text = v.string(req.body?.text, 'text', { max: 600, required: true });
   const [shared, mine] = await Promise.all([catalogueFoods(Food), Food.find({ userId: req.user.id, hidden: { $ne: true } }).select('name brand servingSize servingUnit units userId').limit(2000).lean()]);
-  res.json({ success: true, ...parseMealText(text, [...mine, ...shared]) });
+  res.json({ success: true, ...parseMealText(englishify(text), [...mine, ...shared]) });
 }));
 
 // GET /api/foods/suggest?date=YYYY-MM-DD&mealType=lunch — foods that fit what's left today (calories, protein, fibre).

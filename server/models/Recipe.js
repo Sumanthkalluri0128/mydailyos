@@ -17,6 +17,8 @@ const schema = new mongoose.Schema(
       },
     ],
     notes: { type: String, default: '', maxlength: 1000 },
+    // Meal prep: portions of the latest cooked batch still in the fridge. "Cooked a batch" adds; "ate 1" logs and subtracts.
+    portionsLeft: { type: Number, default: 0, min: 0, max: 1000 },
     foodId: { type: mongoose.Schema.Types.ObjectId, ref: 'Food', default: null },
     perServing: {
       calories: { type: Number, default: 0 }, protein: { type: Number, default: 0 }, carbohydrates: { type: Number, default: 0 },

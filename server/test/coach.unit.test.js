@@ -25,3 +25,11 @@ test('weekly budget counts unlogged days as on budget, never as spare calories',
   assert.equal(out.weekBudget.budget, 11200);
   assert.ok(out.weekBudget.usedBeforeToday >= 1000 * 2 + 1600 * 2, 'unlogged days count at the target');
 });
+
+test('Indian-language food words map to the English words the catalogue uses', () => {
+  const { expandWord, englishify } = require('../lib/foodAliases');
+  assert.ok(expandWord('annam').includes('rice'));
+  assert.ok(expandWord('perugu').includes('curd'));
+  assert.equal(englishify('2 roti, perugu, annam'), '2 roti, curd, rice');
+  assert.deepEqual(expandWord('paneer'), ['paneer']);
+});

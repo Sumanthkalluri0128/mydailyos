@@ -46,6 +46,8 @@ function createApp({ allowedOrigins = [] } = {}) {
     })
   );
   app.use(compression());
+  // Photo logging carries a base64 picture, so it gets its own larger JSON limit and is mounted before the 100 kb default.
+  app.use('/api/foods/photo', express.json({ limit: '7mb' }), require('./routes/photoRoutes'));
   app.use(express.json({ limit: '100kb' }));
 
   app.get('/api/health', (req, res) =>

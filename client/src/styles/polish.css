@@ -83,3 +83,6 @@
 .wc-budget strong{font-size:22px;display:block;margin:6px 0}
 .wc-bad{color:#e5484d}.wc-good{color:#22a06b}
 .eo-pad{display:flex;gap:8px;align-items:center;margin:8px 0;font-size:13px;opacity:.85}
+.meal-prep-row{display:flex;flex-wrap:wrap;gap:8px;align-items:center;width:100%;margin-top:8px}
+.eo-dishes{display:grid;gap:6px;margin:8px 0;font-size:13px}
+.eo-dishes .serving-chips{display:inline-flex;gap:6px;margin-left:8px}

@@ -2,6 +2,8 @@
 const express = require('express');
 const Recipe = require('../models/Recipe');
 const Food = require('../models/Food');
+const FoodLog = require('../models/FoodLog');
+const { createOnce } = require('../lib/idempotent');
 const { requireAuth } = require('../middleware/auth');
 const { wrap, HttpError } = require('../lib/http');
 const { nutritionFor, KEYS } = require('../lib/nutritionCalc');
@@ -69,6 +71,34 @@ router.put('/:id', wrap(async (req, res) => {
   Object.assign(recipe, parsed, { foodId: food._id });
   await recipe.save();
   res.json({ success: true, recipe, food });
+}));
+
+// Meal prep: "I cooked a batch" adds portions (default: everything the recipe makes).
+router.post('/:id/cook', wrap(async (req, res) => {
+  const recipe = await Recipe.findOne({ _id: v.objectId(req.params.id), userId: req.user.id });
+  if (!recipe) throw new HttpError(404, 'Recipe not found');
+  const portions = v.number(req.body?.portions, 'portions', { min: 0.25, max: 200, required: false, def: recipe.servings });
+  recipe.portionsLeft = Math.min(1000, (recipe.portionsLeft || 0) + portions);
+  await recipe.save();
+  res.json({ success: true, recipe });
+}));
+
+// "Ate 1 portion": logs it to a meal in one step and takes it off the batch.
+router.post('/:id/eat', wrap(async (req, res) => {
+  const uid = req.user.id;
+  const recipe = await Recipe.findOne({ _id: v.objectId(req.params.id), userId: uid });
+  if (!recipe) throw new HttpError(404, 'Recipe not found');
+  const date = v.date(req.body?.date);
+  const mealType = v.oneOf(req.body?.mealType, 'mealType', ['breakfast', 'lunch', 'dinner', 'snacks']);
+  const portions = v.number(req.body?.portions, 'portions', { min: 0.25, max: 20, required: false, def: 1 });
+  const per = Object.fromEntries(KEYS.map((k) => [k, Number(recipe.perServing?.[k] || 0)]));
+  const total = Object.fromEntries(KEYS.map((k) => [k, per[k] * portions]));
+  const { doc, duplicate } = await createOnce(FoodLog, uid, v.clientId(req.body?.clientId), {
+    foodId: recipe.foodId, date, mealType, foodName: recipe.name, baseServingSize: 1, servingUnit: 'serving', consumedQuantity: portions, servings: portions,
+    nutritionPerServing: per, nutritionTotal: total, notes: 'Meal prep portion',
+  });
+  if (!duplicate) { recipe.portionsLeft = Math.max(0, (recipe.portionsLeft || 0) - portions); await recipe.save(); }
+  res.status(duplicate ? 200 : 201).json({ success: true, log: doc, recipe, duplicate });
 }));
 
 router.delete('/:id', wrap(async (req, res) => {

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { apiFetch } from "../config/api";
 import { notify } from "../utils/notify";
 
@@ -12,11 +12,23 @@ export default function EatingOut({ date, defaultMeal = "dinner", onLogged }) {
   const [high, setHigh] = useState("");
   const [meal, setMeal] = useState(defaultMeal);
   const [busy, setBusy] = useState(false);
+  const [dishes, setDishes] = useState([]);
   const [pad, setPad] = useState(true); // restaurant food hides oil and big portions: add 15% by default
 
   const lo = Number(low), hi = Number(high);
   const mid = lo > 0 && hi >= lo ? Math.round((lo + hi) / 2) : lo > 0 && !hi ? lo : 0;
   const valid = name.trim() && mid > 0;
+
+  // Typical calories for restaurant dishes you type, so you pick a size instead of guessing.
+  useEffect(() => {
+    const q = name.trim();
+    if (q.length < 3) { setDishes([]); return undefined; }
+    const t = setTimeout(() => {
+      apiFetch(`/api/foods/dish-range?q=${encodeURIComponent(q)}`).then((r) => r.json()).then((d) => setDishes(d.dishes || [])).catch(() => setDishes([]));
+    }, 350);
+    return () => clearTimeout(t);
+  }, [name]);
+  const useRange = (v) => { setLow(String(Math.round(v * 0.9))); setHigh(String(Math.round(v * 1.1))); };
 
   const save = async () => {
     setBusy(true);
@@ -45,6 +57,20 @@ export default function EatingOut({ date, defaultMeal = "dinner", onLogged }) {
         <select value={meal} onChange={(e) => setMeal(e.target.value)} aria-label="Meal">{MEALS.map(([id, l]) => <option key={id} value={id}>{l}</option>)}</select>
       </div>
       {mid > 0 && <p className="card-description">Will log about <strong>{mid} kcal</strong>{hi ? ` (range ${lo}–${hi})` : ""}. Tip: restaurant portions are usually bigger than home portions — lean toward the higher number when unsure.</p>}
+      {dishes.length > 0 && !lo && (
+        <div className="eo-dishes">
+          <small>Typical for this dish, tap a size:</small>
+          {dishes.slice(0, 3).map((d) => (
+            <div key={d.name}><strong>{d.name}</strong>
+              <span className="serving-chips">
+                <button type="button" className="chip" onClick={() => useRange(d.small)}>Small ~{d.small}</button>
+                <button type="button" className="chip" onClick={() => useRange(d.regular)}>Regular ~{d.regular}</button>
+                <button type="button" className="chip" onClick={() => useRange(d.large)}>Large ~{d.large}</button>
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
       <label className="eo-pad"><input type="checkbox" checked={pad} onChange={(e) => setPad(e.target.checked)} /> Add a 15% safety buffer for hidden oil and bigger portions (recommended)</label>
       <button className="primary-button" disabled={busy || !valid} onClick={save}>Log estimate</button>
     </div>

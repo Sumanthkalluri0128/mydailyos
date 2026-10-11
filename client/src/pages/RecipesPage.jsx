@@ -14,6 +14,21 @@ export default function RecipesPage({ onBack }) {
   const [foodMap, setFoodMap] = useState({});
   const [picking, setPicking] = useState(false);
 
+  const mealNow = () => { const h = new Date().getHours(); return h < 10 ? "breakfast" : h < 16 ? "lunch" : h < 18 ? "snacks" : "dinner"; };
+  const localToday = () => { const t = new Date(); return `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, "0")}-${String(t.getDate()).padStart(2, "0")}`; };
+  // Meal prep: cook a batch once, then log "1 portion" per meal and watch the count go down.
+  const cookBatch = async (r) => {
+    const res = await apiFetch(`/api/recipes/${r._id}/cook`, { method: "POST", body: JSON.stringify({}) });
+    if (!res.ok) return notify("Could not save the batch.", "error");
+    notify(`${r.servings} portions of ${r.name} in the fridge.`, "success"); load();
+  };
+  const eatPortion = async (r) => {
+    const meal = mealNow();
+    const res = await apiFetch(`/api/recipes/${r._id}/eat`, { method: "POST", body: JSON.stringify({ date: localToday(), mealType: meal, portions: 1, clientId: `mp-${Date.now()}-${Math.random().toString(36).slice(2, 7)}` }) });
+    if (!res.ok) return notify("Could not log that portion.", "error");
+    notify(`1 portion of ${r.name} added to ${meal}.`, "success"); load();
+  };
+
   const load = () => apiFetch("/api/recipes").then((r) => r.json()).then((d) => d.success && setRecipes(d.recipes)).catch(() => notify("Could not load recipes.", "error"));
   useEffect(() => { load(); }, []);
 
@@ -111,6 +126,11 @@ export default function RecipesPage({ onBack }) {
             <button className="secondary-button" onClick={() => share(r)}>Share</button>
             <button className="secondary-button" onClick={() => edit(r)}>Edit</button>
             <button className="delete-log-button" aria-label={`Delete ${r.name}`} onClick={() => remove(r)}>✕</button>
+            <div className="meal-prep-row">
+              <strong>🥘 {r.portionsLeft || 0} portion{(r.portionsLeft || 0) === 1 ? "" : "s"} left</strong>
+              <button className="secondary-button" onClick={() => cookBatch(r)}>＋ Cooked a batch</button>
+              <button className="secondary-button" onClick={() => eatPortion(r)}>Ate 1 portion ({mealNow()})</button>
+            </div>
           </div>
         ))}
       </div>
