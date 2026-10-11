@@ -14,8 +14,6 @@ services:
         sync: false
       - key: CLIENT_URL
         sync: false
-      - key: ANTHROPIC_API_KEY # optional: turns on photo logging
-        sync: false
       - key: GMAIL_REFRESH_TOKEN
         sync: false
       - key: BREVO_API_KEY

@@ -86,3 +86,14 @@
 .meal-prep-row{display:flex;flex-wrap:wrap;gap:8px;align-items:center;width:100%;margin-top:8px}
 .eo-dishes{display:grid;gap:6px;margin:8px 0;font-size:13px}
 .eo-dishes .serving-chips{display:inline-flex;gap:6px;margin-left:8px}
+
+/* ---- Reports & emails: tidy layout (the account-form rules were stretching the checkboxes) ---- */
+.account-form.data-controls{gap:16px}
+.account-form.data-controls .data-actions{display:flex;flex-wrap:wrap;gap:12px;align-items:center}
+.account-form.data-controls .data-actions select{flex:1 1 100%;min-height:46px}
+.account-form.data-controls label{display:inline-flex;align-items:center;gap:10px;font-weight:600;cursor:pointer}
+.account-form.data-controls input[type="checkbox"]{width:20px!important;height:20px!important;min-width:20px;padding:0!important;margin:0;flex:none;accent-color:var(--primary,#6c63ff)}
+.account-form.data-controls .secondary-button{width:auto;min-height:44px;padding:0 18px;white-space:nowrap}
+.account-form.data-controls .data-actions .secondary-button{margin-left:auto}
+.account-form.data-controls .toggle-row{display:flex}
+.account-form.data-controls > .secondary-button{align-self:flex-start}

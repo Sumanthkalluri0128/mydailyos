@@ -81,6 +81,7 @@ function FoodLogger({ date, onBack, goTo }) {
   const [saving, setSaving] = useState(false);
   const [recent, setRecent] = useState([]);
   const [showExtras, setShowExtras] = useState(false);
+  const [searchFocus, setSearchFocus] = useState(false);
   const [showAll, setShowAll] = useState(false);
   const [openMeals, setOpenMeals] = useState({});
   const searchSeq = useRef(0);
@@ -480,6 +481,8 @@ function FoodLogger({ date, onBack, goTo }) {
             type="text"
             placeholder="🔍 Search your saved foods..."
             value={search}
+            onFocus={() => setSearchFocus(true)}
+            onBlur={() => setSearchFocus(false)}
             onChange={(event) => {
               setSearch(
                 event.target.value
@@ -509,8 +512,9 @@ function FoodLogger({ date, onBack, goTo }) {
 
         {/* Food list */}
 
-        {!selectedFood && (
-          <div className="logger-food-list">
+        {/* The list appears only while you are typing or the search box is active; otherwise the page stays short. */}
+        {!selectedFood && (searching || searchFocus) && (
+          <div className="logger-food-list" onMouseDown={(e) => e.preventDefault()}>
 
             {!searching && recent.length > 0 && <p className="logger-list-label">Recent — tap to add</p>}
             {loadingFoods && filteredFoods.length === 0 ? (

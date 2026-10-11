@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useState } from "react";
 import { apiFetch } from "../config/api";
 import { notify } from "../utils/notify";
 
@@ -28,32 +28,6 @@ export default function TextLogger({ date, defaultMeal = "lunch", onLogged }) {
     } finally { setBusy(false); }
   };
 
-  // Photo -> text -> the same match-and-review step. Nothing is logged until you press Log.
-  const fileRef = useRef(null);
-  const readPhoto = async (file) => {
-    if (!file) return;
-    setBusy(true);
-    try {
-      const image = await new Promise((resolve, reject) => {
-        const img = new Image();
-        img.onload = () => {
-          const k = Math.min(1, 1280 / Math.max(img.width, img.height));
-          const c = document.createElement("canvas"); c.width = Math.round(img.width * k); c.height = Math.round(img.height * k);
-          c.getContext("2d").drawImage(img, 0, 0, c.width, c.height);
-          resolve(c.toDataURL("image/jpeg", 0.6).split(",")[1]);
-        };
-        img.onerror = () => reject(new Error("Could not open that photo"));
-        img.src = URL.createObjectURL(file);
-      });
-      const res = await apiFetch("/api/foods/photo", { method: "POST", body: JSON.stringify({ image, mediaType: "image/jpeg" }) });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data.message || "Could not read that photo");
-      if (!data.text) { notify("No food found in that photo. Try a closer shot or type it.", "info"); return; }
-      setText(data.text);
-      await parse(data.text);
-    } catch (e) { notify(e.message, "error"); } finally { setBusy(false); if (fileRef.current) fileRef.current.value = ""; }
-  };
-
   const logAll = async () => {
     setBusy(true);
     try {
@@ -80,8 +54,6 @@ export default function TextLogger({ date, defaultMeal = "lunch", onLogged }) {
           {MEAL_OPTIONS.map(([id, label]) => <option key={id} value={id}>{label}</option>)}
         </select>
         <button className="primary-button" disabled={busy || !text.trim()} onClick={parse}>Find foods</button>
-        <button type="button" className="secondary-button" disabled={busy} onClick={() => fileRef.current && fileRef.current.click()}>📸 Photo</button>
-        <input ref={fileRef} type="file" accept="image/*" capture="environment" hidden onChange={(e) => readPhoto(e.target.files && e.target.files[0])} />
       </div>
       {items && items.length > 0 && (
         <div className="text-logger-results">

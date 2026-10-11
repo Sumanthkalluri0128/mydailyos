@@ -1,3 +1,11 @@
+# v20 - tidy-ups (web + server)
+
+- **Log Food:** the foods list appears only while you click into the search box or type.
+- **Reports & emails:** checkboxes, select and buttons laid out properly.
+- **Photo logging removed:** /api/foods/photo, the photo button and the ANTHROPIC_API_KEY setting are gone, so nothing in the app calls a paid API.
+
+---
+
 # v19 - six more features (web + server)
 
 - POST /api/foods/photo (own 7 MB JSON limit, 6 requests/min/user, needs ANTHROPIC_API_KEY; optional PHOTO_MODEL).
