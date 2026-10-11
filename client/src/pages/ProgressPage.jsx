@@ -1,3 +1,4 @@
+import useShowMore, { ShowMoreButton } from "../utils/useShowMore";
 import { useEffect, useMemo, useState } from "react";
 import Buddy from "../motion/Buddy";
 import { API_URL } from "../config";
@@ -256,6 +257,7 @@ function ProgressPage({ onBack }) {
   };
 
   const days = data?.days || [];
+  const dayRows = useShowMore(days.slice().reverse(), 3); // newest first; the rest after one click
   const selectedDay = days.find((d) => d.date === selectedDate);
   const totals = data?.totals || {};
   const averages = useMemo(() => {
@@ -355,8 +357,9 @@ function ProgressPage({ onBack }) {
             </div>
             <div className="daily-table-wrap">
               <table className="daily-table"><thead><tr><th>Date</th><th>Weight</th><th>Calories</th><th>Protein</th><th>Water</th><th>Exercise</th><th>Tasks</th><th>Habits</th></tr></thead>
-                <tbody>{days.slice().reverse().map((day) => <tr key={day.date} className={selectedDate === day.date ? 'selected' : ''} onClick={() => { setSelectedDate(day.date); setAnchor(day.date); }}><td>{fullDate(day.date)}</td><td>{day.weightKg == null ? '—' : `${Number(day.weightKg).toFixed(1)} kg`}</td><td>{Math.round(day.calories)} kcal</td><td>{Number(day.protein).toFixed(1)} g</td><td>{(day.waterMl / 1000).toFixed(1)} L</td><td>{Math.round(day.exerciseMinutes)} min</td><td>{day.tasksCompleted}/{day.tasksTotal}</td><td>{day.habitsCompleted}</td></tr>)}</tbody>
+                <tbody>{dayRows.shown.map((day) => <tr key={day.date} className={selectedDate === day.date ? 'selected' : ''} onClick={() => { setSelectedDate(day.date); setAnchor(day.date); }}><td>{fullDate(day.date)}</td><td>{day.weightKg == null ? '—' : `${Number(day.weightKg).toFixed(1)} kg`}</td><td>{Math.round(day.calories)} kcal</td><td>{Number(day.protein).toFixed(1)} g</td><td>{(day.waterMl / 1000).toFixed(1)} L</td><td>{Math.round(day.exerciseMinutes)} min</td><td>{day.tasksCompleted}/{day.tasksTotal}</td><td>{day.habitsCompleted}</td></tr>)}</tbody>
               </table>
+              <ShowMoreButton hidden={dayRows.hidden} open={dayRows.open} onClick={dayRows.toggle} noun="days" />
             </div>
           </section>
 

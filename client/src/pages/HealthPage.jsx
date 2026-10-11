@@ -1,3 +1,4 @@
+import useShowMore, { ShowMoreButton } from "../utils/useShowMore";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Buddy from "../motion/Buddy";
 import { apiFetch } from "../config/api";
@@ -36,6 +37,7 @@ function Bars({ logs, target }) {
 export default function HealthPage({ onBack }) {
   const [tab, setTab] = useState("steps");
   const [logs, setLogs] = useState([]);
+  const logHist = useShowMore(logs.slice(0, 60), 3);
   const [value, setValue] = useState("");
   const [value2, setValue2] = useState("");
   const [profile, setProfile] = useState(null);
@@ -109,12 +111,13 @@ export default function HealthPage({ onBack }) {
       <h3>History</h3>
       {logs.length === 0 ? <p>Nothing logged yet.</p> : (
         <div className="activity-list">
-          {logs.slice(0, 30).map((l) => (
+          {logHist.shown.map((l) => (
             <div className="history-item" key={l._id}>
               <span>{l.date === today ? "Today" : l.date} — {tab === "bloodPressure" ? `${l.value}/${l.value2} mmHg` : `${Number(l.value).toLocaleString()} ${unitLabel}`}{l.source === "device" ? " (phone)" : ""}</span>
               {tab !== "steps" && <button type="button" className="chip" onClick={() => remove(l._id)}>Delete</button>}
             </div>
           ))}
+          <ShowMoreButton hidden={logHist.hidden} open={logHist.open} onClick={logHist.toggle} noun="entries" />
         </div>
       )}
     </div>
