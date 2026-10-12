@@ -13,6 +13,7 @@ import "./motion/buddy.css"; // Flex the mascot, tap marker, calm mode: last so 
 import "./motion/fun.css"; // animated backdrop + lively UI motion
 import "./styles/polish.css"; // logging/profile layout tidy-up
 import FunBackdrop from "./motion/FunBackdrop";
+import FigureLab from "./pages/FigureLab";
 import { installTapMarker } from "./motion/tapMarker";
 
 installTapMarker();
@@ -33,7 +34,9 @@ document.addEventListener("focusin", (event) => {
   setTimeout(() => el.scrollIntoView({ block: "center", behavior: "smooth" }), 300);
 });
 
+const labOnly = window.location.hash === "#figures"; // figure lab needs no sign-in
 ReactDOM.createRoot(document.getElementById("root")).render(
+  labOnly ? <React.StrictMode><FunBackdrop /><FigureLab /></React.StrictMode> : (
   <React.StrictMode>
     <FunBackdrop />
     <ToastHost />
@@ -43,7 +46,7 @@ ReactDOM.createRoot(document.getElementById("root")).render(
     <AuthGate>
       <App />
     </AuthGate>
-  </React.StrictMode>
+  </React.StrictMode>)
 );
 
 // Offline support: the service worker caches the app shell so the site opens with no connection (production builds only).

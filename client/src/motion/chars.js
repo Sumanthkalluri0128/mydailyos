@@ -1,7 +1,7 @@
 // The cast. Sprites live in public/chars/<who>-<scene>.webp (cut from the sticker sheets).
 const V = "?v=16"; // bump when sprites change so browsers never mix old art with new code
-export const CHARS = { zoro: "Zoro", naruto: "Naruto", luffy: "Luffy", jinwoo: "Jin-Woo", goku: "Goku", gojo: "Gojo" };
-export const DAY_ORDER = ["zoro", "naruto", "luffy", "jinwoo", "goku", "gojo", "luffy"]; // Sun..Sat
+export const CHARS = { zoro: "Zoro", naruto: "Naruto", luffy: "Luffy", jinwoo: "Jin-Woo", goku: "Goku", gojo: "Gojo", kakashi: "Kakashi", tanjiro: "Tanjiro", zenitsu: "Zenitsu", inosuke: "Inosuke" };
+export const DAY_ORDER = ["zoro", "naruto", "luffy", "jinwoo", "goku", "gojo", "tanjiro"]; // Sun..Sat
 const BASE = ["sad", "drink", "eat", "scale", "walk", "task", "habit", "cheer", "wave", "fight", "dance", "sleep", "idle", "run", "workout", "pushup", "squat", "plank", "rope", "cycle", "swim", "study", "powerup", "victory", "levelup", "climb", "blink"];
 const HAS = {
   zoro: [...BASE, "lift", "plan", "chart", "health", "chef"], jinwoo: [...BASE, "lift", "plan", "chart", "health", "chef"],
@@ -23,3 +23,17 @@ export const runStrip = (who) => `${import.meta.env.BASE_URL}chars/${who}-runstr
 export const climbStrip = (who) => `${import.meta.env.BASE_URL}chars/${who}-climbstrip.webp${V}`;
 // Where the rope sits inside each character's rope-climb sprite (fraction of the sprite width), so the on-screen rope lines up with it.
 export const ROPE_X = {"jinwoo": 0.445, "naruto": 0.535, "luffy": 0.578, "zoro": 0.504, "goku": 0.523, "gojo": 0.5};
+
+// ---- 3D figure set (chars/fig/<who>-<pose>.webp, cut from the 3D chibi sheet; 10 characters x 10 poses) ----
+export const FIG_WHO = ["goku", "naruto", "luffy", "jinwoo", "zoro", "gojo", "kakashi", "tanjiro", "zenitsu", "inosuke"];
+export const FIG_POSES = ["say", "dance", "eat", "drink", "workout", "walk", "sit", "study", "phone", "sleep"];
+// Which 3D pose acts out each Buddy scene.
+const SCENE_FIG = { wave: "say", cheer: "dance", dance: "dance", victory: "dance", levelup: "sit", habit: "dance", eat: "eat", chef: "eat", drink: "drink", health: "drink", lift: "workout", workout: "workout", pushup: "workout", powerup: "workout", fight: "workout", walk: "walk", run: "walk", task: "phone", plan: "study", chart: "study", study: "study", scale: "sit", idle: "sit", sad: "sleep", sleep: "sleep" };
+// Add ?figs=off to the address (or localStorage ff_figs = "off") to fall back to the old sticker art.
+export const figsOn = () => { try { return !/figs=off/.test(window.location.search) && localStorage.getItem("ff_figs") !== "off"; } catch { return true; } };
+export const figure = (who, pose) => `${import.meta.env.BASE_URL}chars/fig/${who}-${pose}.webp?v=1`;
+/** The 3D figure for a Buddy scene, or null when the set is switched off / the character has none. */
+export function sceneFigure(who, scene) {
+  const pose = SCENE_FIG[scene];
+  return figsOn() && pose && FIG_WHO.includes(who) ? figure(who, pose) : null;
+}

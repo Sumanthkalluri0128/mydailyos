@@ -2,7 +2,7 @@
 // Which character you see depends on the day of the week (see chars.js); pass who="naruto" to pin one.
 import "./buddy.css";
 import "./characters.css";
-import { CHARS, dayChar, sprite, wallOf } from "./chars";
+import { CHARS, dayChar, sprite, wallOf, sceneFigure } from "./chars";
 import Slab from "./Slab";
 
 // body = which idle motion the picture gets; dur = ms for half a cycle.
@@ -46,7 +46,14 @@ export function sceneForText(text = "", type = "success") {
 export default function Buddy({ scene = "wave", size = 96, says, className = "", label, who }) {
   const c = SCENES[scene] || SCENES.wave;
   const char = who || dayChar();
-  const buddy = (
+  const fig = sceneFigure(char, scene);
+  const buddy = fig ? (
+    <span className={`bd bdi bdi-3d ${className}`} style={{ width: size, height: size, "--bt": `${c.dur * 2}ms` }} role="img" aria-label={label || `${CHARS[char]} is ${c.label}`}>
+      <span className={`bdi-img bdi-${c.body}`} style={{ width: size, height: size }}>
+        <img className="bdi-fig" src={fig} alt="" width={size} height={size} draggable="false" loading="lazy" decoding="async" />
+      </span>
+    </span>
+  ) : (
     <span className={`bd bdi ${className}`} style={{ width: size, height: size, "--bt": `${c.dur * 2}ms` }} role="img" aria-label={label || `${CHARS[char]} is ${c.label}`}>
       <span className={`bdi-img bdi-${c.body}`} style={{ width: size, height: size }}>
         <Slab size={size} lean={-9} look={12} face={<img className="bdi-pic" src={sprite(char, scene)} alt="" width={size} height={size} draggable="false" loading="lazy" decoding="async" />} wall={<img className="bdi-pic" src={wallOf(sprite(char, scene))} alt="" width={size} height={size} draggable="false" loading="lazy" decoding="async" />} />
@@ -57,10 +64,10 @@ export default function Buddy({ scene = "wave", size = 96, says, className = "",
 }
 
 /** Friendly empty state: a character instead of an emoji. */
-export function BuddyEmpty({ scene = "sad", title, children, size = 120 }) {
+export function BuddyEmpty({ scene = "sad", title, children, size = 120, who }) {
   return (
     <div className="bd-empty">
-      <Buddy scene={scene} size={size} />
+      <Buddy scene={scene} size={size} who={who} />
       {title && <h3>{title}</h3>}
       {children && <p>{children}</p>}
     </div>

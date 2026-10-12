@@ -298,7 +298,7 @@ const [habitStats, setHabitStats] = useState({});
             ← Back
           </button>
 
-          <div className="bd-head"><h1>Habits</h1><Buddy scene="habit" size={76} says="Keep the streak!" /></div>
+          <div className="bd-head"><h1>Habits</h1><Buddy who="zenitsu" scene="habit" size={76} says="Keep the streak!" /></div>
 
           <p>
             Build consistency one day at a time.
