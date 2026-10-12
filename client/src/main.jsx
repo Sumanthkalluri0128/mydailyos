@@ -11,8 +11,7 @@ import "./styles/redesign.css"; // refines App.css without replacing it
 import "./motion/motion.css"; // older animation kit (mostly switched off, see buddy.css)
 import "./motion/buddy.css"; // Flex the mascot, tap marker, calm mode: last so it wins
 import "./motion/fun.css"; // animated backdrop + lively UI motion
-import "./styles/polish.css";
-import "./styles/scenes.css"; // logging/profile layout tidy-up
+import "./styles/polish.css"; // logging/profile layout tidy-up
 import FunBackdrop from "./motion/FunBackdrop";
 import { installTapMarker } from "./motion/tapMarker";
 

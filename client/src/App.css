@@ -3023,3 +3023,54 @@ select {
 .onboarding-error { color: #c0392b; background: rgba(192, 57, 43, 0.1); padding: 10px 12px; border-radius: 10px; font-size: 14px; }
 .onboarding-btn { padding: 14px; border: 0; border-radius: 14px; background: #6d5dfc; color: #fff; font-size: 16px; font-weight: 700; cursor: pointer; }
 .onboarding-btn:disabled { opacity: 0.6; cursor: default; }
+
+/* FlexFit 12 dashboard scenes: all original dashboard functionality retained. */
+.app[data-dashboard-theme] {--scene-image:none;--scene-ink:#17233b;--scene-card:rgba(255,255,255,.94);--scene-line:rgba(120,110,160,.18);--scene-overlay:linear-gradient(90deg,rgba(255,255,255,.92),rgba(255,255,255,.55));min-height:100vh;color:var(--scene-ink);}
+.app[data-dashboard-theme="horizon-sunrise"]{--scene-image:none;--scene-ink:#17233b;--scene-card:rgba(255,255,255,.94);--scene-overlay:linear-gradient(90deg,#fff6e9ed,#ffecdd88);--scene-accent:#ec8958;background:linear-gradient(135deg,#fff6e9,#ffecdd);}
+.app[data-dashboard-theme="ocean-breeze"]{--scene-image:none;--scene-ink:#17233b;--scene-card:rgba(255,255,255,.94);--scene-overlay:linear-gradient(90deg,#effcffed,#daf7ff88);--scene-accent:#189bbd;background:linear-gradient(135deg,#effcff,#daf7ff);}
+.app[data-dashboard-theme="dark-focus"]{--scene-image:none;--scene-ink:#f7f3ff;--scene-card:rgba(21,21,43,.93);--scene-overlay:linear-gradient(90deg,rgba(14,13,34,.95),rgba(18,16,40,.59));--scene-accent:#a46aff;background:linear-gradient(135deg,#17132c,#22183b);}
+.app[data-dashboard-theme="cozy-room"]{--scene-image:none;--scene-ink:#17233b;--scene-card:rgba(255,255,255,.94);--scene-overlay:linear-gradient(90deg,#fff8eced,#f9e9d388);--scene-accent:#b8804e;background:linear-gradient(135deg,#fff8ec,#f9e9d3);}
+.app[data-dashboard-theme="forest-retreat"]{--scene-image:none;--scene-ink:#17233b;--scene-card:rgba(255,255,255,.94);--scene-overlay:linear-gradient(90deg,#edfff4ed,#dff4e788);--scene-accent:#399a70;background:linear-gradient(135deg,#edfff4,#dff4e7);}
+.app[data-dashboard-theme="minimal-glass"]{--scene-image:none;--scene-ink:#17233b;--scene-card:rgba(255,255,255,.94);--scene-overlay:linear-gradient(90deg,#f9fbffed,#eaf2ff88);--scene-accent:#6789d5;background:linear-gradient(135deg,#f9fbff,#eaf2ff);}
+.app[data-dashboard-theme="cyber-neon"]{--scene-image:none;--scene-ink:#f7f3ff;--scene-card:rgba(21,21,43,.93);--scene-overlay:linear-gradient(90deg,rgba(14,13,34,.95),rgba(18,16,40,.59));--scene-accent:#b05cf5;background:linear-gradient(135deg,#141329,#201d42);}
+.app[data-dashboard-theme="mountain-peak"]{--scene-image:none;--scene-ink:#17233b;--scene-card:rgba(255,255,255,.94);--scene-overlay:linear-gradient(90deg,#f4faffed,#e0f2ff88);--scene-accent:#4d93c9;background:linear-gradient(135deg,#f4faff,#e0f2ff);}
+.app[data-dashboard-theme="city-loft"]{--scene-image:none;--scene-ink:#17233b;--scene-card:rgba(255,255,255,.94);--scene-overlay:linear-gradient(90deg,#fff5fced,#f2e6fb88);--scene-accent:#b277ba;background:linear-gradient(135deg,#fff5fc,#f2e6fb);}
+.app[data-dashboard-theme="night-sky"]{--scene-image:none;--scene-ink:#f7f3ff;--scene-card:rgba(21,21,43,.93);--scene-overlay:linear-gradient(90deg,rgba(14,13,34,.95),rgba(18,16,40,.59));--scene-accent:#9582f4;background:linear-gradient(135deg,#15152e,#1f2145);}
+.app[data-dashboard-theme="autumn-vibes"]{--scene-image:none;--scene-ink:#17233b;--scene-card:rgba(255,255,255,.94);--scene-overlay:linear-gradient(90deg,#fff6e8ed,#ffedd288);--scene-accent:#ce8042;background:linear-gradient(135deg,#fff6e8,#ffedd2);}
+.app[data-dashboard-theme="pastel-dream"]{--scene-image:none;--scene-ink:#17233b;--scene-card:rgba(255,255,255,.94);--scene-overlay:linear-gradient(90deg,#fff6ffed,#f7e7fc88);--scene-accent:#bc7dc5;background:linear-gradient(135deg,#fff6ff,#f7e7fc);}
+
+.app[data-dashboard-theme] .dashboard {position:relative;isolation:isolate;}
+.app[data-dashboard-theme] .dashboard::before {content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;background-image:var(--scene-overlay);background-size:cover;background-position:center;background-attachment:fixed;}
+.app[data-dashboard-theme] .hero2 {background-image:var(--scene-overlay);background-size:cover;background-position:center 45%;border:1px solid var(--scene-line);border-radius:26px;box-shadow:0 14px 44px rgba(23,23,55,.14);color:var(--scene-ink);}
+.app[data-dashboard-theme] .coach,.app[data-dashboard-theme] .hero2-minis .mini,.app[data-dashboard-theme] .quick button {background:var(--scene-card);border:1px solid var(--scene-line);color:var(--scene-ink);border-radius:16px;backdrop-filter:blur(14px);}
+.app[data-dashboard-theme] .card,.app[data-dashboard-theme] .large-card {background:var(--scene-card);color:var(--scene-ink);border:1px solid var(--scene-line);border-radius:22px;backdrop-filter:blur(16px);}
+.app[data-dashboard-theme] .hero2 h2,.app[data-dashboard-theme] .hero2 strong,.app[data-dashboard-theme] .card h2,.app[data-dashboard-theme] .card h3 {color:var(--scene-ink);}
+.app[data-dashboard-theme] .quick img {max-height:44px;}
+.dashboard-theme-control {position:relative;}
+.dashboard-theme-popover {position:absolute;right:0;top:calc(100% + 10px);z-index:9999;width:min(410px,calc(100vw - 28px));max-height:75vh;overflow:auto;padding:16px;background:#fff;color:#22223d;border:1px solid #dddced;border-radius:18px;box-shadow:0 20px 60px #16123844;}
+.dashboard-theme-auto {display:block;width:100%;padding:11px;margin:12px 0;border:1px solid #d8d2f2;background:#f4f0ff;border-radius:12px;cursor:pointer;}
+.dashboard-theme-options {display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px;}
+.dashboard-theme-option {padding:0 0 8px;text-align:left;background:#f7f7fb;border:2px solid transparent;border-radius:12px;overflow:hidden;cursor:pointer;color:#22223d;font-size:12px;font-weight:700;}
+.dashboard-theme-option.is-active {border-color:#8066ef;}
+.dashboard-theme-option img {width:100%;height:75px;object-fit:cover;display:block;margin-bottom:7px;}
+.dashboard-theme-option span {padding:0 8px;}
+
+/* v27: avoid stretching labeled collage artwork behind the live dashboard */
+.app[data-dashboard-theme] .dashboard::before{background-image:var(--scene-overlay);background-color:transparent;background-size:cover;background-position:center;}
+.app[data-dashboard-theme] .hero2{background-image:var(--scene-overlay);background-color:var(--scene-card);background-size:cover;background-position:center;}
+.app[data-dashboard-theme="horizon-sunrise"]{background:linear-gradient(135deg,#fff7ee,#ffe9df 45%,#f8e9ff)}
+.app[data-dashboard-theme="ocean-breeze"]{background:linear-gradient(135deg,#edfaff,#dff5ff 48%,#e8f2ff)}
+.app[data-dashboard-theme="dark-focus"]{background:linear-gradient(135deg,#11152e,#211b42 55%,#311c3d)}
+.app[data-dashboard-theme="cozy-room"]{background:linear-gradient(135deg,#fff8ed,#f8e7d2 50%,#f7e9df)}
+.app[data-dashboard-theme="forest-retreat"]{background:linear-gradient(135deg,#effbf2,#dcefe3 50%,#e8f4e7)}
+.app[data-dashboard-theme="minimal-glass"]{background:linear-gradient(135deg,#f8fbff,#eaf2ff 50%,#f2edff)}
+.app[data-dashboard-theme="cyber-neon"]{background:linear-gradient(135deg,#0b1029,#181b46 52%,#2b1641)}
+.app[data-dashboard-theme="mountain-peak"]{background:linear-gradient(135deg,#f4fbff,#dceeff 50%,#e9f4ff)}
+.app[data-dashboard-theme="city-loft"]{background:linear-gradient(135deg,#fff5fb,#f0e6fa 52%,#e9edff)}
+.app[data-dashboard-theme="night-sky"]{background:linear-gradient(135deg,#10172f,#171c43 50%,#281b4c)}
+.app[data-dashboard-theme="autumn-vibes"]{background:linear-gradient(135deg,#fff8e9,#fbe5c7 50%,#f5e1d5)}
+.app[data-dashboard-theme="pastel-dream"]{background:linear-gradient(135deg,#fff6fd,#f2e9ff 50%,#ffe7f3)}
+.app[data-dashboard-theme="dark-focus"] .hero2,.app[data-dashboard-theme="cyber-neon"] .hero2,.app[data-dashboard-theme="night-sky"] .hero2{background:rgba(22,22,47,.94);color:#f5f0ff}
+.app[data-dashboard-theme="dark-focus"] .coach,.app[data-dashboard-theme="cyber-neon"] .coach,.app[data-dashboard-theme="night-sky"] .coach{background:rgba(49,40,78,.92)}
+
+.dashboard-theme-option .dashboard-theme-swatch{display:block;width:100%;height:76px;margin:0 0 8px;background:linear-gradient(135deg,#f4eaff,#ffeaf4)}

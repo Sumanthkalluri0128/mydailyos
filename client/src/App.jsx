@@ -27,6 +27,31 @@ import { apiFetch } from "./config/api";
 import { API_URL } from "./config";
 
 
+
+const DASHBOARD_THEMES = [
+  ["horizon-sunrise","🌅 Horizon Sunrise"],["ocean-breeze","🌊 Ocean Breeze"],
+  ["dark-focus","🌙 Dark Focus"],["cozy-room","☕ Cozy Room"],
+  ["forest-retreat","🌿 Forest Retreat"],["minimal-glass","💎 Minimal Glass"],
+  ["cyber-neon","⚡ Cyber Neon"],["mountain-peak","🏔️ Mountain Peak"],
+  ["city-loft","🌆 City Loft"],["night-sky","✨ Night Sky"],
+  ["autumn-vibes","🍁 Autumn Vibes"],["pastel-dream","🌸 Pastel Dream"]
+];
+const DAY_MODE_KEY = "flexfit_daily_theme_mode";
+const DAY_PICK_KEY = "flexfit_daily_theme_pick";
+function getDailyDashboardTheme(){
+ const d=new Date();const day=Math.floor(new Date(d.getFullYear(),d.getMonth(),d.getDate()).getTime()/86400000);
+ return DASHBOARD_THEMES[((day%DASHBOARD_THEMES.length)+DASHBOARD_THEMES.length)%DASHBOARD_THEMES.length][0];
+}
+function useDashboardThemes(){
+ const [mode,setMode]=useState(()=>localStorage.getItem(DAY_MODE_KEY)||"auto");
+ const [selected,setSelected]=useState(()=>localStorage.getItem(DAY_PICK_KEY)||"horizon-sunrise");
+ const [daily,setDaily]=useState(getDailyDashboardTheme);
+ useEffect(()=>{const t=setInterval(()=>setDaily(getDailyDashboardTheme()),60000);return ()=>clearInterval(t)},[]);
+ return {mode,theme:mode==="auto"?daily:selected,
+   auto:()=>{setMode("auto");localStorage.setItem(DAY_MODE_KEY,"auto")},
+   select:(v)=>{setMode("manual");setSelected(v);localStorage.setItem(DAY_MODE_KEY,"manual");localStorage.setItem(DAY_PICK_KEY,v)} };
+}
+
 const THEME_KEY = "mydailyos_theme";
 
 function getInitialTheme() {
@@ -95,30 +120,9 @@ const warmPages = () => Promise.all([
   import("./pages/ExercisePage"), import("./pages/WeightPage"), import("./pages/ProfilePage"),
 ]).catch(() => {});
 
-
-const SCENE_THEMES = [
-  ["horizon", "Horizon Sunrise"], ["ocean", "Ocean Breeze"],
-  ["dark-focus", "Dark Focus"], ["cozy", "Cozy Room"],
-  ["forest", "Forest Retreat"], ["glass", "Minimal Glass"],
-  ["cyber", "Cyber Neon"], ["mountain", "Mountain Peak"],
-  ["loft", "City Loft"], ["night-sky", "Night Sky"],
-  ["autumn", "Autumn Vibes"], ["pastel", "Pastel Dream"],
-];
-const SCENE_STORAGE_KEY = "flexfit_scene_theme_v1";
-function dailySceneIndex() {
-  const now = new Date();
-  const day = Math.floor(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate()) / 86400000);
-  return ((day % SCENE_THEMES.length) + SCENE_THEMES.length) % SCENE_THEMES.length;
-}
-function readScenePreference() {
-  try {
-    const stored = JSON.parse(localStorage.getItem(SCENE_STORAGE_KEY) || "null");
-    if (stored && (stored.mode === "auto" || SCENE_THEMES.some(([id]) => id === stored.mode))) return stored.mode;
-  } catch { /* unavailable local storage */ }
-  return "auto";
-}
-
 function App() {
+  const dashboardThemes=useDashboardThemes();
+  const [themePickerOpen,setThemePickerOpen]=useState(false);
   useEffect(() => {
     if (typeof navigator !== "undefined" && navigator.connection?.saveData) return undefined; // respect Data Saver
     const idle = window.requestIdleCallback || ((fn) => setTimeout(fn, 1500));
@@ -155,18 +159,6 @@ function App() {
   // THEME (light / dark)
   // ============================================================
 
-  const [scenePreference, setScenePreference] = useState(readScenePreference);
-  const [sceneDay, setSceneDay] = useState(dailySceneIndex);
-  const activeScene = scenePreference === "auto" ? SCENE_THEMES[sceneDay][0] : scenePreference;
-  useEffect(() => {
-    try { localStorage.setItem(SCENE_STORAGE_KEY, JSON.stringify({ mode: scenePreference })); } catch { /* optional */ }
-  }, [scenePreference]);
-  useEffect(() => {
-    const refreshScene = () => setSceneDay(dailySceneIndex());
-    const interval = window.setInterval(refreshScene, 60000);
-    document.addEventListener("visibilitychange", refreshScene);
-    return () => { window.clearInterval(interval); document.removeEventListener("visibilitychange", refreshScene); };
-  }, []);
   const [theme, setTheme] = useState(getInitialTheme);
 
   useEffect(() => {
@@ -434,11 +426,19 @@ function App() {
 
   if (currentPage === "foodLogger") {
     return (
-      <div className="app" data-scene-theme={activeScene}>
+      <div className="app" data-dashboard-theme={dashboardThemes.theme}>
 
         <header className="topbar">
           <BrandHome onHome={() => setCurrentPage("dashboard")} />
-        <ThemeToggle theme={theme} onToggle={toggleTheme} />
+        <div className="dashboard-theme-control">
+            <button type="button" className="topbar-progress" aria-expanded={themePickerOpen} onClick={()=>setThemePickerOpen(v=>!v)}>🎨 Themes</button>
+            {themePickerOpen && <div className="dashboard-theme-popover" role="dialog" aria-label="Dashboard themes">
+              <strong>Choose your dashboard</strong>
+              <button type="button" className="dashboard-theme-auto" onClick={()=>{dashboardThemes.auto();setThemePickerOpen(false)}}>🔄 Rotate automatically every day {dashboardThemes.mode==="auto"?"✓":""}</button>
+              <div className="dashboard-theme-options">{DASHBOARD_THEMES.map(([id,label])=><button type="button" key={id} className={"dashboard-theme-option "+(dashboardThemes.theme===id?"is-active":"")} onClick={()=>{dashboardThemes.select(id);setThemePickerOpen(false)}}><span className={"dashboard-theme-swatch swatch-"+id} aria-hidden="true"></span><span>{label}</span></button>)}</div>
+            </div>}
+          </div>
+          <ThemeToggle theme={theme} onToggle={toggleTheme} />
         </header>
 
         <main key={currentPage} className="dashboard fx-page">
@@ -463,16 +463,9 @@ function App() {
 
   if (currentPage === "health") {
     return (
-      <div className="app" data-scene-theme={activeScene}>
+      <div className="app" data-dashboard-theme={dashboardThemes.theme}>
         <header className="topbar">
           <BrandHome onHome={() => setCurrentPage("dashboard")} />
-          <label className="scene-select-wrap" title="Choose dashboard appearance">
-            <span aria-hidden="true">🎨</span>
-            <select className="scene-select" aria-label="Dashboard theme" value={scenePreference} onChange={(event) => setScenePreference(event.target.value)}>
-              <option value="auto">Auto · changes daily</option>
-              {SCENE_THEMES.map(([id, label]) => <option key={id} value={id}>{label}</option>)}
-            </select>
-          </label>
           <ThemeToggle theme={theme} onToggle={toggleTheme} />
         </header>
         <main key={currentPage} className="dashboard fx-page">
@@ -486,7 +479,7 @@ function App() {
 
   if (currentPage === "exercise") {
     return (
-      <div className="app" data-scene-theme={activeScene}>
+      <div className="app" data-dashboard-theme={dashboardThemes.theme}>
 
         <header className="topbar">
           <BrandHome onHome={() => setCurrentPage("dashboard")} />
@@ -513,7 +506,7 @@ function App() {
 
   if (currentPage === "task") {
     return (
-      <div className="app" data-scene-theme={activeScene}>
+      <div className="app" data-dashboard-theme={dashboardThemes.theme}>
 
         <header className="topbar">
           <BrandHome onHome={() => setCurrentPage("dashboard")} />
@@ -540,7 +533,7 @@ function App() {
 
   if (currentPage === "habit") {
     return (
-      <div className="app" data-scene-theme={activeScene}>
+      <div className="app" data-dashboard-theme={dashboardThemes.theme}>
 
         <header className="topbar">
           <BrandHome onHome={() => setCurrentPage("dashboard")} />
@@ -567,7 +560,7 @@ function App() {
 
   if (currentPage === "water") {
     return (
-      <div className="app" data-scene-theme={activeScene}>
+      <div className="app" data-dashboard-theme={dashboardThemes.theme}>
 
         <header className="topbar">
           <BrandHome onHome={() => setCurrentPage("dashboard")} />
@@ -594,7 +587,7 @@ function App() {
 
   if (currentPage === "weight") {
     return (
-      <div className="app" data-scene-theme={activeScene}>
+      <div className="app" data-dashboard-theme={dashboardThemes.theme}>
 
         <header className="topbar">
           <BrandHome onHome={() => setCurrentPage("dashboard")} />
@@ -621,7 +614,7 @@ function App() {
 
   if (currentPage === "profile") {
     return (
-      <div className="app" data-scene-theme={activeScene}>
+      <div className="app" data-dashboard-theme={dashboardThemes.theme}>
 
         <header className="topbar">
           <BrandHome onHome={() => setCurrentPage("dashboard")} />
@@ -648,7 +641,7 @@ function App() {
 
   if (currentPage === "progress") {
     return (
-      <div className="app" data-scene-theme={activeScene}>
+      <div className="app" data-dashboard-theme={dashboardThemes.theme}>
         <header className="topbar">
           <BrandHome onHome={() => setCurrentPage("dashboard")} />
         <ThemeToggle theme={theme} onToggle={toggleTheme} />
@@ -664,7 +657,7 @@ function App() {
 
   if (currentPage === "planner" || currentPage === "recipes") {
     return (
-      <div className="app" data-scene-theme={activeScene}>
+      <div className="app" data-dashboard-theme={dashboardThemes.theme}>
         <header className="topbar">
           <BrandHome onHome={() => setCurrentPage("dashboard")} />
           <ThemeToggle theme={theme} onToggle={toggleTheme} />
@@ -686,7 +679,7 @@ function App() {
 
   if (currentPage === "food") {
     return (
-      <div className="app" data-scene-theme={activeScene}>
+      <div className="app" data-dashboard-theme={dashboardThemes.theme}>
 
         <header className="topbar">
 
@@ -815,7 +808,7 @@ function App() {
   // ============================================================
 
   return (
-    <div className="app" data-scene-theme={activeScene}>
+    <div className="app" data-dashboard-theme={dashboardThemes.theme}>
 
       {/* ====================================================== */}
       {/* TOP BAR */}
