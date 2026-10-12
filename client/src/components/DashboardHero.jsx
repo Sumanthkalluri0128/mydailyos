@@ -5,7 +5,6 @@ import { buzz, fireConfetti, useCelebrateOnce } from "../motion/motion";
 import { apiFetch } from "../config/api";
 import { dayBalance } from "../utils/energy";
 import { coachLine } from "../utils/coach";
-import SkinBanner from "../skins/SkinBanner";
 
 const greeting = (h) => (h < 5 ? "Still up" : h < 12 ? "Good morning" : h < 17 ? "Good afternoon" : h < 22 ? "Good evening" : "Good night");
 const n = (v) => Math.round(Number(v) || 0).toLocaleString();
@@ -110,15 +109,17 @@ export default function DashboardHero({ profile, today, summary, activity, water
   };
 
   return (
-    <>
-      <SkinBanner title={`${greeting(hour)}${first ? `, ${first}` : ""}`} dateText={dateText}>
+    <section className="hero2" aria-label="Today at a glance">
+      <header className="hero2-head">
+        <p className="date">{dateText}</p>
+        <h2>{greeting(hour)}{first ? `, ${first}` : ""}</h2>
         {streak && (
           <button type="button" className="streak-chip" onClick={() => goTo("progress")} aria-label={streak.current > 0 ? `${streak.current} day streak` : "Start a streak"}>
             {streak.current > 0 ? <StreakFlame streak={streak.current} compact bare /> : <span>🌱</span>}<strong>{streak.current}</strong>
           </button>
         )}
-      </SkinBanner>
-    <section className="hero2" aria-label="Today at a glance">
+      </header>
+
       <div className={`coach coach-${coach.tone}`} role="status">
         <span className="coach-buddy"><Buddy scene={buddyScene} size={62} /></span>
         <div>
@@ -185,6 +186,5 @@ export default function DashboardHero({ profile, today, summary, activity, water
         <button type="button" onClick={() => goTo("health")}><Buddy scene="walk" size={40} label="" />Steps</button>
       </div>
     </section>
-    </>
   );
 }

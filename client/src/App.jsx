@@ -17,15 +17,14 @@ import OnboardingPage from "./pages/OnboardingPage";
 import CalorieBalance from "./components/CalorieBalance";
 import { waterTargetMl } from "./utils/energy";
 import { currentOwner } from "./utils/cacheOwner";
-import SkinDashboard from "./skins/SkinDashboard";
-import AppChrome from "./skins/Shell";
+import DashboardHero from "./components/DashboardHero";
 import { PageSkeleton } from "./motion/PageTransition";
 import { withTransition } from "./motion/motion";
+import MacroCard from "./components/MacroCard";
 
 import { getLocalDate } from "./utils/date";
 import { apiFetch } from "./config/api";
 import { API_URL } from "./config";
-import { useSkin, setSkinProfile } from "./skins/skinStore";
 
 
 const THEME_KEY = "mydailyos_theme";
@@ -135,17 +134,15 @@ function App() {
 
   const [theme, setTheme] = useState(getInitialTheme);
 
-  // Today's themed skin: women / men get their own set, and always-dark skins override the light / dark choice.
-  const { skin: todaySkin } = useSkin();
   useEffect(() => {
-    document.documentElement.setAttribute("data-theme", todaySkin.force || theme);
+    document.documentElement.setAttribute("data-theme", theme);
     try {
       localStorage.setItem(THEME_KEY, theme);
     } catch {
       // Best-effort — a failed write just means the choice won't
       // persist across reloads, which isn't worth surfacing to the user.
     }
-  }, [theme, todaySkin.force]);
+  }, [theme]);
 
   const toggleTheme = () =>
     setTheme((current) => (current === "dark" ? "light" : "dark"));
@@ -221,7 +218,6 @@ function App() {
   // ============================================================
 
   const [profile, setProfile] = useState(null);
-  useEffect(() => { setSkinProfile(profile); }, [profile]); // women / men themes follow the profile's sex
 
   // ============================================================
   // TODAY
@@ -381,22 +377,6 @@ function App() {
   // ============================================================
 
   const avatarInitial = (profile?.name || "").trim().charAt(0).toUpperCase() || "?";
-  const todayLabel = (() => {
-    const p = Object.fromEntries(new Intl.DateTimeFormat("en-GB", { weekday: "short", day: "numeric", month: "short", year: "numeric" }).formatToParts(new Date()).map((x) => [x.type, x.value]));
-    return `${p.weekday}, ${p.day} ${p.month} ${p.year}`;
-  })();
-  // Sidebar + top bar shared by every page (skins/Shell.jsx).
-  const chrome = (
-    <AppChrome
-      page={currentPage}
-      goTo={setCurrentPage}
-      brand={<BrandHome onHome={() => setCurrentPage("dashboard")} />}
-      themeToggle={<ThemeToggle theme={todaySkin.force || theme} onToggle={toggleTheme} />}
-      avatar={avatarInitial}
-      avatarTitle={profile?.name || ""}
-      dateText={todayLabel}
-    />
-  );
 
   if (profile && profile.onboarded === false) {
     return (
@@ -421,7 +401,10 @@ function App() {
     return (
       <div className="app">
 
-        {chrome}
+        <header className="topbar">
+          <BrandHome onHome={() => setCurrentPage("dashboard")} />
+        <ThemeToggle theme={theme} onToggle={toggleTheme} />
+        </header>
 
         <main key={currentPage} className="dashboard fx-page">
           <Suspense fallback={<PageSkeleton variant="list" />}>
@@ -446,7 +429,10 @@ function App() {
   if (currentPage === "health") {
     return (
       <div className="app">
-        {chrome}
+        <header className="topbar">
+          <BrandHome onHome={() => setCurrentPage("dashboard")} />
+          <ThemeToggle theme={theme} onToggle={toggleTheme} />
+        </header>
         <main key={currentPage} className="dashboard fx-page">
           <Suspense fallback={<PageSkeleton variant="list" />}>
             <HealthPage onBack={() => setCurrentPage("dashboard")} />
@@ -460,7 +446,10 @@ function App() {
     return (
       <div className="app">
 
-        {chrome}
+        <header className="topbar">
+          <BrandHome onHome={() => setCurrentPage("dashboard")} />
+        <ThemeToggle theme={theme} onToggle={toggleTheme} />
+        </header>
 
         <main key={currentPage} className="dashboard fx-page">
           <Suspense fallback={<PageSkeleton variant="list" />}>
@@ -484,7 +473,10 @@ function App() {
     return (
       <div className="app">
 
-        {chrome}
+        <header className="topbar">
+          <BrandHome onHome={() => setCurrentPage("dashboard")} />
+        <ThemeToggle theme={theme} onToggle={toggleTheme} />
+        </header>
 
         <main key={currentPage} className="dashboard fx-page">
           <Suspense fallback={<PageSkeleton variant="list" />}>
@@ -508,7 +500,10 @@ function App() {
     return (
       <div className="app">
 
-        {chrome}
+        <header className="topbar">
+          <BrandHome onHome={() => setCurrentPage("dashboard")} />
+        <ThemeToggle theme={theme} onToggle={toggleTheme} />
+        </header>
 
         <main key={currentPage} className="dashboard fx-page">
           <Suspense fallback={<PageSkeleton variant="list" />}>
@@ -532,7 +527,10 @@ function App() {
     return (
       <div className="app">
 
-        {chrome}
+        <header className="topbar">
+          <BrandHome onHome={() => setCurrentPage("dashboard")} />
+        <ThemeToggle theme={theme} onToggle={toggleTheme} />
+        </header>
 
         <main key={currentPage} className="dashboard fx-page">
           <Suspense fallback={<PageSkeleton variant="list" />}>
@@ -556,7 +554,10 @@ function App() {
     return (
       <div className="app">
 
-        {chrome}
+        <header className="topbar">
+          <BrandHome onHome={() => setCurrentPage("dashboard")} />
+        <ThemeToggle theme={theme} onToggle={toggleTheme} />
+        </header>
 
         <main key={currentPage} className="dashboard fx-page">
           <Suspense fallback={<PageSkeleton variant="list" />}>
@@ -580,7 +581,10 @@ function App() {
     return (
       <div className="app">
 
-        {chrome}
+        <header className="topbar">
+          <BrandHome onHome={() => setCurrentPage("dashboard")} />
+        <ThemeToggle theme={theme} onToggle={toggleTheme} />
+        </header>
 
         <main key={currentPage} className="dashboard fx-page">
           <Suspense fallback={<PageSkeleton variant="list" />}>
@@ -603,7 +607,10 @@ function App() {
   if (currentPage === "progress") {
     return (
       <div className="app">
-        {chrome}
+        <header className="topbar">
+          <BrandHome onHome={() => setCurrentPage("dashboard")} />
+        <ThemeToggle theme={theme} onToggle={toggleTheme} />
+        </header>
         <main key={currentPage} className="dashboard fx-page">
           <Suspense fallback={<PageSkeleton variant="list" />}>
           <ProgressPage onBack={() => setCurrentPage("dashboard")} />
@@ -616,7 +623,10 @@ function App() {
   if (currentPage === "planner" || currentPage === "recipes") {
     return (
       <div className="app">
-        {chrome}
+        <header className="topbar">
+          <BrandHome onHome={() => setCurrentPage("dashboard")} />
+          <ThemeToggle theme={theme} onToggle={toggleTheme} />
+        </header>
         <main key={currentPage} className="dashboard fx-page">
           <Suspense fallback={<PageSkeleton variant="list" />}>
             {currentPage === "planner"
@@ -636,7 +646,22 @@ function App() {
     return (
       <div className="app">
 
-        {chrome}
+        <header className="topbar">
+
+          <BrandHome onHome={() => setCurrentPage("dashboard")} />
+
+          <button
+            className="secondary-button"
+            onClick={() =>
+              setCurrentPage("dashboard")
+            }
+          >
+            ← Dashboard
+          </button>
+
+          <ThemeToggle theme={theme} onToggle={toggleTheme} />
+
+        </header>
 
         <main key={currentPage} className="dashboard fx-page">
           <Suspense fallback={<PageSkeleton variant="list" />}>
@@ -754,7 +779,44 @@ function App() {
       {/* TOP BAR */}
       {/* ====================================================== */}
 
-      {chrome}
+      <header className="topbar">
+
+        <BrandHome onHome={() => setCurrentPage("dashboard")} />
+
+        <div className="topbar-actions">
+          <ThemeToggle theme={theme} onToggle={toggleTheme} />
+
+          <button
+            className="topbar-progress"
+            onClick={() => setCurrentPage("planner")}
+            aria-label="Open meal planner"
+          >
+            <span>📅</span>
+            <span>Plan</span>
+          </button>
+
+          <button
+            className={`topbar-progress ${currentPage === "progress" ? "active" : ""}`}
+            onClick={() => setCurrentPage("progress")}
+            aria-label="Open Progress and History"
+          >
+            <span>📈</span>
+            <span>Progress</span>
+          </button>
+
+          <div className="profile">
+            <button
+              className="profile-avatar"
+              onClick={() => setCurrentPage("profile")}
+              aria-label="Open profile"
+              title={profile?.name || ""}
+            >
+              {avatarInitial}
+            </button>
+          </div>
+        </div>
+
+      </header>
 
       <main key={currentPage} className="dashboard fx-page">
 
@@ -762,7 +824,7 @@ function App() {
         {/* WELCOME */}
         {/* ==================================================== */}
 
-        <SkinDashboard
+        <DashboardHero
           profile={profile}
           today={today}
           summary={dailySummary}
@@ -772,10 +834,36 @@ function App() {
           goTo={setCurrentPage}
           onChanged={() => setSyncTick((t) => t + 1)}
           streak={streak}
-          weight={{ latest: latestWeight !== null ? Number(latestWeight) : NaN, history: sortedWeightHistory, target: targetWeight, hasGoal: hasWeightGoal, direction: weightDirection, remaining: remainingWeight }}
         />
 
         <section className="stats-grid two">
+
+          <MacroCard profile={profile} summary={dailySummary} />
+
+          {/* One weight card: where you are, and (if you set one) how far along your goal is. */}
+          <div className="card weight-card" onClick={() => setCurrentPage("weight")} style={{ cursor: "pointer" }}>
+            <span className="card-icon">⚖️</span>
+            <p>Weight</p>
+            <h3>
+              {latestWeight !== null ? Number(latestWeight).toFixed(1) : "--"}
+              <small> kg</small>
+            </h3>
+            {hasWeightGoal ? (
+              <>
+                <div className="progress-bar">
+                  <div className="progress-fill" style={{ width: `${weightGoalProgress}%` }}></div>
+                </div>
+                <div className="card-description">
+                  {weightDirection === "Maintain"
+                    ? "Maintaining your weight"
+                    : `${remainingWeight.toFixed(1)} kg to ${weightDirection.toLowerCase()} · target ${targetWeight.toFixed(1)} kg`}
+                  {" · "}{Math.round(weightGoalProgress)}% there
+                </div>
+              </>
+            ) : (
+              <div className="card-description">{latestWeight !== null ? "Set a target weight in Profile to track your goal" : "No weight recorded yet"}</div>
+            )}
+          </div>
 
           <CalorieBalance
             collapsible
