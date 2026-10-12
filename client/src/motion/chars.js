@@ -10,7 +10,11 @@ const HAS = {
 const FALLBACK = { blink: "idle", climb: "rope", workout: "lift", victory: "cheer", levelup: "cheer", powerup: "fight", idle: "wave", run: "walk", plan: "task", chart: "task", health: "drink", chef: "eat", lift: "habit", fight: "walk", dance: "cheer", sleep: "sad", habit: "cheer", cheer: "wave", wave: "task" };
 // The dark, hard-edged silhouette that forms the thick edge of the 3D figure (baked next to each sprite in chars/walls/).
 export const wallOf = (url) => url.replace("/chars/", "/chars/walls/");
-export const dayChar = (d = new Date()) => DAY_ORDER[d.getDay()];
+// Today's character comes from today's theme (see skins/); the old weekday rotation is the fallback.
+export const dayChar = (d = new Date()) => {
+  const fromSkin = typeof document !== "undefined" ? document.documentElement.getAttribute("data-ff-char") : null;
+  return fromSkin && CHARS[fromSkin] ? fromSkin : DAY_ORDER[d.getDay()];
+};
 export function sprite(who, scene) {
   const ok = (HAS[who] || BASE).includes(scene) ? scene : FALLBACK[scene] || "task";
   return `${import.meta.env.BASE_URL}chars/${who}-${ok}.webp${V}`;

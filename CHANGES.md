@@ -1,3 +1,16 @@
+# v24 - daily themes (web)
+
+- **A new look every day, picked at random.** Four themes for women (Calm & Cozy, Scenic & Peaceful, Energetic & Fun, Minimal Productive) and four for men (Dark Anime, Anime Gym, Adventure Journey, Minimal Modern). Each has its own colours (light and dark), background, banner artwork, motivational note and a male anime character (Goku, Naruto, Luffy, Gojo, Zoro). No female characters.
+- **Which set you get** follows Sex in Profile. If it is not set, all eight themes are in the mix.
+- **How the daily pick works** (src/skins/skins.js): days are grouped into rounds, each round is a shuffle of your set, so every theme shows up before any repeats and the same theme never appears two days running. It changes at local midnight (also if the app is left open), and it is the same on every device.
+- **Banner buttons:** 🎲 shuffles to another theme for the rest of today; 📍 keeps the current theme every day until you tap 📌 to unlock.
+- The theme's character is now also the character used across the app that day (replaces the weekday rotation).
+- Dark Anime and Anime Gym are always dark; the other six follow the light / dark switch.
+- Adventure Journey adds a level-up trail under the banner. Animations stop with Calm motion / Reduce motion.
+- New: src/skins/ (skins.js, skinStore.js, SkinBanner.jsx, skins.css, skins.test.js). Run `node --test src/skins/skins.test.js`. Service worker cache bumped to v3.
+
+---
+
 # v23 - new icon + tidier lists (web)
 
 - New icons (favicon, apple-touch, 192, 512, maskable), PWA background colour, service-worker cache bumped so devices pick them up.

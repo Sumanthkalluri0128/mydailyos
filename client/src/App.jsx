@@ -25,86 +25,10 @@ import MacroCard from "./components/MacroCard";
 import { getLocalDate } from "./utils/date";
 import { apiFetch } from "./config/api";
 import { API_URL } from "./config";
+import { useSkin, setSkinProfile } from "./skins/skinStore";
 
 
 const THEME_KEY = "mydailyos_theme";
-const DASHBOARD_MODE_KEY = "flexfit_dashboard_theme_mode_v1";
-const DASHBOARD_MANUAL_KEY = "flexfit_dashboard_theme_manual_v1";
-
-// Every theme uses male anime characters only. The profile's selected sex chooses
-// the visual collection; it does not affect health calculations or saved data.
-const DASHBOARD_THEMES = {
-  female: [
-    { id: "calm-cozy", label: "Calm & Cozy", emoji: "🌸", description: "Soft pastel, cute and clean" },
-    { id: "scenic", label: "Scenic & Peaceful", emoji: "🌄", description: "Nature, mountains and motivation" },
-    { id: "energetic", label: "Energetic & Fun", emoji: "⚡", description: "Bright, playful workout energy" },
-    { id: "minimal", label: "Minimal Productive", emoji: "☁️", description: "Clean, modern and focused" },
-    { id: "dark-anime", label: "Dark Anime", emoji: "🌌", description: "Dark surfaces and neon purple" },
-    { id: "anime-gym", label: "Anime Gym", emoji: "🏋️", description: "Bold strength and workout energy" },
-    { id: "adventure", label: "Adventure Journey", emoji: "🗺️", description: "Progress, quests and milestones" },
-  ],
-  male: [
-    { id: "dark-anime", label: "Dark Anime", emoji: "🌌", description: "Dark surfaces and neon purple" },
-    { id: "anime-gym", label: "Anime Gym", emoji: "🏋️", description: "Bold strength and workout energy" },
-    { id: "adventure", label: "Adventure Journey", emoji: "🗺️", description: "Progress, quests and milestones" },
-    { id: "minimal", label: "Minimal Modern", emoji: "☁️", description: "Clean, focused and high-performance" },
-    { id: "scenic", label: "Scenic & Peaceful", emoji: "🌄", description: "Nature, mountains and motivation" },
-    { id: "energetic", label: "Energetic & Fun", emoji: "⚡", description: "Bright, playful workout energy" },
-    { id: "calm-cozy", label: "Calm & Cozy", emoji: "🌸", description: "Soft pastel, cute and clean" },
-  ],
-  all: [
-    { id: "calm-cozy", label: "Calm & Cozy", emoji: "🌸", description: "Soft pastel and cute" },
-    { id: "scenic", label: "Scenic & Peaceful", emoji: "🌄", description: "Nature and motivation" },
-    { id: "energetic", label: "Energetic & Fun", emoji: "⚡", description: "Bright workout energy" },
-    { id: "minimal", label: "Minimal Modern", emoji: "☁️", description: "Clean and focused" },
-    { id: "dark-anime", label: "Dark Anime", emoji: "🌌", description: "Dark surfaces and neon" },
-    { id: "anime-gym", label: "Anime Gym", emoji: "🏋️", description: "Strength and workout energy" },
-    { id: "adventure", label: "Adventure Journey", emoji: "🗺️", description: "Progress and milestones" },
-  ],
-};
-
-function getStoredDashboardMode() {
-  try {
-    const mode = localStorage.getItem(DASHBOARD_MODE_KEY);
-    return ["daily", "manual"].includes(mode) ? mode : "daily";
-  } catch { return "daily"; }
-}
-function getStoredManualDashboardTheme() {
-  try { return localStorage.getItem(DASHBOARD_MANUAL_KEY) || ""; }
-  catch { return ""; }
-}
-function getDailyThemeIndex(dateString, length) {
-  const match = String(dateString || "").match(/^(\d{4})-(\d{2})-(\d{2})$/);
-  if (!match || !length) return 0;
-  const dayNumber = Math.floor(Date.UTC(Number(match[1]), Number(match[2]) - 1, Number(match[3])) / 86400000);
-  return ((dayNumber % length) + length) % length;
-}
-
-function DashboardThemePicker({ mode, setMode, themeId, setThemeId, themeOptions, selectedTheme }) {
-  const [open, setOpen] = useState(false);
-  return (
-    <div className="dashboard-theme-picker">
-      <button type="button" className="topbar-progress theme-picker-trigger" onClick={() => setOpen((value) => !value)} aria-expanded={open} aria-label="Dashboard theme settings">
-        <span aria-hidden="true">🎨</span><span>Theme</span>
-      </button>
-      {open && <div className="theme-picker-panel" role="dialog" aria-label="Dashboard theme settings">
-        <div className="theme-picker-heading"><strong>Dashboard themes</strong><button type="button" onClick={() => setOpen(false)} aria-label="Close theme settings">×</button></div>
-        <p className="theme-picker-caption">Changes appearance only. Your health data stays untouched.</p>
-        <label className="theme-picker-label" htmlFor="dashboard-theme-mode">Rotation</label>
-        <select id="dashboard-theme-mode" value={mode} onChange={(event) => setMode(event.target.value)}>
-          <option value="daily">Auto-rotate daily</option><option value="manual">Lock selected theme</option>
-        </select>
-        <div className="theme-picker-current"><span>{selectedTheme?.emoji || "✨"}</span><div><strong>{selectedTheme?.label || "FlexFit theme"}</strong><small>{mode === "daily" ? "Changes once per day" : "Manual theme locked"}</small></div></div>
-        <label className="theme-picker-label" htmlFor="dashboard-theme-select">Choose a theme</label>
-        <select id="dashboard-theme-select" value={themeId} onChange={(event) => { setThemeId(event.target.value); setMode("manual"); }}>
-          {themeOptions.map((item) => <option key={item.id} value={item.id}>{item.emoji} {item.label}</option>)}
-        </select>
-        <div className="theme-picker-note">Male anime characters only · theme collection follows your Profile selection.</div>
-        <button type="button" className="theme-picker-done" onClick={() => setOpen(false)}>Done</button>
-      </div>}
-    </div>
-  );
-}
 
 function getInitialTheme() {
   try {
@@ -211,15 +135,17 @@ function App() {
 
   const [theme, setTheme] = useState(getInitialTheme);
 
+  // Today's themed skin: women / men get their own set, and always-dark skins override the light / dark choice.
+  const { skin: todaySkin } = useSkin();
   useEffect(() => {
-    document.documentElement.setAttribute("data-theme", theme);
+    document.documentElement.setAttribute("data-theme", todaySkin.force || theme);
     try {
       localStorage.setItem(THEME_KEY, theme);
     } catch {
       // Best-effort — a failed write just means the choice won't
       // persist across reloads, which isn't worth surfacing to the user.
     }
-  }, [theme]);
+  }, [theme, todaySkin.force]);
 
   const toggleTheme = () =>
     setTheme((current) => (current === "dark" ? "light" : "dark"));
@@ -295,40 +221,7 @@ function App() {
   // ============================================================
 
   const [profile, setProfile] = useState(null);
-
-  // Daily dashboard theme rotation is presentation-only and does not touch API data.
-  const [dashboardThemeMode, setDashboardThemeMode] = useState(getStoredDashboardMode);
-  const [manualDashboardTheme, setManualDashboardTheme] = useState(getStoredManualDashboardTheme);
-  const [dashboardThemeDate, setDashboardThemeDate] = useState(getLocalDate);
-  useEffect(() => {
-    // Update the theme even when the app stays open across local midnight.
-    const interval = window.setInterval(() => {
-      const currentDate = getLocalDate();
-      setDashboardThemeDate((previous) => previous === currentDate ? previous : currentDate);
-    }, 60_000);
-    return () => window.clearInterval(interval);
-  }, []);
-  const profileSex = String(profile?.sex || "").toLowerCase();
-  const dashboardThemeCollection = profileSex === "female" ? "female" : profileSex === "male" ? "male" : "all";
-  const dashboardThemeOptions = DASHBOARD_THEMES[dashboardThemeCollection];
-  const dailyDashboardTheme = dashboardThemeOptions[getDailyThemeIndex(dashboardThemeDate, dashboardThemeOptions.length)];
-  const matchingManualTheme = dashboardThemeOptions.find((item) => item.id === manualDashboardTheme);
-  const activeDashboardTheme = dashboardThemeMode === "manual" && matchingManualTheme ? matchingManualTheme : dailyDashboardTheme;
-
-  useEffect(() => {
-    try {
-      localStorage.setItem(DASHBOARD_MODE_KEY, dashboardThemeMode);
-      if (manualDashboardTheme) localStorage.setItem(DASHBOARD_MANUAL_KEY, manualDashboardTheme);
-    } catch { /* Theme preferences are best-effort in private browsing. */ }
-  }, [dashboardThemeMode, manualDashboardTheme]);
-
-  // When profile sex changes, keep the current selection if it exists in that collection;
-  // otherwise fall back to the first suitable theme, without altering profile or health data.
-  useEffect(() => {
-    if (dashboardThemeMode === "manual" && !dashboardThemeOptions.some((item) => item.id === manualDashboardTheme)) {
-      setManualDashboardTheme(dashboardThemeOptions[0]?.id || "minimal");
-    }
-  }, [dashboardThemeCollection, dashboardThemeMode, manualDashboardTheme]);
+  useEffect(() => { setSkinProfile(profile); }, [profile]); // women / men themes follow the profile's sex
 
   // ============================================================
   // TODAY
@@ -510,7 +403,7 @@ function App() {
 
   if (currentPage === "foodLogger") {
     return (
-      <div className="app" data-dashboard-theme={activeDashboardTheme.id} data-dashboard-collection={dashboardThemeCollection}>
+      <div className="app">
 
         <header className="topbar">
           <BrandHome onHome={() => setCurrentPage("dashboard")} />
@@ -539,18 +432,10 @@ function App() {
 
   if (currentPage === "health") {
     return (
-      <div className="app" data-dashboard-theme={activeDashboardTheme.id} data-dashboard-collection={dashboardThemeCollection}>
+      <div className="app">
         <header className="topbar">
           <BrandHome onHome={() => setCurrentPage("dashboard")} />
           <ThemeToggle theme={theme} onToggle={toggleTheme} />
-          <DashboardThemePicker
-            mode={dashboardThemeMode}
-            setMode={setDashboardThemeMode}
-            themeId={activeDashboardTheme.id}
-            setThemeId={setManualDashboardTheme}
-            themeOptions={dashboardThemeOptions}
-            selectedTheme={activeDashboardTheme}
-          />
         </header>
         <main key={currentPage} className="dashboard fx-page">
           <Suspense fallback={<PageSkeleton variant="list" />}>
@@ -563,7 +448,7 @@ function App() {
 
   if (currentPage === "exercise") {
     return (
-      <div className="app" data-dashboard-theme={activeDashboardTheme.id} data-dashboard-collection={dashboardThemeCollection}>
+      <div className="app">
 
         <header className="topbar">
           <BrandHome onHome={() => setCurrentPage("dashboard")} />
@@ -590,7 +475,7 @@ function App() {
 
   if (currentPage === "task") {
     return (
-      <div className="app" data-dashboard-theme={activeDashboardTheme.id} data-dashboard-collection={dashboardThemeCollection}>
+      <div className="app">
 
         <header className="topbar">
           <BrandHome onHome={() => setCurrentPage("dashboard")} />
@@ -617,7 +502,7 @@ function App() {
 
   if (currentPage === "habit") {
     return (
-      <div className="app" data-dashboard-theme={activeDashboardTheme.id} data-dashboard-collection={dashboardThemeCollection}>
+      <div className="app">
 
         <header className="topbar">
           <BrandHome onHome={() => setCurrentPage("dashboard")} />
@@ -644,7 +529,7 @@ function App() {
 
   if (currentPage === "water") {
     return (
-      <div className="app" data-dashboard-theme={activeDashboardTheme.id} data-dashboard-collection={dashboardThemeCollection}>
+      <div className="app">
 
         <header className="topbar">
           <BrandHome onHome={() => setCurrentPage("dashboard")} />
@@ -671,7 +556,7 @@ function App() {
 
   if (currentPage === "weight") {
     return (
-      <div className="app" data-dashboard-theme={activeDashboardTheme.id} data-dashboard-collection={dashboardThemeCollection}>
+      <div className="app">
 
         <header className="topbar">
           <BrandHome onHome={() => setCurrentPage("dashboard")} />
@@ -698,7 +583,7 @@ function App() {
 
   if (currentPage === "profile") {
     return (
-      <div className="app" data-dashboard-theme={activeDashboardTheme.id} data-dashboard-collection={dashboardThemeCollection}>
+      <div className="app">
 
         <header className="topbar">
           <BrandHome onHome={() => setCurrentPage("dashboard")} />
@@ -725,7 +610,7 @@ function App() {
 
   if (currentPage === "progress") {
     return (
-      <div className="app" data-dashboard-theme={activeDashboardTheme.id} data-dashboard-collection={dashboardThemeCollection}>
+      <div className="app">
         <header className="topbar">
           <BrandHome onHome={() => setCurrentPage("dashboard")} />
         <ThemeToggle theme={theme} onToggle={toggleTheme} />
@@ -741,18 +626,10 @@ function App() {
 
   if (currentPage === "planner" || currentPage === "recipes") {
     return (
-      <div className="app" data-dashboard-theme={activeDashboardTheme.id} data-dashboard-collection={dashboardThemeCollection}>
+      <div className="app">
         <header className="topbar">
           <BrandHome onHome={() => setCurrentPage("dashboard")} />
           <ThemeToggle theme={theme} onToggle={toggleTheme} />
-          <DashboardThemePicker
-            mode={dashboardThemeMode}
-            setMode={setDashboardThemeMode}
-            themeId={activeDashboardTheme.id}
-            setThemeId={setManualDashboardTheme}
-            themeOptions={dashboardThemeOptions}
-            selectedTheme={activeDashboardTheme}
-          />
         </header>
         <main key={currentPage} className="dashboard fx-page">
           <Suspense fallback={<PageSkeleton variant="list" />}>
@@ -771,7 +648,7 @@ function App() {
 
   if (currentPage === "food") {
     return (
-      <div className="app" data-dashboard-theme={activeDashboardTheme.id} data-dashboard-collection={dashboardThemeCollection}>
+      <div className="app">
 
         <header className="topbar">
 
@@ -787,14 +664,6 @@ function App() {
           </button>
 
           <ThemeToggle theme={theme} onToggle={toggleTheme} />
-          <DashboardThemePicker
-            mode={dashboardThemeMode}
-            setMode={setDashboardThemeMode}
-            themeId={activeDashboardTheme.id}
-            setThemeId={setManualDashboardTheme}
-            themeOptions={dashboardThemeOptions}
-            selectedTheme={activeDashboardTheme}
-          />
 
         </header>
 
@@ -908,7 +777,7 @@ function App() {
   // ============================================================
 
   return (
-    <div className="app" data-dashboard-theme={activeDashboardTheme.id} data-dashboard-collection={dashboardThemeCollection}>
+    <div className="app">
 
       {/* ====================================================== */}
       {/* TOP BAR */}
@@ -920,14 +789,6 @@ function App() {
 
         <div className="topbar-actions">
           <ThemeToggle theme={theme} onToggle={toggleTheme} />
-          <DashboardThemePicker
-            mode={dashboardThemeMode}
-            setMode={setDashboardThemeMode}
-            themeId={activeDashboardTheme.id}
-            setThemeId={setManualDashboardTheme}
-            themeOptions={dashboardThemeOptions}
-            selectedTheme={activeDashboardTheme}
-          />
 
           <button
             className="topbar-progress"
