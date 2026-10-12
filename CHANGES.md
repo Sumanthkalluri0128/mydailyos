@@ -1,3 +1,13 @@
+# v25 - exact reference layout for the daily themes (web)
+
+- **App frame like the reference:** left sidebar (FlexFit logo; Home, Food Logs, Activities, Water, Weight, Habits, Tasks, Progress, Plan, Profile) and a slim top bar with the date pill, light/dark switch and profile, on every page. On phones the sidebar becomes a scrollable bottom bar.
+- **Dashboard in the reference order:** themed banner (painted scene, big character, greeting, note) -> four stat tiles (kcal left, water, steps, exercise) overlapping the banner -> cards in each theme's own arrangement: Today's Nutrition / Macros Today, Weight Progress (line + current badge), Today's Goals / Today's Tasks (tick themselves from your real data), Quick Actions (character tiles), motto card, Adventure level-up trail and signposts.
+- Every number appears once. The old ring card and the separate macros / weight cards on the dashboard are replaced; the Calorie balance explainer and everything under it are unchanged.
+- Scenes are drawn in code (src/skins/scenes.jsx). To use real artwork instead, add public/skins/<theme id>.webp (e.g. f-cozy.webp).
+- New: src/skins/Shell.jsx, SkinDashboard.jsx.
+
+---
+
 # v24 - daily themes (web)
 
 - **A new look every day, picked at random.** Four themes for women (Calm & Cozy, Scenic & Peaceful, Energetic & Fun, Minimal Productive) and four for men (Dark Anime, Anime Gym, Adventure Journey, Minimal Modern). Each has its own colours (light and dark), background, banner artwork, motivational note and a male anime character (Goku, Naruto, Luffy, Gojo, Zoro). No female characters.

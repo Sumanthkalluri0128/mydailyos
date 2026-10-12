@@ -9,7 +9,7 @@ const pal = (bg, surface, soft, text, muted, border, primary, psoft, chip, shado
 export const SKINS = [
   // ---------------------------------------------------------------- women
   {
-    id: "f-cozy", sex: "female", name: "Calm & Cozy", tag: "Soft pastel, clean and aesthetic",
+    id: "f-cozy",  sex: "female", name: "Calm & Cozy", tag: "Soft pastel, clean and aesthetic",
     char: "goku", scene: "wave", decor: "fall",
     sub: "A healthier, happier you is a brighter you!",
     quote: "Progress, not perfection 💜",
@@ -24,7 +24,7 @@ export const SKINS = [
     },
   },
   {
-    id: "f-scenic", sex: "female", name: "Scenic & Peaceful", tag: "Nature, mountains and motivation",
+    id: "f-scenic",  sex: "female", name: "Scenic & Peaceful", tag: "Nature, mountains and motivation",
     char: "naruto", scene: "wave", decor: "rise",
     sub: "Small steps today, big changes tomorrow!",
     quote: "Breathe in. Move forward. 🏔️",
@@ -39,7 +39,7 @@ export const SKINS = [
     },
   },
   {
-    id: "f-fun", sex: "female", name: "Energetic & Fun", tag: "Bright, playful and workout motivated",
+    id: "f-fun",  sex: "female", name: "Energetic & Fun", tag: "Bright, playful and workout motivated",
     char: "luffy", scene: "cheer", decor: "twinkle",
     sub: "Let's make today a stronger day!",
     quote: "Today is YOUR day! 🌟",
@@ -54,7 +54,7 @@ export const SKINS = [
     },
   },
   {
-    id: "f-minimal", sex: "female", name: "Minimal Productive", tag: "Clean, modern and focused",
+    id: "f-minimal",  sex: "female", name: "Minimal Productive", tag: "Clean, modern and focused",
     char: "gojo", scene: "plan", decor: "none",
     sub: "Stay consistent, stay proud!",
     quote: "Discipline today creates the results you'll be proud of tomorrow.",
@@ -71,7 +71,7 @@ export const SKINS = [
 
   // ---------------------------------------------------------------- men
   {
-    id: "m-dark", sex: "male", name: "Dark Anime", tag: "Bold, neon and powerful",
+    id: "m-dark",  sex: "male", name: "Dark Anime", tag: "Bold, neon and powerful",
     char: "gojo", scene: "powerup", decor: "rise", force: "dark",
     sub: "Discipline. Progress. No excuses.",
     quote: "No limits. Just progress. 💜",
@@ -83,7 +83,7 @@ export const SKINS = [
     },
   },
   {
-    id: "m-gym", sex: "male", name: "Anime Gym", tag: "Gym, strength and transformation",
+    id: "m-gym",  sex: "male", name: "Anime Gym", tag: "Gym, strength and transformation",
     char: "goku", scene: "workout", decor: "rise", force: "dark",
     sub: "Train today for a stronger tomorrow.",
     quote: "Break your limits. 🔥",
@@ -95,8 +95,8 @@ export const SKINS = [
     },
   },
   {
-    id: "m-adventure", sex: "male", name: "Adventure Journey", tag: "Gamified progress and milestones",
-    char: "naruto", scene: "walk", decor: "fall", strip: true,
+    id: "m-adventure",  sex: "male", name: "Adventure Journey", tag: "Gamified progress and milestones",
+    char: "naruto", scene: "walk", decor: "fall",
     sub: "Every step makes you stronger!",
     quote: "Level up every day!",
     g: ["#2f6fdc", "#3a8fd8", "#e08a1e"], b: ["#9ed0ff", "#ffd28a", "#b9e4a8"],
@@ -110,10 +110,10 @@ export const SKINS = [
     },
   },
   {
-    id: "m-minimal", sex: "male", name: "Minimal Modern", tag: "Clean, focused and high-performance",
+    id: "m-minimal",  sex: "male", name: "Minimal Modern", tag: "Clean, focused and high-performance",
     char: "zoro", scene: "idle", decor: "none",
     sub: "Focus today. Bigger results tomorrow.",
-    quote: "Same routine. Bigger results.",
+    quote: "Same Routine. Bigger Results.",
     g: ["#117a52", "#17956a", "#2aa77a"], b: ["#d4eadf", "#e2efe8", "#d6e6ef"],
     light: {
       ...pal("#f2f6f4", "#ffffff", "#f9fbfa", "#1a2622", "#53625c", "#dde7e2", "#117a52", "#e2f4eb", "#e8efeb"),
@@ -125,6 +125,19 @@ export const SKINS = [
     },
   },
 ];
+
+// What each theme's dashboard looks like: greeting emoji, the note in the banner, and the cards under the stats row (a nested list = one row of cards).
+const EXTRA = {
+  "f-cozy": { emoji: "💜", bannerNote: "Progress, not perfection 💜", layout: [["nutrition", "weight"]] },
+  "f-scenic": { emoji: "💜", layout: [["goals", "macros"]] },
+  "f-fun": { emoji: "💜", layout: ["quick", ["nutrition", "weight"]] },
+  "f-minimal": { emoji: "💜", bannerNote: "Discipline today creates the results you'll be proud of tomorrow.", layout: [["tasks", "macros"]] },
+  "m-dark": { emoji: "💜", layout: [["weight", "nutrition"], ["tasks", "motto"]] },
+  "m-gym": { emoji: "🔥", layout: [["nutrition", "weight"], "quick"] },
+  "m-adventure": { emoji: "⭐", layout: [["goals", "weight"], "trail"] },
+  "m-minimal": { emoji: "💜", bannerNote: "Discipline today builds the results you'll be proud of tomorrow.", layout: [["macros", "weight"], ["tasks", "motto"]] },
+};
+SKINS.forEach((s) => Object.assign(s, EXTRA[s.id]));
 
 export const SKIN_BY_ID = Object.fromEntries(SKINS.map((s) => [s.id, s]));
 

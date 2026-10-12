@@ -52,3 +52,11 @@ test("generated css covers every skin, and dark-only skins have no light block",
 test("every skin uses a character that has a sprite set", () => {
   assert.deepEqual([...new Set(SKINS.map((s) => s.char))].sort(), ["gojo", "goku", "luffy", "naruto", "zoro"]);
 });
+
+test("every theme's dashboard layout only names cards that exist", () => {
+  const known = new Set(["nutrition", "macros", "weight", "goals", "tasks", "quick", "motto", "trail"]);
+  for (const s of SKINS) {
+    assert.ok(Array.isArray(s.layout) && s.layout.length > 0, `${s.id} has no layout`);
+    for (const row of s.layout) for (const k of [].concat(row)) assert.ok(known.has(typeof k === "string" ? k : k.k), `${s.id}: unknown card ${k}`);
+  }
+});
