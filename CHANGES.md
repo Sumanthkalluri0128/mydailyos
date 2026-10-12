@@ -7,6 +7,7 @@
 - The theme's character is now also the character used across the app that day (replaces the weekday rotation).
 - Dark Anime and Anime Gym are always dark; the other six follow the light / dark switch.
 - Adventure Journey adds a level-up trail under the banner. Animations stop with Calm motion / Reduce motion.
+- Fix: src/utils/useShowMore.js contained JSX, which made the Vite production build fail; renamed to useShowMore.jsx.
 - New: src/skins/ (skins.js, skinStore.js, SkinBanner.jsx, skins.css, skins.test.js). Run `node --test src/skins/skins.test.js`. Service worker cache bumped to v3.
 
 ---
