@@ -1,3 +1,13 @@
+# v26 - painted scene banners (web)
+
+- **20 scene banners** from the reference sheet (Sakura Morning, Mountain Adventure, Dark Anime, Anime Gym, Minimal Modern, Sunset Chill, Forest Zen, Night City, Sky Journey, Training Arena, Snow Peak, Library Room, Rainy City, Autumn Breeze, Ocean Wave, Starry Sky, Temple Serenity, Cyber Mountain, Bamboo Forest, Evening Rooftop). Each is a daily-rotation option; the picture already shows its character, so the banner has no separate sprite.
+- Each scene uses the colours and card layout of one of the 8 families from v25. Women's and men's rotations pick from their own set of scenes (some are shared); with no sex set, all 20 rotate.
+- **Image quality:** `tools/build-skin-art.py` cuts each scene out of the sheet, removes the label chip, denoises, upscales 4x with edge-aware smoothing and a gentle sharpen, and saves public/skins/<scene>.webp (about 180 KB each). For sharper art, drop a bigger picture at the same path (about 1800 x 800 or larger works best).
+- The drawn scenes from v25 stay as the fall-back while a picture loads or if it is missing.
+- Theme keys changed (scene ids), so anyone who had pinned an old theme goes back to the daily rotation once.
+
+---
+
 # v25 - exact reference layout for the daily themes (web)
 
 - **App frame like the reference:** left sidebar (FlexFit logo; Home, Food Logs, Activities, Water, Weight, Habits, Tasks, Progress, Plan, Profile) and a slim top bar with the date pill, light/dark switch and profile, on every page. On phones the sidebar becomes a scrollable bottom bar.

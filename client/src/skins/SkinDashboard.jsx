@@ -1,7 +1,7 @@
 // The dashboard top section, laid out like the reference designs:
 //   banner (scene + greeting + character + note)  ->  4 stat tiles overlapping its bottom edge  ->  cards in the order the theme lists.
 // Every number is real and shown once (calories left, water, steps, exercise in the tiles; macros, weight and goals in their cards).
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import "./skins.css";
 import Buddy from "../motion/Buddy";
 import StreakFlame from "../motion/StreakFlame";
@@ -17,16 +17,21 @@ const n = (v) => Math.round(Number(v) || 0).toLocaleString();
 
 /* ---------------- banner ---------------- */
 function Banner({ skin, title, mode, shuffle, togglePin, streak, goTo }) {
+  // The scene pictures already contain the character, so the separate sprite and the paper note only show without a picture.
+  const [photo, setPhoto] = useState(null);
+  useEffect(() => { setPhoto(null); }, [skin.id]);
+  const hasPhoto = photo === true;
   return (
-    <section className="sk-banner" data-decor={skin.decor} aria-label={`${skin.name} theme`}>
-      <div className="sk-art" aria-hidden="true"><Scene id={skin.id} /></div>
+    <section className={`sk-banner${hasPhoto ? " has-photo" : ""}`} data-scene={skin.id} aria-label={`${skin.name} theme`}>
+      <div className="sk-art" aria-hidden="true"><Scene id={skin.family} photo={skin.image} onPhoto={setPhoto} /></div>
       <div className="sk-copy">
         <h2>{title}<span aria-hidden="true"> {skin.emoji || "💜"}</span></h2>
         <p className="sk-sub">{skin.sub}</p>
+        <span className="sk-chip">{skin.name} · {skin.tag}</span>
       </div>
-      <div className="sk-hero"><Buddy who={skin.char} scene={skin.scene} size={210} label={`${skin.name} character`} /></div>
-      {skin.id === "m-adventure" && <ul className="sk-signs" aria-hidden="true">{["Better Habits", "Stronger You", "New Levels"].map((t) => <li key={t}>{t}</li>)}</ul>}
-      {skin.bannerNote && <aside className="sk-note"><span>{skin.bannerNote}</span></aside>}
+      {!hasPhoto && <div className="sk-hero"><Buddy who={skin.char} scene={skin.scene} size={210} label={`${skin.name} character`} /></div>}
+      {!hasPhoto && skin.family === "m-adventure" && <ul className="sk-signs" aria-hidden="true">{["Better Habits", "Stronger You", "New Levels"].map((t) => <li key={t}>{t}</li>)}</ul>}
+      {!hasPhoto && skin.bannerNote && <aside className="sk-note"><span>{skin.bannerNote}</span></aside>}
       <div className="sk-tools">
         {streak && (
           <button type="button" className="streak-chip" onClick={() => goTo("progress")} aria-label={streak.current > 0 ? `${streak.current} day streak` : "Start a streak"}>
@@ -174,8 +179,8 @@ function Quick({ goTo, quickWater, adding, waterOk }) {
 function Motto({ skin }) {
   return (
     <section className="sk-card sk-motto" aria-label="Motivation">
-      <p>{skin.id === "m-dark" ? <>No limits.<br />Just progress. <span>💜</span></> : <>Same<br />Routine.<br />Bigger<br />Results.</>}</p>
-      <img src={sprite(skin.char, skin.id === "m-dark" ? "powerup" : "idle")} alt="" width="150" height="150" loading="lazy" decoding="async" draggable="false" />
+      <p>{skin.family === "m-dark" ? <>No limits.<br />Just progress. <span>💜</span></> : <>Same<br />Routine.<br />Bigger<br />Results.</>}</p>
+      <img src={sprite(skin.char, skin.family === "m-dark" ? "powerup" : "idle")} alt="" width="150" height="150" loading="lazy" decoding="async" draggable="false" />
     </section>
   );
 }
@@ -256,7 +261,7 @@ export default function SkinDashboard({ profile, today, summary, activity, water
   };
   // "goals" in Adventure Journey is the task-style list (Plan meals / Drink / Workout / Steps / Log food), titled "Today's Goals".
   const rows = (skin.layout || []).map((row) => (Array.isArray(row) ? row : [row]));
-  const goalsAsTasks = skin.id === "m-adventure";
+  const goalsAsTasks = skin.family === "m-adventure";
 
   return (
     <div className="sk-dash">

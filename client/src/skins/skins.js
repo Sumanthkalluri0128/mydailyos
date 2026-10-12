@@ -6,7 +6,7 @@
 const pal = (bg, surface, soft, text, muted, border, primary, psoft, chip, shadow = "rgba(40, 30, 70, 0.10)") =>
   ({ bg, surface, soft, text, muted, border, primary, psoft, chip, shadow });
 
-export const SKINS = [
+const FAMILIES = [
   // ---------------------------------------------------------------- women
   {
     id: "f-cozy",  sex: "female", name: "Calm & Cozy", tag: "Soft pastel, clean and aesthetic",
@@ -137,14 +137,48 @@ const EXTRA = {
   "m-adventure": { emoji: "⭐", layout: [["goals", "weight"], "trail"] },
   "m-minimal": { emoji: "💜", bannerNote: "Discipline today builds the results you'll be proud of tomorrow.", layout: [["macros", "weight"], ["tasks", "motto"]] },
 };
-SKINS.forEach((s) => Object.assign(s, EXTRA[s.id]));
+FAMILIES.forEach((s) => Object.assign(s, EXTRA[s.id]));
+
+
+// ---- the 20 painted scenes (public/skins/<id>.webp, built by tools/build-skin-art.py) ----------------------------
+// Each scene borrows the colours, card layout and fall-back artwork of one of the 8 families above.
+// `for` = who gets it in their daily rotation; people with no sex set in Profile see all 20.
+const F = ["female"], M = ["male"], FM = ["female", "male"];
+const SCENES = [
+  ["s01-sakura", "Sakura Morning", "Calm & Cozy", "f-cozy", "naruto", F, "A healthier, happier you is a brighter you!"],
+  ["s02-mountain", "Mountain Adventure", "Nature", "m-adventure", "luffy", FM, "Every step makes you stronger!"],
+  ["s03-neon", "Dark Anime", "Neon", "m-dark", "gojo", M, "Discipline. Progress. No excuses."],
+  ["s04-gym", "Anime Gym", "Energetic", "m-gym", "goku", M, "Train today for a stronger tomorrow."],
+  ["s05-modern", "Minimal Modern", "Clean", "m-minimal", "zoro", FM, "Focus today. Bigger results tomorrow."],
+  ["s06-sunset", "Sunset Chill", "Relaxed", "f-fun", "luffy", F, "Slow down, then go again."],
+  ["s07-forest", "Forest Zen", "Peaceful", "m-minimal", "zoro", F, "Calm mind, strong body."],
+  ["s08-night-city", "Night City", "Cyber", "m-dark", "jinwoo", M, "The city sleeps. You level up."],
+  ["s09-sky", "Sky Journey", "Minimal Anime", "f-scenic", "naruto", FM, "Small steps today, big changes tomorrow!"],
+  ["s10-arena", "Training Arena", "Power", "m-gym", "goku", M, "Break your limits."],
+  ["s11-snow", "Snow Peak", "Focused", "f-minimal", "gojo", FM, "Stay consistent, stay proud!"],
+  ["s12-library", "Library Room", "Productive", "f-minimal", "jinwoo", F, "Plan it. Do it. Be proud of it."],
+  ["s13-rain", "Rainy City", "Moody", "m-dark", "jinwoo", M, "Rain or shine, you show up."],
+  ["s14-autumn", "Autumn Breeze", "Warm", "f-fun", "naruto", F, "Let's make today a stronger day!"],
+  ["s15-ocean", "Ocean Wave", "Fresh", "f-scenic", "luffy", F, "Ride the day, one wave at a time."],
+  ["s16-stars", "Starry Sky", "Dreamy", "m-dark", "goku", FM, "Rest well. Dream big. Train again."],
+  ["s17-temple", "Temple Serenity", "Spiritual", "f-cozy", "naruto", F, "Progress, not perfection."],
+  ["s18-cyber", "Cyber Mountain", "Futuristic", "m-dark", "jinwoo", M, "Upgrade yourself daily."],
+  ["s19-bamboo", "Bamboo Forest", "Mystic", "m-minimal", "zoro", FM, "Quiet effort builds loud results."],
+  ["s20-rooftop", "Evening Rooftop", "Minimal", "f-fun", "gojo", FM, "End the day proud of what you did."],
+];
+const FAMILY = Object.fromEntries(FAMILIES.map((f) => [f.id, f]));
+/** One entry per scene: the family's palette, layout and scene id for the fall-back drawing, plus its own picture, character and line. */
+export const SKINS = SCENES.map(([id, name, tag, family, char, sexes, sub]) => {
+  const f = FAMILY[family];
+  return { ...f, id, family, name, tag, char, sex: sexes, sub, image: id, quote: sub, bannerNote: undefined };
+});
 
 export const SKIN_BY_ID = Object.fromEntries(SKINS.map((s) => [s.id, s]));
 
 /** Which skins a person can see. Sex comes from their profile; unknown / other sees all eight. */
 export function poolFor(sex) {
-  if (sex === "female") return SKINS.filter((s) => s.sex === "female");
-  if (sex === "male") return SKINS.filter((s) => s.sex === "male");
+  if (sex === "female") return SKINS.filter((s) => s.sex.includes("female"));
+  if (sex === "male") return SKINS.filter((s) => s.sex.includes("male"));
   return SKINS;
 }
 
@@ -210,7 +244,7 @@ function block(selector, v, scheme) {
     + `--sk-banner:${v.banner};--sk-ink:${v.ink};}`;
 }
 export function skinCss() {
-  return SKINS.map((s) => {
+  return FAMILIES.map((s) => {
     const sel = `html[data-ff-skin="${s.id}"][data-theme`;
     const common = `html[data-ff-skin="${s.id}"]{--sk-g1:${s.g[0]};--sk-g2:${s.g[1]};--sk-g3:${s.g[2]};--sk-b1:${s.b[0]};--sk-b2:${s.b[1]};--sk-b3:${s.b[2]};}`;
     const light = s.light ? block(`${sel}="light"]`, s.light, "light") : "";

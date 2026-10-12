@@ -56,12 +56,18 @@ html[data-ff-skin] .topbar-actions .topbar-progress.active { background: var(--p
 
 /* ---------- banner ---------- */
 .sk-dash { display: block; }
-.sk-banner { position: relative; isolation: isolate; overflow: hidden; min-height: 292px; padding: 36px 38px 84px; border-radius: 26px; background: var(--sk-banner); color: var(--sk-ink); box-shadow: 0 18px 50px var(--shadow); }
-.sk-art { position: absolute; inset: 0; z-index: -1; --sk-scrim: rgba(255, 255, 255, 0.4); }
+.sk-banner { position: relative; isolation: isolate; overflow: hidden; min-height: 340px; padding: 40px 38px 90px; border-radius: 26px; background: var(--sk-banner); color: var(--sk-ink); box-shadow: 0 18px 50px var(--shadow); }
+.sk-art { position: absolute; inset: 0; z-index: -1; --sk-scrim: rgba(255, 255, 255, 0.42); }
+.has-photo .sk-art { --sk-scrim: rgba(12, 10, 30, 0.62); }
+.has-photo .sk-copy { color: #fff; }
+.has-photo .sk-copy h2, .has-photo .sk-sub { text-shadow: 0 2px 16px rgba(0, 0, 0, 0.7); }
+.sk-chip { display: inline-block; margin-top: 12px; padding: 5px 12px; border-radius: 999px; font-size: 12px; font-weight: 800; background: rgba(255, 255, 255, 0.18); border: 1px solid rgba(255, 255, 255, 0.35); backdrop-filter: blur(6px); color: #fff; }
 html[data-theme="dark"] .sk-art { --sk-scrim: rgba(4, 3, 14, 0.55); }
 .sk-art::before { content: ""; position: absolute; inset: 0; z-index: 2; pointer-events: none; background: linear-gradient(90deg, var(--sk-scrim) 0%, transparent 56%); }
 .sk-scene, .sk-photo { position: absolute; inset: 0; width: 100%; height: 100%; }
-.sk-photo { object-fit: cover; object-position: center bottom; }
+.sk-photo { object-fit: cover; object-position: 72% 58%; opacity: 0; transition: opacity 0.5s ease; image-rendering: auto; }
+.sk-photo.is-in { opacity: 1; }
+.has-photo .sk-art::after { content: ""; position: absolute; inset: 0; background: linear-gradient(0deg, rgba(0, 0, 0, 0.28), transparent 38%); }
 html[data-ff-skin^="f-"][data-theme="dark"] .sk-art::after, html[data-ff-skin="m-adventure"][data-theme="dark"] .sk-art::after, html[data-ff-skin="m-minimal"][data-theme="dark"] .sk-art::after { content: ""; position: absolute; inset: 0; background: linear-gradient(rgba(8, 10, 28, 0.62), rgba(8, 10, 28, 0.38)); }
 .sk-copy { position: relative; z-index: 2; max-width: 46%; }
 .sk-copy h2 { margin: 0; font-size: clamp(26px, 3.2vw, 40px); font-weight: 900; letter-spacing: -0.03em; line-height: 1.12; color: inherit; -webkit-text-fill-color: currentColor; background: none; animation: none; text-shadow: 0 1px 12px rgba(255, 255, 255, 0.55); }
@@ -139,7 +145,8 @@ html[data-theme="dark"] .sk-copy h2, html[data-theme="dark"] .sk-sub { text-shad
   .sk-note, .sk-signs { display: none; }
 }
 @media (max-width: 720px) {
-  .sk-banner { min-height: 238px; padding: 64px 18px 70px; border-radius: 22px; }
+  .sk-banner { min-height: 280px; padding: 64px 18px 74px; border-radius: 22px; }
+  .sk-photo { object-position: 80% 55%; }
   .sk-copy { max-width: 62%; padding-top: 0; }
   .sk-copy h2 { font-size: 24px; }
   .sk-sub { font-size: 14px; }

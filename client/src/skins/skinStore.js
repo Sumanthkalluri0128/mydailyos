@@ -41,7 +41,8 @@ function apply(skin) {
     el.textContent = skinCss();
     document.head.appendChild(el);
   }
-  root.setAttribute("data-ff-skin", skin.id);
+  root.setAttribute("data-ff-skin", skin.family); // colours and layout come from the family
+  root.setAttribute("data-ff-scene", skin.id);
   root.setAttribute("data-ff-char", skin.char);
   // Always-dark skins force dark; the others follow the person's light / dark choice (or the system setting).
   const saved = read(THEME_KEY);

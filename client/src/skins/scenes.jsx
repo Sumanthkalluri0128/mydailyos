@@ -104,13 +104,17 @@ const SCENES = {
   </>),
 };
 
-export default function Scene({ id }) {
+// `id` = the family (drawn fall-back); `photo` = the scene's picture. While the picture loads, or if it is missing, the drawing shows.
+export default function Scene({ id, photo, onPhoto }) {
   const Art = SCENES[id];
   return (
     <>
       <svg className="sk-scene" viewBox="0 0 1200 300" preserveAspectRatio="xMidYMax slice" aria-hidden="true">{Art ? <Art /> : null}</svg>
-      {/* optional real artwork: public/skins/<id>.webp; hidden if the file is not there */}
-      <img className="sk-photo" src={`${import.meta.env.BASE_URL}skins/${id}.webp`} alt="" loading="lazy" decoding="async" onError={(e) => { e.currentTarget.style.display = "none"; }} />
+      {photo && (
+        <img className="sk-photo" src={`${import.meta.env.BASE_URL}skins/${photo}.webp?v=1`} alt="" decoding="async" fetchPriority="high"
+          onLoad={(e) => { e.currentTarget.classList.add("is-in"); onPhoto?.(true); }}
+          onError={(e) => { e.currentTarget.style.display = "none"; onPhoto?.(false); }} />
+      )}
     </>
   );
 }

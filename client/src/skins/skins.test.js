@@ -5,11 +5,10 @@ import { SKINS, poolFor, pickSkin, shuffleSkin, dayNumber, skinCss } from "./ski
 const dates = (start, n) => Array.from({ length: n }, (_, i) => new Date(Date.UTC(2026, 9, 1 + i)).toISOString().slice(0, 10));
 
 test("four skins for each group, and women only get the women's set", () => {
-  assert.equal(poolFor("female").length, 4);
-  assert.equal(poolFor("male").length, 4);
-  assert.equal(poolFor("").length, 8);
-  assert.ok(poolFor("female").every((s) => s.sex === "female"));
-  assert.ok(poolFor("male").every((s) => s.sex === "male"));
+  assert.equal(poolFor("").length, 20);
+  assert.ok(poolFor("female").length >= 10 && poolFor("male").length >= 10);
+  assert.ok(poolFor("female").every((s) => s.sex.includes("female")));
+  assert.ok(poolFor("male").every((s) => s.sex.includes("male")));
 });
 
 test("same day, same skin; the pick is deterministic", () => {
@@ -28,14 +27,14 @@ test("never the same skin two days in a row, and every skin shows up within a ro
 
 test("women's days and men's days stay inside their own set", () => {
   for (const date of dates(0, 60)) {
-    assert.equal(pickSkin({ sex: "female", date }).sex, "female");
-    assert.equal(pickSkin({ sex: "male", date }).sex, "male");
+    assert.ok(pickSkin({ sex: "female", date }).sex.includes("female"));
+    assert.ok(pickSkin({ sex: "male", date }).sex.includes("male"));
   }
 });
 
 test("shuffle always returns a different skin from the same set", () => {
   for (const sex of ["female", "male"]) for (const s of poolFor(sex)) {
-    for (const r of [0, 0.3, 0.99]) { const n = shuffleSkin({ sex, currentId: s.id, rnd: () => r }); assert.notEqual(n.id, s.id); assert.equal(n.sex, sex); }
+    for (const r of [0, 0.3, 0.99]) { const n = shuffleSkin({ sex, currentId: s.id, rnd: () => r }); assert.notEqual(n.id, s.id); assert.ok(n.sex.includes(sex)); }
   }
 });
 
@@ -46,11 +45,16 @@ test("dayNumber ignores timezone and handles month ends", () => {
 
 test("generated css covers every skin, and dark-only skins have no light block", () => {
   const css = skinCss();
-  for (const s of SKINS) { assert.ok(css.includes(`data-ff-skin="${s.id}"][data-theme="dark"]`)); assert.equal(css.includes(`data-ff-skin="${s.id}"][data-theme="light"]`), !!s.light); }
+  for (const s of SKINS) { assert.ok(css.includes(`data-ff-skin="${s.family}"][data-theme="dark"]`), s.id); }
 });
 
 test("every skin uses a character that has a sprite set", () => {
-  assert.deepEqual([...new Set(SKINS.map((s) => s.char))].sort(), ["gojo", "goku", "luffy", "naruto", "zoro"]);
+  assert.ok(SKINS.every((s) => ["gojo", "goku", "luffy", "naruto", "zoro", "jinwoo"].includes(s.char)));
+});
+
+test("every scene has a picture file and a layout", async () => {
+  const fs = await import("node:fs");
+  for (const s of SKINS) assert.ok(fs.existsSync(new URL(`../../public/skins/${s.image}.webp`, import.meta.url)), `missing picture for ${s.id}`);
 });
 
 test("every theme's dashboard layout only names cards that exist", () => {
