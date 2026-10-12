@@ -13,8 +13,6 @@ import "./motion/buddy.css"; // Flex the mascot, tap marker, calm mode: last so 
 import "./motion/fun.css"; // animated backdrop + lively UI motion
 import "./styles/polish.css"; // logging/profile layout tidy-up
 import FunBackdrop from "./motion/FunBackdrop";
-import FloatingAsta from "./motion/FloatingAsta";
-import "./motion/floatingAsta.css";
 import { installTapMarker } from "./motion/tapMarker";
 
 installTapMarker();
@@ -38,7 +36,6 @@ document.addEventListener("focusin", (event) => {
 ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>
     <FunBackdrop />
-    <FloatingAsta />
     <ToastHost />
     <ConfirmHost />
     <ServerWakeBanner />
