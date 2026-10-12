@@ -1,10 +1,3 @@
-# v23 - new icon + tidier lists (web)
-
-- New icons (favicon, apple-touch, 192, 512, maskable), PWA background colour, service-worker cache bumped so devices pick them up.
-- History lists show the newest 3 entries with a "Show N more" button: exercise, weight, health and the Progress daily table.
-
----
-
 # v22 - macro ranges + scanner fix (web + server)
 
 - **Barcode import (Open Food Facts):** sodium is stored in grams per 100 g, but some products are typed in milligrams or with impossible numbers, which produced a food the server refused ("sodium must be between 0 and 100000"). Values are now normalised and clamped (sodium unit mix-ups, kJ typed as kcal, negatives, macros above 100 g per 100 g), and saving a food no longer fails because of a sodium problem.

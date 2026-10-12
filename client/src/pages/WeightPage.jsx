@@ -280,7 +280,7 @@ function WeightPage({ onBack }) {
     setWeight((Math.max(1, base + delta)).toFixed(1));
   };
   const [showAll, setShowAll] = useState(false);
-  const shown = showAll ? logs : logs.slice(0, 3);
+  const shown = showAll ? logs : logs.slice(0, 6);
   const good = weightChange !== null && weightChange !== 0 && (direction === "Gain" ? weightChange > 0 : weightChange < 0);
 
   return (
@@ -340,7 +340,7 @@ function WeightPage({ onBack }) {
             })}
           </ul>
         )}
-        {logs.length > 3 && <button type="button" className="secondary-button wt-more" onClick={() => setShowAll((v) => !v)}>{showAll ? "Show less" : `Show all ${logs.length}`}</button>}
+        {logs.length > 6 && <button type="button" className="secondary-button wt-more" onClick={() => setShowAll((v) => !v)}>{showAll ? "Show less" : `Show all ${logs.length}`}</button>}
       </section>
     </div>
   );

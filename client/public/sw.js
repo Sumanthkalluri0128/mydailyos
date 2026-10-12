@@ -4,8 +4,8 @@
  *  - Page loads go to the network first (always the newest version) and fall back to the saved shell when offline.
  *  - API calls are NOT handled here: the app saves and replays them itself, per signed-in person (see src/offline).
  */
-const VERSION = "ff-shell-v2";
-const SHELL = ["/", "/favicon.png", "/manifest.webmanifest", "/icons/icon-192.png", "/icons/icon-512.png"];
+const VERSION = "ff-shell-v1";
+const SHELL = ["/", "/favicon.svg", "/manifest.webmanifest", "/icons/icon-192.png", "/icons/icon-512.png"];
 
 self.addEventListener("install", (e) => {
   e.waitUntil(caches.open(VERSION).then((c) => c.addAll(SHELL)).then(() => self.skipWaiting()));

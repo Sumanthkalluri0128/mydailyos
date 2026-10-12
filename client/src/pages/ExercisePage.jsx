@@ -1,4 +1,3 @@
-import useShowMore, { ShowMoreButton } from "../utils/useShowMore";
 import { confirmAction } from "../utils/confirm";
 import Buddy, { BuddyEmpty } from "../motion/Buddy";
 import { notify } from "../utils/notify";
@@ -261,7 +260,6 @@ function ExercisePage({ onBack }) {
     return m;
   }, {});
   const historyDates = Object.keys(byDay).sort().reverse();
-  const hist = useShowMore(historyDates, 3);
   const historyCalories = history.reduce((t, l) => t + Number(l.caloriesBurned || 0), 0);
 
   return (
@@ -660,7 +658,7 @@ function ExercisePage({ onBack }) {
           <p>No workouts in this period.</p>
         ) : (
           <div className="activity-list">
-            {hist.shown.map((d) => {
+            {historyDates.map((d) => {
               const items = byDay[d];
               const kcal = items.reduce((t, l) => t + Number(l.caloriesBurned || 0), 0);
               const mins = items.reduce((t, l) => t + Number(l.durationMinutes || 0), 0);
@@ -679,7 +677,6 @@ function ExercisePage({ onBack }) {
                 </div>
               );
             })}
-            <ShowMoreButton hidden={hist.hidden} open={hist.open} onClick={hist.toggle} noun="days" />
           </div>
         )}
 
