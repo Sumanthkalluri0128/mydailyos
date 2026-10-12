@@ -3109,3 +3109,74 @@ select {
 .app[data-dashboard-theme="anime-gym"] .brand-subtitle { color:#b9b7d3; }
 .app[data-dashboard-theme="dark-anime"] .topbar-progress,
 .app[data-dashboard-theme="anime-gym"] .topbar-progress { border-color:#3a3452; }
+
+
+/* ================================================================
+   FlexFit theme v2 — target the actual hero2 dashboard components.
+   Previous rules targeted .welcome, but the live dashboard uses
+   .hero2 / .coach / .hero2-minis / .quick.
+   ================================================================ */
+.app[data-dashboard-theme] {
+  min-height: 100vh;
+  transition: background 280ms ease, color 280ms ease;
+}
+.app[data-dashboard-theme] .dashboard {
+  max-width: 1480px;
+  padding: clamp(18px, 2.4vw, 36px) clamp(14px, 2.2vw, 32px) 56px;
+  transition: color 250ms ease;
+}
+.app[data-dashboard-theme] .hero2 {
+  position: relative; overflow: hidden; border-radius: 28px;
+  padding: clamp(20px, 2.2vw, 32px); margin: 0 0 24px;
+  border: 1px solid var(--theme-border, rgba(130,130,160,.16));
+  background: var(--theme-hero, rgba(255,255,255,.92));
+  box-shadow: 0 18px 50px var(--theme-shadow, rgba(50,40,90,.07));
+  transition: background 280ms ease, border-color 280ms ease, box-shadow 280ms ease;
+}
+.app[data-dashboard-theme] .hero2::after { content:""; position:absolute; pointer-events:none; width:340px; height:340px; right:-130px; top:-190px; border-radius:50%; background:var(--theme-orb,rgba(130,100,255,.10)); }
+.app[data-dashboard-theme] .hero2-head,.app[data-dashboard-theme] .coach,.app[data-dashboard-theme] .hero2-main,.app[data-dashboard-theme] .hero2-minis,.app[data-dashboard-theme] .quick { position:relative; z-index:1; }
+.app[data-dashboard-theme] .hero2-head h2 { letter-spacing:-.035em; font-size:clamp(25px,2.5vw,38px); }
+.app[data-dashboard-theme] .coach { border:1px solid var(--theme-border,rgba(130,130,160,.12)); background:var(--theme-coach,linear-gradient(110deg,#f0eaff,#fff5fb)); border-radius:20px; padding:13px 18px; margin:18px 0 20px; overflow:hidden; }
+.app[data-dashboard-theme] .hero2-minis .mini { border:1px solid var(--theme-border,rgba(130,130,160,.16)); background:var(--theme-mini,rgba(255,255,255,.88)); border-radius:20px; padding:12px 10px; box-shadow:0 8px 22px var(--theme-shadow,rgba(50,40,90,.06)); transition:transform 180ms ease,background 280ms ease,border-color 280ms ease; }
+.app[data-dashboard-theme] .hero2-minis .mini:hover { transform:translateY(-3px); }
+.app[data-dashboard-theme] .quick { margin-top:18px; gap:12px; }
+.app[data-dashboard-theme] .quick > button,.app[data-dashboard-theme] .quick .quick-water > button { border:1px solid var(--theme-border,rgba(130,130,160,.16)); background:var(--theme-mini,rgba(255,255,255,.9)); border-radius:16px; box-shadow:0 7px 20px var(--theme-shadow,rgba(50,40,90,.06)); }
+.app[data-dashboard-theme] .stats-grid .card,.app[data-dashboard-theme] .stats-grid .large-card,.app[data-dashboard-theme] .large-card,.app[data-dashboard-theme] .card.weight-card { border-radius:22px; border-color:var(--theme-border,rgba(130,130,160,.16)); background:var(--theme-card,rgba(255,255,255,.94)); box-shadow:0 14px 34px var(--theme-shadow,rgba(50,40,90,.06)); transition:background 280ms ease,border-color 280ms ease,box-shadow 280ms ease,color 280ms ease; }
+.app[data-dashboard-theme] .section-header h2,.app[data-dashboard-theme] .card h3 { letter-spacing:-.025em; }
+.app[data-dashboard-theme] .main-grid { gap:20px; }
+.app[data-dashboard-theme] .card-icon { background:var(--theme-icon-bg,var(--md-primary-soft)); }
+
+/* Calm & Cozy — soft lavender/pink with airy cards. */
+.app[data-dashboard-theme="calm-cozy"] { --theme-border:#e8dcff; --theme-shadow:rgba(127,91,190,.10); --theme-hero:linear-gradient(125deg,#fff 0%,#fbf7ff 58%,#fff0f7 100%); --theme-coach:linear-gradient(110deg,#efe7ff,#fff0f7); --theme-card:rgba(255,255,255,.96); --theme-mini:rgba(255,255,255,.94); --theme-orb:rgba(238,154,213,.22); --theme-icon-bg:#f0eaff; }
+.app[data-dashboard-theme="calm-cozy"] .hero2 { background-image:radial-gradient(circle at 92% 10%,rgba(238,154,213,.14),transparent 24%),linear-gradient(125deg,#fff 0%,#fbf7ff 58%,#fff0f7 100%); }
+/* Scenic — sky blue, soft green, sunrise coral. */
+.app[data-dashboard-theme="scenic"] { --theme-border:#d7e4f7; --theme-shadow:rgba(69,105,160,.10); --theme-hero:linear-gradient(125deg,#fafdff 0%,#edf4ff 48%,#fff1e9 100%); --theme-coach:linear-gradient(110deg,#e7efff,#fff0e7 58%,#e6f7ef); --theme-card:rgba(255,255,255,.94); --theme-mini:rgba(255,255,255,.94); --theme-orb:rgba(255,178,125,.24); --theme-icon-bg:#e9f0ff; }
+.app[data-dashboard-theme="scenic"] .hero2 { background-image:radial-gradient(ellipse at 88% 4%,rgba(255,186,134,.26),transparent 28%),linear-gradient(125deg,#fafdff 0%,#edf4ff 48%,#fff1e9 100%); }
+/* Energetic — punchy lilac, rose and warm orange accents. */
+.app[data-dashboard-theme="energetic"] { --theme-border:#f0d5f1; --theme-shadow:rgba(179,75,148,.12); --theme-hero:linear-gradient(125deg,#fff 0%,#f7efff 42%,#fff0e5 100%); --theme-coach:linear-gradient(110deg,#efe4ff,#ffe6f2 56%,#fff0d9); --theme-card:rgba(255,255,255,.95); --theme-mini:rgba(255,255,255,.95); --theme-orb:rgba(255,131,94,.24); --theme-icon-bg:#f1e5ff; }
+.app[data-dashboard-theme="energetic"] .hero2-head h2 { text-shadow:0 4px 22px rgba(206,89,171,.12); }
+/* Minimal — cooler whites and a clean indigo accent. */
+.app[data-dashboard-theme="minimal"] { --theme-border:#dfe3f7; --theme-shadow:rgba(67,83,142,.08); --theme-hero:linear-gradient(125deg,#fff 0%,#f7f9ff 65%,#f5f0ff 100%); --theme-coach:linear-gradient(110deg,#edf1ff,#fff 65%,#f8f0ff); --theme-card:rgba(255,255,255,.98); --theme-mini:rgba(255,255,255,.98); --theme-orb:rgba(115,112,255,.16); --theme-icon-bg:#edf0ff; }
+.app[data-dashboard-theme="minimal"] .hero2 { box-shadow:0 14px 42px rgba(67,83,142,.055); }
+/* Adventure — mint, forest, and treasure-gold highlights. */
+.app[data-dashboard-theme="adventure"] { --theme-border:#d2e8d9; --theme-shadow:rgba(48,116,84,.11); --theme-hero:linear-gradient(125deg,#fbfffc 0%,#eaf8ef 48%,#fff2d9 100%); --theme-coach:linear-gradient(110deg,#e3f6e9,#edf0ff 58%,#fff0d6); --theme-card:rgba(255,255,255,.95); --theme-mini:rgba(255,255,255,.95); --theme-orb:rgba(237,183,78,.23); --theme-icon-bg:#e3f6e9; }
+.app[data-dashboard-theme="adventure"] .hero2-minis .mini:nth-child(2) { border-bottom:3px solid #70c5a0; }
+/* Dark Anime — visibly darkens the entire dashboard. */
+.app[data-dashboard-theme="dark-anime"] { --theme-border:#393153; --theme-shadow:rgba(0,0,0,.25); --theme-hero:linear-gradient(125deg,rgba(25,24,46,.98),rgba(33,25,54,.98) 55%,rgba(49,25,55,.98)); --theme-coach:linear-gradient(110deg,#30264d,#25243c 60%,#3b2447); --theme-card:rgba(25,26,45,.97); --theme-mini:rgba(29,28,51,.96); --theme-orb:rgba(151,103,255,.20); --theme-icon-bg:#332a52; }
+.app[data-dashboard-theme="dark-anime"] .topbar { background:rgba(14,16,32,.98); border-color:#302b4b; }
+.app[data-dashboard-theme="dark-anime"] .hero2,.app[data-dashboard-theme="dark-anime"] .stats-grid .card,.app[data-dashboard-theme="dark-anime"] .large-card,.app[data-dashboard-theme="dark-anime"] .card.weight-card { color:#f3f0ff; }
+.app[data-dashboard-theme="dark-anime"] .hero2-head h2,.app[data-dashboard-theme="dark-anime"] .section-header h2,.app[data-dashboard-theme="dark-anime"] .card h3,.app[data-dashboard-theme="dark-anime"] .card strong,.app[data-dashboard-theme="dark-anime"] .large-card strong { color:#f5f1ff; }
+.app[data-dashboard-theme="dark-anime"] .hero2 .date,.app[data-dashboard-theme="dark-anime"] .hero2 p,.app[data-dashboard-theme="dark-anime"] .hero2 span,.app[data-dashboard-theme="dark-anime"] .card p,.app[data-dashboard-theme="dark-anime"] .card-description,.app[data-dashboard-theme="dark-anime"] .section-header p,.app[data-dashboard-theme="dark-anime"] .meal span { color:#bfc0dc; }
+.app[data-dashboard-theme="dark-anime"] .theme-picker-trigger,.app[data-dashboard-theme="dark-anime"] .topbar-progress { color:#f5f1ff; background:#26213c; border-color:#453b62; }
+.app[data-dashboard-theme="dark-anime"] .dashboard { color:#f3f0ff; }
+/* Anime Gym — deep plum/charcoal with ember orange highlights. */
+.app[data-dashboard-theme="anime-gym"] { --theme-border:#493449; --theme-shadow:rgba(0,0,0,.23); --theme-hero:linear-gradient(125deg,#201b2d,#2a1c35 58%,#3b252d); --theme-coach:linear-gradient(110deg,#34243f,#302039 58%,#49302c); --theme-card:rgba(31,27,44,.97); --theme-mini:rgba(38,31,49,.97); --theme-orb:rgba(255,121,67,.20); --theme-icon-bg:#412c45; }
+.app[data-dashboard-theme="anime-gym"] .topbar { background:rgba(25,23,38,.98); border-color:#493449; }
+.app[data-dashboard-theme="anime-gym"] .hero2,.app[data-dashboard-theme="anime-gym"] .stats-grid .card,.app[data-dashboard-theme="anime-gym"] .large-card,.app[data-dashboard-theme="anime-gym"] .card.weight-card { color:#fff2e9; }
+.app[data-dashboard-theme="anime-gym"] .hero2-head h2,.app[data-dashboard-theme="anime-gym"] .section-header h2,.app[data-dashboard-theme="anime-gym"] .card h3,.app[data-dashboard-theme="anime-gym"] .card strong,.app[data-dashboard-theme="anime-gym"] .large-card strong { color:#fff2e9; }
+.app[data-dashboard-theme="anime-gym"] .hero2 .date,.app[data-dashboard-theme="anime-gym"] .hero2 p,.app[data-dashboard-theme="anime-gym"] .hero2 span,.app[data-dashboard-theme="anime-gym"] .card p,.app[data-dashboard-theme="anime-gym"] .card-description,.app[data-dashboard-theme="anime-gym"] .section-header p,.app[data-dashboard-theme="anime-gym"] .meal span { color:#c9bed4; }
+.app[data-dashboard-theme="anime-gym"] .theme-picker-trigger,.app[data-dashboard-theme="anime-gym"] .topbar-progress { color:#fff2e9; background:#30243d; border-color:#493449; }
+/* Keep action illustrations compact, while making the theme differences obvious. */
+.app[data-dashboard-theme] .hero2 .coach-buddy { filter:drop-shadow(0 7px 12px rgba(89,63,150,.16)); }
+.app[data-dashboard-theme] .quick > button,.app[data-dashboard-theme] .quick .quick-water > button { min-height:66px; padding:8px 12px; }
+.app[data-dashboard-theme] .quick img,.app[data-dashboard-theme] .quick .buddy { max-height:42px; }
