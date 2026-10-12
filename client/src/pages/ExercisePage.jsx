@@ -274,7 +274,7 @@ function ExercisePage({ onBack }) {
       <div className="page-header">
 
         <div>
-          <div className="bd-head"><h1>Exercise</h1><Buddy who="zoro" scene="lift" size={76} says="Let's lift!" /></div>
+          <div className="bd-head"><h1>Exercise</h1><Buddy who="goku" scene="lift" size={76} says="Let's lift!" /></div>
 
           <p>
             Track your activities and calories burned.
@@ -566,7 +566,7 @@ function ExercisePage({ onBack }) {
 
         {logs.length === 0 ? (
 
-          <BuddyEmpty who="naruto" scene="pushup" title="No exercise yet today">
+          <BuddyEmpty scene="sad" title="No exercise yet today">
             Even 10 minutes counts. Add your first activity above and I will cheer you on!
           </BuddyEmpty>
 

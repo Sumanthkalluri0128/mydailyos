@@ -3023,3 +3023,89 @@ select {
 .onboarding-error { color: #c0392b; background: rgba(192, 57, 43, 0.1); padding: 10px 12px; border-radius: 10px; font-size: 14px; }
 .onboarding-btn { padding: 14px; border: 0; border-radius: 14px; background: #6d5dfc; color: #fff; font-size: 16px; font-weight: 700; cursor: pointer; }
 .onboarding-btn:disabled { opacity: 0.6; cursor: default; }
+
+/* ================================================================
+   FlexFit daily anime dashboard themes
+   Themes are CSS-only; existing React data, API calls and page logic
+   remain unchanged. Character art uses the project's existing male
+   anime chibi assets.
+   ================================================================ */
+.dashboard-theme-picker { position: relative; }
+.theme-picker-trigger { white-space: nowrap; }
+.theme-picker-panel {
+  position: absolute; z-index: 1000; right: 0; top: calc(100% + 12px);
+  width: min(340px, calc(100vw - 28px)); padding: 18px;
+  border: 1px solid var(--border); border-radius: 20px;
+  background: var(--surface); color: var(--text); box-shadow: 0 18px 55px rgba(34, 24, 73, .22);
+}
+.theme-picker-heading { display:flex; align-items:center; justify-content:space-between; gap:12px; font-size:16px; }
+.theme-picker-heading button { border:0; border-radius:10px; width:30px; height:30px; background:var(--surface-soft); color:var(--text); font-size:22px; }
+.theme-picker-caption { margin:6px 0 14px; color:var(--text-muted); font-size:12px; line-height:1.45; }
+.theme-picker-label { display:block; margin:12px 0 6px; color:var(--text-muted); font-size:12px; font-weight:750; }
+.theme-picker-panel select { width:100%; padding:10px 12px; border:1px solid var(--border); border-radius:11px; background:var(--surface-soft); color:var(--text); font:inherit; font-size:13px; }
+.theme-picker-current { display:flex; align-items:center; gap:10px; margin-top:12px; padding:10px; border-radius:13px; background:var(--primary-soft); }
+.theme-picker-current > span { font-size:25px; }
+.theme-picker-current strong,.theme-picker-current small { display:block; }
+.theme-picker-current small { margin-top:3px; color:var(--text-muted); font-size:11px; }
+.theme-picker-note { margin-top:12px; color:var(--text-muted); font-size:11px; line-height:1.5; }
+.theme-picker-done { width:100%; margin-top:14px; border:0; border-radius:11px; padding:10px 12px; color:#fff; background:linear-gradient(135deg,#8067ff,#e45cb8); font-weight:750; }
+
+.app[data-dashboard-theme="calm-cozy"] { background:linear-gradient(125deg,#f0eaff 0%,#fffafd 52%,#ffeaf5 100%); }
+.app[data-dashboard-theme="calm-cozy"] .welcome { background:linear-gradient(120deg,rgba(241,234,255,.96),rgba(255,246,251,.94) 56%,rgba(231,244,255,.94)); border-color:#e9ddff; }
+.app[data-dashboard-theme="scenic"] { background:linear-gradient(145deg,#e4efff 0%,#f7f5ff 45%,#fff0e9 100%); }
+.app[data-dashboard-theme="scenic"] .welcome { background:linear-gradient(115deg,#e4eaff 0%,#fff2ed 55%,#e4f7f1 100%); border-color:#d9e3ff; }
+.app[data-dashboard-theme="energetic"] { background:linear-gradient(145deg,#f2e8ff 0%,#fff1f7 48%,#fff4e4 100%); }
+.app[data-dashboard-theme="energetic"] .welcome { background:linear-gradient(120deg,#efe5ff,#ffe8f5 58%,#fff1dc); border-color:#ead8ff; }
+.app[data-dashboard-theme="minimal"] { background:linear-gradient(145deg,#f0f2ff 0%,#f9fbff 48%,#fceef7 100%); }
+.app[data-dashboard-theme="minimal"] .welcome { background:linear-gradient(120deg,#edf0ff,#ffffff 58%,#fff1f8); border-color:#e1e5fa; }
+.app[data-dashboard-theme="adventure"] { background:linear-gradient(145deg,#e2f3e9 0%,#f4f7ff 50%,#fff0dc 100%); }
+.app[data-dashboard-theme="adventure"] .welcome { background:linear-gradient(120deg,#e2f5ec,#eef1ff 58%,#fff0d9); border-color:#d8eadf; }
+.app[data-dashboard-theme="anime-gym"] { background:linear-gradient(145deg,#191b31 0%,#241a3e 50%,#3b2039 100%); }
+.app[data-dashboard-theme="anime-gym"] .topbar { background:#17192a; border-color:#38314e; }
+.app[data-dashboard-theme="anime-gym"] .welcome { background:linear-gradient(120deg,#27203f,#2c1d37 55%,#3a242f); border-color:#57406f; }
+.app[data-dashboard-theme="dark-anime"] { background:radial-gradient(ellipse at 12% 4%,#30255b 0%,transparent 40%),linear-gradient(145deg,#0d1020 0%,#17142a 55%,#24182f 100%); }
+.app[data-dashboard-theme="dark-anime"] .topbar { background:rgba(14,16,32,.97); border-color:#302b4b; }
+.app[data-dashboard-theme="dark-anime"] .welcome { background:linear-gradient(120deg,rgba(30,26,57,.98),rgba(25,26,44,.97) 55%,rgba(46,25,55,.97)); border-color:#453768; }
+.app[data-dashboard-theme="dark-anime"] .welcome p:last-child,
+.app[data-dashboard-theme="anime-gym"] .welcome p:last-child { color:#c4c8e4; }
+.app[data-dashboard-theme="dark-anime"] .card,
+.app[data-dashboard-theme="dark-anime"] .large-card,
+.app[data-dashboard-theme="anime-gym"] .card,
+.app[data-dashboard-theme="anime-gym"] .large-card { background:rgba(25,27,44,.94); border-color:#39344f; color:#f0efff; }
+.app[data-dashboard-theme="dark-anime"] .card p,
+.app[data-dashboard-theme="anime-gym"] .card p,
+.app[data-dashboard-theme="dark-anime"] .card-description,
+.app[data-dashboard-theme="anime-gym"] .card-description { color:#b8bdd4; }
+.app[data-dashboard-theme="dark-anime"] .theme-picker-trigger,
+.app[data-dashboard-theme="anime-gym"] .theme-picker-trigger { color:#f2efff; border-color:#39344f; background:#24223a; }
+.app[data-dashboard-theme="dark-anime"] .dashboard,
+.app[data-dashboard-theme="anime-gym"] .dashboard { color:#f1efff; }
+.app[data-dashboard-theme="dark-anime"] .welcome::after { background:rgba(153,110,255,.18); }
+.app[data-dashboard-theme="anime-gym"] .welcome::after { background:rgba(255,120,75,.16); }
+
+/* Keep tracking shortcuts compact across all theme collections. */
+.app .quick-actions button, .app .quick-action, .app .action-card { min-height:unset; }
+@media (max-width: 700px) {
+  .theme-picker-panel { right:-48px; }
+  .theme-picker-trigger { padding-inline:10px; }
+  .theme-picker-trigger span:last-child { display:none; }
+}
+/* Small male-anime chibi accents in the hero; deliberately subtle so text/cards stay readable. */
+.app[data-dashboard-theme="calm-cozy"] .welcome::before,
+.app[data-dashboard-theme="minimal"] .welcome::before { background-image:url('/chars/goku-cheer.webp'); }
+.app[data-dashboard-theme="scenic"] .welcome::before,
+.app[data-dashboard-theme="adventure"] .welcome::before { background-image:url('/chars/luffy-victory.webp'); }
+.app[data-dashboard-theme="energetic"] .welcome::before,
+.app[data-dashboard-theme="anime-gym"] .welcome::before { background-image:url('/chars/zoro-workout.webp'); }
+.app[data-dashboard-theme="dark-anime"] .welcome::before { background-image:url('/chars/gojo-cheer.webp'); }
+.app[data-dashboard-theme] .welcome::before {
+  content:""; position:absolute; right:14px; bottom:-8px; width:clamp(64px, 9vw, 126px); height:clamp(76px, 11vw, 148px);
+  background-repeat:no-repeat; background-size:contain; background-position:center bottom;
+  opacity:.22; pointer-events:none; z-index:0; filter:saturate(.95);
+}
+.app[data-dashboard-theme="dark-anime"] .brand-title,
+.app[data-dashboard-theme="anime-gym"] .brand-title { color:#f4f0ff; }
+.app[data-dashboard-theme="dark-anime"] .brand-subtitle,
+.app[data-dashboard-theme="anime-gym"] .brand-subtitle { color:#b9b7d3; }
+.app[data-dashboard-theme="dark-anime"] .topbar-progress,
+.app[data-dashboard-theme="anime-gym"] .topbar-progress { border-color:#3a3452; }

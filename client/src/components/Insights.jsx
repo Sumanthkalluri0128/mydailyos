@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import { apiFetch } from "../config/api";
 import { getLocalDate } from "../utils/date";
-import Buddy from "../motion/Buddy";
 
 const STREAK_LABELS = {
   water: ["💧", "Water goal"],
@@ -49,7 +48,6 @@ export default function Insights() {
               <h2>Streaks & badges</h2>
               <p>{ach.unlockedCount} of {ach.badges.length} badges unlocked</p>
             </div>
-            <Buddy who="jinwoo" scene="levelup" size={72} label="Jin-Woo on his throne" />
             <button className="secondary-button" onClick={() => setShowAll((s) => !s)}>{showAll ? "Show unlocked" : "Show all"}</button>
           </div>
           <div className="streak-row">

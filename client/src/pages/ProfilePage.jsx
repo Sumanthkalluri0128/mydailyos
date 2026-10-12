@@ -319,7 +319,7 @@ function ProfilePage({ onBack }) {
             ← Back
           </button>
 
-          <div className="bd-head"><h1>Profile & Goals</h1><Buddy who="goku" scene="wave" size={76} says="Hi there!" /></div>
+          <div className="bd-head"><h1>Profile & Goals</h1><Buddy scene="wave" size={76} says="Hi there!" /></div>
 
           <p>
             Manage your body information

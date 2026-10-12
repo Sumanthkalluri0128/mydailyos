@@ -1,14 +1,3 @@
-# v24 - 3D figure set (web)
-
-- 100 new 3D chibi figures (10 characters x 10 poses) in client/public/chars/fig/, cut from the 3D sheet with tools/cutout_figures.py. New cast: Kakashi, Tanjiro, Zenitsu, Inosuke.
-- Buddy uses the 3D figures (motion/chars.js sceneFigure). Add ?figs=off to the address to see the old sticker art.
-- Per-screen characters: Profile Goku, Exercise Zoro (empty state Naruto), Water Tanjiro, Health Inosuke (Sleep tab Gojo), Habits Zenitsu, Progress Kakashi, Badges Jin-Woo.
-- Figure lab: open the app with #figures (no sign-in) to browse all figures and pick favourites.
-- Fix: removed a stray duplicate utils/useShowMore.js (JSX in a .js file) that broke `vite build`.
-- Service-worker cache bumped to ff-shell-v3.
-
----
-
 # v23 - new icon + tidier lists (web)
 
 - New icons (favicon, apple-touch, 192, 512, maskable), PWA background colour, service-worker cache bumped so devices pick them up.

@@ -5,8 +5,8 @@ import "./characters.css";
 import { CHARS, dayChar, sprite, wallOf } from "./chars";
 import Slab from "./Slab";
 
-const IDLE = { zoro: "wave", jinwoo: "wave", naruto: "task", luffy: "task", goku: "wave", gojo: "wave", kakashi: "wave", tanjiro: "wave", zenitsu: "wave", inosuke: "wave" };
-const DANCE = { zoro: ["cheer", "wave"], jinwoo: ["cheer", "wave"], naruto: ["task", "walk"], luffy: ["task", "walk"], goku: ["cheer", "wave"], gojo: ["cheer", "wave"], kakashi: ["cheer", "wave"], tanjiro: ["cheer", "wave"], zenitsu: ["cheer", "wave"], inosuke: ["cheer", "wave"] };
+const IDLE = { zoro: "wave", jinwoo: "wave", naruto: "task", luffy: "task", goku: "wave", gojo: "wave" };
+const DANCE = { zoro: ["cheer", "wave"], jinwoo: ["cheer", "wave"], naruto: ["task", "walk"], luffy: ["task", "walk"], goku: ["cheer", "wave"], gojo: ["cheer", "wave"] };
 const WORDS = ["POW!", "BAM!", "WHAM!", "KAPOW!", "CLANG!"];
 const rnd = (a, b) => a + Math.random() * (b - a);
 const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
