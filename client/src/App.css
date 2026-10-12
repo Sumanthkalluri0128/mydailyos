@@ -3104,3 +3104,56 @@ select {
 .dashboard-theme-option .swatch-night-sky{background:linear-gradient(135deg,#090f28,#33336e,#ac8aff);}
 .dashboard-theme-option .swatch-autumn-vibes{background:linear-gradient(135deg,#fff3d2,#f3a35a,#9f492e);}
 .dashboard-theme-option .swatch-pastel-dream{background:linear-gradient(135deg,#fff,#f0cfff,#ffaed8);}
+
+
+/* Horizon Sunrise — the single selected FlexFit dashboard design. */
+.app[data-dashboard-theme] {
+  --scene-ink:#17233b;
+  --scene-card:rgba(255,255,255,.93);
+  --scene-line:rgba(115,111,165,.20);
+  --scene-accent:#ee8b54;
+  background:#fff4ee;
+  min-height:100vh;
+}
+.app[data-dashboard-theme] .dashboard::before {
+  content:"";
+  position:fixed;
+  inset:0;
+  z-index:-1;
+  pointer-events:none;
+  background:
+    linear-gradient(115deg,rgba(255,249,239,.70),rgba(255,240,230,.46) 48%,rgba(248,226,255,.43)),
+    url('/theme-backgrounds/horizon-sunrise.webp') center 42% / cover no-repeat;
+  opacity:1;
+}
+.app[data-dashboard-theme] .hero2 {
+  background:linear-gradient(110deg,rgba(255,250,244,.94),rgba(255,238,228,.82));
+  border:1px solid rgba(238,167,135,.36);
+  box-shadow:0 16px 42px rgba(116,74,74,.10);
+  color:#17233b;
+}
+.app[data-dashboard-theme] .coach {
+  background:rgba(255,255,255,.88);
+  border:1px solid rgba(239,177,157,.40);
+  backdrop-filter:blur(10px);
+}
+.app[data-dashboard-theme] .hero2-minis .mini,
+.app[data-dashboard-theme] .quick button {
+  background:rgba(255,255,255,.94);
+  border:1px solid rgba(229,218,227,.90);
+  color:#17233b;
+  box-shadow:0 8px 20px rgba(65,56,86,.08);
+}
+.app[data-dashboard-theme] .card,
+.app[data-dashboard-theme] .large-card {
+  background:rgba(255,255,255,.95);
+  color:#17233b;
+  border:1px solid rgba(230,219,231,.9);
+  box-shadow:0 12px 32px rgba(76,61,92,.08);
+  backdrop-filter:blur(12px);
+}
+.app[data-dashboard-theme] .hero2 h2,
+.app[data-dashboard-theme] .hero2 strong,
+.app[data-dashboard-theme] .card h2,
+.app[data-dashboard-theme] .card h3 {color:#17233b;}
+.dashboard-theme-control {display:none!important;}

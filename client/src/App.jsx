@@ -28,47 +28,11 @@ import { API_URL } from "./config";
 
 
 
-const DASHBOARD_THEMES = [
-  ["horizon-sunrise","🌅 Horizon Sunrise"],["ocean-breeze","🌊 Ocean Breeze"],
-  ["dark-focus","🌙 Dark Focus"],["cozy-room","☕ Cozy Room"],
-  ["forest-retreat","🌿 Forest Retreat"],["minimal-glass","💎 Minimal Glass"],
-  ["cyber-neon","⚡ Cyber Neon"],["mountain-peak","🏔️ Mountain Peak"],
-  ["city-loft","🌆 City Loft"],["night-sky","✨ Night Sky"],
-  ["autumn-vibes","🍁 Autumn Vibes"],["pastel-dream","🌸 Pastel Dream"]
-];
+const DASHBOARD_THEMES = [["horizon-sunrise","🌅 Horizon Sunrise"]];
 const DAY_MODE_KEY = "flexfit_daily_theme_mode";
 const DAY_PICK_KEY = "flexfit_daily_theme_pick";
-function getDailyDashboardTheme(){
- const d=new Date();const day=Math.floor(new Date(d.getFullYear(),d.getMonth(),d.getDate()).getTime()/86400000);
- return DASHBOARD_THEMES[((day%DASHBOARD_THEMES.length)+DASHBOARD_THEMES.length)%DASHBOARD_THEMES.length][0];
-}
 function useDashboardThemes(){
- const [mode,setMode]=useState(()=>localStorage.getItem(DAY_MODE_KEY)||"auto");
- const [selected,setSelected]=useState(()=>localStorage.getItem(DAY_PICK_KEY)||"horizon-sunrise");
- const [daily,setDaily]=useState(getDailyDashboardTheme);
- useEffect(()=>{const t=setInterval(()=>setDaily(getDailyDashboardTheme()),60000);return ()=>clearInterval(t)},[]);
- return {mode,theme:mode==="auto"?daily:selected,
-   auto:()=>{setMode("auto");localStorage.setItem(DAY_MODE_KEY,"auto")},
-   select:(v)=>{setMode("manual");setSelected(v);localStorage.setItem(DAY_MODE_KEY,"manual");localStorage.setItem(DAY_PICK_KEY,v)} };
-}
-
-const THEME_KEY = "mydailyos_theme";
-
-function getInitialTheme() {
-  try {
-    const stored = localStorage.getItem(THEME_KEY);
-    if (stored === "light" || stored === "dark") return stored;
-  } catch {
-    // localStorage can throw in some privacy modes — fall through.
-  }
-  if (
-    typeof window !== "undefined" &&
-    window.matchMedia &&
-    window.matchMedia("(prefers-color-scheme: dark)").matches
-  ) {
-    return "dark";
-  }
-  return "light";
+  return {mode:"manual",theme:"horizon-sunrise",auto:()=>{},select:()=>{}};
 }
 
 function ThemeToggle({ theme, onToggle }) {
