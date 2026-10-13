@@ -27,12 +27,23 @@ import { apiFetch } from "./config/api";
 import { API_URL } from "./config";
 
 
+const THEME_KEY = "mydailyos_theme";
 
-const DASHBOARD_THEMES = [["horizon-sunrise","🌅 Horizon Sunrise"]];
-const DAY_MODE_KEY = "flexfit_daily_theme_mode";
-const DAY_PICK_KEY = "flexfit_daily_theme_pick";
-function useDashboardThemes(){
-  return {mode:"manual",theme:"horizon-sunrise",auto:()=>{},select:()=>{}};
+function getInitialTheme() {
+  try {
+    const stored = localStorage.getItem(THEME_KEY);
+    if (stored === "light" || stored === "dark") return stored;
+  } catch {
+    // localStorage can throw in some privacy modes — fall through.
+  }
+  if (
+    typeof window !== "undefined" &&
+    window.matchMedia &&
+    window.matchMedia("(prefers-color-scheme: dark)").matches
+  ) {
+    return "dark";
+  }
+  return "light";
 }
 
 function ThemeToggle({ theme, onToggle }) {
@@ -85,8 +96,6 @@ const warmPages = () => Promise.all([
 ]).catch(() => {});
 
 function App() {
-  const dashboardThemes=useDashboardThemes();
-  const [themePickerOpen,setThemePickerOpen]=useState(false);
   useEffect(() => {
     if (typeof navigator !== "undefined" && navigator.connection?.saveData) return undefined; // respect Data Saver
     const idle = window.requestIdleCallback || ((fn) => setTimeout(fn, 1500));
@@ -390,19 +399,11 @@ function App() {
 
   if (currentPage === "foodLogger") {
     return (
-      <div className="app" data-dashboard-theme={dashboardThemes.theme}>
+      <div className="app">
 
         <header className="topbar">
           <BrandHome onHome={() => setCurrentPage("dashboard")} />
-        <div className="dashboard-theme-control">
-            <button type="button" className="topbar-progress" aria-expanded={themePickerOpen} onClick={()=>setThemePickerOpen(v=>!v)}>🎨 Themes</button>
-            {themePickerOpen && <div className="dashboard-theme-popover" role="dialog" aria-label="Dashboard themes">
-              <strong>Choose your dashboard</strong>
-              <button type="button" className="dashboard-theme-auto" onClick={()=>{dashboardThemes.auto();setThemePickerOpen(false)}}>🔄 Rotate automatically every day {dashboardThemes.mode==="auto"?"✓":""}</button>
-              <div className="dashboard-theme-options">{DASHBOARD_THEMES.map(([id,label])=><button type="button" key={id} className={"dashboard-theme-option "+(dashboardThemes.theme===id?"is-active":"")} onClick={()=>{dashboardThemes.select(id);setThemePickerOpen(false)}}><span className={"dashboard-theme-swatch swatch-"+id} aria-hidden="true"></span><span>{label}</span></button>)}</div>
-            </div>}
-          </div>
-          <ThemeToggle theme={theme} onToggle={toggleTheme} />
+        <ThemeToggle theme={theme} onToggle={toggleTheme} />
         </header>
 
         <main key={currentPage} className="dashboard fx-page">
@@ -427,7 +428,7 @@ function App() {
 
   if (currentPage === "health") {
     return (
-      <div className="app" data-dashboard-theme={dashboardThemes.theme}>
+      <div className="app">
         <header className="topbar">
           <BrandHome onHome={() => setCurrentPage("dashboard")} />
           <ThemeToggle theme={theme} onToggle={toggleTheme} />
@@ -443,7 +444,7 @@ function App() {
 
   if (currentPage === "exercise") {
     return (
-      <div className="app" data-dashboard-theme={dashboardThemes.theme}>
+      <div className="app">
 
         <header className="topbar">
           <BrandHome onHome={() => setCurrentPage("dashboard")} />
@@ -470,7 +471,7 @@ function App() {
 
   if (currentPage === "task") {
     return (
-      <div className="app" data-dashboard-theme={dashboardThemes.theme}>
+      <div className="app">
 
         <header className="topbar">
           <BrandHome onHome={() => setCurrentPage("dashboard")} />
@@ -497,7 +498,7 @@ function App() {
 
   if (currentPage === "habit") {
     return (
-      <div className="app" data-dashboard-theme={dashboardThemes.theme}>
+      <div className="app">
 
         <header className="topbar">
           <BrandHome onHome={() => setCurrentPage("dashboard")} />
@@ -524,7 +525,7 @@ function App() {
 
   if (currentPage === "water") {
     return (
-      <div className="app" data-dashboard-theme={dashboardThemes.theme}>
+      <div className="app">
 
         <header className="topbar">
           <BrandHome onHome={() => setCurrentPage("dashboard")} />
@@ -551,7 +552,7 @@ function App() {
 
   if (currentPage === "weight") {
     return (
-      <div className="app" data-dashboard-theme={dashboardThemes.theme}>
+      <div className="app">
 
         <header className="topbar">
           <BrandHome onHome={() => setCurrentPage("dashboard")} />
@@ -578,7 +579,7 @@ function App() {
 
   if (currentPage === "profile") {
     return (
-      <div className="app" data-dashboard-theme={dashboardThemes.theme}>
+      <div className="app">
 
         <header className="topbar">
           <BrandHome onHome={() => setCurrentPage("dashboard")} />
@@ -605,7 +606,7 @@ function App() {
 
   if (currentPage === "progress") {
     return (
-      <div className="app" data-dashboard-theme={dashboardThemes.theme}>
+      <div className="app">
         <header className="topbar">
           <BrandHome onHome={() => setCurrentPage("dashboard")} />
         <ThemeToggle theme={theme} onToggle={toggleTheme} />
@@ -621,7 +622,7 @@ function App() {
 
   if (currentPage === "planner" || currentPage === "recipes") {
     return (
-      <div className="app" data-dashboard-theme={dashboardThemes.theme}>
+      <div className="app">
         <header className="topbar">
           <BrandHome onHome={() => setCurrentPage("dashboard")} />
           <ThemeToggle theme={theme} onToggle={toggleTheme} />
@@ -643,7 +644,7 @@ function App() {
 
   if (currentPage === "food") {
     return (
-      <div className="app" data-dashboard-theme={dashboardThemes.theme}>
+      <div className="app">
 
         <header className="topbar">
 
@@ -772,7 +773,7 @@ function App() {
   // ============================================================
 
   return (
-    <div className="app" data-dashboard-theme={dashboardThemes.theme}>
+    <div className="app">
 
       {/* ====================================================== */}
       {/* TOP BAR */}
