@@ -11,6 +11,7 @@ const HealthPage = lazy(() => import("./pages/HealthPage"));
 const WeightPage = lazy(() => import("./pages/WeightPage"));
 const ProfilePage = lazy(() => import("./pages/ProfilePage"));
 const ProgressPage = lazy(() => import("./pages/ProgressPage"));
+const GoalsPage = lazy(() => import("./pages/GoalsPage"));
 const PlannerPage = lazy(() => import("./pages/PlannerPage"));
 const RecipesPage = lazy(() => import("./pages/RecipesPage"));
 import OnboardingPage from "./pages/OnboardingPage";
@@ -18,6 +19,7 @@ import CalorieBalance from "./components/CalorieBalance";
 import { waterTargetMl } from "./utils/energy";
 import { currentOwner } from "./utils/cacheOwner";
 import DashboardHero from "./components/DashboardHero";
+import JourneyCard from "./components/JourneyCard";
 import { PageSkeleton } from "./motion/PageTransition";
 import { withTransition } from "./motion/motion";
 import MacroCard from "./components/MacroCard";
@@ -604,6 +606,22 @@ function App() {
   // PROGRESS PAGE
   // ============================================================
 
+  if (currentPage === "goals") {
+    return (
+      <div className="app">
+        <header className="topbar">
+          <BrandHome onHome={() => setCurrentPage("dashboard")} />
+        <ThemeToggle theme={theme} onToggle={toggleTheme} />
+        </header>
+        <main key={currentPage} className="dashboard fx-page">
+          <Suspense fallback={<PageSkeleton variant="list" />}>
+          <GoalsPage onBack={() => setCurrentPage("dashboard")} />
+        </Suspense>
+        </main>
+      </div>
+    );
+  }
+
   if (currentPage === "progress") {
     return (
       <div className="app">
@@ -796,6 +814,15 @@ function App() {
           </button>
 
           <button
+            className={`topbar-progress ${currentPage === "goals" ? "active" : ""}`}
+            onClick={() => setCurrentPage("goals")}
+            aria-label="Open Goals and Journey"
+          >
+            <span>🏆</span>
+            <span>Goals</span>
+          </button>
+
+          <button
             className={`topbar-progress ${currentPage === "progress" ? "active" : ""}`}
             onClick={() => setCurrentPage("progress")}
             aria-label="Open Progress and History"
@@ -835,6 +862,7 @@ function App() {
           onChanged={() => setSyncTick((t) => t + 1)}
           streak={streak}
         />
+        <JourneyCard onOpen={() => setCurrentPage("goals")} syncTick={syncTick} />
 
         <section className="stats-grid two">
 

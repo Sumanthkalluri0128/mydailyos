@@ -506,7 +506,7 @@ test('account deletion removes everything the person owns (and only theirs)', { 
   const User = require('../models/User');
   const alice = await User.findOne({ email: 'alice@test.dev' });
   assert.equal(alice, null);
-  for (const name of ['FoodLog', 'WaterLog', 'WeightLog', 'Task', 'Habit', 'HabitLog', 'ActivityLog', 'WorkoutTemplate', 'Profile']) {
+  for (const name of ['FoodLog', 'WaterLog', 'WeightLog', 'Task', 'Habit', 'HabitLog', 'ActivityLog', 'WorkoutTemplate', 'Profile', 'Goal']) {
     const M = require(`../models/${name}`);
     const rows = await M.find({}).lean();
     assert.ok(rows.every((r) => String(r.userId) !== String(ctx.aliceId || '')), name);
@@ -515,4 +515,32 @@ test('account deletion removes everything the person owns (and only theirs)', { 
   assert.equal((await call('GET', '/api/profile', { token: ctx.alice })).status, 200, 'token still verifies, but data is gone');
   const bobFoods = await call('GET', '/api/foods', { token: ctx.bob });
   assert.equal(bobFoods.status, 200);
+});
+
+test('goals: create, validate, progress from logs, patch, delete, isolation', { skip }, async () => {
+  const a = await call('POST', '/api/auth/signup', { body: { name: 'Gina', email: 'gina@test.dev', password: 'password123' } });
+  const b = await call('POST', '/api/auth/signup', { body: { name: 'Gus', email: 'gus@test.dev', password: 'password123' } });
+  assert.equal((await call('POST', '/api/goals', { token: a.token, body: { title: '', metric: 'workouts', target: 5 } })).status, 400);
+  assert.equal((await call('POST', '/api/goals', { token: a.token, body: { title: 'Bad', metric: 'workouts', target: 5, startDate: plus(0), deadline: plus(-3) } })).status, 400);
+  const g = await call('POST', '/api/goals', { token: a.token, body: { title: 'Work out 3 times', kind: 'short', metric: 'workouts', target: 3, startDate: plus(-1), deadline: plus(20), today: today() } });
+  assert.equal(g.status, 201);
+  const j = await call('GET', `/api/goals/journey?today=${today()}`, { token: a.token });
+  assert.equal(j.status, 200);
+  assert.equal(j.goals.length, 1);
+  assert.equal(j.goals[0].progress.pct, 0);
+  assert.ok(j.level.level >= 1);
+  const p = await call('PATCH', `/api/goals/${g.goal._id}`, { token: a.token, body: { done: true, today: today() } });
+  assert.equal(p.goal.done, true);
+  assert.equal((await call('PATCH', `/api/goals/${g.goal._id}`, { token: b.token, body: { done: false } })).status, 404, 'someone else cannot edit it');
+  assert.equal((await call('GET', '/api/goals', { token: b.token })).goals.length, 0);
+  assert.equal((await call('DELETE', `/api/goals/${g.goal._id}`, { token: a.token })).status, 200);
+});
+
+test('food search: any word order, typos and partial words', { skip }, async () => {
+  const c = await call('POST', '/api/auth/signup', { body: { name: 'Sam', email: 'sam@test.dev', password: 'password123' } });
+  const made = await call('POST', '/api/foods', { token: c.token, body: { name: 'Masala Dosa', servingSize: 1, servingUnit: 'piece', calories: 330, protein: 6, carbohydrates: 50, fat: 10 } });
+  assert.equal(made.status, 201);
+  const names = async (q) => (await call('GET', `/api/foods?search=${encodeURIComponent(q)}`, { token: c.token })).foods.map((f) => f.name);
+  assert.ok((await names('dosa masala')).includes('Masala Dosa'));
+  assert.ok((await names('masla dos')).includes('Masala Dosa'));
 });

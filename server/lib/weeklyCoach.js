@@ -4,7 +4,7 @@ const { addDays, weekday } = require('./dates');
 const { swapFor } = require('./swaps');
 const { adaptiveMaintenance } = require('./adaptiveTdee');
 
-const WHO = ['gojo', 'goku', 'zoro', 'naruto', 'luffy', 'jinwoo'];
+const WHO = ['gojo', 'goku', 'zoro', 'naruto', 'luffy', 'jinwoo', 'vegeta', 'bakugo', 'kakashi', 'asta', 'killua', 'zenitsu', 'tanjiro']; // one per week, in turn
 const avg = (a) => (a.length ? a.reduce((s, x) => s + x, 0) / a.length : 0);
 const r = (n) => Math.round(n);
 const mondayOf = (d) => addDays(d, -((weekday(d) + 6) % 7));

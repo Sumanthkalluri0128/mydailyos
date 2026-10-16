@@ -15,7 +15,7 @@ export default function FoodPicker({ onPick, onCancel, actionLabel = "Add", init
       const id = ++seq.current; // ignore answers that arrive after a newer search
       apiFetch(`/api/foods?search=${encodeURIComponent(q.trim())}&limit=12`)
         .then((r) => r.json()).then((d) => d.success && id === seq.current && setResults(d.foods)).catch(() => {});
-    }, 250);
+    }, 110);
     return () => clearTimeout(t);
   }, [q]);
 

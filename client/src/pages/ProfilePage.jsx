@@ -4,6 +4,7 @@ import { apiFetch } from "../config/api";
 import { useEffect, useState } from "react";
 import { API_URL } from "../config";
 import DataControls from "../components/DataControls";
+import CharacterSettings from "../components/CharacterSettings";
 import ReportControls from "../components/ReportControls";
 import { expectedEnergy } from "../utils/energy";
 
@@ -717,6 +718,7 @@ function ProfilePage({ onBack }) {
       </form>
 
       {/* Export your data, change password, log out, delete account */}
+      <CharacterSettings />
       <ReportControls />
       <DataControls />
 

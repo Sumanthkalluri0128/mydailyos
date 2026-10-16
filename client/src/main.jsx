@@ -9,10 +9,12 @@ import ServerWakeBanner from "./components/ServerWakeBanner";
 import "./index.css";
 import "./styles/redesign.css"; // refines App.css without replacing it
 import "./motion/motion.css"; // older animation kit (mostly switched off, see buddy.css)
-import "./motion/buddy.css"; // Flex the mascot, tap marker, calm mode: last so it wins
+import "./motion/stickers.css";
+import "./motion/base.css"; // speech bubble, tap marker, calm mode: last so it wins
 import "./motion/fun.css"; // animated backdrop + lively UI motion
 import "./styles/polish.css"; // logging/profile layout tidy-up
 import FunBackdrop from "./motion/FunBackdrop";
+import Companions from "./motion/Companions";
 import { installTapMarker } from "./motion/tapMarker";
 
 installTapMarker();
@@ -37,6 +39,7 @@ ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>
     <FunBackdrop />
     <ToastHost />
+    <Companions />
     <ConfirmHost />
     <ServerWakeBanner />
     <OfflineBanner />

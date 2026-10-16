@@ -194,3 +194,10 @@ Tests: `cd server && npm test`.
 
 ---
 
+
+## v23 — new cast, forgiving food search, goals & journey
+- **Characters:** the old six are gone. 13 sticker-sheet characters (Asta, Luffy, Naruto, Jin-Woo, Goku, Kakashi, Zoro, Gojo, Tanjiro, Killua, Vegeta, Zenitsu, Bakugo), cut out with their white outlines (`client/public/stickers`).
+  Buddy now hops/squashes and talks when tapped; two roaming companions (`motion/Companions.jsx`) walk, nap at night, react to what you log, can be dragged and thrown, double-tap for confetti, and answer chat chips from your real data (`motion/talk.js`, `motion/ctxStore.js`). Switch them off in Profile → Characters.
+- **Food search:** `server/lib/foodSearch.js` — any word order, partial words, plurals, typos, abbreviations (`chkn`), regional names; all-word matches first, partial matches after. Debounce 250 → 110 ms.
+- **Goals & journey:** `server/lib/journey.js`, `models/Goal.js`, `routes/goalRoutes.js` (`/api/goals`, `/api/goals/journey`). XP + levels, daily quests, weekly missions, weight journey checkpoints, streak milestones, your own short/long-term goals with pace status. Web: Goals page + dashboard card.
+- **Accuracy:** new tests — journey maths (9), food search (7), catalogue audit (calories vs macros, sane numbers, unique names). Goal data is included in account export/delete. Weekly rival roster now has all 13 characters.

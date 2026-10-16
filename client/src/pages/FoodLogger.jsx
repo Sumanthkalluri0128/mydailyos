@@ -124,7 +124,7 @@ function FoodLogger({ date, onBack, goTo }) {
       } finally {
         if (id === searchSeq.current) setLoadingFoods(false);
       }
-    }, 250);
+    }, 110);
     return () => clearTimeout(t);
   }, [search, selectedFood]);
 

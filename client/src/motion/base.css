@@ -1,0 +1,38 @@
+/* Layout glue for the characters (speech bubble, empty state, toasts), the tap marker and Calm mode. */
+/* speech bubble + empty state */
+.bd-row{display:inline-flex;align-items:center;gap:8px}
+.bd-says{position:relative;padding:8px 12px;border-radius:14px;background:var(--surface,#fff);border:1px solid var(--border,#e5e7ef);color:var(--text,#1f2340);font-size:14px;font-weight:600;line-height:1.3;box-shadow:0 4px 14px rgba(31,35,61,.08)}
+.bd-says::before{content:"";position:absolute;left:-6px;top:50%;width:10px;height:10px;background:inherit;border-left:1px solid var(--border,#e5e7ef);border-bottom:1px solid var(--border,#e5e7ef);transform:translateY(-50%) rotate(45deg)}
+.bd-empty{display:grid;justify-items:center;gap:4px;padding:18px 12px;text-align:center}
+.bd-empty h3{margin:6px 0 0}.bd-empty p{margin:0;color:var(--text-muted,#6b7280)}
+.bd-head{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.coach span.coach-buddy{flex:none;display:grid;place-items:center;width:66px;height:66px;margin:-4px 0}
+.quick .bd{margin-bottom:2px}
+.toast{grid-template-columns:46px 1fr 28px}
+.toast .bd{margin:0}
+
+/* tap marker: shows exactly where you pressed */
+.ff-tap{position:fixed;z-index:100000;width:0;height:0;pointer-events:none}
+.ff-tap i{position:absolute;left:-7px;top:-7px;width:14px;height:14px;border-radius:50%;background:rgba(104,71,232,.9);animation:ffDot .5s ease-out forwards}
+.ff-tap b{position:absolute;left:-28px;top:-28px;width:56px;height:56px;border-radius:50%;border:3px solid rgba(104,71,232,.65);animation:ffRing .65s ease-out forwards}
+@keyframes ffDot{0%{transform:scale(.4);opacity:1}60%{opacity:1}100%{transform:scale(1.1);opacity:0}}
+@keyframes ffRing{0%{transform:scale(.3);opacity:1}100%{transform:scale(1.2);opacity:0}}
+
+@media (prefers-reduced-motion:reduce){
+  .ff-tap b{animation:none;opacity:0}
+}
+
+/* Calm mode (default): switch off the older decorative effects. Fun motion is now the default; localStorage ff_calm_motion=1 switches it off. */
+html.ff-calm .fx-page,html.ff-calm .fx-reveal,html.ff-calm .fx-skel::after,
+html.ff-calm .ring.is-pop svg,html.ff-calm .ring.is-pop::after,html.ff-calm .fxr.is-pop svg,html.ff-calm .fxr.is-pop::after,
+html.ff-calm .flame-body,html.ff-calm .flame-inner,html.ff-calm .flame-glow,html.ff-calm .flame-spark,html.ff-calm .flame-burst,
+html.ff-calm .fx-roll,html.ff-calm .fx-pulse,html.ff-calm .goal-rings.is-all-closed,html.ff-calm .fx-btn[data-s="done"]{animation:none!important}
+html.ff-calm .fx-ripple{display:none}
+html.ff-calm .ring-fill,html.ff-calm .fxr-fill{transition:none}
+html.ff-calm .quick button,html.ff-calm .mini,html.ff-calm .ring-btn,html.ff-calm .streak-chip,
+html.ff-calm .primary-button,html.ff-calm .secondary-button,html.ff-calm .profile-avatar{transition:background-color 160ms,border-color 160ms,opacity 160ms}
+html.ff-calm .quick button:active,html.ff-calm .mini:active,html.ff-calm .ring-btn:active,html.ff-calm .streak-chip:active,
+html.ff-calm .primary-button:active,html.ff-calm .secondary-button:active,html.ff-calm .profile-avatar:active{transform:none}
+html.ff-calm::view-transition-old(root),html.ff-calm::view-transition-new(root){animation:none}
+
+

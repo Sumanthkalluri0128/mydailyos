@@ -1,0 +1,51 @@
+/* Sticker characters: the in-page Buddy, the fight/dance stage and the roaming companions. */
+.bd{display:inline-flex;flex:none;line-height:0;position:relative;cursor:pointer;-webkit-tap-highlight-color:transparent;user-select:none}
+.bd-img{display:block;width:100%;height:100%;object-fit:contain;filter:drop-shadow(0 3px 5px rgba(20,16,50,.28));transform-origin:50% 92%;pointer-events:none;-webkit-user-drag:none}
+.bdi-body{display:inline-flex;width:100%;height:100%;transform-origin:50% 92%;animation:var(--bn,bdBob) var(--bt,1.6s) ease-in-out infinite}
+@keyframes bdBob{0%,100%{transform:translateY(0) scale(1,1)}50%{transform:translateY(-4px) scale(.98,1.03)}}
+@keyframes bdPush{0%,100%{transform:translateY(0) scale(1.02,.98)}50%{transform:translateY(-3px) scale(.98,1.03)}}
+@keyframes bdSlump{0%,100%{transform:translateY(3px) scaleY(.97) rotate(-1.5deg)}50%{transform:translateY(5px) scaleY(.95) rotate(1.5deg)}}
+@keyframes bdWobble{0%,100%{transform:rotate(-4deg)}50%{transform:rotate(4deg)}}
+@keyframes bdBounce{0%,100%{transform:translateY(0) scale(1.05,.95)}50%{transform:translateY(-9px) scale(.96,1.05)}}
+@keyframes bdNod{0%,100%{transform:translateY(0) rotate(0)}50%{transform:translateY(2px) rotate(2deg)}}
+@keyframes bdBeat{0%,100%{transform:scale(1)}50%{transform:scale(1.06)}}
+@keyframes bdJump{0%,100%{transform:translateY(0) scale(1.06,.94)}50%{transform:translateY(-14px) scale(.95,1.06)}}
+.bd.is-hop .bdi-body{animation:bdHop .62s cubic-bezier(.3,1.6,.5,1) 1}
+@keyframes bdHop{0%{transform:translateY(0) scale(1.12,.86)}35%{transform:translateY(-26px) rotate(-6deg) scale(.92,1.1)}65%{transform:translateY(-4px) rotate(5deg) scale(1.04,.96)}100%{transform:translateY(0) scale(1,1)}}
+.bd:hover .bd-img{filter:drop-shadow(0 5px 9px rgba(20,16,50,.34)) brightness(1.04)}
+.bd-bubble{position:absolute;left:50%;bottom:calc(100% + 4px);transform:translateX(-50%) scale(.9);transform-origin:50% 100%;z-index:5;min-width:120px;max-width:min(240px,70vw);padding:8px 11px;border-radius:14px;background:#fff;color:#1f2340;font:600 12.5px/1.35 system-ui,sans-serif;box-shadow:0 6px 20px rgba(20,16,50,.25);opacity:0;pointer-events:none;animation:bdPop .22s ease-out forwards;text-align:left;white-space:normal}
+.bd-bubble:after{content:"";position:absolute;left:50%;top:100%;margin-left:-6px;border:6px solid transparent;border-top-color:#fff}
+@keyframes bdPop{to{opacity:1;transform:translateX(-50%) scale(1)}}
+.bd-sparkle{position:absolute;pointer-events:none;font-size:14px;animation:bdSpark .9s ease-out forwards}
+@keyframes bdSpark{from{opacity:1;transform:translate(0,0) scale(.6)}to{opacity:0;transform:translate(var(--dx),var(--dy)) scale(1.2)}}
+
+/* ---- stage ---- */
+.bs{position:relative;display:flex;justify-content:center;align-items:flex-end;gap:14px;height:var(--bsh,150px);cursor:pointer;overflow:visible}
+.bs-c{position:relative;display:inline-flex;transition:transform .32s cubic-bezier(.3,1.4,.5,1);transform:translateX(var(--bx,0)) scaleX(var(--bf,1))}
+.bs-c img{display:block;object-fit:contain;filter:drop-shadow(0 3px 5px rgba(20,16,50,.28));-webkit-user-drag:none}
+.bs-c.is-shake{animation:bsShake .18s linear 3}
+@keyframes bsShake{25%{translate:-4px 0}75%{translate:4px 0}}
+.bs-word{position:absolute;left:50%;top:6px;transform:translateX(-50%) rotate(-6deg);font:900 24px system-ui;color:#ffcb2b;-webkit-text-stroke:1.5px #7a1d1d;text-shadow:2px 2px 0 #7a1d1d;animation:bsWord .5s ease-out both;pointer-events:none}
+@keyframes bsWord{from{opacity:0;transform:translateX(-50%) scale(.4) rotate(-6deg)}60%{opacity:1;transform:translateX(-50%) scale(1.25) rotate(-6deg)}to{opacity:1;transform:translateX(-50%) scale(1) rotate(-6deg)}}
+
+/* ---- roaming companions ---- */
+.cp-layer{position:fixed;inset:0;pointer-events:none;z-index:60;overflow:hidden}
+.cp{position:absolute;left:0;top:0;pointer-events:auto;touch-action:none;cursor:grab;will-change:transform;-webkit-tap-highlight-color:transparent;user-select:none}
+.cp.is-drag{cursor:grabbing}
+.cp img{display:block;width:100%;height:100%;object-fit:contain;filter:drop-shadow(0 4px 6px rgba(20,16,50,.32));-webkit-user-drag:none;pointer-events:none}
+.cp-shadow{position:absolute;left:12%;right:12%;bottom:-3px;height:8px;border-radius:50%;background:rgba(0,0,0,.2);filter:blur(2px)}
+.cp-bubble{position:absolute;bottom:calc(100% + 8px);left:50%;width:max-content;max-width:min(250px,72vw);padding:9px 12px;border-radius:15px;background:#fff;color:#1f2340;font:600 12.5px/1.38 system-ui,sans-serif;box-shadow:0 8px 24px rgba(20,16,50,.3);transform:translateX(var(--bubx,-50%));animation:cpIn .22s cubic-bezier(.3,1.5,.5,1) both;pointer-events:auto;cursor:default;z-index:2}
+.cp-bubble b{display:block;font-size:11px;letter-spacing:.03em;text-transform:uppercase;opacity:.55;margin-bottom:2px}
+.cp-bubble:after{content:"";position:absolute;top:100%;left:var(--tail,50%);margin-left:-6px;border:6px solid transparent;border-top-color:#fff}
+@keyframes cpIn{from{opacity:0;margin-bottom:-8px}to{opacity:1;margin-bottom:0}}
+.cp-chips{display:flex;flex-wrap:wrap;gap:5px;margin-top:7px}
+.cp-chips button{border:0;border-radius:999px;padding:4px 9px;font:600 11px system-ui;background:#ece8ff;color:#4a35c9;cursor:pointer}
+.cp-chips button:active{transform:scale(.94)}
+.cp-zzz{position:absolute;right:-4px;top:-8px;font:800 14px system-ui;color:#6a7bff;animation:cpZ 2s ease-in-out infinite}
+@keyframes cpZ{0%{opacity:0;transform:translate(0,6px) scale(.7)}40%{opacity:1}100%{opacity:0;transform:translate(8px,-14px) scale(1.2)}}
+.cp-off .cp-layer{display:none}
+html.ff-calm .bdi-body{animation:none}
+@media (prefers-reduced-motion:reduce){.bdi-body{animation:none}.bd.is-hop .bdi-body{animation:none}}
+[data-theme="dark"] .bd-bubble,[data-theme="dark"] .cp-bubble{background:#2b2f55;color:#f2f3ff}
+[data-theme="dark"] .bd-bubble:after,[data-theme="dark"] .cp-bubble:after{border-top-color:#2b2f55}
+:root{--cp-floor:76px}

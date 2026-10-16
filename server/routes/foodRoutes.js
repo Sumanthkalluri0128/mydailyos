@@ -11,6 +11,7 @@ const { parseMealText } = require('../lib/foodParse');
 const { catalogueFoods } = require('../lib/foodCache');
 const { suggestFoods } = require('../lib/suggest');
 const { expandWord, englishify } = require('../lib/foodAliases');
+const { searchFoods, tokens } = require('../lib/foodSearch');
 const { dailyTarget, expectedEnergy, macroTargets } = require('../lib/energy');
 
 const router = express.Router();
@@ -72,34 +73,34 @@ function parseFood(body = {}) {
 // foods that start with what you typed, then ones with a word that starts with it, then my own and favourite foods.
 router.get('/', wrap(async (req, res) => {
   const uid = req.user.id;
-  const and = [visibleTo(uid), { hidden: { $ne: true } }];
-  const raw = String(req.query.search || '').trim().slice(0, 60).toLowerCase();
-  const words = raw.split(/\s+/).filter(Boolean).slice(0, 5);
-  for (const w of words) {
-    // "annam", "perugu", "kodi"... also match rice, curd, chicken (see lib/foodAliases.js)
-    const rx = new RegExp(expandWord(w).map(v.escapeRegex).join('|'), 'i');
-    and.push({ $or: [{ name: rx }, { brand: rx }] });
-  }
-  if (req.query.mine === 'true') and.push({ userId: uid });
-  if (req.query.favorites === 'true') and.push({ $or: [{ favoriteBy: uid }, { userId: uid, isFavorite: true }] });
+  const raw = String(req.query.search || '').trim().slice(0, 80);
   const limit = Math.min(Math.max(parseInt(req.query.limit, 10) || 500, 1), 1000);
+  const mineOnly = req.query.mine === 'true';
+  const favOnly = req.query.favorites === 'true';
 
-  // With a search, pull a wider candidate set and rank it; without one, keep the simple A–Z order.
-  const found = await Food.find({ $and: and }).select('+favoriteBy').sort({ name: 1 }).limit(words.length ? Math.max(limit, 300) : limit).lean();
-  let foods = found.map((f) => present(f, uid));
-  if (words.length) {
-    const score = (f) => {
-      const n = String(f.name).toLowerCase();
-      let s = 0;
-      if (n === raw) s += 100;
-      else if (n.startsWith(raw)) s += 60;
-      else if (n.split(/[^a-z0-9]+/).some((t) => t.startsWith(words[0]))) s += 30;
-      if (f.isCustom) s += 6;
-      if (f.isFavorite) s += 8;
-      return s - Math.min(n.length, 60) / 100; // shorter, simpler names win ties
-    };
-    foods = foods.map((f) => ({ f, s: score(f) })).sort((a, b) => b.s - a.s).map((x) => x.f).slice(0, limit);
+  if (!tokens(raw).length) {
+    // No search words: plain A–Z list (optionally only mine / favourites).
+    const and = [visibleTo(uid), { hidden: { $ne: true } }];
+    if (mineOnly) and.push({ userId: uid });
+    if (favOnly) and.push({ $or: [{ favoriteBy: uid }, { userId: uid, isFavorite: true }] });
+    const found = await Food.find({ $and: and }).select('+favoriteBy').sort({ name: 1 }).limit(limit).lean();
+    return res.json({ success: true, foods: found.map((f) => present(f, uid)) });
   }
+
+  // With search words, rank in memory: the shared catalogue is cached, my own foods are read fresh. Matching is forgiving
+  // (any word order, partial words, plurals, typos, abbreviations, regional names) — see lib/foodSearch.js.
+  const [shared, mine, favDocs] = await Promise.all([
+    mineOnly ? [] : catalogueFoods(Food),
+    Food.find({ userId: uid, hidden: { $ne: true } }).select('+favoriteBy').limit(2000).lean(),
+    Food.find({ favoriteBy: uid }).select('_id').lean(),
+  ]);
+  const favIds = new Set(favDocs.map((d) => String(d._id)));
+  const pool = [...mine, ...shared.filter((f) => !f.hidden)].map((f) => {
+    const p = present(f, uid);
+    if (favIds.has(String(p._id))) p.isFavorite = true;
+    return p;
+  }).filter((f) => !favOnly || f.isFavorite);
+  const foods = searchFoods(pool, raw, { limit, extra: (f) => (f.isCustom ? 6 : 0) + (f.isFavorite ? 8 : 0) });
   res.json({ success: true, foods });
 }));
 
