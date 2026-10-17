@@ -10,9 +10,14 @@ const Profile = require('../models/Profile');
 const { parseMealText } = require('../lib/foodParse');
 const { catalogueFoods } = require('../lib/foodCache');
 const { suggestFoods } = require('../lib/suggest');
+const { buildMeals, lightOptions, makeItFit, macroCaps } = require('../lib/mealBuilder');
+const { previewFit } = require('../lib/fitCheck');
+const { weekUsage } = require('../lib/fatLossScore');
+const { buildHistory, getDayDetails } = require('../lib/progress');
+const { addDays } = require('../lib/dates');
 const { expandWord, englishify } = require('../lib/foodAliases');
 const { searchFoods, tokens } = require('../lib/foodSearch');
-const { dailyTarget, expectedEnergy, macroTargets } = require('../lib/energy');
+const { dailyTarget, expectedEnergy, macroTargets, macroRanges, dayBalance } = require('../lib/energy');
 
 const router = express.Router();
 router.use(requireAuth);
@@ -145,19 +150,23 @@ router.post('/parse', wrap(async (req, res) => {
   res.json({ success: true, ...parseMealText(englishify(text), [...mine, ...shared]) });
 }));
 
-// GET /api/foods/suggest?date=YYYY-MM-DD&mealType=lunch — foods that fit what's left today (calories, protein, fibre).
+// GET /api/foods/suggest?date=YYYY-MM-DD&mealType=lunch — what fits what's left today.
+//   mode 'meal'  (250+ kcal left)   whole plates (roti + dal + sabzi) that fit kcal AND protein, plus single foods, with carb / fat caps
+//   mode 'light' (40–250 kcal left) single foods that fit, plus near-zero-calorie options
+//   mode 'over'  (under 40 left)    near-zero options and "make it fit" swaps of what is already logged — exactly when help is needed most
 router.get('/suggest', wrap(async (req, res) => {
   const uid = req.user.id;
   const date = v.date(req.query.date, 'date');
   const [profile, logs, recentLogs] = await Promise.all([
     Profile.findOne({ userId: uid }).lean(),
-    FoodLog.find({ userId: uid, date }).select('nutritionTotal').lean(),
+    FoodLog.find({ userId: uid, date }).select('foodName mealType nutritionTotal').lean(),
     FoodLog.find({ userId: uid }).sort({ createdAt: -1 }).limit(120).select('foodId').lean(),
   ]);
-  const eaten = logs.reduce((a, l) => { const n = l.nutritionTotal || {}; a.calories += n.calories || 0; a.protein += n.protein || 0; a.fiber += n.fiber || 0; return a; }, { calories: 0, protein: 0, fiber: 0 });
+  const eaten = logs.reduce((a, l) => { const n = l.nutritionTotal || {}; for (const k of ['calories', 'protein', 'fiber', 'carbohydrates', 'fat']) a[k] += n[k] || 0; return a; }, { calories: 0, protein: 0, fiber: 0, carbohydrates: 0, fat: 0 });
   const target = dailyTarget(profile);
   const e = expectedEnergy(profile);
   const macros = macroTargets(target, profile?.currentWeightKg, e?.direction, profile?.goals?.proteinTarget);
+  const ranges = macroRanges(target, profile?.currentWeightKg, e?.direction, profile?.goals?.proteinTarget);
   const remaining = { calories: target - eaten.calories, protein: macros.protein - eaten.protein, fiber: macros.fiber - eaten.fiber };
   const [shared, mine, favs] = await Promise.all([
     catalogueFoods(Food),
@@ -166,15 +175,45 @@ router.get('/suggest', wrap(async (req, res) => {
   ]);
   const foods = [...mine, ...shared];
   const mealType = ['breakfast', 'lunch', 'dinner', 'snacks'].includes(req.query.mealType) ? req.query.mealType : undefined;
-  const picks = suggestFoods(foods, remaining, {
-    mealType,
-    recentIds: new Set(recentLogs.map((l) => String(l.foodId))),
-    favoriteIds: new Set(favs.map((f) => String(f._id))),
-  });
+  const recentIds = new Set(recentLogs.map((l) => String(l.foodId)));
+  const mode = remaining.calories < 40 ? 'over' : remaining.calories < 250 ? 'light' : 'meal';
+  const caps = macroCaps({ ranges, eaten });
+  const picks = suggestFoods(foods, remaining, { mealType, recentIds, favoriteIds: new Set(favs.map((f) => String(f._id))) });
+  const meals = mode === 'meal' ? buildMeals(foods, remaining, { caps, recentIds, mealType, limit: 3 }) : [];
+  const light = mode === 'meal' ? [] : lightOptions(foods, { recentIds });
+  const fit = mode === 'over' || mode === 'light' ? makeItFit(logs, Math.max(0, -remaining.calories)) : [];
   res.json({
-    success: true, remaining: { calories: Math.round(remaining.calories), protein: Math.round(remaining.protein), fiber: Math.round(remaining.fiber) },
+    success: true, mode,
+    remaining: { calories: Math.round(remaining.calories), protein: Math.round(remaining.protein), fiber: Math.round(remaining.fiber) },
+    caps,
     suggestions: picks.map((p) => ({ food: present(p.food, uid), reason: p.reason })),
+    meals: meals.map((m) => ({ ...m, items: m.items.map((i) => ({ food: present(i.food, uid), servings: i.servings, label: i.label })) })),
+    light: light.map((l) => ({ ...l, food: l.food ? present(l.food, uid) : null })),
+    makeItFit: fit,
+    message: mode === 'over' ? 'You are at or past your budget. That is okay. Here are very light options, and ways to make what you have already eaten fit better.' : '',
   });
+}));
+
+// POST /api/foods/fit { foodId, quantity, date } — "will this fit?": what one food does to today and to the week, nothing is saved.
+router.post('/fit', wrap(async (req, res) => {
+  const uid = req.user.id;
+  const date = v.date(req.body?.date, 'date');
+  const food = await Food.findOne({ _id: v.objectId(String(req.body?.foodId || ''), 'foodId'), ...visibleTo(uid) }).lean();
+  if (!food) throw new HttpError(404, 'Food not found');
+  const quantity = v.number(req.body?.quantity, 'quantity', { min: 0.01, max: 100000, required: false, def: food.servingSize || 1 });
+  const servings = quantity / Number(food.servingSize || 1);
+  const [profile, details, history] = await Promise.all([
+    Profile.findOne({ userId: uid }).lean(), getDayDetails(uid, date), buildHistory(uid, addDays(date, -7), date),
+  ]);
+  const bal = dayBalance(profile, { eaten: details.summary.calories, workout: details.summary.workoutCalories, steps: details.summary.stepCalories });
+  const e = expectedEnergy(profile);
+  const macros = macroTargets(bal.target, profile?.currentWeightKg, e?.direction, profile?.goals?.proteinTarget);
+  const fit = previewFit({
+    add: { calories: (food.calories || 0) * servings, protein: (food.protein || 0) * servings },
+    today: { eaten: details.summary.calories, budget: bal.budget, protein: details.summary.protein, proteinTarget: macros.protein },
+    week: weekUsage(history.days, bal.target, date),
+  });
+  res.json({ success: true, food: present(food, uid), quantity, servings, ...fit });
 }));
 
 // GET /api/foods/barcode/:code — my/catalogue food with that barcode, else a draft from Open Food Facts (not saved).

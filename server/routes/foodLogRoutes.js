@@ -10,6 +10,7 @@ const router = express.Router();
 router.use(requireAuth);
 
 const MEALS = ['breakfast', 'lunch', 'dinner', 'snacks'];
+const TRIGGERS = ['', 'stress', 'social', 'bored', 'late-night', 'hungry', 'celebration'];
 const KEYS = ['calories', 'protein', 'carbohydrates', 'fat', 'fiber', 'sugar', 'sodium'];
 
 const perServing = (f) => Object.fromEntries(KEYS.map((k) => [k, Number(f[k] || 0)]));
@@ -55,7 +56,7 @@ router.post('/quick', wrap(async (req, res) => {
   const note = (low && high ? `Estimate ${Math.round(low)}–${Math.round(high)} kcal` : 'Estimate') + (pad > 0 ? ` +${Math.round(pad)}% buffer` : '');
   const { doc, duplicate } = await createOnce(FoodLog, uid, v.clientId(req.body?.clientId), {
     foodId: base._id, date, mealType, foodName: name, baseServingSize: 1, servingUnit: 'serving', consumedQuantity: 1, servings: 1,
-    nutritionPerServing: total, nutritionTotal: total, notes: note,
+    nutritionPerServing: total, nutritionTotal: total, notes: note, trigger: v.oneOf(req.body?.trigger, 'trigger', TRIGGERS, ''),
   });
   res.status(duplicate ? 200 : 201).json({ success: true, log: doc, duplicate });
 }));
@@ -78,6 +79,7 @@ router.post('/', wrap(async (req, res) => {
     foodId: food._id, date, mealType, foodName: food.name, baseServingSize: food.servingSize, servingUnit: food.servingUnit,
     consumedQuantity: quantity, servings, nutritionPerServing: per, nutritionTotal: scale(per, servings),
     notes: v.string(req.body?.notes, 'notes', { max: 300 }),
+    trigger: v.oneOf(req.body?.trigger, 'trigger', TRIGGERS, ''),
   });
   res.status(duplicate ? 200 : 201).json({ success: true, log: doc, duplicate });
 }));
@@ -87,6 +89,9 @@ router.patch('/:id', wrap(async (req, res) => {
   const log = await FoodLog.findOne({ _id: v.objectId(req.params.id), userId: req.user.id });
   if (!log) throw new HttpError(404, 'Food log not found');
   if (req.body?.mealType !== undefined) log.mealType = v.oneOf(req.body.mealType, 'mealType', MEALS);
+  if (req.body?.trigger !== undefined) log.trigger = v.oneOf(req.body.trigger, 'trigger', TRIGGERS, '');
+  // "Make it fit": halve what was logged (nutrition is recalculated from the stored snapshot).
+  if (req.body?.halve === true && req.body?.quantity === undefined) req.body.quantity = Math.max(0.01, Number(log.consumedQuantity) / 2);
   if (req.body?.quantity !== undefined) {
     const q = v.number(req.body.quantity, 'quantity', { min: 0.01, max: 100000 });
     log.consumedQuantity = q;

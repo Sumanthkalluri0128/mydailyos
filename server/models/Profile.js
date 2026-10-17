@@ -36,6 +36,32 @@ const schema = new mongoose.Schema(
       weeklyEmail: { type: Boolean, default: false },
       lastWeeklyEmail: { type: String, default: '' },
     },
+    // The north-star plan ("lose 6 kg by March"): everything else (focus habits, rewards, events, maintenance breaks) hangs under it.
+    plan: {
+      active: { type: Boolean, default: false },
+      startKg: { type: Number, default: null },
+      startDate: { type: String, default: '' },
+      targetKg: { type: Number, default: null },
+      byDate: { type: String, default: '' },
+      paceKg: { type: Number, default: 0.5 },
+      focus: { type: [String], default: [] }, // three weekly focus habit ids (see lib/northStar HABITS)
+      // Rewards the person chose for themselves ("new shoes at 3 kg lost"). Never food.
+      rewards: {
+        type: [{ _id: false, id: { type: String, required: true }, atKg: { type: Number, required: true, min: 0.1, max: 200 }, text: { type: String, required: true, maxlength: 80 }, claimedAt: { type: String, default: '' } }],
+        default: [],
+      },
+      // Event mode: Diwali, a wedding, a trip.
+      events: {
+        type: [{ _id: false, id: { type: String, required: true }, title: { type: String, required: true, maxlength: 60 }, startDate: { type: String, required: true }, endDate: { type: String, required: true } }],
+        default: [],
+      },
+      // Maintenance break: while on, the calorie target is held at maintenance (we remember the previous mode to restore it).
+      breakUntil: { type: String, default: '' },
+      breakPrev: { mode: { type: String, default: '' }, target: { type: Number, default: null } },
+      lastBreakEnd: { type: String, default: '' },
+    },
+    // Safety layer. hideNumbers hides weights and calorie counts in the apps (the plan still works).
+    safety: { hideNumbers: { type: Boolean, default: false } },
     // Existing accounts default to true so they are never pushed through first-run onboarding;
     // signup creates the profile with onboarded:false explicitly.
     onboarded: { type: Boolean, default: true },

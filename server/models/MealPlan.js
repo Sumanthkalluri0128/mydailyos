@@ -14,6 +14,7 @@ const schema = new mongoose.Schema(
     protein: { type: Number, default: 0 },
     fiber: { type: Number, default: 0 },
     logged: { type: Boolean, default: false },
+    rescue: { type: Boolean, default: false }, // built by the "gentle day" button
   },
   { timestamps: true }
 );

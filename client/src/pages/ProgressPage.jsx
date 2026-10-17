@@ -3,6 +3,8 @@ import Buddy from "../motion/Buddy";
 import { API_URL } from "../config";
 import { apiFetch } from "../config/api";
 import WeeklyCoach from "../components/WeeklyCoach";
+import OverDayCard from "../components/OverDayCard";
+import PatternsCard from "../components/PatternsCard";
 import { getLocalDate } from "../utils/date";
 import { notify } from "../utils/notify";
 
@@ -286,7 +288,9 @@ function ProgressPage({ onBack }) {
         <button className="secondary-button" onClick={onBack}>← Dashboard</button>
       </div>
 
+      <OverDayCard />
       <WeeklyCoach />
+      <PatternsCard />
 
       <section className="progress-toolbar card">
         <div className="period-mode-row">

@@ -12,9 +12,9 @@ router.use(requireAuth);
 
 const RANGES = {
   steps: [0, 200000], sleep: [0.1, 24], heartRate: [20, 250], bloodPressure: [50, 260], glucose: [20, 800],
-  waist: [10, 300], chest: [10, 300], hips: [10, 300], arm: [5, 150], thigh: [10, 200],
+  waist: [10, 300], chest: [10, 300], hips: [10, 300], arm: [5, 150], thigh: [10, 200], neck: [10, 100], oil: [0.25, 60],
 };
-const ONE_PER_DAY = new Set(['steps', 'sleep']); // re-saving the same day replaces the value
+const ONE_PER_DAY = new Set(['steps', 'sleep']); // re-saving the same day replaces the value (oil and measurements keep every entry)
 
 router.get('/', wrap(async (req, res) => {
   const type = v.oneOf(req.query.type, 'type', HealthLog.TYPES);

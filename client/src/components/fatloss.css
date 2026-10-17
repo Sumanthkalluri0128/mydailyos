@@ -1,0 +1,34 @@
+/* North-star plan, fat-loss score, over-day help, outcome badges. Uses the app's existing colour tokens. */
+.fl-card { background: var(--surface); border: 1px solid var(--border); border-radius: 20px; padding: 18px; margin-bottom: 16px; }
+.fl-card.accent { border: 2px solid var(--primary); }
+.fl-card.alert { border: 2px solid var(--danger); }
+.fl-eyebrow { font-size: 12px; font-weight: 800; letter-spacing: .04em; color: var(--text-muted); text-transform: uppercase; margin: 0 0 4px; }
+.fl-card h3 { margin: 0 0 4px; font-size: 18px; color: var(--text); }
+.fl-card p { margin: 4px 0; color: var(--text-muted); font-size: 14px; line-height: 1.5; }
+.fl-card p.ink { color: var(--text); }
+.fl-bar { height: 10px; border-radius: 5px; background: var(--primary-soft); overflow: hidden; margin-top: 8px; }
+.fl-bar > i { display: block; height: 100%; background: var(--primary); border-radius: 5px; }
+.fl-bar.good > i { background: var(--success); }
+.fl-row { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+.fl-big { font-size: 30px; font-weight: 800; color: var(--text); }
+.fl-big small { font-size: 14px; color: var(--text-muted); font-weight: 600; }
+.fl-comp { margin-top: 10px; font-size: 13px; color: var(--text); font-weight: 700; }
+.fl-comp .fl-bar { height: 6px; margin-top: 3px; }
+.fl-btn { background: var(--primary); color: #fff; border: 0; border-radius: 12px; padding: 11px 16px; font-weight: 800; cursor: pointer; margin-top: 10px; }
+.fl-btn.ghost { background: transparent; color: var(--primary); border: 1.5px solid var(--primary); }
+.fl-btn:disabled { opacity: .55; cursor: default; }
+.fl-chip { border: 1px solid var(--border); background: var(--surface-soft); color: var(--text); border-radius: 999px; padding: 7px 12px; font-weight: 700; cursor: pointer; margin: 0 6px 6px 0; }
+.fl-chip.on { background: var(--primary); color: #fff; border-color: var(--primary); }
+.fl-find { display: flex; gap: 10px; margin: 10px 0; }
+.fl-find > span { font-size: 22px; }
+.fl-find strong { color: var(--text); display: block; }
+.fl-field { display: block; margin: 10px 0 0; font-size: 13px; font-weight: 700; color: var(--text-muted); }
+.fl-field input { display: block; width: 100%; box-sizing: border-box; margin-top: 4px; padding: 10px 12px; border-radius: 12px; border: 1.5px solid var(--border); background: var(--surface); color: var(--text); font-size: 15px; }
+.fl-preview { background: var(--primary-soft); border-radius: 14px; padding: 12px; margin: 10px 0; }
+.fl-badges { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 12px; }
+.fl-badge { display: flex; gap: 12px; align-items: center; background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 12px; }
+.fl-badge.locked { opacity: .6; }
+.fl-medal { width: 48px; height: 48px; border-radius: 50%; display: grid; place-items: center; font-size: 24px; background: var(--primary-soft); flex: none; }
+.fl-medal.bronze { background: #b87333; } .fl-medal.silver { background: #9aa5b1; } .fl-medal.gold { background: #d4a017; }
+.fl-plate { border-top: 1px solid var(--border); padding: 10px 0; display: flex; justify-content: space-between; align-items: center; gap: 10px; text-align: left; width: 100%; background: none; border-left: 0; border-right: 0; border-bottom: 0; cursor: pointer; color: var(--text); }
+.fl-plate small { display: block; color: var(--text-muted); }

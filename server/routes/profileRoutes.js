@@ -4,6 +4,8 @@ const { requireAuth } = require('../middleware/auth');
 const { wrap } = require('../lib/http');
 const v = require('../lib/validate');
 const { refreshStoredTarget } = require('../lib/profileEnergy');
+const { endBreak, breakExpired } = require('../lib/planState');
+const { todayUtc } = require('../lib/dates');
 
 const router = express.Router();
 router.use(requireAuth);
@@ -37,13 +39,16 @@ function parseUpdate(body = {}) {
     if (u.energy !== undefined) set['units.energy'] = v.oneOf(u.energy, 'units.energy', ['kcal', 'kJ']);
     if (u.volume !== undefined) set['units.volume'] = v.oneOf(u.volume, 'units.volume', ['ml', 'oz']);
   }
+  if (body.safety && typeof body.safety === 'object' && body.safety.hideNumbers !== undefined) set['safety.hideNumbers'] = v.bool(body.safety.hideNumbers, 'safety.hideNumbers');
   const nf = body.notify;
   if (nf && typeof nf === 'object' && nf.weeklyEmail !== undefined) set['notify.weeklyEmail'] = v.bool(nf.weeklyEmail, 'notify.weeklyEmail');
   return set;
 }
 
 router.get('/', wrap(async (req, res) => {
-  const profile = (await Profile.findOne({ userId: req.user.id })) || (await Profile.create({ userId: req.user.id }));
+  let profile = (await Profile.findOne({ userId: req.user.id })) || (await Profile.create({ userId: req.user.id }));
+  // A finished maintenance break hands the calorie target back to the plan the next time the profile is read.
+  if (breakExpired(profile, todayUtc())) profile = (await Profile.findOneAndUpdate({ userId: req.user.id }, { $set: endBreak(profile, todayUtc()) }, { new: true })) || profile;
   res.json({ success: true, profile });
 }));
 

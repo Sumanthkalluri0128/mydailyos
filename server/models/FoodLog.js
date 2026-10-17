@@ -25,6 +25,8 @@ const schema = new mongoose.Schema(
     nutritionPerServing: nutrition,
     nutritionTotal: nutrition,
     notes: { type: String, default: '' },
+    // Optional "why did I eat this?" tag, used only to surface patterns (never to judge).
+    trigger: { type: String, enum: ['', 'stress', 'social', 'bored', 'late-night', 'hungry', 'celebration'], default: '' },
   },
   { timestamps: true }
 );

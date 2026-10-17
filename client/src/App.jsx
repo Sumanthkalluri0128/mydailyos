@@ -20,6 +20,8 @@ import { waterTargetMl } from "./utils/energy";
 import { currentOwner } from "./utils/cacheOwner";
 import DashboardHero from "./components/DashboardHero";
 import JourneyCard from "./components/JourneyCard";
+import FatLossCard from "./components/FatLossCard";
+import OverDayCard from "./components/OverDayCard";
 import { PageSkeleton } from "./motion/PageTransition";
 import { withTransition } from "./motion/motion";
 import MacroCard from "./components/MacroCard";
@@ -862,6 +864,8 @@ function App() {
           onChanged={() => setSyncTick((t) => t + 1)}
           streak={streak}
         />
+        <OverDayCard onPlan={() => setCurrentPage("planner")} />
+        <FatLossCard onOpen={() => setCurrentPage("goals")} syncTick={syncTick} />
         <JourneyCard onOpen={() => setCurrentPage("goals")} syncTick={syncTick} />
 
         <section className="stats-grid two">

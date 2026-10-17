@@ -1,8 +1,8 @@
 const mongoose = require('mongoose');
 
 // One collection for every simple measurement: steps, sleep, heart rate, blood pressure, glucose, body measurements.
-// `value` is the main number (steps, hours, bpm, systolic, mg/dL, cm); `value2` is the second number (diastolic).
-const TYPES = ['steps', 'sleep', 'heartRate', 'bloodPressure', 'glucose', 'waist', 'chest', 'hips', 'arm', 'thigh'];
+// `value` is the main number (steps, hours, bpm, systolic, mg/dL, cm; 'oil' = teaspoons of added oil/ghee that day); `value2` is the second number (diastolic).
+const TYPES = ['steps', 'sleep', 'heartRate', 'bloodPressure', 'glucose', 'waist', 'chest', 'hips', 'arm', 'thigh', 'neck', 'oil'];
 
 const schema = new mongoose.Schema(
   {

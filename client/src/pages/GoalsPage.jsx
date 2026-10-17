@@ -4,6 +4,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import "./goals.css";
+import NorthStarPanel from "../components/NorthStarPanel";
 import Buddy from "../motion/Buddy";
 import { apiFetch } from "../config/api";
 import { getLocalDate } from "../utils/date";
@@ -100,6 +101,7 @@ export default function GoalsPage({ onBack }) {
   return (
     <section className="gp">
       <button className="gp-back" onClick={onBack}>← Back</button>
+      <NorthStarPanel />
 
       <div className="gp-hero2">
         <Buddy scene={packs?.available ? "cheer" : "wave"} size={104} who={mate} says={packs?.available ? `${packs.available} pack${packs.available === 1 ? "" : "s"} ready!` : say(mate || "naruto", "hype")} />
