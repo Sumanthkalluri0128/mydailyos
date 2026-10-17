@@ -38,3 +38,7 @@ export const sprite = (who, scene, seed = 0) => pickSticker(who, SCENE_CATS[scen
 export const stickerFor = (who, scene, seed = 0) => pickSticker(who, SCENE_CATS[scene] || [scene], typeof seed === "string" ? hash(seed) : seed);
 export const hasCat = (who, cat) => !!(MANIFEST[who] && MANIFEST[who][cat]);
 export const preload = (who, scenes) => scenes.forEach((s) => { const i = new Image(); i.src = sprite(who, s); });
+
+/** Direct URL of one sticker by its album id parts, e.g. stickerUrl("zoro", "hype-0"). */
+export const stickerUrl = (who, name) => url(who, name);
+export const stickerList = () => MANIFEST;

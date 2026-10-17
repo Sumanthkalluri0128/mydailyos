@@ -1,6 +1,8 @@
-// Goals & journey: level / XP, today's quests, this week's missions, the weight journey, and your own
-// short-term and long-term goals — all computed from your real logs by the server (/api/goals/journey).
-import { useCallback, useEffect, useState } from "react";
+// Journey: instead of bars and targets, you COLLECT. Showing up earns sticker packs; each pack reveals a new sticker of
+// the characters and fills your album. A weekly "chapter" path shows the days you showed up, quests are small moves
+// that earn XP towards the next pack, and your own goals live in a fold-out at the bottom.
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { createPortal } from "react-dom";
 import "./goals.css";
 import Buddy from "../motion/Buddy";
 import { apiFetch } from "../config/api";
@@ -8,6 +10,8 @@ import { getLocalDate } from "../utils/date";
 import { notify } from "../utils/notify";
 import { fireConfetti } from "../motion/motion";
 import { refreshCtx } from "../motion/ctxStore";
+import { CHARS, ALL, accent, stickerUrl, stickerFor, stickerList } from "../motion/chars";
+import { say } from "../motion/talk";
 
 const METRICS = [
   { id: "workouts", label: "Workout days", unit: "days", def: 12 },
@@ -25,21 +29,44 @@ function Bar({ pct, tone = "mid" }) {
   return <div className="gp-bar" role="progressbar" aria-valuenow={pct} aria-valuemin={0} aria-valuemax={100}><i className={`gp-fill gp-${tone}`} style={{ width: `${Math.max(2, Math.min(100, pct))}%` }} /></div>;
 }
 
+
+const stickerListOf = (w) => Object.values(stickerList()[w] || {}).flat().map((x) => x[0]);
+const RARITY = { common: ["Common", "#8f94b8"], rare: ["Rare", "#3d8bff"], epic: ["Epic", "#ffb020"] };
+const rarityOf = (cat) => (cat === "power" ? "epic" : ["party", "love", "lift", "cool", "game", "sleep", "sport"].includes(cat) ? "rare" : "common");
+const idParts = (id) => { const [who, name] = id.split("/"); return { who, name, cat: name.replace(/-\d+$/, "") }; };
+
 export default function GoalsPage({ onBack }) {
   const [data, setData] = useState(null);
+  const [album, setAlbum] = useState(null);
   const [err, setErr] = useState("");
   const [tab, setTab] = useState("short");
   const [form, setForm] = useState(null);
+  const [packFor, setPackFor] = useState("any");
+  const [pack, setPack] = useState(null);      // { stage: 'shake'|'reveal', sticker }
+  const [openWho, setOpenWho] = useState(null);
   const today = getLocalDate();
 
   const load = useCallback(async () => {
     try {
-      const r = await apiFetch(`/api/goals/journey?today=${today}`); const d = await r.json();
-      if (!d.success) throw new Error(d.message || "Could not load goals");
-      setData(d); setErr("");
-    } catch (e) { setErr(e.message || "Could not load goals"); }
+      const [r, a] = await Promise.all([apiFetch(`/api/goals/journey?today=${today}`), apiFetch(`/api/album?today=${today}`)]);
+      const [d, al] = await Promise.all([r.json(), a.json()]);
+      if (!d.success) throw new Error(d.message || "Could not load your journey");
+      setData(d); setAlbum(al.success ? al : null); setErr("");
+    } catch (e) { setErr(e.message || "Could not load your journey"); }
   }, [today]);
   useEffect(() => { load(); }, [load]);
+
+  const openPack = async () => {
+    if (!album || album.packs.available < 1 || pack) return;
+    setPack({ stage: "shake" });
+    try {
+      const [r] = await Promise.all([apiFetch("/api/album/open", { method: "POST", body: JSON.stringify({ who: packFor === "any" ? undefined : packFor, today }) }), new Promise((res) => setTimeout(res, 1500))]);
+      const d = await r.json(); if (!d.success) throw new Error(d.message || "Could not open the pack");
+      setPack({ stage: "reveal", sticker: d.sticker }); setAlbum(d);
+      if (d.sticker.rarity !== "common") fireConfetti({ count: d.sticker.rarity === "epic" ? 140 : 70 });
+      notify(`New sticker: ${CHARS[d.sticker.who]} (${RARITY[d.sticker.rarity][0]})!`, "success"); refreshCtx(true);
+    } catch (e) { setPack(null); notify(e.message, "error"); load(); }
+  };
 
   const openForm = (kind, preset = {}) => setForm({ kind, title: "", metric: "workouts", target: 12, deadline: addDays(today, kind === "short" ? 30 : 120), ...preset });
   const save = async (e) => {
@@ -60,47 +87,77 @@ export default function GoalsPage({ onBack }) {
   };
   const remove = async (g) => { try { await apiFetch(`/api/goals/${g._id || g.id}`, { method: "DELETE" }); notify("Goal removed", "info"); load(); refreshCtx(true); } catch (er) { notify(er.message, "error"); } };
 
+  const ownedSet = useMemo(() => new Set(album?.owned || []), [album]);
   if (err && !data) return <section className="gp"><button className="gp-back" onClick={onBack}>← Back</button><p className="gp-err">{err}</p></section>;
   if (!data) return <section className="gp"><button className="gp-back" onClick={onBack}>← Back</button><p>Loading your journey…</p></section>;
-  const { level: lv, today: dq, week, streak, weightJourney: wj, goals } = data;
+  const { level: lv, today: dq, streak, weightJourney: wj, goals, chapter } = data;
   const list = goals.filter((g) => g.kind === tab);
   const active = list.filter((g) => !g.done), finished = list.filter((g) => g.done);
+  const packs = album?.packs;
+  const nextPackXp = packs ? packs.nextAtXp - packs.xp : 0;
+  const mate = ALL.includes(packFor) ? packFor : undefined;
 
   return (
     <section className="gp">
       <button className="gp-back" onClick={onBack}>← Back</button>
 
-      <div className="gp-hero">
-        <Buddy scene={dq.done === dq.total && dq.total ? "victory" : "powerup"} size={112} />
-        <div className="gp-hero-t">
-          <small>{lv.rank}</small>
-          <h2>Level {lv.level}</h2>
-          <Bar pct={lv.pct} tone="xp" />
-          <p>{lv.xpToNext} XP to level {lv.level + 1} · {lv.xp} XP total</p>
-          <p className="gp-chips"><span>🔥 {streak.current}-day streak</span><span>🏅 best {streak.best}</span><span>⭐ {data.perfectDays} perfect days</span></p>
+      <div className="gp-hero2">
+        <Buddy scene={packs?.available ? "cheer" : "wave"} size={104} who={mate} says={packs?.available ? `${packs.available} pack${packs.available === 1 ? "" : "s"} ready!` : say(mate || "naruto", "hype")} />
+        <div className="gp-album-sum">
+          <b>{album ? `${album.owned.length}/${album.total}` : "—"}</b><span>stickers collected</span>
+          <div className="gp-bar"><i className="gp-fill gp-xp" style={{ width: `${album ? Math.max(2, (album.owned.length / album.total) * 100) : 0}%` }} /></div>
         </div>
       </div>
 
-      <h3>Today's quests <small>{dq.done}/{dq.total} · {dq.xpEarned}/{dq.xpAvailable} XP</small></h3>
-      <div className="gp-list">
-        {dq.quests.length === 0 && <p className="gp-muted">Finish your profile to get daily targets.</p>}
+      <div className="gp-packbox">
+        <div>
+          <h3>🎁 Sticker packs</h3>
+          <p className="gp-muted">{packs ? (packs.available > 0 ? `You have ${packs.available} pack${packs.available === 1 ? "" : "s"} waiting.` : `Next pack in ${nextPackXp} XP — log a meal, water or a workout.`) : ""} Every 50 XP and every week you log 5+ days gives one.</p>
+        </div>
+        <div className="gp-pick">
+          <button type="button" className={packFor === "any" ? "on" : ""} onClick={() => setPackFor("any")}>Any</button>
+          {ALL.map((w) => <button key={w} type="button" className={packFor === w ? "on" : ""} title={CHARS[w]} onClick={() => setPackFor(w)}><img src={stickerFor(w, "cheer", 0).src} alt={CHARS[w]} width="34" height="34" /></button>)}
+        </div>
+        <button className="gp-open" disabled={!packs || packs.available < 1 || !!pack} onClick={openPack}>{packs?.available ? `Open a ${packFor === "any" ? "" : CHARS[packFor] + " "}pack` : "No packs yet"}</button>
+      </div>
+
+      <h3>This week's chapter <small>{chapter.logged}/7 days · {chapter.chestReady ? "chest earned 🎉" : `${Math.max(0, chapter.chestAt - chapter.logged)} more for a bonus pack`}</small></h3>
+      <div className="gp-path">
+        {chapter.stones.map((s, i) => (
+          <div key={s.date} className={`gp-stone ${s.logged ? "on" : ""} ${s.today ? "now" : ""} ${s.future ? "fut" : ""} ${s.perfect ? "perfect" : ""}`}>
+            {s.today && <img className="gp-walker" src={stickerFor(mate || "naruto", "walk", i).src} alt="" width="46" height="46" />}
+            <i>{s.logged ? (s.perfect ? "⭐" : "✓") : s.future ? "" : "·"}</i><span>{s.label}</span>
+          </div>
+        ))}
+        <div className={`gp-chest ${chapter.chestReady ? "open" : ""}`}>{chapter.chestReady ? "🎁" : "📦"}</div>
+      </div>
+
+      <h3>Today's moves <small>{dq.done}/{dq.total} · +{dq.xpEarned} XP · lvl {lv.level}</small></h3>
+      <div className="gp-moves">
+        {dq.quests.length === 0 && <p className="gp-muted">Finish your profile to unlock today's moves.</p>}
         {dq.quests.map((q) => (
-          <div key={q.id} className={`gp-card ${q.done ? "is-done" : ""}`}>
-            <div className="gp-row"><b>{q.icon} {q.title}</b><span className="gp-xp">{q.done ? "✓" : "+"}{q.xp} XP</span></div>
-            <Bar pct={q.pct} tone={q.done ? "ok" : "mid"} />
-            <small>{q.value.toLocaleString()} / {q.target.toLocaleString()} {q.unit} — {q.done ? "complete!" : q.hint}</small>
+          <div key={q.id} className={`gp-move ${q.done ? "done" : ""}`}>
+            <span className="gp-ico">{q.done ? "✅" : q.icon}</span>
+            <div><b>{q.title}</b><small>{q.done ? `Done! +${q.xp} XP` : `${q.hint} · +${q.xp} XP`}</small></div>
+            <em style={{ "--p": `${q.pct}%` }}>{q.pct}%</em>
           </div>
         ))}
       </div>
 
-      <h3>This week's missions <small>{week.done}/{week.total}</small></h3>
-      <div className="gp-list">
-        {week.missions.map((m) => (
-          <div key={m.id} className={`gp-card ${m.done ? "is-done" : ""}`}>
-            <div className="gp-row"><b>{m.icon} {m.title}</b><span className="gp-xp">+{m.xp} XP</span></div>
-            <Bar pct={m.pct} tone={m.done ? "ok" : "mid"} /><small>{m.value}/{m.target} days</small>
-          </div>
-        ))}
+      <h3>Your album</h3>
+      <div className="gp-albums">
+        {ALL.map((w) => {
+          const s = album?.byWho?.[w]; const all = (stickerListOf(w)); const isOpen = openWho === w;
+          return (
+            <div key={w} className={`gp-char ${isOpen ? "open" : ""}`} style={{ "--ac": accent[w] }}>
+              <button type="button" className="gp-char-h" onClick={() => setOpenWho(isOpen ? null : w)}>
+                <img src={stickerFor(w, "cheer", 0).src} alt="" width="44" height="44" /><b>{CHARS[w]}</b><span>{s ? `${s.owned}/${s.total}` : ""}</span>
+                <div className="gp-bar"><i className="gp-fill gp-mid" style={{ width: `${s ? (s.owned / Math.max(1, s.total)) * 100 : 0}%`, background: accent[w] }} /></div>
+              </button>
+              {isOpen && <div className="gp-grid">{all.map((n) => { const id = `${w}/${n}`; const has = ownedSet.has(id); const r = rarityOf(n.replace(/-\d+$/, "")); return <img key={id} className={`${has ? "has" : "lock"} r-${r}`} src={stickerUrl(w, n)} alt={has ? n : "locked"} title={has ? `${CHARS[w]} · ${RARITY[r][0]}` : "Locked"} width="64" height="64" loading="lazy" />; })}</div>}
+            </div>
+          );
+        })}
       </div>
 
       {wj && (
@@ -110,39 +167,40 @@ export default function GoalsPage({ onBack }) {
             <div className="gp-row"><b>{wj.reached ? "Goal reached! 🏆" : `${wj.remainingKg} kg to go`}</b><span>{wj.pct}%</span></div>
             <Bar pct={wj.pct} tone={wj.reached ? "ok" : "xp"} />
             <div className="gp-steps">{wj.checkpoints.map((c) => <span key={c.label} className={c.reached ? "on" : ""}>{c.reached ? "✓" : "○"} {c.label}<em>{c.kg} kg</em></span>)}</div>
-            {!wj.reached && <small>About {wj.weeksLeft} weeks at your chosen pace — you're at {wj.currentKg} kg now.</small>}
           </div>
         </>
       )}
 
-      <h3>Streak milestones</h3>
-      <div className="gp-card">
-        <div className="gp-steps">{[3, 7, 14, 30, 60, 100, 180, 365].map((s) => <span key={s} className={streak.reached.includes(s) ? "on" : ""}>{streak.reached.includes(s) ? "🏅" : "○"} {s} days</span>)}</div>
-        {streak.next && <small>{streak.toNext} more day{streak.toNext === 1 ? "" : "s"} to reach {streak.next}. Log something every day!</small>}
-      </div>
+      <details className="gp-fold">
+        <summary>🎯 My goals (optional)</summary>
+        <div className="gp-tabs">
+          <button className={tab === "short" ? "on" : ""} onClick={() => setTab("short")}>Short-term</button>
+          <button className={tab === "long" ? "on" : ""} onClick={() => setTab("long")}>Long-term</button>
+        </div>
+        <div className="gp-list">
+          {active.map((g) => <GoalCard key={g._id || g.id} g={g} onDone={() => patch(g, { done: true }, "Goal completed! 🎉")} onDelete={() => remove(g)} onManual={(v) => patch(g, { manualValue: v })} />)}
+          {active.length === 0 && <p className="gp-muted">No active {tab === "short" ? "short" : "long"}-term goals.</p>}
+          {finished.map((g) => <GoalCard key={g._id || g.id} g={g} onDelete={() => remove(g)} onUndo={() => patch(g, { done: false })} />)}
+        </div>
+        <button className="gp-add" onClick={() => openForm(tab)}>＋ New {tab === "short" ? "short-term" : "long-term"} goal</button>
+      </details>
 
-      <h3>My goals</h3>
-      <div className="gp-tabs">
-        <button className={tab === "short" ? "on" : ""} onClick={() => setTab("short")}>Short-term</button>
-        <button className={tab === "long" ? "on" : ""} onClick={() => setTab("long")}>Long-term</button>
-      </div>
-      <p className="gp-muted">{tab === "short" ? "Days to a few weeks — quick wins that build momentum." : "Months — the big changes that become your new lifestyle."}</p>
+      {pack && createPortal(
+        <div className="gp-modal" onClick={() => pack.stage === "reveal" && setPack(null)}>
+          <div className={`gp-packview ${pack.stage}`} onClick={(e) => e.stopPropagation()}>
+            {pack.stage === "shake" && <><div className="gp-pack">🎁</div><p>Opening…</p></>}
+            {pack.stage === "reveal" && (() => { const st = pack.sticker; const [rl, rc] = RARITY[st.rarity]; return (
+              <>
+                <div className="gp-rare" style={{ color: rc }}>{rl}</div>
+                <img className={`gp-reveal r-${st.rarity}`} src={stickerUrl(st.who, st.name)} alt={CHARS[st.who]} width="200" height="200" />
+                <h3>{CHARS[st.who]}</h3>
+                <p className="gp-muted">{album.owned.length}/{album.total} collected{album.packs.available ? ` · ${album.packs.available} more pack${album.packs.available === 1 ? "" : "s"} ready` : ""}</p>
+                <div className="gp-actions"><button type="button" onClick={() => setPack(null)}>Nice!</button>{album.packs.available > 0 && <button className="primary" type="button" onClick={() => { setPack(null); setTimeout(openPack, 50); }}>Open another</button>}</div>
+              </>); })()}
+          </div>
+        </div>, document.body)}
 
-      <div className="gp-list">
-        {active.map((g) => <GoalCard key={g._id || g.id} g={g} onDone={() => patch(g, { done: true }, "Goal completed! 🎉")} onDelete={() => remove(g)} onManual={(v) => patch(g, { manualValue: v })} />)}
-        {active.length === 0 && <p className="gp-muted">No active {tab === "short" ? "short" : "long"}-term goals yet.</p>}
-      </div>
-      <div className="gp-presets">
-        {(tab === "short"
-          ? [["Work out 12 times in 30 days", { metric: "workouts", target: 12 }], ["Log food 14 days in a row-ish", { metric: "logDays", target: 14, deadline: addDays(today, 18) }], ["Hit water goal 10 days", { metric: "waterDays", target: 10 }]]
-          : [["Land my calories 60 days", { metric: "calorieDays", target: 60, deadline: addDays(today, 100) }], ["Work out 100 times", { metric: "workouts", target: 100, deadline: addDays(today, 200) }], ["Walk 1,000,000 steps", { metric: "stepsTotal", target: 1000000, deadline: addDays(today, 150) }]]
-        ).map(([t, p]) => <button key={t} type="button" onClick={() => openForm(tab, { title: t, ...p })}>＋ {t}</button>)}
-      </div>
-      <button className="gp-add" onClick={() => openForm(tab)}>＋ New {tab === "short" ? "short-term" : "long-term"} goal</button>
-
-      {finished.length > 0 && (<><h3>Completed 🎉</h3><div className="gp-list">{finished.map((g) => <GoalCard key={g._id || g.id} g={g} onDelete={() => remove(g)} onUndo={() => patch(g, { done: false })} />)}</div></>)}
-
-      {form && (
+      {form && createPortal(
         <div className="gp-modal" onClick={() => setForm(null)}>
           <form className="gp-form" onClick={(e) => e.stopPropagation()} onSubmit={save}>
             <h3>New {form.kind === "short" ? "short" : "long"}-term goal</h3>
@@ -156,8 +214,7 @@ export default function GoalsPage({ onBack }) {
             <label>Deadline<input type="date" min={today} value={form.deadline} onChange={(e) => setForm({ ...form, deadline: e.target.value })} /></label>
             <div className="gp-actions"><button type="button" onClick={() => setForm(null)}>Cancel</button><button className="primary" type="submit">Save goal</button></div>
           </form>
-        </div>
-      )}
+        </div>, document.body)}
     </section>
   );
 }

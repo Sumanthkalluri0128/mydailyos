@@ -176,6 +176,30 @@ function goalProgress(goal, days, t, today, latestWeightKg) {
   return { value: g.metric === 'weight' ? r1(value) : Math.round(value), target, pct: Math.min(100, progress), status, daysLeft, expectedPct: expected };
 }
 
+
+// ---------------------------------------------------------------- the weekly "chapter" (Mon-Sun path) and chests
+const dow = (iso) => { const [y, m, d] = iso.split('-').map(Number); return (new Date(Date.UTC(y, m - 1, d)).getUTCDay() + 6) % 7; }; // Mon=0
+const weekStartOf = (iso) => addDays(iso, -dow(iso));
+const LABELS = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
+/** The 7 stepping stones of this week: which days you showed up, which were perfect, where you are now. */
+function weekChapter(days, t, today) {
+  const start = weekStartOf(today);
+  const by = new Map(days.map((d) => [d.date, d]));
+  const stones = Array.from({ length: 7 }, (_, i) => {
+    const date = addDays(start, i); const row = by.get(date); const h = row ? dayHits(row, t) : null;
+    return { date, label: LABELS[i], logged: !!h?.log, perfect: !!(h && h.calories && h.water && (h.move || h.steps)), today: date === today, future: date > today };
+  });
+  const logged = stones.filter((x) => x.logged).length;
+  return { start, stones, logged, chestAt: 5, chestReady: logged >= 5, daysLeft: Math.max(0, 6 - dow(today)) };
+}
+/** Weeks (Mon-Sun, including this one) with 5+ days of logging each give one bonus pack. */
+function weekChests(days, t) {
+  const weeks = new Map();
+  for (const d of days) if (dayHits(d, t).log) { const w = weekStartOf(d.date); weeks.set(w, (weeks.get(w) || 0) + 1); }
+  let n = 0; for (const c of weeks.values()) if (c >= 5) n++;
+  return n;
+}
+
 /** Everything for the journey screen. */
 function buildJourney({ days, targets, today, totals, weights, profile, goals = [] }) {
   const t = targets || {};
@@ -194,8 +218,9 @@ function buildJourney({ days, targets, today, totals, weights, profile, goals = 
   return {
     level: lv, perfectDays, today: daily, week: weekly, streak: streakMilestones(streaks.logging), waterStreak: streakMilestones(streaks.water),
     weightJourney: journey, goals: decorated,
+    chapter: weekChapter(days, t, today), chests: weekChests(days, t),
     totals: { logDays: sets.logging.size, workoutDays: days.filter((d) => d.exerciseMinutes > 0).length, ...(totals || {}) },
   };
 }
 
-module.exports = { caloriesOnTrack, dayHits, dayXp, xpForLevel, levelFor, buildXp, dailyQuests, weeklyMissions, streakMilestones, weightJourney, goalProgress, buildJourney, GOAL_METRICS, XP_PER, STREAK_STEPS };
+module.exports = { weekChapter, weekChests, weekStartOf, caloriesOnTrack, dayHits, dayXp, xpForLevel, levelFor, buildXp, dailyQuests, weeklyMissions, streakMilestones, weightJourney, goalProgress, buildJourney, GOAL_METRICS, XP_PER, STREAK_STEPS };

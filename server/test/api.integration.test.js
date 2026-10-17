@@ -544,3 +544,15 @@ test('food search: any word order, typos and partial words', { skip }, async () 
   assert.ok((await names('dosa masala')).includes('Masala Dosa'));
   assert.ok((await names('masla dos')).includes('Masala Dosa'));
 });
+
+test('album: packs are earned, opening gives a new sticker each time, no double-open, isolated per user', { skip }, async () => {
+  const a = await call('POST', '/api/auth/signup', { body: { name: 'Al', email: 'al@test.dev', password: 'password123' } });
+  const b = await call('POST', '/api/auth/signup', { body: { name: 'Bo', email: 'bo@test.dev', password: 'password123' } });
+  const s0 = await call('GET', `/api/album?today=${today()}`, { token: a.token });
+  assert.equal(s0.status, 200); assert.equal(s0.packs.available, 1); assert.equal(s0.owned.length, 0);
+  assert.equal((await call('POST', '/api/album/open', { token: a.token, body: { who: 'nobody' } })).status, 400);
+  const open = await call('POST', '/api/album/open', { token: a.token, body: { who: 'zoro', today: today() } });
+  assert.equal(open.status, 200); assert.equal(open.sticker.who, 'zoro'); assert.equal(open.owned.length, 1); assert.equal(open.packs.available, 0);
+  assert.equal((await call('POST', '/api/album/open', { token: a.token, body: { today: today() } })).status, 400, 'no pack left');
+  assert.equal((await call('GET', `/api/album?today=${today()}`, { token: b.token })).owned.length, 0, 'other users are unaffected');
+});

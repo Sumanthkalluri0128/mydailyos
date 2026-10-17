@@ -2,14 +2,12 @@
 const express = require('express');
 const Goal = require('../models/Goal');
 const Profile = require('../models/Profile');
-const WeightLog = require('../models/WeightLog');
 const { requireAuth } = require('../middleware/auth');
 const { wrap, HttpError } = require('../lib/http');
 const v = require('../lib/validate');
-const { buildHistory, lifetimeTotals } = require('../lib/progress');
-const { dailyTarget, expectedEnergy, macroTargets, waterTargetMl } = require('../lib/energy');
-const { buildJourney, GOAL_METRICS } = require('../lib/journey');
-const { addDays, todayUtc, diffDays } = require('../lib/dates');
+const { loadJourney } = require('../lib/journeyData');
+const { GOAL_METRICS } = require('../lib/journey');
+const { todayUtc } = require('../lib/dates');
 
 const router = express.Router();
 router.use(requireAuth);
@@ -33,33 +31,10 @@ function parseGoal(body = {}, today, { partial = false } = {}) {
   return out;
 }
 
-async function targetsFor(profile) {
-  const target = dailyTarget(profile);
-  const e = expectedEnergy(profile);
-  const macros = macroTargets(target, profile?.currentWeightKg, e?.direction, profile?.goals?.proteinTarget);
-  const g = profile?.goals || {};
-  return {
-    calories: target || 0, direction: e?.direction || 'maintain', protein: macros?.protein || 0,
-    waterMl: g.waterTargetMl || waterTargetMl(profile?.currentWeightKg) || 0, steps: g.stepsTarget || 0, exerciseMinutes: g.exerciseMinutesTarget || 0,
-  };
-}
-
-// GET /api/goals/journey?today=YYYY-MM-DD — level, quests, missions, streak, weight journey and my goals with live progress.
+// GET /api/goals/journey?today=YYYY-MM-DD — level, quests, missions, streak, weekly chapter, weight journey and my goals with live progress.
 router.get('/journey', wrap(async (req, res) => {
-  const uid = req.user.id;
   const today = req.query.today ? v.date(req.query.today, 'today') : todayUtc();
-  const [profile, goals, totals, weightRows] = await Promise.all([
-    Profile.findOne({ userId: uid }).lean(),
-    Goal.find({ userId: uid }).sort({ done: 1, deadline: 1, createdAt: -1 }).limit(60).lean(),
-    lifetimeTotals(uid),
-    WeightLog.find({ userId: uid }).sort({ date: 1, createdAt: 1 }).select('date weightKg').lean(),
-  ]);
-  const oldest = goals.reduce((m, g) => (g.startDate && g.startDate < m ? g.startDate : m), addDays(today, -400));
-  const from = oldest < addDays(today, -799) ? addDays(today, -799) : oldest;
-  const { days } = await buildHistory(uid, from, today);
-  const targets = await targetsFor(profile);
-  const journey = buildJourney({ days, targets, today, totals, weights: weightRows.map((w) => Number(w.weightKg)), profile, goals: goals.map((g) => ({ ...g, id: String(g._id) })) });
-  res.json({ success: true, targets, ...journey });
+  res.json({ success: true, ...(await loadJourney(req.user.id, today)) });
 }));
 
 router.get('/', wrap(async (req, res) => {
