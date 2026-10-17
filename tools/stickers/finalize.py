@@ -84,7 +84,12 @@ def refine(c,who,si):
     art=cv2.GaussianBlur((res*255).astype(np.uint8),(0,0),0.9)/255.0
     rgb=crop.astype(np.float32)*art[...,None]+255.0*(1-art[...,None])      # art over white
     rgba=np.dstack([np.clip(rgb,0,255).astype(np.uint8),alpha])
+    # completeness: a real sticker is ringed by its own white outline; a fragment cut through the body is not
+    ar8=(res*255).astype(np.uint8); edge=cv2.subtract(ar8,cv2.erode(ar8,np.ones((7,7),np.uint8)))>0
+    gl=crop.astype(int); whiteish=(gl.mean(2)>205)&((gl.max(2)-gl.min(2))<55)
+    ring=float((edge&whiteish).sum())/max(1,int(edge.sum()))
     ys,xs=np.where(alpha>10)
+    c['ring']=ring; c['fill']=float(res.sum())/max(1,(res.shape[0]*res.shape[1]))
     return rgba[ys.min():ys.max()+1,xs.min():xs.max()+1]
 
 ROWB={'std':[210,395,578,745,855],'asta':[235,430,620,812]}
@@ -105,7 +110,7 @@ def iou(a,b):
     x0=max(a['x'],b['x']);y0=max(a['y'],b['y']);x1=min(a['x']+a['w'],b['x']+b['w']);y1=min(a['y']+a['h'],b['y']+b['h'])
     i=max(0,x1-x0)*max(0,y1-y0);u=a['w']*a['h']+b['w']*b['h']-i
     return i/u if u else 0
-out=sys.argv[1]; man={}
+out=sys.argv[1]; man={}; METRICS=[]
 for who,files in SHEETS.items():
     cs=[]
     for si in range(len(files)):
@@ -150,7 +155,9 @@ for who,files in SHEETS.items():
         if s<1: img=cv2.resize(img,None,fx=s,fy=s,interpolation=cv2.INTER_AREA)
         cv2.imwrite(f'{out}/{who}/{name}.webp',img,[cv2.IMWRITE_WEBP_QUALITY,86])
         lst.append((c['cat'],name,img.shape[1],img.shape[0]))
+        METRICS.append(dict(who=who,name=name,cat=c['cat'],row=c['row'],ring=round(c['ring'],3),w=int(img.shape[1]),h=int(img.shape[0]),area=int(c['ar'])))
     m={}
     for cat,name,w,h in lst: m.setdefault(cat,[]).append([name,w,h])
     man[who]=m; print(who,len(lst))
 json.dump(man,open(f'{out}/manifest.json','w'),separators=(',',':'))
+json.dump(METRICS,open(f'{out}/metrics.json','w'))

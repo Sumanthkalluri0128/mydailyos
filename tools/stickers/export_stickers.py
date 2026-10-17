@@ -1,5 +1,5 @@
 import json,shutil,os,sys
-SRC='/home/claude/stk'; W='/home/claude/w/client'; M='/home/claude/m'
+SRC='/home/claude/stk3'; W='/home/claude/w/client'; M='/home/claude/m'
 man=json.load(open(f'{SRC}/manifest.json'))
 # web
 dst=f'{W}/public/stickers'; shutil.rmtree(dst,ignore_errors=True); os.makedirs(dst)

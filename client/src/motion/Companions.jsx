@@ -1,9 +1,9 @@
-// Roaming companions. Two characters live along the bottom of the screen and:
+// Roaming companion. ONE character lives along the bottom of the screen and changes every few minutes (or when you pick one):
 //  • wander, hop, nap at night; you can PICK THEM UP, DRAG and THROW them (gravity + bounces)
 //  • tap = pet (hearts, "bond" grows) · double-tap = celebrate · tap again for comments from your real data + chat chips
 //  • EAT what you log: log a meal / water and the food drops from the top, they run over and eat it
 //  • PLAY BALL: drag/flick the ball, they chase and kick it back · FOLLOW ME: they trail your finger/cursor
-//  • DUEL or HIGH-FIVE each other now and then · SWAP any of the 13 characters in
+//  • TAGS IN a different character every few minutes · or SWAP to any of the 13 yourself
 // Bond levels are remembered per character (localStorage). Everything they say comes from talk.js / ctxStore.js.
 import { useEffect, useRef, useState } from "react";
 import "./stickers.css";
@@ -28,7 +28,7 @@ function addBond(who, n) {
   try { localStorage.setItem(bondKey, JSON.stringify(b)); } catch { /* ignore */ }
   const after = bondLevel(b[who]); return { level: after, up: after > before, xp: b[who] };
 }
-const loadCast = () => { try { const c = JSON.parse(localStorage.getItem(castKey)); if (Array.isArray(c) && c.length === 2 && c.every((w) => ALL.includes(w))) return c; } catch { /* ignore */ } const a = dayChar(); return [a, pick(ALL.filter((k) => k !== a))]; };
+const loadCast = () => { try { const c = JSON.parse(localStorage.getItem(castKey)); if (Array.isArray(c) && ALL.includes(c[0])) return [c[0]]; } catch { /* ignore */ } return [dayChar()]; };
 
 function idleScene() {
   const h = new Date().getHours();
@@ -64,7 +64,8 @@ function Layer() {
   const [fx, setFx] = useState([]);    // floating hearts / words
   const pointer = useRef({ x: 0, on: false });
   const follow = useRef(0);
-  const pair = useRef(null);
+  const lastTouch = useRef(performance.now());
+  const swapRef = useRef(null);
   const lastTap = useRef([0, 0]); const tapRun = useRef([0, 0]);
 
   const patch = (i, p) => setView((v) => v.map((x, k) => (k === i ? { ...x, ...p } : x)));
@@ -167,42 +168,25 @@ function Layer() {
         }
       });
 
-      // duel / high-five between the two
-      const p = pair.current;
-      if (p) {
-        const [a, b] = S;
-        if (p.phase === "meet") {
-          const bothHere = Math.abs(a.x - b.x) < 100 && !a.target && !b.target;
-          if (bothHere || now > p.until) { p.phase = "act"; p.until = now + 2400; a.dir = a.x < b.x ? 1 : -1; b.dir = -a.dir;
-            const fight = p.type === "duel";
-            [0, 1].forEach((k) => patch(k, { scene: fight ? pick(["fight", "powerup"]) : "victory", seed: Date.now() % 97, bubble: null }));
-            burst(0, fight ? "💥" : "🙌", 2); hop(0, 600); hop(1, 600);
-            if (fight) { buzz([20, 30, 20]); showBubble(Math.random() < 0.5 ? 0 : 1, { who: "Duel!", text: pick(["Round one — FIGHT!", "Show me what you've got!", "Winner gets the next snack!"]) }, 2300); }
-            else showBubble(Math.random() < 0.5 ? 0 : 1, { who: "Teamwork", text: pick(["Nice work today!", "High five!", "We're a team!"]) }, 2300);
-          }
-        } else if (p.phase === "act") {
-          if (p.type === "duel" && Math.floor(now / 200) % 2 === 0) { [a, b].forEach((o, k) => { o.x += (k === 0 ? 1 : -1) * Math.sin(now / 60) * 1.2; }); }
-          if (now > p.until) { pair.current = null; [0, 1].forEach((k) => { patch(k, { scene: idleScene() }); S[k].mode = "idle"; S[k].until = now + 2500; }); }
-        }
-      }
       raf = requestAnimationFrame(step);
     };
     sim.current.forEach((s, i) => { s.x = rnd(20, Math.max(40, window.innerWidth - 140)); s.mode = "idle"; s.until = performance.now() + 1000 + i * 1500; });
     raf = requestAnimationFrame(step);
-    // schedule duels / high fives
-    const sched = setInterval(() => {
-      const S = sim.current;
-      if (document.hidden || pair.current || viewRef.current.some((v) => v.bubble) || S.some((s) => s.mode === "drag" || s.mode === "fly" || s.target)) return;
-      if (new Date().getHours() >= 23 || new Date().getHours() < 5) return;
-      const meet = rnd(80, Math.max(120, window.innerWidth - 200)); const type = Math.random() < 0.5 ? "duel" : "highfive";
-      pair.current = { type, phase: "meet", until: performance.now() + 6500 };
-      S[0].target = { x: meet - 50, speed: 130, until: performance.now() + 6000 }; S[1].target = { x: meet + 50, speed: 130, until: performance.now() + 6000 };
-      S.forEach((s) => { s.mode = "walk"; });
-    }, 55000);
+    // a different character tags in every few minutes (not while you are playing with this one)
+    const rotate = setInterval(() => {
+      const S = sim.current[0]; const v = viewRef.current[0];
+      if (document.hidden || v.bubble || S.mode === "drag" || S.mode === "fly" || S.target || items.current.length) return;
+      if (performance.now() - lastTouch.current < 45000) return;
+      const h = new Date().getHours(); if (h >= 23 || h < 5) return;
+      const next = pick(ALL.filter((k) => k !== v.w));
+      const prev = CHARS[v.w];
+      showBubble(0, { who: prev, text: pick(["Tagging out — see you!", "My turn's over, bye!", "Time for a swap!"]) }, 1800, "wave");
+      setTimeout(() => swapRef.current?.(0, next, `${prev} tagged you in!`), 1900);
+    }, 170000);
     const onMove = (e) => { pointer.current = { x: e.clientX, on: true }; };
     window.addEventListener("pointermove", onMove, { passive: true });
     window.addEventListener("pointerdown", onMove, { passive: true });
-    return () => { cancelAnimationFrame(raf); clearInterval(sched); window.removeEventListener("pointermove", onMove); window.removeEventListener("pointerdown", onMove); };
+    return () => { cancelAnimationFrame(raf); clearInterval(rotate); window.removeEventListener("pointermove", onMove); window.removeEventListener("pointerdown", onMove); };
   }, []);
 
   // ---- drop items from the sky
@@ -228,7 +212,7 @@ function Layer() {
       if (!d.message || /offline|sync/i.test(d.message)) return;
       clearTimeout(timer);
       timer = setTimeout(async () => {
-        const i = Math.floor(Math.random() * 2);
+        const i = 0;
         const t = d.message.toLowerCase();
         if (d.type === "success") await refreshCtx(true);
         if (d.type === "success" && /water|\bml\b|drink/.test(t)) { dropItem("water", pick(["💧", "🥤"])); return; }
@@ -236,7 +220,7 @@ function Layer() {
         const r = reactTo(d.message, d.type || "success", getCtx(), view[i]?.w || cast.current[i]);
         showBubble(i, { text: r.text, who: CHARS[cast.current[i]] }, 6000, MOOD_SCENE[r.mood] || "cheer");
         hop(i, 560); buzz(10); burst(i, r.mood === "sad" ? "💧" : "✨", 2);
-        if (/goal|level|streak|album|sticker/i.test(d.message)) { fireConfetti({ count: 60 }); hop(0, 700); hop(1, 700); }
+        if (/goal|level|streak|album|sticker/i.test(d.message)) { fireConfetti({ count: 60 }); hop(0, 700); }
       }, 600);
     };
     window.addEventListener("mydailyos:toast", onToast);
@@ -248,7 +232,7 @@ function Layer() {
     refreshCtx();
     const t = setInterval(() => {
       if (document.hidden || viewRef.current.some((v) => v.bubble)) return;
-      const i = Math.floor(Math.random() * 2), w = viewRef.current[i].w;
+      const i = 0, w = viewRef.current[i].w;
       refreshCtx().then((ctx) => {
         const ins = insights(ctx, w);
         const line = ins.length ? ins[Math.floor(Math.random() * Math.min(3, ins.length))] : { mood: "hype", text: say(w, "hype") };
@@ -260,6 +244,7 @@ function Layer() {
 
   // ---- pointer: tap (pet), double tap, drag & throw
   const down = (i) => (e) => {
+    lastTouch.current = performance.now();
     const s = sim.current[i]; e.preventDefault(); e.currentTarget.setPointerCapture?.(e.pointerId);
     s.drag = { sx: e.clientX, sy: e.clientY, ox: s.x, oy: s.y, pts: [{ x: e.clientX, y: e.clientY, t: performance.now() }], moved: false };
   };
@@ -305,13 +290,15 @@ function Layer() {
     const r = reply(chip, w, getCtx());
     showBubble(i, { text: r.text, who: CHARS[w], chips: true, bond: bondLevel(loadBond()[w]) }, 14000, MOOD_SCENE[r.mood] || "cheer"); hop(i, 420);
   };
-  const swap = (i, who) => {
+  const swap = (i, who, note) => {
     cast.current = cast.current.map((w, k) => (k === i ? who : w));
     try { localStorage.setItem(castKey, JSON.stringify(cast.current)); } catch { /* ignore */ }
-    patch(i, { w: who, scene: "victory", seed: Date.now() % 97, bubble: { text: `${CHARS[who]} joins the party!`, who: CHARS[who] }, bond: bondLevel(loadBond()[who]) });
+    patch(i, { w: who, scene: "victory", seed: Date.now() % 97, bubble: { text: note || `${CHARS[who]} joins the party!`, who: CHARS[who] }, bond: bondLevel(loadBond()[who]) });
     hop(i, 760); fireConfetti({ count: 50 }); burst(i, "✨", 3);
     clearTimeout(timers.current[i]); timers.current[i] = setTimeout(() => patch(i, { bubble: null, scene: idleScene() }), 3500);
   };
+
+  swapRef.current = swap;
 
   return (
     <div className="cp-layer" aria-live="polite">

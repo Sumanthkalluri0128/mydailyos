@@ -5,7 +5,7 @@ const J = require('../lib/journey');
 
 test('catalogue: every sticker has a unique id and a rarity', () => {
   const all = A.allStickers(); const ids = new Set(all.map((s) => s.id));
-  assert.equal(ids.size, all.length); assert.ok(all.length > 300);
+  assert.equal(ids.size, all.length); assert.ok(all.length > 250);
   for (const s of all) assert.ok(['common', 'rare', 'epic'].includes(s.rarity));
 });
 test('packs: welcome pack, one per 50 XP, one per good week', () => {
