@@ -81,6 +81,16 @@ function App() {
   }, [syncTick]);
 
   useEffect(() => {
+    const go = (e) => {
+      const d = e.detail || {};
+      if (d.fix) { try { sessionStorage.setItem("ff_open_fix", "1"); } catch { /* ignore */ } window.dispatchEvent(new Event("ff:fixday")); }
+      if (d.page) setCurrentPage(d.page);
+    };
+    window.addEventListener("ff:goto", go);
+    return () => window.removeEventListener("ff:goto", go);
+  }, []);
+
+  useEffect(() => {
     const bump = () => setSyncTick((n) => n + 1);
     window.addEventListener("flexfit:synced", bump);
     return () => window.removeEventListener("flexfit:synced", bump);

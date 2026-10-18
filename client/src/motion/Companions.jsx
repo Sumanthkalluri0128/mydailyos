@@ -11,6 +11,8 @@ import { ALL, CHARS, dayChar, stickerFor } from "./chars";
 import { insights, reactTo, reply, say } from "./talk";
 import { getCtx, refreshCtx } from "./ctxStore";
 import { buzz, fireConfetti } from "./motion";
+import { apiFetch } from "../config/api";
+import { getLocalDate } from "../utils/date";
 
 const SIZE = 84, GRAV = 1900, BOUNCE = 0.46, ITEM = 34;
 const rnd = (a, b) => a + Math.random() * (b - a);
@@ -39,7 +41,16 @@ function idleScene() {
   return pick(["wave", "cheer", "task", "habit", "health"]);
 }
 const MOOD_SCENE = { drink: "drink", eat: "eat", lift: "lift", sad: "sad", party: "victory", thumbs: "habit", sleep: "sleep", think: "think", angry: "angry", laugh: "cheer", hype: "cheer" };
-const CHIP_SET = ["Ask me anything 💬", "How am I doing?", "What's next?", "Play ball ⚽", "Follow me 👣", "Swap me 🔄"];
+// Bubble menu: icon tiles. `go` = real app shortcut, `chip` = handled by ask() below.
+const MENU = [
+  { k: "water", icon: "💧", label: "+250 ml" },
+  { k: "food", icon: "🍽️", label: "Log food", go: { page: "foodLogger" } },
+  { k: "next", icon: "🎯", label: "What's next", chip: "What's next?" },
+  { k: "ask", icon: "💬", label: "Ask me", chip: "Ask me anything 💬" },
+  { k: "ball", icon: "⚽", label: "Play", chip: "Play ball ⚽" },
+  { k: "follow", icon: "👣", label: "Follow", chip: "Follow me 👣" },
+  { k: "swap", icon: "🔄", label: "Swap", chip: "Swap me 🔄" },
+];
 // Questions about your data go to the full assistant (it reads your whole day, week and goals); fun chips stay local.
 const TO_ASSISTANT = { "How am I doing?": "How am I doing today?", "What's next?": "What should I do next?", "Motivate me": "I need motivation" };
 const FOODS = ["🍛", "🍜", "🍔", "🍱", "🥗", "🍎", "🍕", "🥪"];
@@ -296,6 +307,25 @@ function Layer() {
     const r = reply(chip, w, getCtx());
     showBubble(i, { text: r.text, who: CHARS[w], chips: true, bond: bondLevel(loadBond()[w]) }, 14000, MOOD_SCENE[r.mood] || "cheer"); hop(i, 420);
   };
+  const menuAct = async (i, m) => {
+    const w = viewRef.current[i].w;
+    if (m.go) { window.dispatchEvent(new CustomEvent("ff:goto", { detail: m.go })); patch(i, { bubble: null }); return; }
+    if (m.k === "fix") { window.dispatchEvent(new CustomEvent("ff:goto", { detail: { page: "dashboard", fix: true } })); patch(i, { bubble: null }); return; }
+    if (m.k === "water") {
+      try {
+        const r = await apiFetch("/api/water", { method: "POST", body: JSON.stringify({ date: getLocalDate(), amountMl: 250 }) });
+        if (!r.ok) throw new Error();
+        window.dispatchEvent(new Event("flexfit:synced")); refreshCtx(true); buzz(12); hop(i, 420); burst(i, "💦", 2);
+        showBubble(i, { text: "Glug glug! +250 ml logged. 💧", who: CHARS[w] }, 3200, "drink");
+      } catch { showBubble(i, { text: "Hmm, I couldn't log that. Try again?", who: CHARS[w] }, 3000, "sad"); }
+      return;
+    }
+    ask(i, m.chip);
+  };
+  const closeBubble = (i) => { clearTimeout(timers.current[i]); patch(i, { bubble: null, scene: idleScene() }); };
+  // stay open while the pointer is on the bubble; fade away shortly after it leaves
+  const holdBubble = (i) => clearTimeout(timers.current[i]);
+  const releaseBubble = (i) => { clearTimeout(timers.current[i]); timers.current[i] = setTimeout(() => patch(i, { bubble: null }), 6000); };
   const swap = (i, who, note) => {
     cast.current = cast.current.map((w, k) => (k === i ? who : w));
     try { localStorage.setItem(castKey, JSON.stringify(cast.current)); } catch { /* ignore */ }
@@ -322,12 +352,22 @@ function Layer() {
             <img src={st.src} alt="" width={SIZE} height={SIZE} draggable="false" />
             {v.zzz && <span className="cp-zzz">Z z z</span>}
             {v.bubble && (
-              <div className="cp-bubble" onPointerDown={(e) => e.stopPropagation()} role="status">
-                <b>{v.bubble.who}{v.bubble.bond ? ` · ❤️ bond ${v.bubble.bond}` : ""}</b>{v.bubble.text}
+              <div className={`cp-bubble ${v.bubble.chips ? "is-menu" : ""}`} onPointerDown={(e) => e.stopPropagation()} onPointerEnter={() => holdBubble(i)} onPointerLeave={() => releaseBubble(i)} role="status">
+                <span className="cp-top"><b>{v.bubble.who}{v.bubble.bond ? ` · ❤️ bond ${v.bubble.bond}` : ""}</b><button type="button" className="cp-x" aria-label="Close" onClick={() => closeBubble(i)}>✕</button></span>
+                <span className="cp-text">{v.bubble.text}</span>
                 {v.bubble.picker && (
                   <div className="cp-pick">{ALL.map((w) => <button key={w} type="button" title={CHARS[w]} onClick={() => swap(i, w)}><img src={stickerFor(w, "cheer", 0).src} alt={CHARS[w]} width="40" height="40" /></button>)}</div>
                 )}
-                {v.bubble.chips && <div className="cp-chips">{CHIP_SET.map((c) => <button key={c} type="button" onClick={() => ask(i, c)}>{c}</button>)}</div>}
+                {v.bubble.chips && (() => {
+                  const q = getCtx()?.today, cal = q?.quests?.find((x) => x.id === "calories");
+                  const items = cal && cal.pct > 108 ? [{ k: "fix", icon: "🌿", label: "Fix my day" }, ...MENU] : MENU;
+                  return (
+                    <>
+                      {q?.total > 0 && <span className="cp-q" title={`${q.done} of ${q.total} quests done today`}><i><b style={{ width: `${Math.round((q.done / q.total) * 100)}%` }} /></i><small>{q.done}/{q.total} quests</small></span>}
+                      <span className="cp-grid">{items.map((m) => <button key={m.k} type="button" className={m.k === "fix" ? "is-fix" : ""} onClick={() => menuAct(i, m)}><span aria-hidden="true">{m.icon}</span>{m.label}</button>)}</span>
+                    </>
+                  );
+                })()}
               </div>
             )}
           </div>

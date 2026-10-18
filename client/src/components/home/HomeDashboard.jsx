@@ -2,6 +2,7 @@
 //   hero (greeting + scene carousel + coach) → five stat cards (with ＋ shortcuts) → nutrition · macros · habits → tasks · progress · scene.
 // Everything on it is tappable: cards open their page, water/steps have quick-add sheets, habits and tasks tick off with a cheer.
 import { useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import "./home.css";
 import "../homefocus.css";
 import HeroCarousel from "./HeroCarousel";
@@ -38,13 +39,17 @@ function Peek({ src, className = "" }) { return src ? <img className={`pk ${clas
 
 function Sheet({ title, onClose, children }) {
   useEffect(() => { const k = (e) => e.key === "Escape" && onClose(); window.addEventListener("keydown", k); return () => window.removeEventListener("keydown", k); }, [onClose]);
-  return (
+  // lock page scroll while the sheet is open
+  useEffect(() => { const prev = document.body.style.overflow; document.body.style.overflow = "hidden"; return () => { document.body.style.overflow = prev; }; }, []);
+  // portal: a fixed sheet inside the animated dashboard would centre on the whole page instead of the screen
+  return createPortal(
     <div className="sh-wrap" onClick={onClose}>
       <div className="sh" role="dialog" aria-modal="true" aria-label={title} onClick={(e) => e.stopPropagation()}>
         <div className="sh-head"><b>{title}</b><button type="button" onClick={onClose} aria-label="Close">✕</button></div>
         {children}
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
 
@@ -118,6 +123,12 @@ export default function HomeDashboard({ profile, summary, activity, water, water
   const minsN = useCountUp(n0(activity?.totalMinutes), 700);
 
   const [sheet, setSheet] = useState(null);       // "water" | "steps" | "fix" | null
+  // companions / other pages can ask Home to open "Fix my day"
+  useEffect(() => {
+    const open = () => { try { sessionStorage.removeItem("ff_open_fix"); } catch { /* ignore */ } setSheet("fix"); };
+    try { if (sessionStorage.getItem("ff_open_fix") === "1") open(); } catch { /* ignore */ }
+    window.addEventListener("ff:fixday", open); return () => window.removeEventListener("ff:fixday", open);
+  }, []);
 
   // ---- coach: the one most important next step (same engine as Ask FlexFit)
   const [next, setNext] = useState(null);
