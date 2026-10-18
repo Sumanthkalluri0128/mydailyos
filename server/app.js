@@ -29,6 +29,7 @@ const recipeRoutes = require('./routes/recipeRoutes');
 const goalRoutes = require('./routes/goalRoutes');
 const planRoutes = require('./routes/planRoutes');
 const albumRoutes = require('./routes/albumRoutes');
+const assistantRoutes = require('./routes/assistantRoutes');
 const { createGoogleRouter } = require('./routes/googleRoutes');
 
 
@@ -80,6 +81,7 @@ function createApp({ allowedOrigins = [] } = {}) {
   app.use('/api/recipes', recipeRoutes);
   app.use('/api/goals', goalRoutes);
   app.use('/api/plan', planRoutes);
+  app.use('/api/assistant', assistantRoutes);
   app.use('/api/album', albumRoutes);
   app.use('/api/progress', progressRoutes);
   app.use('/api/history', progressRoutes); // backward-compatible alias for older builds

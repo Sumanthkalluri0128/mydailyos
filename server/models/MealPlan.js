@@ -15,6 +15,8 @@ const schema = new mongoose.Schema(
     fiber: { type: Number, default: 0 },
     logged: { type: Boolean, default: false },
     rescue: { type: Boolean, default: false }, // built by the "gentle day" button
+    auto: { type: Boolean, default: false },   // built by "Plan my week from what I eat"
+    why: { type: String, default: '', maxlength: 200 }, // short reason shown under an auto-planned item
   },
   { timestamps: true }
 );

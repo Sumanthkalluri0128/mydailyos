@@ -5,6 +5,7 @@ import { notify } from "../utils/notify";
 import { confirmAction } from "../utils/confirm";
 import { getLocalDate } from "../utils/date";
 import FoodPicker from "../components/FoodPicker";
+import AutoPlanPanel from "../components/AutoPlanPanel";
 
 const MEALS = [["breakfast", "🌅", "Breakfast"], ["lunch", "☀️", "Lunch"], ["dinner", "🌙", "Dinner"], ["snacks", "🍎", "Snacks"]];
 const parse = (s) => { const [y, m, d] = s.split("-").map(Number); return new Date(Date.UTC(y, m - 1, d)); };
@@ -21,6 +22,7 @@ export default function PlannerPage({ onBack, goTo }) {
   const [shop, setShop] = useState(null);
   const [checked, setChecked] = useState({});
   const [dragId, setDragId] = useState(null);
+  const [auto, setAuto] = useState(false);
   const end = addDays(start, 6);
   const days = useMemo(() => Array.from({ length: 7 }, (_, i) => addDays(start, i)), [start]);
 
@@ -83,9 +85,12 @@ export default function PlannerPage({ onBack, goTo }) {
         <button className="secondary-button" onClick={() => setStart(addDays(start, 7))} aria-label="Next week">›</button>
         <button className="secondary-button" onClick={() => setStart(mondayOf(today))}>This week</button>
         <button className="secondary-button" onClick={copyWeek}>Copy last week</button>
-        <button className="primary-button" onClick={openShopping}>🛒 Shopping list</button>
+        <button className="primary-button" onClick={() => setAuto(!auto)}>✨ Plan my week from what I eat</button>
+        <button className="secondary-button" onClick={openShopping}>🛒 Shopping list</button>
         {goTo && <button className="secondary-button" onClick={() => goTo("recipes")}>🍲 Recipes</button>}
       </div>
+
+      {auto && <AutoPlanPanel from={start} to={end} onClose={() => setAuto(false)} onSaved={load} />}
 
       {shop && (
         <div className="large-card shopping-list">
@@ -122,7 +127,7 @@ export default function PlannerPage({ onBack, goTo }) {
                     <div className="planner-slot-head"><span>{emoji} {label}</span>
                       <button className="link-button" onClick={() => setAdding(adding === key ? null : key)}>{adding === key ? "Close" : "+ Add"}</button></div>
                     {slot.map((i) => (
-                      <div key={i._id} className={`planner-item ${i.logged ? "logged" : ""}`} draggable={!i.logged} onDragStart={() => setDragId(i._id)} onDragEnd={() => setDragId(null)}>
+                      <div key={i._id} title={i.why || undefined} className={`planner-item ${i.logged ? "logged" : ""}`} draggable={!i.logged} onDragStart={() => setDragId(i._id)} onDragEnd={() => setDragId(null)}>
                         <span><strong>{i.foodName}</strong><small>{i.quantity} {i.servingUnit} · {i.calories} kcal</small></span>
                         {i.logged ? <em>✓ eaten</em> : <button className="secondary-button" onClick={() => call(`/${i._id}/log`, "POST", { date: date <= today ? date : today, clientId: `pl-${i._id}` }, `Logged ${i.foodName}.`)}>Log</button>}
                         <button className="delete-log-button" aria-label={`Remove ${i.foodName}`} onClick={() => call(`/${i._id}`, "DELETE")}>✕</button>

@@ -39,7 +39,9 @@ function idleScene() {
   return pick(["wave", "cheer", "task", "habit", "health"]);
 }
 const MOOD_SCENE = { drink: "drink", eat: "eat", lift: "lift", sad: "sad", party: "victory", thumbs: "habit", sleep: "sleep", think: "think", angry: "angry", laugh: "cheer", hype: "cheer" };
-const CHIP_SET = ["How am I doing?", "Motivate me", "What's next?", "Play ball ⚽", "Follow me 👣", "Swap me 🔄", "Tell me a joke"];
+const CHIP_SET = ["Ask me anything 💬", "How am I doing?", "What's next?", "Motivate me", "Play ball ⚽", "Follow me 👣", "Swap me 🔄", "Tell me a joke"];
+// Questions about your data go to the full assistant (it reads your whole day, week and goals); fun chips stay local.
+const TO_ASSISTANT = { "How am I doing?": "How am I doing today?", "What's next?": "What should I do next?" };
 const FOODS = ["🍛", "🍜", "🍔", "🍱", "🥗", "🍎", "🍕", "🥪"];
 
 export default function Companions() {
@@ -287,6 +289,10 @@ function Layer() {
     if (chip.startsWith("Play ball")) { const it = dropItem("ball", "⚽", s.x + 70); showBubble(i, { text: it ? "Ball! Throw it — I'll kick it back!" : "The ball is already out — go get it!", who: CHARS[w] }, 3500, "cheer"); hop(i, 520); return; }
     if (chip.startsWith("Follow me")) { follow.current = performance.now() + 14000; showBubble(i, { text: "Lead the way — I'll follow your finger!", who: CHARS[w] }, 3500, "cheer"); hop(i, 420); return; }
     if (chip.startsWith("Swap me")) { showBubble(i, { who: "Choose who joins you", picker: true }, 20000); return; }
+    if (chip.startsWith("Ask me anything") || TO_ASSISTANT[chip]) {
+      window.dispatchEvent(new CustomEvent("flexfit:ask", { detail: { who: w, question: TO_ASSISTANT[chip] } }));
+      showBubble(i, { text: chip.startsWith("Ask me") ? "Ask away. I know your day, your week and every feature!" : "Let me check your numbers…", who: CHARS[w] }, 2500, "think"); hop(i, 420); return;
+    }
     const r = reply(chip, w, getCtx());
     showBubble(i, { text: r.text, who: CHARS[w], chips: true, bond: bondLevel(loadBond()[w]) }, 14000, MOOD_SCENE[r.mood] || "cheer"); hop(i, 420);
   };

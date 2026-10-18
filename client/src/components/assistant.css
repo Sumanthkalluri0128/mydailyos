@@ -1,0 +1,39 @@
+.as-fab { position: fixed; z-index: 70; right: 16px; bottom: calc(var(--tab-h, 64px) + 16px + env(safe-area-inset-bottom, 0px)); display: flex; align-items: center; gap: 6px; padding: 5px 16px 5px 6px;
+  border: 0; border-radius: 999px; cursor: pointer; font: 800 14px system-ui; color: #fff; background: linear-gradient(135deg, var(--primary), #9b6bff); box-shadow: 0 10px 28px rgba(104, 71, 232, .45); transition: transform .15s; }
+.as-fab:hover { transform: translateY(-2px) scale(1.02); }
+.as-fab img { background: rgba(255, 255, 255, .92); border-radius: 50%; object-fit: contain; padding: 2px; }
+@media (min-width: 960px) { .as-fab { bottom: 22px; right: 24px; } }
+.as-panel { position: fixed; z-index: 80; right: 16px; bottom: 16px; width: min(420px, calc(100vw - 32px)); height: min(640px, calc(100vh - 32px)); display: flex; flex-direction: column;
+  border-radius: 22px; overflow: hidden; background: var(--bg); border: 1px solid var(--border); box-shadow: 0 24px 70px rgba(10, 8, 30, .45); animation: asIn .22s cubic-bezier(.2, .9, .3, 1); }
+@keyframes asIn { from { transform: translateY(24px) scale(.98); opacity: 0; } }
+@media (max-width: 700px) { .as-panel { inset: 28px 0 0 0; width: auto; height: auto; border-radius: 22px 22px 0 0; right: 0; bottom: 0; } }
+.as-head { display: flex; align-items: center; gap: 10px; padding: 12px 12px 12px 14px; color: #fff; background: linear-gradient(135deg, var(--primary), #9b6bff); }
+.as-head img { background: rgba(255, 255, 255, .92); border-radius: 50%; object-fit: contain; padding: 2px; flex: none; }
+.as-head img.is-think { animation: asBob .8s ease-in-out infinite; }
+@keyframes asBob { 50% { transform: translateY(-4px) rotate(-4deg); } }
+.as-head > div { flex: 1; min-width: 0; }
+.as-head b { display: block; font-size: 15px; }
+.as-head small { display: block; opacity: .85; font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.as-head button { width: 40px; height: 40px; min-height: 40px; border: 0; border-radius: 50%; background: rgba(255, 255, 255, .18); color: #fff; font-size: 16px; cursor: pointer; flex: none; }
+.as-body { flex: 1; overflow-y: auto; padding: 14px 12px; display: grid; gap: 12px; align-content: start; overscroll-behavior: contain; }
+.as-msg { display: flex; gap: 8px; align-items: flex-end; max-width: 94%; }
+.as-msg img { object-fit: contain; flex: none; }
+.as-msg p { margin: 0; padding: 10px 13px; border-radius: 16px; font-size: 14.5px; line-height: 1.5; white-space: pre-wrap; overflow-wrap: anywhere; }
+.as-msg.bot p { background: var(--surface); border: 1px solid var(--border); border-bottom-left-radius: 5px; color: var(--text); }
+.as-msg.me { justify-self: end; flex-direction: row-reverse; }
+.as-msg.me p { background: var(--primary); color: #fff; border-bottom-right-radius: 5px; }
+.as-actions { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 7px; }
+.as-actions button, .as-chips button { border: 1px solid var(--primary-soft-hover-border, #d7d2ff); background: var(--primary-soft); color: var(--primary-soft-hover-text, #4f42ce); border-radius: 999px; padding: 8px 13px; min-height: 40px; font: 700 13px system-ui; cursor: pointer; }
+.as-actions button:hover, .as-chips button:hover:not(:disabled) { background: var(--primary-soft-hover-bg, #e9e8ff); }
+.as-chips { display: flex; gap: 6px; padding: 8px 12px; overflow-x: auto; border-top: 1px solid var(--border); scrollbar-width: none; }
+.as-chips button { white-space: nowrap; flex: none; }
+.as-chips button:disabled { opacity: .5; }
+.as-form { display: flex; gap: 8px; padding: 10px 12px calc(10px + env(safe-area-inset-bottom, 0px)); border-top: 1px solid var(--border); background: var(--surface); }
+.as-form input { flex: 1; min-width: 0; padding: 0 14px; border-radius: 999px; }
+.as-form button { width: 48px; height: 48px; border-radius: 50%; border: 0; background: var(--primary); color: #fff; font-size: 18px; cursor: pointer; flex: none; }
+.as-form button:disabled { opacity: .45; cursor: default; }
+.as-dots { display: inline-flex; gap: 5px; }
+.as-dots i { width: 7px; height: 7px; border-radius: 50%; background: var(--text-muted); animation: asDot 1s infinite; }
+.as-dots i:nth-child(2) { animation-delay: .15s; } .as-dots i:nth-child(3) { animation-delay: .3s; }
+@keyframes asDot { 0%, 80%, 100% { opacity: .25; transform: translateY(0); } 40% { opacity: 1; transform: translateY(-4px); } }
+@media (prefers-reduced-motion: reduce) { .as-panel, .as-head img.is-think, .as-dots i { animation: none; } }

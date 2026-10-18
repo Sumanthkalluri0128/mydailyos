@@ -9,6 +9,11 @@ const { createOnce } = require('../lib/idempotent');
 const { nutritionFor, foodLogDoc } = require('../lib/nutritionCalc');
 const { diffDays, addDays } = require('../lib/dates');
 const v = require('../lib/validate');
+const { loadCore } = require('../lib/planData');
+const { analyzeHabits, buildAutoPlan, MEALS: ALL_MEALS } = require('../lib/autoPlan');
+const { catalogueFoods } = require('../lib/foodCache');
+const { limitTargets } = require('../lib/energy');
+const { todayUtc } = require('../lib/dates');
 
 const router = express.Router();
 router.use(requireAuth);
@@ -133,6 +138,67 @@ router.get('/shopping-list', wrap(async (req, res) => {
     return { ...g, quantity: Math.round(g.quantity * 10) / 10, calories: Math.round(g.calories), approx };
   }).sort((a, b) => a.name.localeCompare(b.name));
   res.json({ success: true, from, to, items: list });
+}));
+
+// ---------------------------------------------------------------------------------------------------------------------
+// Plan from my own eating habits.
+async function loadHabits(uid, today) {
+  const logs = await FoodLog.find({ userId: uid, date: { $gt: addDays(today, -60), $lte: today } })
+    .select('foodId foodName mealType date consumedQuantity servingUnit nutritionTotal').lean();
+  const habits = analyzeHabits(logs, today);
+  const foodDocs = await Food.find({ _id: { $in: [...habits.byFood.keys()] }, hidden: { $ne: true }, ...visible(uid) }).lean();
+  return { habits, foods: new Map(foodDocs.map((f) => [String(f._id), f])) };
+}
+
+// GET /api/meal-plans/habits — what I eat at each meal, how often, usual and biggest portion, and the weekly cap this implies.
+router.get('/habits', wrap(async (req, res) => {
+  const today = req.query.today ? v.date(req.query.today, 'today') : todayUtc();
+  const { habits, foods } = await loadHabits(req.user.id, today);
+  const out = {};
+  for (const m of ALL_MEALS) {
+    out[m] = habits.byMeal[m].filter((h) => foods.has(h.foodId)).slice(0, 8)
+      .map((h) => ({ foodId: h.foodId, name: h.name, perWeek: h.perWeek, usualQty: h.usualQty, maxQty: h.maxQty, unit: h.unit, weeklyCap: h.weeklyCap, indulgent: h.indulgent, lastDate: h.lastDate }));
+  }
+  res.json({ success: true, loggedDays: habits.loggedDays, meals: out });
+}));
+
+// POST /api/meal-plans/auto { from, days (1-7), meals?, preview? } — fills empty meal slots from what I really eat.
+// preview:true returns the plan without saving. Re-running replaces the earlier automatic plan (not what I added by hand, not what I ate).
+router.post('/auto', wrap(async (req, res) => {
+  const uid = req.user.id;
+  const from = v.date(req.body?.from, 'from');
+  const nDays = Math.min(7, Math.max(1, Math.round(Number(req.body?.days) || 7)));
+  const to = addDays(from, nDays - 1);
+  const dates = Array.from({ length: nDays }, (_, i) => addDays(from, i));
+  const meals = Array.isArray(req.body?.meals) && req.body.meals.length ? req.body.meals.filter((m) => MEALS.includes(m)) : MEALS;
+  const today = req.body?.today ? v.date(req.body.today, 'today') : todayUtc();
+
+  const core = await loadCore(uid, today, { historyDays: 2 });
+  if (!core.ranges || !(core.target > 0)) throw new HttpError(400, 'Add your height, age and weight in Profile first so each day can be sized for you');
+  const { habits, foods } = await loadHabits(uid, today);
+  if (!habits.byFood.size) throw new HttpError(422, 'Log a few days of meals first. The plan is built from what you actually eat');
+
+  const [existing, eaten, shared] = await Promise.all([
+    MealPlan.find({ userId: uid, date: { $gte: from, $lte: to } }).lean(),
+    FoodLog.find({ userId: uid, date: { $gte: from, $lte: to } }).select('date mealType foodId nutritionTotal').lean(),
+    catalogueFoods(Food),
+  ]);
+  const keep = existing.filter((i) => !(i.auto && !i.logged));              // earlier automatic, uneaten items get replaced
+  const occupied = {}; const dayBase = {}; const weekCounts = new Map();
+  const bump = (id) => weekCounts.set(String(id), (weekCounts.get(String(id)) || 0) + 1);
+  for (const i of keep) { occupied[`${i.date}|${i.mealType}`] = true; bump(i.foodId); const b = (dayBase[i.date] ||= {}); b.calories = (b.calories || 0) + i.calories; b.protein = (b.protein || 0) + i.protein; b.fiber = (b.fiber || 0) + i.fiber; }
+  for (const l of eaten) { occupied[`${l.date}|${l.mealType}`] = true; bump(l.foodId); const b = (dayBase[l.date] ||= {}); for (const k of ['calories', 'protein', 'carbohydrates', 'fat', 'fiber', 'sugar', 'sodium']) b[k] = (b[k] || 0) + Number(l.nutritionTotal?.[k] || 0); }
+
+  const plan = buildAutoPlan({
+    habits, foods, catalogue: shared.filter((f) => !f.hidden), dates, target: core.target, floor: core.floor, ranges: core.ranges,
+    limits: limitTargets(core.target), occupied, dayBase, weekCounts, meals,
+  });
+  if (!plan.items.length) throw new HttpError(422, plan.notes[0] || 'Nothing to plan: every meal in that range already has food');
+
+  if (req.body?.preview === true) return res.json({ success: true, preview: true, ...plan });
+  await MealPlan.deleteMany({ userId: uid, date: { $gte: from, $lte: to }, auto: true, logged: false });
+  const saved = await MealPlan.insertMany(plan.items.map((i) => ({ userId: uid, date: i.date, mealType: i.mealType, foodId: i.foodId, foodName: i.foodName, quantity: i.quantity, servingUnit: i.servingUnit, calories: i.calories, protein: i.protein, fiber: i.fiber, auto: true, why: i.why })));
+  res.status(201).json({ success: true, saved: saved.length, ...plan });
 }));
 
 module.exports = router;

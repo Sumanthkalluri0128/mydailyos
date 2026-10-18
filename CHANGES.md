@@ -1,3 +1,14 @@
+# v27 - clearer UI, smart assistant, plan from your habits, scanner fix (web + server)
+
+- **Navigation:** one grouped menu (Today / Eat / Move & body / Stay on track) as a sidebar on desktop and a bottom tab bar with a "More" sheet on phones. Every page is still there.
+- **Home:** a "What would you like to do?" row of live action tiles (food, water, steps, weight, plan) replaces the Quick Add block at the bottom.
+- **Ask FlexFit (assistant):** floating button, `?` shortcut, and the moving characters' chat all open it. POST /api/assistant/ask reads your day, week, weight trend, goals, habits and top foods, suggests what to eat from your own foods, explains stalls, and explains every feature with a button to open it. Rule-based: free, private, no outside AI. Calorie budget matches the dashboard.
+- **Plan my week from what I eat:** POST /api/meal-plans/auto (preview or save) and GET /api/meal-plans/habits. Only foods from your history, usual portions, weekly cap per food (treats stay rare), portion never above your biggest ever, each day checked against calories, protein, carbs, fat, sugar, sodium and the safe minimum.
+- **Barcode import:** tries barcode variants on the global and India servers, reads per-serving values, estimates calories from macros, and returns `missing` / `estimated` lists instead of failing.
+- Tests: assistant.unit.test.js, autoPlan.unit.test.js.
+
+---
+
 # v22 - macro ranges + scanner fix (web + server)
 
 - **Barcode import (Open Food Facts):** sodium is stored in grams per 100 g, but some products are typed in milligrams or with impossible numbers, which produced a food the server refused ("sodium must be between 0 and 100000"). Values are now normalised and clamped (sodium unit mix-ups, kJ typed as kcal, negatives, macros above 100 g per 100 g), and saving a food no longer fails because of a sodium problem.

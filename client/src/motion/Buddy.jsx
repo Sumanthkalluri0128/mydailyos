@@ -86,7 +86,7 @@ export default function Buddy({ scene = "wave", size = 96, says, className = "",
       <span className="bdi-body" style={{ "--bn": `bd${c.body}`, "--bt": `${c.dur}ms` }}>
         <img className="bd-img" src={pic.src} alt="" width={size} height={size} draggable="false" loading="lazy" decoding="async" />
       </span>
-      {bubble && <span className="bd-bubble" role="status">{bubble}</span>}
+      {bubble && <span className="bd-bubble" role="status">{bubble}<b className="bd-ask" role="button" tabIndex={0} onClick={(e) => { e.stopPropagation(); window.dispatchEvent(new CustomEvent("flexfit:ask", { detail: { who: char } })); }} onKeyDown={(e) => { if (e.key === "Enter") { e.stopPropagation(); window.dispatchEvent(new CustomEvent("flexfit:ask", { detail: { who: char } })); } }}>Ask me anything ›</b></span>}
       {sparks.map((s) => <i key={s.id} className="bd-sparkle" style={{ left: "50%", top: "30%", "--dx": s.dx, "--dy": s.dy }}>{s.e}</i>)}
     </span>
   );

@@ -1,0 +1,17 @@
+.ta { margin: 4px 0 26px; }
+.ta-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
+.ta-head h2 { margin: 0; font-size: 20px; }
+.ta-ask { border: 1px solid var(--primary-soft-hover-border, #d7d2ff); background: var(--primary-soft); color: var(--primary); font-weight: 800; border-radius: 999px; padding: 8px 16px; cursor: pointer; }
+.ta-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; }
+.ta-tile { --tone: var(--primary); position: relative; display: grid; gap: 3px; text-align: left; padding: 16px 16px 20px; border-radius: 20px; border: 1px solid var(--border); background: var(--surface); color: var(--text); cursor: pointer; overflow: hidden; transition: transform .15s, box-shadow .15s, border-color .15s; min-height: 132px; align-content: start; }
+.ta-tile:hover { transform: translateY(-2px); border-color: var(--tone); box-shadow: 0 10px 26px color-mix(in srgb, var(--tone) 22%, transparent); }
+.ta-tile.tone-kcal { --tone: var(--kcal, #e8823a); } .ta-tile.tone-water { --tone: var(--water, #2587d9); }
+.ta-tile.tone-steps { --tone: var(--steps, #14a38b); } .ta-tile.tone-weight { --tone: #8a63ff; } .ta-tile.tone-plan { --tone: #e0527a; }
+.ta-ic { width: 40px; height: 40px; display: grid; place-items: center; font-size: 21px; border-radius: 13px; background: color-mix(in srgb, var(--tone) 16%, transparent); }
+.ta-title { font-size: 13px; font-weight: 700; color: var(--text-muted); margin-top: 6px; }
+.ta-tile strong { font-size: 20px; letter-spacing: -.02em; }
+.ta-tile small { color: var(--text-muted); font-size: 12.5px; line-height: 1.35; }
+.ta-tile.is-over { border-color: #e5484d; } .ta-tile.is-over small { color: #e5484d; font-weight: 700; }
+.ta-bar { position: absolute; left: 0; right: 0; bottom: 0; height: 6px; background: color-mix(in srgb, var(--tone) 14%, transparent); }
+.ta-bar b { display: block; height: 100%; background: var(--tone); border-radius: 0 6px 6px 0; transition: width .6s cubic-bezier(.22, 1, .36, 1); }
+@media (max-width: 520px) { .ta-grid { grid-template-columns: repeat(2, 1fr); } .ta-tile:last-child { grid-column: 1 / -1; min-height: 0; } }

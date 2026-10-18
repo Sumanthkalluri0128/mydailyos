@@ -25,6 +25,9 @@ import OverDayCard from "./components/OverDayCard";
 import { PageSkeleton } from "./motion/PageTransition";
 import { withTransition } from "./motion/motion";
 import MacroCard from "./components/MacroCard";
+import AppNav from "./components/AppNav";
+import AssistantPanel from "./components/AssistantPanel";
+import TodayActions from "./components/TodayActions";
 
 import { getLocalDate } from "./utils/date";
 import { apiFetch } from "./config/api";
@@ -48,49 +51,6 @@ function getInitialTheme() {
     return "dark";
   }
   return "light";
-}
-
-function ThemeToggle({ theme, onToggle }) {
-  const isDark = theme === "dark";
-  return (
-    <button
-      type="button"
-      className="theme-toggle"
-      onClick={onToggle}
-      aria-label={isDark ? "Switch to light mode" : "Switch to dark mode"}
-      title={isDark ? "Switch to light mode" : "Switch to dark mode"}
-    >
-      {isDark ? "☀️" : "🌙"}
-    </button>
-  );
-}
-
-function BrandHome({ onHome }) {
-  const handleKeyDown = (event) => {
-    if (event.key === "Enter" || event.key === " ") {
-      event.preventDefault();
-      onHome();
-    }
-  };
-
-  return (
-    <div
-      className="brand-home"
-      role="button"
-      tabIndex={0}
-      onClick={onHome}
-      onKeyDown={handleKeyDown}
-      aria-label="Go to Home"
-    >
-      <div className="brand-icon">✦</div>
-      <div>
-        <div className="brand-title">FlexFit</div>
-        <div className="brand-subtitle">
-          Your daily health & productivity tracker
-        </div>
-      </div>
-    </div>
-  );
 }
 
 // After the first screen is up, fetch the other pages' code in the background so tapping a tab is instant.
@@ -382,6 +342,24 @@ function App() {
 
   const avatarInitial = (profile?.name || "").trim().charAt(0).toUpperCase() || "?";
 
+  // One navigation + the "Ask FlexFit" assistant, shared by every page.
+  const openAssistant = (detail) => window.dispatchEvent(new CustomEvent("flexfit:ask", { detail }));
+  const shell = (
+    <>
+      <AppNav
+        current={currentPage}
+        go={setCurrentPage}
+        theme={theme}
+        onToggleTheme={toggleTheme}
+        avatar={avatarInitial}
+        name={(profile?.name || "").split(" ")[0]}
+        streak={streak}
+        onAsk={() => openAssistant()}
+      />
+      <AssistantPanel go={setCurrentPage} />
+    </>
+  );
+
   if (profile && profile.onboarded === false) {
     return (
       <OnboardingPage
@@ -405,10 +383,7 @@ function App() {
     return (
       <div className="app">
 
-        <header className="topbar">
-          <BrandHome onHome={() => setCurrentPage("dashboard")} />
-        <ThemeToggle theme={theme} onToggle={toggleTheme} />
-        </header>
+        {shell}
 
         <main key={currentPage} className="dashboard fx-page">
           <Suspense fallback={<PageSkeleton variant="list" />}>
@@ -433,10 +408,7 @@ function App() {
   if (currentPage === "health") {
     return (
       <div className="app">
-        <header className="topbar">
-          <BrandHome onHome={() => setCurrentPage("dashboard")} />
-          <ThemeToggle theme={theme} onToggle={toggleTheme} />
-        </header>
+        {shell}
         <main key={currentPage} className="dashboard fx-page">
           <Suspense fallback={<PageSkeleton variant="list" />}>
             <HealthPage onBack={() => setCurrentPage("dashboard")} />
@@ -450,10 +422,7 @@ function App() {
     return (
       <div className="app">
 
-        <header className="topbar">
-          <BrandHome onHome={() => setCurrentPage("dashboard")} />
-        <ThemeToggle theme={theme} onToggle={toggleTheme} />
-        </header>
+        {shell}
 
         <main key={currentPage} className="dashboard fx-page">
           <Suspense fallback={<PageSkeleton variant="list" />}>
@@ -477,10 +446,7 @@ function App() {
     return (
       <div className="app">
 
-        <header className="topbar">
-          <BrandHome onHome={() => setCurrentPage("dashboard")} />
-        <ThemeToggle theme={theme} onToggle={toggleTheme} />
-        </header>
+        {shell}
 
         <main key={currentPage} className="dashboard fx-page">
           <Suspense fallback={<PageSkeleton variant="list" />}>
@@ -504,10 +470,7 @@ function App() {
     return (
       <div className="app">
 
-        <header className="topbar">
-          <BrandHome onHome={() => setCurrentPage("dashboard")} />
-        <ThemeToggle theme={theme} onToggle={toggleTheme} />
-        </header>
+        {shell}
 
         <main key={currentPage} className="dashboard fx-page">
           <Suspense fallback={<PageSkeleton variant="list" />}>
@@ -531,10 +494,7 @@ function App() {
     return (
       <div className="app">
 
-        <header className="topbar">
-          <BrandHome onHome={() => setCurrentPage("dashboard")} />
-        <ThemeToggle theme={theme} onToggle={toggleTheme} />
-        </header>
+        {shell}
 
         <main key={currentPage} className="dashboard fx-page">
           <Suspense fallback={<PageSkeleton variant="list" />}>
@@ -558,10 +518,7 @@ function App() {
     return (
       <div className="app">
 
-        <header className="topbar">
-          <BrandHome onHome={() => setCurrentPage("dashboard")} />
-        <ThemeToggle theme={theme} onToggle={toggleTheme} />
-        </header>
+        {shell}
 
         <main key={currentPage} className="dashboard fx-page">
           <Suspense fallback={<PageSkeleton variant="list" />}>
@@ -585,10 +542,7 @@ function App() {
     return (
       <div className="app">
 
-        <header className="topbar">
-          <BrandHome onHome={() => setCurrentPage("dashboard")} />
-        <ThemeToggle theme={theme} onToggle={toggleTheme} />
-        </header>
+        {shell}
 
         <main key={currentPage} className="dashboard fx-page">
           <Suspense fallback={<PageSkeleton variant="list" />}>
@@ -611,10 +565,7 @@ function App() {
   if (currentPage === "goals") {
     return (
       <div className="app">
-        <header className="topbar">
-          <BrandHome onHome={() => setCurrentPage("dashboard")} />
-        <ThemeToggle theme={theme} onToggle={toggleTheme} />
-        </header>
+        {shell}
         <main key={currentPage} className="dashboard fx-page">
           <Suspense fallback={<PageSkeleton variant="list" />}>
           <GoalsPage onBack={() => setCurrentPage("dashboard")} />
@@ -627,10 +578,7 @@ function App() {
   if (currentPage === "progress") {
     return (
       <div className="app">
-        <header className="topbar">
-          <BrandHome onHome={() => setCurrentPage("dashboard")} />
-        <ThemeToggle theme={theme} onToggle={toggleTheme} />
-        </header>
+        {shell}
         <main key={currentPage} className="dashboard fx-page">
           <Suspense fallback={<PageSkeleton variant="list" />}>
           <ProgressPage onBack={() => setCurrentPage("dashboard")} />
@@ -643,10 +591,7 @@ function App() {
   if (currentPage === "planner" || currentPage === "recipes") {
     return (
       <div className="app">
-        <header className="topbar">
-          <BrandHome onHome={() => setCurrentPage("dashboard")} />
-          <ThemeToggle theme={theme} onToggle={toggleTheme} />
-        </header>
+        {shell}
         <main key={currentPage} className="dashboard fx-page">
           <Suspense fallback={<PageSkeleton variant="list" />}>
             {currentPage === "planner"
@@ -666,22 +611,7 @@ function App() {
     return (
       <div className="app">
 
-        <header className="topbar">
-
-          <BrandHome onHome={() => setCurrentPage("dashboard")} />
-
-          <button
-            className="secondary-button"
-            onClick={() =>
-              setCurrentPage("dashboard")
-            }
-          >
-            ← Dashboard
-          </button>
-
-          <ThemeToggle theme={theme} onToggle={toggleTheme} />
-
-        </header>
+        {shell}
 
         <main key={currentPage} className="dashboard fx-page">
           <Suspense fallback={<PageSkeleton variant="list" />}>
@@ -799,53 +729,7 @@ function App() {
       {/* TOP BAR */}
       {/* ====================================================== */}
 
-      <header className="topbar">
-
-        <BrandHome onHome={() => setCurrentPage("dashboard")} />
-
-        <div className="topbar-actions">
-          <ThemeToggle theme={theme} onToggle={toggleTheme} />
-
-          <button
-            className="topbar-progress"
-            onClick={() => setCurrentPage("planner")}
-            aria-label="Open meal planner"
-          >
-            <span>📅</span>
-            <span>Plan</span>
-          </button>
-
-          <button
-            className={`topbar-progress ${currentPage === "goals" ? "active" : ""}`}
-            onClick={() => setCurrentPage("goals")}
-            aria-label="Open Goals and Journey"
-          >
-            <span>🏆</span>
-            <span>Goals</span>
-          </button>
-
-          <button
-            className={`topbar-progress ${currentPage === "progress" ? "active" : ""}`}
-            onClick={() => setCurrentPage("progress")}
-            aria-label="Open Progress and History"
-          >
-            <span>📈</span>
-            <span>Progress</span>
-          </button>
-
-          <div className="profile">
-            <button
-              className="profile-avatar"
-              onClick={() => setCurrentPage("profile")}
-              aria-label="Open profile"
-              title={profile?.name || ""}
-            >
-              {avatarInitial}
-            </button>
-          </div>
-        </div>
-
-      </header>
+      {shell}
 
       <main key={currentPage} className="dashboard fx-page">
 
@@ -863,6 +747,16 @@ function App() {
           goTo={setCurrentPage}
           onChanged={() => setSyncTick((t) => t + 1)}
           streak={streak}
+        />
+        <TodayActions
+          profile={profile}
+          summary={dailySummary}
+          activity={activitySummary}
+          water={waterSummary}
+          waterTarget={waterTarget}
+          latestWeight={latestWeight}
+          goTo={setCurrentPage}
+          onAsk={() => openAssistant()}
         />
         <OverDayCard onPlan={() => setCurrentPage("planner")} />
         <FatLossCard onOpen={() => setCurrentPage("goals")} syncTick={syncTick} />
@@ -1333,105 +1227,6 @@ function App() {
               )}
 
             </div>
-
-          </div>
-
-        </section>
-
-        {/* ==================================================== */}
-        {/* QUICK ACTIONS */}
-        {/* ==================================================== */}
-
-        <section className="quick-actions">
-
-          <h2>
-            Quick Add
-          </h2>
-
-          <div className="quick-grid">
-
-            <button
-              onClick={() =>
-                setCurrentPage("foodLogger")
-              }
-            >
-              🍽️
-              <span>
-                Food
-              </span>
-            </button>
-
-            <button
-              onClick={() =>
-                setCurrentPage("exercise")
-              }
-            >
-              🔥
-              <span>
-                Exercise
-              </span>
-            </button>
-
-            <button
-              onClick={() =>
-                setCurrentPage("water")
-              }
-            >
-              💧
-              <span>
-                Water
-              </span>
-            </button>
-
-            <button onClick={() => setCurrentPage("health")}>
-              👟
-              <span>Health &amp; Steps</span>
-            </button>
-
-            <button
-              onClick={() =>
-                setCurrentPage("weight")
-              }
-            >
-              ⚖️
-              <span>
-                Weight
-              </span>
-            </button>
-
-            <button
-              onClick={() =>
-                setCurrentPage("task")
-              }
-            >
-              📋
-              <span>
-                Task
-              </span>
-            </button>
-
-            <button
-              onClick={() =>
-                setCurrentPage("habit")
-              }
-            >
-              🔁
-              <span>
-                Habit
-              </span>
-            </button>
-
-            <button
-              className="progress-quick-action"
-              onClick={() =>
-                setCurrentPage("progress")
-              }
-            >
-              📈
-              <span>
-                Progress
-              </span>
-            </button>
 
           </div>
 

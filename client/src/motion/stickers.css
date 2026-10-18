@@ -56,3 +56,6 @@ html.ff-calm .bdi-body{animation:none}
 .cp-pick{display:grid;grid-template-columns:repeat(5,1fr);gap:4px;margin-top:8px;max-width:230px}
 .cp-pick button{border:0;border-radius:12px;background:#ece8ff;padding:3px;cursor:pointer;line-height:0}
 .cp-pick button:hover{background:#d9d0ff}.cp-pick img{object-fit:contain}
+.bd-ask{display:block;margin-top:5px;font:800 11px system-ui;color:#5b3fe0;cursor:pointer;pointer-events:auto}
+.bd-ask:hover{text-decoration:underline}
+[data-theme="dark"] .bd-ask{color:#b9a8ff}
