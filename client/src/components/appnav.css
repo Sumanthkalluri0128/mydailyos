@@ -1,33 +1,39 @@
 /* App navigation: sidebar (>= 960px) / top bar + bottom tabs (< 960px). Uses the theme variables from App.css. */
 :root { --nav-w: 264px; --tab-h: 64px; }
-.nv-side, .nv-top, .nv-tabs { font-family: var(--font, system-ui); }
-.nv-side button, .nv-top button, .nv-tabs button, .nv-sheet button { font-family: inherit; }
+.nv-bar, .nv-top, .nv-tabs { font-family: var(--font, system-ui); }
+.nv-bar button, .nv-top button, .nv-tabs button, .nv-sheet button, .nv-menu button { font-family: inherit; }
 
-/* ---- desktop sidebar ---- */
-.nv-side { position: fixed; z-index: 40; inset: 0 auto 0 0; width: var(--nav-w); display: none; flex-direction: column; gap: 10px; padding: 18px 14px 14px;
-  background: var(--surface); border-right: 1px solid var(--border); overflow-y: auto; }
-.nv-brand { display: flex; align-items: center; gap: 12px; background: none; border: 0; padding: 4px 6px; cursor: pointer; color: var(--text); text-align: left; min-height: 48px; }
-.nv-brand img { border-radius: 11px; box-shadow: 0 4px 14px rgba(104, 71, 232, .35); }
-.nv-brand b { display: block; font-size: 19px; letter-spacing: -.02em; }
-.nv-brand small { color: var(--text-muted); font-size: 12px; }
-.nv-ask { display: flex; align-items: center; gap: 10px; width: 100%; padding: 12px 14px; border: 0; border-radius: 14px; cursor: pointer; font-weight: 700; font-size: 15px;
-  color: #fff; background: linear-gradient(135deg, var(--primary), #9b6bff); box-shadow: 0 6px 18px rgba(104, 71, 232, .32); transition: transform .15s, box-shadow .15s; }
-.nv-ask:hover { transform: translateY(-1px); box-shadow: 0 9px 22px rgba(104, 71, 232, .4); }
-.nv-ask kbd { margin-left: auto; font: 700 11px system-ui; padding: 2px 7px; border-radius: 6px; background: rgba(255, 255, 255, .22); }
+/* ---- desktop top bar ---- */
+.nv-bar { position: sticky; top: 0; z-index: 50; display: none; align-items: center; gap: 18px; padding: 12px clamp(16px, 2.4vw, 34px); }
+.nv-brand { display: flex; align-items: center; gap: 12px; background: none; border: 0; padding: 0; cursor: pointer; color: var(--text); text-align: left; min-height: 48px; }
+.nv-brand img { border-radius: 14px; box-shadow: 0 6px 18px rgba(104, 71, 232, .38); }
+.nv-brand b { display: block; font-size: 22px; letter-spacing: -.03em; line-height: 1.05; }
+.nv-brand small { color: var(--text-muted); font-size: 12.5px; font-weight: 600; }
+.nv-pill { display: flex; align-items: center; gap: 2px; margin: 0 auto; padding: 5px; border-radius: 999px; background: color-mix(in srgb, var(--surface) 88%, transparent); backdrop-filter: blur(14px); border: 1px solid color-mix(in srgb, var(--text) 8%, transparent); box-shadow: 0 10px 30px color-mix(in srgb, var(--primary) 14%, transparent); }
+.nv-pi { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 8px 18px; border: 0; border-radius: 999px; background: none; color: var(--text); font-weight: 700; font-size: 14.5px; cursor: pointer; white-space: nowrap; transition: background .18s, color .18s, transform .15s; }
+.nv-pi span { font-size: 17px; }
+.nv-pi:hover { background: var(--primary-soft); } .nv-pi:active { transform: scale(.96); }
+.nv-pi.is-on { color: #fff; background: linear-gradient(135deg, #6847e8, #9b6bff); box-shadow: 0 6px 16px rgba(104, 71, 232, .4); }
+.nv-more-wrap { position: relative; }
+.nv-menu { position: absolute; top: calc(100% + 12px); right: 0; z-index: 60; width: min(360px, 86vw); max-height: 78vh; overflow: auto; padding: 12px; border-radius: 22px; background: var(--surface); border: 1px solid var(--border); box-shadow: 0 24px 60px rgba(20, 16, 50, .28); animation: nvDrop .18s ease-out; }
+.nv-menu .nv-group:first-child { margin-top: 0; }
+.nv-menu .nv-item { align-items: center; } .nv-menu .nv-item small { display: block; color: var(--text-muted); font-size: 12px; font-weight: 500; } .nv-menu .nv-item b { font-size: 14.5px; }
+.nv-prof { margin-top: 8px; border-top: 1px solid var(--border); border-radius: 0 0 12px 12px; }
+@keyframes nvDrop { from { opacity: 0; transform: translateY(-6px); } }
+.nv-right { display: flex; align-items: center; gap: 10px; }
+.nv-round { display: grid; place-items: center; width: 46px; height: 46px; border-radius: 50%; border: 1px solid color-mix(in srgb, var(--text) 8%, transparent); background: color-mix(in srgb, var(--surface) 90%, transparent); backdrop-filter: blur(10px); font-size: 19px; cursor: pointer; box-shadow: 0 6px 18px color-mix(in srgb, var(--primary) 12%, transparent); transition: transform .15s, background .15s; }
+.nv-round:hover { transform: translateY(-2px); background: var(--primary-soft); }
 .nv-group { display: grid; gap: 2px; margin-top: 8px; }
 .nv-title { padding: 4px 12px; font-size: 11px; font-weight: 800; letter-spacing: .09em; text-transform: uppercase; color: var(--text-muted); }
 .nv-item { display: flex; align-items: center; gap: 12px; width: 100%; padding: 10px 12px; border: 0; border-radius: 12px; background: none; color: var(--text); font-size: 15px; font-weight: 600; cursor: pointer; text-align: left; min-height: 44px; transition: background .15s; }
 .nv-item:hover { background: var(--primary-soft); }
 .nv-item.is-on { background: var(--primary-soft); color: var(--primary); box-shadow: inset 3px 0 0 var(--primary); }
 .nv-ic { width: 26px; text-align: center; font-size: 18px; }
-.nv-foot { margin-top: auto; display: flex; align-items: center; gap: 8px; padding-top: 12px; border-top: 1px solid var(--border); }
-.nv-me { flex: 1; display: flex; align-items: center; gap: 10px; padding: 8px; border: 0; border-radius: 12px; background: none; color: var(--text); cursor: pointer; text-align: left; min-width: 0; }
-.nv-me:hover, .nv-me.is-on { background: var(--primary-soft); }
-.nv-me b { display: block; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 120px; }
-.nv-me small { color: var(--text-muted); font-size: 12px; }
+.nv-me { display: flex; align-items: center; gap: 6px; padding: 4px 8px 4px 4px; border: 1px solid color-mix(in srgb, var(--text) 8%, transparent); border-radius: 999px; background: color-mix(in srgb, var(--surface) 90%, transparent); backdrop-filter: blur(10px); color: var(--text); cursor: pointer; box-shadow: 0 6px 18px color-mix(in srgb, var(--primary) 12%, transparent); }
+.nv-me:hover, .nv-me.is-on { background: var(--primary-soft); } .nv-chev { font-size: 14px; color: var(--text-muted); }
 .nv-avatar { width: 38px; height: 38px; border-radius: 50%; display: inline-grid; place-items: center; font-weight: 800; color: #fff; background: linear-gradient(135deg, var(--primary), #9b6bff); border: 0; flex: none; cursor: pointer; }
 .nv-theme { width: 44px; height: 44px; border-radius: 12px; border: 1px solid var(--border); background: var(--surface); cursor: pointer; font-size: 18px; flex: none; }
-.nv-streak { font-weight: 800; font-size: 13px; padding: 5px 9px; border-radius: 999px; background: rgba(232, 130, 58, .14); color: var(--kcal, #e8823a); white-space: nowrap; }
+.nv-streak { display: inline-flex; align-items: center; gap: 6px; min-height: 46px; padding: 4px 16px; border-radius: 18px; font-weight: 800; font-size: 15px; background: color-mix(in srgb, var(--surface) 92%, transparent); border: 1px solid color-mix(in srgb, var(--text) 8%, transparent); color: var(--kcal, #e8823a); white-space: nowrap; box-shadow: 0 6px 18px color-mix(in srgb, var(--primary) 12%, transparent); }
 
 /* ---- phone top bar + bottom tabs ---- */
 .nv-top { position: sticky; top: 0; z-index: 40; display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: calc(8px + env(safe-area-inset-top, 0px)) 14px 8px;
@@ -60,10 +66,12 @@
 .app { padding-bottom: calc(var(--tab-h) + env(safe-area-inset-bottom, 0px)); }
 .app > .topbar { display: none; }
 :root { --cp-floor: 140px; }  /* roaming characters walk above the tab bar */
-@media (min-width: 960px) {
-  .nv-side { display: flex; }
+@media (min-width: 1000px) {
+  .nv-bar { display: flex; }
   .nv-top, .nv-tabs { display: none; }
-  .app { padding-left: var(--nav-w); padding-bottom: 0; }
+  .app { padding-bottom: 0; }
   :root { --cp-floor: 76px; }
 }
+@media (min-width: 1000px) and (max-width: 1180px) { .nv-brand small, .nv-streak { display: none; } .nv-pi { padding: 8px 12px; } .nv-pi span { display: none; } .nv-right { gap: 6px; } }
 @media (prefers-reduced-motion: reduce) { .nv-sheet, .nv-sheet-wrap { animation: none; } }
+.nv-ask { display: flex; align-items: center; gap: 10px; width: 100%; padding: 12px 14px; border: 0; border-radius: 14px; cursor: pointer; font-weight: 700; font-size: 15px; color: #fff; background: linear-gradient(135deg, var(--primary), #9b6bff); box-shadow: 0 6px 18px rgba(104, 71, 232, .32); }

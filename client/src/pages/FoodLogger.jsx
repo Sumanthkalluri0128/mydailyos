@@ -38,8 +38,16 @@ function FoodLogger({ date, onBack, goTo }) {
   const [foods, setFoods] = useState([]);
   const [foodLogs, setFoodLogs] = useState([]);
 
+  // Home's meal rows ("+" next to Lunch) hand over which meal to log to, once.
   const [selectedMeal, setSelectedMeal] =
-    useState("breakfast");
+    useState(() => {
+      try {
+        const m = sessionStorage.getItem("ff_log_meal");
+        sessionStorage.removeItem("ff_log_meal");
+        if (["breakfast", "lunch", "dinner", "snacks"].includes(m)) return m;
+      } catch { /* storage unavailable */ }
+      return "breakfast";
+    });
 
   const [selectedFood, setSelectedFood] =
     useState(null);

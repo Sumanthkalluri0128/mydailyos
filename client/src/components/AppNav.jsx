@@ -1,6 +1,6 @@
 // One navigation for the whole app: a grouped sidebar on desktop, a thumb-friendly tab bar + "More" sheet on phones.
 // Every page that existed is still here; they are just grouped by what you are trying to do.
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import "./appnav.css";
 
 export const NAV_GROUPS = [
@@ -26,9 +26,22 @@ export const NAV_GROUPS = [
 ];
 const TABS = [["dashboard", "🏠", "Home"], ["foodLogger", "🍽️", "Food"], ["planner", "📅", "Plan"], ["progress", "📈", "Progress"]];
 const FOOD_PAGES = ["foodLogger", "food"];
+const PILL = [["dashboard", "🏠", "Home"], ["foodLogger", "🍽️", "Log Food"], ["planner", "📅", "Meal Planner"], ["recipes", "🍲", "Recipes"], ["food", "🥗", "My Foods"]];
+const PILL_IDS = PILL.map((p) => p[0]);
 
 export default function AppNav({ current, go, theme, onToggleTheme, avatar, name, streak, onAsk }) {
   const [more, setMore] = useState(false);
+  const [menu, setMenu] = useState(false);
+  const moreRef = useRef(null);
+  const moreOn = !PILL_IDS.includes(current) && current !== "profile";
+  useEffect(() => { setMenu(false); }, [current]);
+  useEffect(() => {
+    if (!menu) return undefined;
+    const off = (e) => { if (moreRef.current && !moreRef.current.contains(e.target)) setMenu(false); };
+    const esc = (e) => e.key === "Escape" && setMenu(false);
+    document.addEventListener("pointerdown", off); window.addEventListener("keydown", esc);
+    return () => { document.removeEventListener("pointerdown", off); window.removeEventListener("keydown", esc); };
+  }, [menu]);
   useEffect(() => { setMore(false); }, [current]);
   useEffect(() => {
     if (!more) return undefined;
@@ -41,33 +54,45 @@ export default function AppNav({ current, go, theme, onToggleTheme, avatar, name
 
   return (
     <>
-      {/* desktop sidebar */}
-      <aside className="nv-side" aria-label="Main navigation">
+      {/* desktop: floating top bar with a pill of the everyday pages and a "More" menu for the rest */}
+      <header className="nv-bar" aria-label="Main navigation">
         <button type="button" className="nv-brand" onClick={() => go("dashboard")} aria-label="FlexFit home">
-          <img src={`${import.meta.env.BASE_URL}icons/icon-192.png`} alt="" width="40" height="40" />
+          <img src={`${import.meta.env.BASE_URL}icons/icon-192.png`} alt="" width="44" height="44" />
           <span><b>FlexFit</b><small>Eat. Move. Improve.</small></span>
         </button>
-        <button type="button" className="nv-ask" onClick={() => onAsk?.()}><span>💬</span> Ask FlexFit <kbd>?</kbd></button>
-        <nav>
-          {NAV_GROUPS.map((g) => (
-            <div key={g.title} className="nv-group">
-              <div className="nv-title">{g.title}</div>
-              {g.items.map(([id, icon, label, hint]) => (
-                <button key={id} type="button" className={`nv-item ${is(id) ? "is-on" : ""}`} onClick={() => go(id)} aria-current={is(id) ? "page" : undefined} title={hint}>
-                  <span className="nv-ic" aria-hidden="true">{icon}</span><span>{label}</span>
-                </button>
-              ))}
-            </div>
+        <nav className="nv-pill" aria-label="Pages">
+          {PILL.map(([id, icon, label]) => (
+            <button key={id} type="button" className={`nv-pi ${current === id ? "is-on" : ""}`} onClick={() => go(id)} aria-current={current === id ? "page" : undefined}><span aria-hidden="true">{icon}</span>{label}</button>
           ))}
+          <div className="nv-more-wrap" ref={moreRef}>
+            <button type="button" className={`nv-pi ${moreOn || menu ? "is-on" : ""}`} onClick={() => setMenu((m) => !m)} aria-expanded={menu} aria-haspopup="menu"><span aria-hidden="true">⋯</span>More</button>
+            {menu && (
+              <div className="nv-menu" role="menu">
+                {NAV_GROUPS.filter((g) => g.title !== "Today" && g.title !== "Eat").map((g) => (
+                  <div key={g.title} className="nv-group">
+                    <div className="nv-title">{g.title}</div>
+                    {g.items.map(([id, icon, label, hint]) => (
+                      <button key={id} type="button" role="menuitem" className={`nv-item ${is(id) ? "is-on" : ""}`} onClick={() => { setMenu(false); go(id); }}>
+                        <span className="nv-ic" aria-hidden="true">{icon}</span><span><b>{label}</b><small>{hint}</small></span>
+                      </button>
+                    ))}
+                  </div>
+                ))}
+                <button type="button" role="menuitem" className={`nv-item nv-prof ${current === "profile" ? "is-on" : ""}`} onClick={() => { setMenu(false); go("profile"); }}>
+                  <span className="nv-ic" aria-hidden="true">⚙️</span><span><b>Profile &amp; settings</b><small>Targets, units, characters</small></span>
+                </button>
+              </div>
+            )}
+          </div>
         </nav>
-        <div className="nv-foot">
-          <button type="button" className={`nv-me ${current === "profile" ? "is-on" : ""}`} onClick={() => go("profile")} aria-label="Profile and settings">
-            <span className="nv-avatar">{avatar}</span><span><b>{name || "Profile"}</b><small>Profile &amp; settings</small></span>
-          </button>
+        <div className="nv-right">
+          <button type="button" className="nv-round" onClick={() => onAsk?.()} aria-label="Ask FlexFit" title="Ask FlexFit (press ?)">🔍</button>
+          <button type="button" className="nv-round" onClick={() => go("task")} aria-label="Tasks and reminders" title="Tasks and reminders">🔔</button>
           {flame}
-          <button type="button" className="nv-theme" onClick={onToggleTheme} aria-label={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}>{theme === "dark" ? "☀️" : "🌙"}</button>
+          <button type="button" className="nv-round" onClick={onToggleTheme} aria-label={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"} title="Light / dark">{theme === "dark" ? "☀️" : "🌙"}</button>
+          <button type="button" className={`nv-me ${current === "profile" ? "is-on" : ""}`} onClick={() => go("profile")} aria-label="Profile and settings"><span className="nv-avatar">{avatar}</span><span className="nv-chev" aria-hidden="true">⌄</span></button>
         </div>
-      </aside>
+      </header>
 
       {/* phone: slim header + bottom tabs */}
       <header className="nv-top">
