@@ -1,5 +1,5 @@
 // Home. One screen, each number shown exactly once:
-//   hero (greeting + scene carousel + coach) → five stat cards → quick actions → nutrition · macros · habits → tasks · progress · scene.
+//   hero (greeting + scene carousel + coach) → five stat cards (with ＋ shortcuts) → nutrition · macros · habits → tasks · progress · scene.
 // Everything on it is tappable: cards open their page, water/steps have quick-add sheets, habits and tasks tick off with a cheer.
 import { useEffect, useMemo, useRef, useState } from "react";
 import "./home.css";
@@ -7,6 +7,7 @@ import "../homefocus.css";
 import HeroCarousel from "./HeroCarousel";
 import OverDayCard from "../OverDayCard";
 import FatLossCard from "../FatLossCard";
+import FixMyDay from "./FixMyDay";
 import HomeSection from "../HomeSection";
 import { apiFetch } from "../../config/api";
 import { dayBalance, expectedEnergy, macroTargets, limitTargets } from "../../utils/energy";
@@ -116,6 +117,8 @@ export default function HomeDashboard({ profile, summary, activity, water, water
   const stepsN = useCountUp(n0(activity?.steps), 800);
   const minsN = useCountUp(n0(activity?.totalMinutes), 700);
 
+  const [sheet, setSheet] = useState(null);       // "water" | "steps" | "fix" | null
+
   // ---- coach: the one most important next step (same engine as Ask FlexFit)
   const [next, setNext] = useState(null);
   useEffect(() => {
@@ -124,13 +127,12 @@ export default function HomeDashboard({ profile, summary, activity, water, water
       .then((r) => r.json()).then((d) => { if (alive && d?.success) setNext({ text: d.top || d.text.split("\n")[0], actions: d.actions || [] }); }).catch(() => {});
     return () => { alive = false; };
   }, [syncTick, summary?.calories, water?.totalMl]); // eslint-disable-line react-hooks/exhaustive-deps
-  const act = (a) => { if (a.page) goTo(a.page); else if (a.ask) onAsk?.({ question: a.ask }); };
+  const act = (a) => { if (/fix my day/i.test(a.label || "")) setSheet("fix"); else if (a.page) goTo(a.page); else if (a.ask) onAsk?.({ question: a.ask }); };
   const fallbackCoach = over ? "You're over today. Keep the rest light and take a walk after dinner."
     : !(summary?.meals?.breakfast > 0) && hour < 11 ? "Log breakfast to start the day strong!" : "Log what you eat as you go. I'll tell you what matters most.";
   const coach = { scene: over ? "sad" : "wave", title: hour < 12 ? "Fuel your morning" : "Your next step", text: next?.text || fallbackCoach, action: next?.actions?.[0] && { label: next.actions[0].label, onClick: () => act(next.actions[0]) } };
 
   // ---- quick-add sheets
-  const [sheet, setSheet] = useState(null);       // "water" | "steps" | null
   const [busy, setBusy] = useState(false);
   const [custom, setCustom] = useState("");
   const addWater = async (ml) => {
@@ -211,10 +213,15 @@ export default function HomeDashboard({ profile, summary, activity, water, water
             <li><span className="ic b">🎯</span><div><small>Budget</small><b>{bal.budget ? fmt(bal.budget) : "—"} kcal</b></div></li>
             <li><span className="ic o">⚡</span><div><small>Activity</small><b>{fmt(bal.burned)} kcal</b></div></li>
           </ul>
+          <span className="sc-cal-acts">
+            <button type="button" className="sc-act" onClick={(e) => { e.stopPropagation(); goTo("foodLogger"); }}>＋ Log food</button>
+            {over && <button type="button" className="sc-act warn" onClick={(e) => { e.stopPropagation(); setSheet("fix"); }}>Fix my day</button>}
+          </span>
         </article>
 
         <article className="sc sc-water" role="button" tabIndex={0} onClick={open("water")} onKeyDown={open("water")}>
           <span className="ic b big">💧</span>
+          <button type="button" className="sc-plus" aria-label="Add water" onClick={(e) => { e.stopPropagation(); setCustom(""); setSheet("water"); }}>＋</button>
           <div className="sc-val"><strong>{waterL.toFixed(2)} L</strong><small>of {(waterTarget / 1000).toFixed(1)} L</small></div>
           <i className="sc-bar"><b style={{ width: `${Math.min(100, ((water?.totalMl || 0) / (waterTarget || 1)) * 100)}%` }} /></i>
           <Peek src={cast(1, "drink")} />
@@ -222,6 +229,7 @@ export default function HomeDashboard({ profile, summary, activity, water, water
 
         <article className="sc sc-steps" role="button" tabIndex={0} onClick={open("health")} onKeyDown={open("health")}>
           <span className="ic o big">👟</span>
+          <button type="button" className="sc-plus" aria-label="Add steps" onClick={(e) => { e.stopPropagation(); setCustom(""); setSheet("steps"); }}>＋</button>
           <div className="sc-val"><strong>{stepsN.toLocaleString()}</strong><small>steps</small></div>
           <i className="sc-bar"><b style={{ width: `${Math.min(100, ((activity?.steps || 0) / stepsT) * 100)}%` }} /></i>
           <small className="sc-goal">Goal: {fmt(stepsT)}</small>
@@ -243,14 +251,6 @@ export default function HomeDashboard({ profile, summary, activity, water, water
           {wLeft != null && <small className="sc-goal">{wLeft.toFixed(1)} kg to go</small>}
           <Peek src={cast(4, "scale")} />
         </article>
-      </section>
-
-      {/* ---------- quick actions ---------- */}
-      <section className="hd-quick" aria-label="Quick actions">
-        <button type="button" className="qa qa-food" onClick={() => goTo("foodLogger")}><span className="qa-ic">🥗</span><b>Log Food</b><Peek src={cast(5, "eat")} /><i>→</i></button>
-        <button type="button" className="qa qa-water" onClick={() => { setCustom(""); setSheet("water"); }}><span className="qa-ic">💧</span><b>Add Water</b><Peek src={cast(6, "drink", 1)} /><i>→</i></button>
-        <button type="button" className="qa qa-work" onClick={() => goTo("exercise")}><span className="qa-ic">🏋️</span><b>Workout</b><Peek src={cast(7, "lift", 1)} /><i>→</i></button>
-        <button type="button" className="qa qa-steps" onClick={() => { setCustom(""); setSheet("steps"); }}><span className="qa-ic">👟</span><b>Add Steps</b><Peek src={cast(8, "walk", 1)} /><i>→</i></button>
       </section>
 
       <OverDayCard onPlan={() => goTo("planner")} />
@@ -353,6 +353,11 @@ export default function HomeDashboard({ profile, summary, activity, water, water
         <FatLossCard onOpen={() => goTo("goals")} syncTick={syncTick} />
       </HomeSection>
 
+      {sheet === "fix" && (
+        <Sheet title="Fix my day" onClose={() => setSheet(null)}>
+          <FixMyDay over={Math.max(0, -n0(bal.remaining))} hour={hour} onChanged={onChanged} onPlan={() => goTo("planner")} onClose={() => setSheet(null)} />
+        </Sheet>
+      )}
       {sheet === "water" && (
         <Sheet title="Add water" onClose={() => setSheet(null)}>
           <div className="sh-chips">{[150, 250, 330, 500, 750, 1000].map((ml) => <button key={ml} type="button" disabled={busy} onClick={() => addWater(ml)}><span aria-hidden="true">💧</span>{ml >= 1000 ? `${ml / 1000} L` : `${ml} ml`}</button>)}</div>

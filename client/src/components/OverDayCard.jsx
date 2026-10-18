@@ -12,11 +12,16 @@ const TITLES = { single: "A little over", streak: "days over · course-correct",
 export default function OverDayCard({ onPlan }) {
   const [d, setD] = useState(null);
   const [busy, setBusy] = useState(false);
+  const [min, setMin] = useState(false);
   const load = useCallback(() => {
     apiFetch(`/api/plan/over-days?today=${getLocalDate()}&tz=${new Date().getTimezoneOffset()}`).then((r) => (r.ok ? r.json() : null)).then((j) => setD(j?.success ? j : null)).catch(() => {});
   }, []);
   useEffect(() => { load(); }, [load]);
+  const key = d ? `${d.tier}|${getLocalDate()}` : "";
+  useEffect(() => { if (!key) return; try { setMin(localStorage.getItem("ff_overday_min") === key); } catch { /* ignore */ } }, [key]);
   if (!d || d.tier === "none") return null;
+  const toggle = () => setMin((m) => { const next = !m; try { if (next) localStorage.setItem("ff_overday_min", key); else localStorage.removeItem("ff_overday_min"); } catch { /* ignore */ } return next; });
+  const title = d.tier === "streak" ? `${d.runDays} ${TITLES.streak}` : TITLES[d.tier];
 
   const rescue = async () => {
     setBusy(true);
@@ -33,14 +38,26 @@ export default function OverDayCard({ onPlan }) {
     if (r.ok) { notify(`Pace is now ${d.easierPace} kg a week. Your daily budget just got bigger.`, "success"); load(); } else notify("Could not change your pace.", "error");
   };
 
+  if (min) {
+    return (
+      <div className={`fl-card od-min ${d.tier === "single" ? "" : "accent"}`}>
+        <button type="button" className="od-bar" onClick={toggle} aria-expanded="false">
+          <Buddy scene="cheer" size={40} />
+          <span className="od-t"><b>{title}</b><small>{d.message}</small></span>
+          <span className="od-chev" aria-hidden="true">Show ▾</span>
+        </button>
+      </div>
+    );
+  }
   return (
     <div className={`fl-card ${d.tier === "single" ? "" : "accent"}`}>
       <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
         <Buddy scene="cheer" size={72} />
-        <div>
-          <p className="fl-eyebrow">{d.tier === "streak" ? `${d.runDays} ${TITLES.streak}` : TITLES[d.tier]}</p>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <p className="fl-eyebrow">{title}</p>
           <p className="ink">{d.message}</p>
         </div>
+        <button type="button" className="od-toggle" onClick={toggle} aria-expanded="true" aria-label="Minimise this card">Hide ▴</button>
       </div>
       {d.correction && <><h3 style={{ marginTop: 10 }}>{d.correction.safe ? `A gentle plan: about ${d.correction.perDay} kcal less a day for ${d.correction.days} days` : "No cutting needed"}</h3><p>{d.correction.note}</p></>}
       {d.cause === "pace_too_aggressive" && d.easierPace && <button className="fl-btn" onClick={easier}>Switch to an easier pace ({d.easierPace} kg/week){d.easierTarget ? ` · ${d.easierTarget} kcal/day` : ""}</button>}

@@ -60,7 +60,6 @@ export default function HeroCarousel({ greeting, name, dateText, coach, onAsk, s
   };
   const onKey = (e) => { if (e.key === "ArrowRight") { e.preventDefault(); go(1); } else if (e.key === "ArrowLeft") { e.preventDefault(); go(-1); } };
 
-  const thumbs = [1, 2, 3].map((o) => ({ o, s: sceneAt(idx + o) }));
   const near = (i) => { const d = Math.min((i - idx + N) % N, (idx - i + N) % N); return d <= 1; };
 
   return (
@@ -103,17 +102,9 @@ export default function HeroCarousel({ greeting, name, dateText, coach, onAsk, s
         {cheer && <div className="hr-cheer" role="status" key={cheer.slug + idx}><b>{cheer.who}</b> says: “{cheer.line}”</div>}
         <button type="button" className="hr-arrow prev" aria-label="Previous scene" onClick={(e) => { e.stopPropagation(); go(-1); }}>‹</button>
         <button type="button" className="hr-arrow next" aria-label="Next scene" onClick={(e) => { e.stopPropagation(); go(1); }}>›</button>
-        <span className="hr-count" aria-hidden="true">{idx + 1} / {N}</span>
       </div>
 
-      <aside className="hr-rail" aria-label="Up next">
-        {thumbs.map(({ o, s }) => (
-          <button key={s.slug} type="button" className={`hr-thumb ${s.land ? "land" : "port"}`} onClick={() => setIdx((idx + o) % N)} aria-label={`Show ${s.who} scene`}>
-            <img src={s.thumb} alt="" loading="lazy" decoding="async" /><span>{s.who}</span>
-          </button>
-        ))}
-        <button type="button" className="hr-shuffle" onClick={() => setIdx(Math.floor(Math.random() * N))} aria-label="Random scene">🎲 Shuffle</button>
-      </aside>
+      <button type="button" className="hr-shuffle" onClick={() => setIdx(Math.floor(Math.random() * N))} aria-label="Random scene">↻</button>
 
       <div className="hr-dots" role="tablist" aria-label="Choose a scene">
         {SCENES.map((s, i) => <button key={s.slug} type="button" role="tab" aria-selected={i === idx} aria-label={`${s.who}, scene ${i + 1}`} className={i === idx ? "on" : ""} onClick={() => setIdx(i)}>{i === idx && !paused && !calm() ? <i key={idx} style={{ animationDuration: `${AUTO_MS}ms` }} /> : null}</button>)}
