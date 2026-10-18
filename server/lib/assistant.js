@@ -146,7 +146,21 @@ function scenarioAnswer(kind, snap, f, q = '') {
   return base('Take it easy. Prioritise water, simple food you can digest (khichdi, curd rice, soup, banana) and rest. Don\'t chase calorie or step goals today. If symptoms are strong or last more than a couple of days, please see a doctor.', 'love', []);
 }
 
+const { buildDietDay } = require('./healthyDiet');
+const DIET_Q = /\b(diet plan|healthy diet|perfect diet|ideal diet|balanced diet|meal plan (for )?(today|tomorrow)|plan my (day|meals|diet)|what (should|can|do) i eat (today|tomorrow|all day|in a day)|full day (of )?(eating|meals)|suggest (a )?(diet|meal plan))\b/;
+const MEAL_LABEL = { breakfast: 'Breakfast', lunch: 'Lunch', dinner: 'Dinner', snacks: 'Snacks' };
+
 const A = {
+  dietDay(snap, f, q = '') {
+    const diet = /non[- ]?veg|chicken|fish|meat|mutton/.test(q) ? 'n' : /\begg/.test(q) ? 'e' : 'v';
+    const variant = /another|different|else|new one|more|change/.test(q) ? 1 + (Date.now() % 7) : 0;
+    const date = new Date().toISOString().slice(0, 10);
+    const day = buildDietDay({ target: f.baseTarget || f.target || 1800, proteinGoal: f.proteinGoal || 0, diet, seed: `${date}|${variant}` });
+    const lines = day.meals.map((m) => `${MEAL_LABEL[m.mealType]} (${m.kcal} kcal)\n${m.items.map((i) => `• ${i.servings !== 1 ? `${i.servings} × ` : ''}${i.name}`).join('\n')}`);
+    const label = diet === 'n' ? 'non-vegetarian' : diet === 'e' ? 'egg-friendly vegetarian' : 'vegetarian';
+    const text = `Here is a balanced ${label} day, about ${day.totals.kcal} kcal with ${day.totals.protein} g protein and ${day.totals.fiber} g fibre:\n\n${lines.join('\n\n')}\n\n${day.tips.slice(0, 2).join(' ')}\nAsk again for a different version any day, or say "non-veg" / "with eggs" to change the style.`;
+    return { text, mood: 'eat', actions: [{ label: 'Add to my planner', healthy: true }, { label: 'Another version', ask: 'Give me another healthy diet plan' }], follow: ['Healthy non-veg diet plan', 'What should I eat next?', 'How am I doing?'] };
+  },
   overview(snap, f) {
     const d = snap.today || {}; const bits = [];
     if (f.target) bits.push(`You've had ${r0(f.eaten)} of ${r0(f.target)} kcal (${pct(f.eaten, f.target)}%)${f.left !== null ? `, so about ${Math.max(0, f.left)} kcal left` : ''}.`);
@@ -307,6 +321,8 @@ function answer(question, snap) {
   const howTo = /\b(how (do|can|to|does)|where (do|can|is)|what is|explain|guide|show me how)\b/.test(q);
   const feat = matchFeature(q);
   if (feat && howTo) return { text: feat.how, mood: 'think', actions: [{ label: feat.label, page: feat.page }], chips, topic: `feature:${feat.id}` };
+
+  if (DIET_Q.test(q)) { const r = A.dietDay(snap || {}, f, q.trim()); return { ...r, chips: followChips(r.follow, chips), topic: 'dietDay' }; }
 
   const sit = sitOf(q.trim());
   if (sit && !howTo) { const r = A.scenario(snap || {}, f, q.trim()); return { ...r, chips: followChips(r.follow, chips), topic: `scenario:${sit}` }; }

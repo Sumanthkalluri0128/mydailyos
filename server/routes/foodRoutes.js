@@ -10,6 +10,7 @@ const Profile = require('../models/Profile');
 const { parseMealText } = require('../lib/foodParse');
 const { catalogueFoods } = require('../lib/foodCache');
 const { suggestFoods } = require('../lib/suggest');
+const { adoptFood, freshPicks } = require('../lib/healthyDiet');
 const { buildMeals, lightOptions, makeItFit, macroCaps } = require('../lib/mealBuilder');
 const { previewFit } = require('../lib/fitCheck');
 const { weekUsage } = require('../lib/fatLossScore');
@@ -182,8 +183,10 @@ router.get('/suggest', wrap(async (req, res) => {
   const meals = mode === 'meal' ? buildMeals(foods, remaining, { caps, recentIds, mealType, limit: 3 }) : [];
   const light = mode === 'meal' ? [] : lightOptions(foods, { recentIds });
   const fit = mode === 'over' || mode === 'light' ? makeItFit(logs, Math.max(0, -remaining.calories)) : [];
+  const fresh = mode === 'over' ? [] : suggestFoods(shared.filter((f) => !recentIds.has(String(f._id))), remaining, { mealType, limit: 4 });
+  const healthy = mode === 'over' ? [] : freshPicks({ haveNames: mine.map((f) => f.name), remaining, mealType, limit: 4 });
   res.json({
-    success: true, mode,
+    success: true, mode, fresh: fresh.map((p) => ({ food: present(p.food, uid), reason: p.reason })), healthy,
     remaining: { calories: Math.round(remaining.calories), protein: Math.round(remaining.protein), fiber: Math.round(remaining.fiber) },
     caps,
     suggestions: picks.map((p) => ({ food: present(p.food, uid), reason: p.reason })),
@@ -192,6 +195,13 @@ router.get('/suggest', wrap(async (req, res) => {
     makeItFit: fit,
     message: mode === 'over' ? 'You are at or past your budget. That is okay. Here are very light options, and ways to make what you have already eaten fit better.' : '',
   });
+}));
+
+// POST /api/foods/adopt { name } — add one of the curated healthy foods to the person's own list, then it can be logged like any food.
+router.post('/adopt', wrap(async (req, res) => {
+  const food = await adoptFood(Food, req.user.id, String(req.body?.name || ''));
+  if (!food) throw new HttpError(404, 'That food is not in the healthy list');
+  res.status(201).json({ success: true, food: present(food.toObject ? food.toObject() : food, req.user.id) });
 }));
 
 // POST /api/foods/fit { foodId, quantity, date } — "will this fit?": what one food does to today and to the week, nothing is saved.

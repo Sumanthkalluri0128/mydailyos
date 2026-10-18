@@ -23,6 +23,7 @@ const { buildPatterns } = require('../lib/patterns');
 const { whatIf } = require('../lib/whatIf');
 const { navyBodyFat } = require('../lib/bodyFat');
 const { rescueDay } = require('../lib/mealBuilder');
+const { buildDietDay, adoptFood } = require('../lib/healthyDiet');
 const { oilKcal } = require('../lib/oil');
 const { computeStreaks } = require('../lib/streaks');
 const { startBreak, endBreak, breakExpired } = require('../lib/planState');
@@ -216,6 +217,32 @@ router.post('/rescue-day', wrap(async (req, res) => {
   await MealPlan.deleteMany({ userId: uid, date, rescue: true, logged: false });
   const items = await MealPlan.insertMany(day.plan.map((p) => ({ userId: uid, date, rescue: true, mealType: p.mealType, foodId: p.foodId, foodName: p.foodName, quantity: p.quantity, servingUnit: p.servingUnit, calories: p.calories, protein: p.protein, fiber: p.fiber })));
   res.status(201).json({ success: true, goal: day.goal, totalCalories: day.totalCalories, totalProtein: day.totalProtein, items });
+}));
+
+// ---- a balanced, varied healthy day built from a curated food pool (not limited to what the person has logged)
+const dietOf = (x) => (['v', 'e', 'n'].includes(x) ? x : 'v');
+async function dietDayFor(req, src) {
+  const uid = req.user.id;
+  const today = todayOf(req);
+  const date = src.date ? v.date(src.date, 'date') : today;
+  const core = await loadCore(uid, today, { historyDays: 2 });
+  const diet = dietOf(src.diet), variant = Math.max(0, Math.min(50, Number(src.variant) || 0));
+  const day = buildDietDay({ target: core.target || 1800, proteinGoal: core.ranges?.protein?.goal || 0, floor: core.floor, diet, seed: `${date}|${variant}` });
+  return { date, diet, variant, needsProfile: !core.ranges, ...day };
+}
+router.get('/diet-day', wrap(async (req, res) => { res.json({ success: true, ...(await dietDayFor(req, req.query)) }); }));
+router.post('/diet-day/apply', wrap(async (req, res) => {
+  const uid = req.user.id;
+  const day = await dietDayFor(req, req.body || {});   // rebuilt on the server: never trusts client-sent items
+  await MealPlan.deleteMany({ userId: uid, date: day.date, why: 'Healthy day', logged: false });
+  const rows = [];
+  for (const m of day.meals) for (const it of m.items) {
+    const food = await adoptFood(Food, uid, it.name);
+    if (!food) continue;
+    rows.push({ userId: uid, date: day.date, mealType: m.mealType, foodId: food._id, foodName: food.name, quantity: it.qty, servingUnit: food.servingUnit, calories: it.kcal, protein: it.protein, fiber: it.fiber, why: 'Healthy day' });
+  }
+  const items = await MealPlan.insertMany(rows);
+  res.status(201).json({ success: true, date: day.date, count: items.length, totals: day.totals });
 }));
 
 // ---- outcome badges, body composition

@@ -83,6 +83,7 @@ function App() {
   useEffect(() => {
     const go = (e) => {
       const d = e.detail || {};
+      if (d.healthy) { try { sessionStorage.setItem("ff_open_healthy", "1"); } catch { /* ignore */ } window.dispatchEvent(new Event("ff:healthyday")); }
       if (d.fix) { try { sessionStorage.setItem("ff_open_fix", "1"); } catch { /* ignore */ } window.dispatchEvent(new Event("ff:fixday")); }
       if (d.page) setCurrentPage(d.page);
     };

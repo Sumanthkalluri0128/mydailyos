@@ -9,6 +9,7 @@ import HeroCarousel from "./HeroCarousel";
 import OverDayCard from "../OverDayCard";
 import FatLossCard from "../FatLossCard";
 import FixMyDay from "./FixMyDay";
+import HealthyDay from "./HealthyDay";
 import HomeSection from "../HomeSection";
 import { apiFetch } from "../../config/api";
 import { dayBalance, expectedEnergy, macroTargets, limitTargets } from "../../utils/energy";
@@ -127,7 +128,10 @@ export default function HomeDashboard({ profile, summary, activity, water, water
   useEffect(() => {
     const open = () => { try { sessionStorage.removeItem("ff_open_fix"); } catch { /* ignore */ } setSheet("fix"); };
     try { if (sessionStorage.getItem("ff_open_fix") === "1") open(); } catch { /* ignore */ }
-    window.addEventListener("ff:fixday", open); return () => window.removeEventListener("ff:fixday", open);
+    const openHealthy = () => { try { sessionStorage.removeItem("ff_open_healthy"); } catch { /* ignore */ } setSheet("healthy"); };
+    try { if (sessionStorage.getItem("ff_open_healthy") === "1") openHealthy(); } catch { /* ignore */ }
+    window.addEventListener("ff:fixday", open); window.addEventListener("ff:healthyday", openHealthy);
+    return () => { window.removeEventListener("ff:fixday", open); window.removeEventListener("ff:healthyday", openHealthy); };
   }, []);
 
   // ---- coach: the one most important next step (same engine as Ask FlexFit)
@@ -269,7 +273,7 @@ export default function HomeDashboard({ profile, summary, activity, water, water
       {/* ---------- nutrition · macros · habits ---------- */}
       <section className="hd-mid">
         <div className="pn pn-nut">
-          <header><span className="pn-ic v">🍽️</span><div><h2>Today's Nutrition</h2><p>Track everything you eat today.</p></div><button type="button" className="pn-btn" onClick={() => goTo("foodLogger")}>+ Add Food</button></header>
+          <header><span className="pn-ic v">🍽️</span><div><h2>Today's Nutrition</h2><p>Track everything you eat today.</p></div><button type="button" className="pn-btn ghost" onClick={() => setSheet("healthy")}>🥗 Healthy day</button><button type="button" className="pn-btn" onClick={() => goTo("foodLogger")}>+ Add Food</button></header>
           <ul className="meals">
             {MEALS.map(([id, label, icon]) => {
               const k = n0(summary?.meals?.[id]);
@@ -367,6 +371,11 @@ export default function HomeDashboard({ profile, summary, activity, water, water
       {sheet === "fix" && (
         <Sheet title="Fix my day" onClose={() => setSheet(null)}>
           <FixMyDay over={Math.max(0, -n0(bal.remaining))} hour={hour} onChanged={onChanged} onPlan={() => goTo("planner")} onClose={() => setSheet(null)} />
+        </Sheet>
+      )}
+      {sheet === "healthy" && (
+        <Sheet title="Your healthy day" onClose={() => setSheet(null)}>
+          <HealthyDay onClose={() => setSheet(null)} onPlan={() => goTo("planner")} />
         </Sheet>
       )}
       {sheet === "water" && (

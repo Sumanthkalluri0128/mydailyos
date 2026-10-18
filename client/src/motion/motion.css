@@ -45,7 +45,7 @@
 @keyframes fxRoll{0%{opacity:0;transform:translateY(60%)}100%{opacity:1;transform:translateY(0)}}
 
 /* 3. Page + skeleton transitions */
-.fx-page{animation:fxPageIn 280ms var(--ff-ease-out) both}
+.fx-page{animation:fxPageIn 280ms var(--ff-ease-out) backwards}
 @keyframes fxPageIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
 @supports (view-transition-name:none){ .fx-page{animation:none} }
 ::view-transition-old(root){animation:fxFade 140ms var(--ff-ease-inout) reverse both}

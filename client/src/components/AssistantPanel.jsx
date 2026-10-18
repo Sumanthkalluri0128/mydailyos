@@ -77,7 +77,7 @@ export default function AssistantPanel({ go }) {
   }, [openPanel]);
 
   const face = (m) => stickerFor(who, SCENE[m] || "wave", `${who}-${m}`).src;
-  const act = (a) => { if (a.page) { go?.(a.page); if (window.innerWidth < 700) setOpen(false); } else if (a.ask) ask(a.ask); };
+  const act = (a) => { if (a.healthy) { window.dispatchEvent(new CustomEvent("ff:goto", { detail: { page: "dashboard", healthy: true } })); if (window.innerWidth < 700) setOpen(false); } else if (a.page) { go?.(a.page); if (window.innerWidth < 700) setOpen(false); } else if (a.ask) ask(a.ask); };
   const clear = () => { setMsgs([]); booted.current = false; sessionStorage.removeItem(KEY); openPanel(); };
 
   return (
@@ -101,7 +101,7 @@ export default function AssistantPanel({ go }) {
                 {m.from === "bot" && <img src={face(m.mood)} alt="" width="34" height="34" />}
                 <div>
                   <p>{m.text}</p>
-                  {m.actions?.length > 0 && <div className="as-actions">{m.actions.map((a) => <button key={a.label} type="button" onClick={() => act(a)}>{a.page ? "→ " : ""}{a.label}</button>)}</div>}
+                  {m.actions?.length > 0 && <div className="as-actions">{m.actions.map((a) => <button key={a.label} type="button" onClick={() => act(a)}>{a.page || a.healthy ? "→ " : ""}{a.label}</button>)}</div>}
                 </div>
               </div>
             ))}

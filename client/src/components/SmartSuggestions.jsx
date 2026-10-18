@@ -13,7 +13,7 @@ export default function SmartSuggestions({ date, mealType, refreshKey, onLogged 
     return () => { alive = false; };
   }, [date, mealType, refreshKey]);
 
-  if (!data || !(data.suggestions?.length || data.meals?.length || data.light?.length || data.makeItFit?.length)) return null;
+  if (!data || !(data.suggestions?.length || data.fresh?.length || data.healthy?.length || data.meals?.length || data.light?.length || data.makeItFit?.length)) return null;
   const logFood = async (food, servings = 1) => {
     const res = await apiFetch("/api/food-logs", { method: "POST", body: JSON.stringify({ foodId: food._id, date, mealType, quantity: food.servingSize * servings, clientId: `sg-${Date.now()}-${Math.random().toString(36).slice(2, 7)}` }) });
     if (!res.ok) throw new Error();
@@ -24,6 +24,13 @@ export default function SmartSuggestions({ date, mealType, refreshKey, onLogged 
     if (o.kind === "swap") return notify(`Next time try ${o.to}. It saves about ${o.saves} kcal.`, "info");
     const r = await apiFetch(`/api/food-logs/${o.logId}`, { method: "PATCH", body: JSON.stringify({ halve: true }) });
     if (r.ok) { notify(`${o.name} halved. Saved about ${o.saves} kcal.`, "success"); onLogged?.(); } else notify("Could not change it.", "error");
+  };
+  const addNew = async (h) => {
+    try {
+      const a = await apiFetch("/api/foods/adopt", { method: "POST", body: JSON.stringify({ name: h.name }) });
+      const j = await a.json(); if (!a.ok) throw new Error();
+      await logFood(j.food); notify(`Added ${h.name} to ${mealType}. It is now in My Foods too.`, "success"); onLogged?.();
+    } catch { notify("Could not add that food.", "error"); }
   };
   const gaps = [data.remaining.protein > 0 && `${data.remaining.protein} g protein`, data.remaining.fiber > 0 && `${data.remaining.fiber} g fibre`].filter(Boolean);
   const caps = [data.caps?.carbs != null && `carbs up to ${data.caps.carbs} g`, data.caps?.fat != null && `fat up to ${data.caps.fat} g`].filter(Boolean);
@@ -43,6 +50,10 @@ export default function SmartSuggestions({ date, mealType, refreshKey, onLogged 
       {data.makeItFit?.length > 0 && <><p className="fl-eyebrow" style={{ marginTop: 10 }}>Make it fit</p><div className="suggestion-list">{data.makeItFit.map((o, i) => (
         <button key={`f${i}`} className="suggestion-chip" onClick={() => halve(o)}><strong>{o.name}: {o.kind === "swap" ? `swap to ${o.to}` : "half portion"}</strong><small>saves about {o.saves} kcal{o.afterOver > 0 ? ` · still ${o.afterOver} over` : " · fits your budget"}</small></button>
       ))}</div></>}
+      {(data.healthy?.length > 0 || data.fresh?.length > 0) && <><p className="fl-eyebrow" style={{ marginTop: 10 }}>✨ Try something new (not on your list)</p><div className="suggestion-list">
+        {data.healthy?.map((h) => <button key={h.name} className="suggestion-chip" onClick={() => addNew(h)} title="Add one serving and save it to My Foods"><strong>+ {h.name}</strong><small>{h.kcal} kcal · {h.protein} g protein · {h.note}</small></button>)}
+        {data.fresh?.map(({ food, reason }) => <button key={food._id} className="suggestion-chip" onClick={() => addOne(food)} title="Add one serving"><strong>+ {food.name}</strong><small>{food.servingSize} {food.servingUnit} · {reason}</small></button>)}
+      </div></>}
       {data.suggestions?.length > 0 && <><p className="fl-eyebrow" style={{ marginTop: 10 }}>Single foods</p><div className="suggestion-list">{data.suggestions.map(({ food, reason }) => (
         <button key={food._id} className="suggestion-chip" onClick={() => addOne(food)} title="Add one serving"><strong>+ {food.name}</strong><small>{food.servingSize} {food.servingUnit} · {reason}</small></button>
       ))}</div></>}
