@@ -23,6 +23,9 @@ router.use(requireAuth);
 router.use(rateLimit({ windowMs: 60_000, max: 40, keyFn: (req) => req.user?.id || req.ip, message: 'One question at a time, please. Try again in a moment.' }));
 
 const visible = (uid) => ({ $or: [{ userId: null }, { userId: { $exists: false } }, { userId: uid }] });
+const SHARE = { breakfast: 0.25, lunch: 0.34, dinner: 0.31, snacks: 0.10 };
+// Eating-out quick adds and dated placeholders ("10th oct lunch") are not real foods: never suggest them.
+const PLACEHOLDER = /(quick add|eating out|restaurant|^\s*\d{1,2}(st|nd|rd|th)?\s+[a-z]+\s+(breakfast|lunch|dinner|snacks?)|^(breakfast|lunch|dinner|snacks?)\s*$)/i;
 const nextMeal = (h) => (h < 10 ? 'breakfast' : h < 15 ? 'lunch' : h < 18 ? 'snacks' : 'dinner');
 const sum = (a) => a.reduce((x, y) => x + y, 0);
 
@@ -36,6 +39,8 @@ async function buildSnapshot(uid, today, hour) {
     Habit.countDocuments({ userId: uid, isActive: true }),
     FoodLog.find({ userId: uid, date: { $gt: addDays(today, -30), $lte: today } }).select('foodId date').lean(),
   ]);
+  const todayLogs = await FoodLog.find({ userId: uid, date: today }).select('mealType').lean();
+  const mealsToday = {}; for (const l of todayLogs) mealsToday[l.mealType] = true;
   const p = core.profile || {};
   const target = core.target || 0;
 
@@ -71,18 +76,22 @@ async function buildSnapshot(uid, today, hour) {
   const workoutKcal = Math.max(0, (day.caloriesBurned || 0) - (day.stepCalories || 0));
   const balance = dayBalance(p, { eaten: day.calories || 0, workout: workoutKcal, steps: day.stepCalories || 0 });
   const remaining = { calories: balance.remaining, protein: (core.ranges?.protein?.goal || 0) - (day.protein || 0), fiber: (core.ranges?.fiber?.goal || 0) - (day.fiber || 0) };
+  const mealKey = nextMeal(hour);
+  const mealBudget = Math.max(0, Math.min(Math.round(balance.remaining), Math.round((balance.budget || target) * SHARE[mealKey])));
+  const mealProtein = core.ranges ? Math.max(0, Math.round(Math.min(Math.max(0, core.ranges.protein.goal - (day.protein || 0)), core.ranges.protein.goal * SHARE[mealKey] * 1.2))) : 0;
   const ids = [...new Set(recentLogs.map((l) => String(l.foodId)))].slice(0, 300);
   const recentIds = new Set(ids);
   let ideas = [];
-  if (ids.length && remaining.calories > 40) {
-    const foods = await Food.find({ _id: { $in: ids }, hidden: { $ne: true }, ...visible(uid) }).lean();
-    ideas = suggestFoods(foods, remaining, { mealType: nextMeal(hour), recentIds, limit: 3 })
+  if (ids.length && mealBudget > 60) {
+    const foods = (await Food.find({ _id: { $in: ids }, hidden: { $ne: true }, ...visible(uid) }).lean()).filter((f) => !PLACEHOLDER.test(f.name) && Number(f.calories) <= mealBudget * 1.05);
+    ideas = suggestFoods(foods, { calories: mealBudget, protein: mealProtein, fiber: 0 }, { mealType: mealKey, recentIds, limit: 8 })
       .map((x) => ({ name: x.food.name, qty: `${x.food.servingSize} ${x.food.servingUnit}`, kcal: Math.round(x.food.calories), protein: Math.round(x.food.protein) }));
   }
+  const sleepH = core.sleep[today] ?? core.sleep[addDays(today, -1)] ?? null;
 
   return {
     name: (p.name || '').split(' ')[0] || '', hour, balance: { target: balance.target, budget: balance.budget, bonus: balance.bonus, remaining: balance.remaining }, today: day, week, targets: { ...(journey?.targets || {}), calories: target }, ranges: core.ranges,
-    limits: target ? limitTargets(balance.budget || target) : null, journey, streak: journey?.streak || null, weight, topFoods, weekendSkew, ideas, habitCount,
+    limits: target ? limitTargets(balance.budget || target) : null, journey, streak: journey?.streak || null, weight, topFoods, weekendSkew, ideas, habitCount, mealsToday, sleepH, meal: { key: mealKey, budget: mealBudget, protein: mealProtein },
     steps7: week.length ? sum(week.map((d) => d.steps || 0)) / week.length : 0,
   };
 }

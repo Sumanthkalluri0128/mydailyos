@@ -18,7 +18,6 @@ import OnboardingPage from "./pages/OnboardingPage";
 import CalorieBalance from "./components/CalorieBalance";
 import { waterTargetMl } from "./utils/energy";
 import { currentOwner } from "./utils/cacheOwner";
-import DashboardHero from "./components/DashboardHero";
 import JourneyCard from "./components/JourneyCard";
 import FatLossCard from "./components/FatLossCard";
 import OverDayCard from "./components/OverDayCard";
@@ -27,7 +26,9 @@ import { withTransition } from "./motion/motion";
 import MacroCard from "./components/MacroCard";
 import AppNav from "./components/AppNav";
 import AssistantPanel from "./components/AssistantPanel";
-import TodayActions from "./components/TodayActions";
+import HomeFocus from "./components/HomeFocus";
+import HomeSection from "./components/HomeSection";
+import "./components/homefocus.css";
 
 import { getLocalDate } from "./utils/date";
 import { apiFetch } from "./config/api";
@@ -737,28 +738,21 @@ function App() {
         {/* WELCOME */}
         {/* ==================================================== */}
 
-        <DashboardHero
-          profile={profile}
-          today={today}
-          summary={dailySummary}
-          activity={activitySummary}
-          water={waterSummary}
-          waterTarget={waterTarget}
-          goTo={setCurrentPage}
-          onChanged={() => setSyncTick((t) => t + 1)}
-          streak={streak}
-        />
-        <TodayActions
+        <HomeFocus
           profile={profile}
           summary={dailySummary}
           activity={activitySummary}
           water={waterSummary}
           waterTarget={waterTarget}
           latestWeight={latestWeight}
+          streak={streak}
           goTo={setCurrentPage}
-          onAsk={() => openAssistant()}
+          onAsk={openAssistant}
+          syncTick={syncTick}
+          onChanged={() => setSyncTick((t) => t + 1)}
         />
         <OverDayCard onPlan={() => setCurrentPage("planner")} />
+        <HomeSection id="insights" icon="📊" title="Insights & goals" summary="Fat-loss score, your journey, macros and calorie balance">
         <FatLossCard onOpen={() => setCurrentPage("goals")} syncTick={syncTick} />
         <JourneyCard onOpen={() => setCurrentPage("goals")} syncTick={syncTick} />
 
@@ -798,11 +792,13 @@ function App() {
           />
 
         </section>
+        </HomeSection>
 
         {/* ==================================================== */}
         {/* MAIN GRID */}
         {/* ==================================================== */}
 
+        <HomeSection id="lists" icon="✅" title="Meals, habits & tasks" summary={`${habitLogs.filter((l) => l.completed).length} of ${habits.length} habits · ${tasks.filter((t) => t.completed).length} of ${tasks.length} tasks · ${Math.round(dailySummary.calories)} kcal eaten`}>
         <section className="main-grid">
 
           {/* ================================================== */}
@@ -1231,6 +1227,7 @@ function App() {
           </div>
 
         </section>
+        </HomeSection>
 
       </main>
 

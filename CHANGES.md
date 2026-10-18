@@ -1,3 +1,11 @@
+# v28 - minimal Home, scenario-aware coach (web + server)
+
+- **Home:** one hero card (calories ring, protein, water, steps, weight, the coach's single next step, four actions). Insights/goals and meals/habits/tasks are collapsible sections that remember their state. Nothing was removed; duplicate tiles and buttons are gone.
+- **Coach:** reasons about time of day, meal-sized budget (not the whole day), protein, water, steps, sleep and meals logged; offers Light / Balanced / Protein-first options; handles eating out, cravings, late night, post-workout, skipped meals, quick meals, travel and feeling unwell; follow-up chips change with the topic. Quick-add and dated placeholder foods are never suggested.
+- **Characters:** their chat chips open the same coach, so the two never disagree.
+
+---
+
 # v27 - clearer UI, smart assistant, plan from your habits, scanner fix (web + server)
 
 - **Navigation:** one grouped menu (Today / Eat / Move & body / Stay on track) as a sidebar on desktop and a bottom tab bar with a "More" sheet on phones. Every page is still there.

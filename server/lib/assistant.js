@@ -81,6 +81,71 @@ function ideasText(snap, f, limit = 3) {
   return ideas.map((i) => `${i.name}${i.qty ? ` (${i.qty})` : ''} — ${i.kcal} kcal, ${i.protein} g protein`).join('; ');
 }
 
+
+const MEAL_SHARE = { breakfast: 0.25, lunch: 0.34, dinner: 0.31, snacks: 0.10 };
+
+/** What matters MOST right now, looking at calories, protein, water, steps, meals logged and the time of day together. */
+function priority(snap, f) {
+  const d = snap.today || {}, t = snap.targets || {}, h = f.hour, done = snap.mealsToday || {};
+  const out = [];
+  if (f.target && f.eaten > f.target * 1.05) out.push({ w: 10, text: `You're ${r0(f.eaten - f.target)} kcal over today. Keep what's left light (soup, salad, curd) and add a 15-minute walk. Tomorrow can absorb the rest.`, actions: [{ label: 'Fix my day', page: 'planner' }] });
+  if (h >= 10 && h < 16 && !done.breakfast && f.eaten < 150) out.push({ w: 8, text: 'No breakfast logged and it\'s already late morning. A protein-first meal now keeps cravings down this afternoon.', actions: [{ label: 'What should I eat?', ask: 'What should I eat next?' }] });
+  if (h >= 15 && !done.lunch && f.eaten < f.target * 0.2) out.push({ w: 8, text: 'You haven\'t logged lunch. Eat something real soon. A very low day usually ends in a big night.', actions: [{ label: 'What should I eat?', ask: 'What should I eat next?' }] });
+  if (f.proteinMin && h >= 14 && n0(d.protein) < f.proteinMin * (h >= 18 ? 0.7 : 0.45)) out.push({ w: 7, text: `Protein is behind (${r0(d.protein)} g, minimum ${f.proteinMin} g). Make your next meal protein-first.`, actions: [{ label: 'Protein ideas', ask: 'How much protein do I need?' }] });
+  if (t.waterMl) { const expect = t.waterMl * Math.min(1, Math.max(0, (h - 7) / 14)); if (n0(d.waterMl) < expect * 0.65) out.push({ w: 6, text: `Water is behind for this time of day (${r0(d.waterMl)} of ${t.waterMl} ml). A big glass now.`, actions: [{ label: 'Open Water', page: 'water' }] }); }
+  if (t.steps && h >= 17 && n0(d.steps) < t.steps * 0.5) out.push({ w: 5, text: `Steps are at ${r0(d.steps)} of ${t.steps}. A 20-minute walk after dinner closes most of the gap.`, actions: [{ label: 'Open Exercise', page: 'exercise' }] });
+  if (snap.sleepH && snap.sleepH < 6) out.push({ w: 4, text: `You slept about ${r1(snap.sleepH)} h. Expect stronger cravings today: lean on protein and fibre and keep an early night.`, actions: [] });
+  out.sort((a, b) => b.w - a.w);
+  if (!out.length) out.push({ w: 0, text: f.target && h >= 18 && f.left > 0 ? `You're on track. ${Math.max(0, f.left)} kcal left for dinner or a light snack.` : 'You\'re on track right now. Keep logging as you go.', actions: [{ label: 'Log food', page: 'foodLogger' }] });
+  return out;
+}
+
+const SIT = [
+  ['eatingOut', /(eating out|restaurant|hotel|dine out|party|wedding|buffet|biryani|ordering|swiggy|zomato|outside food)/],
+  ['craving', /(crav|sweet|chocolate|ice ?cream|dessert|junk|chips|snack attack|something tasty)/],
+  ['late', /(late night|midnight|can.?t sleep|after dinner|night hunger|hungry at night)/],
+  ['postWorkout', /(after (the )?(gym|workout|run|training)|post.?workout|just worked out|recovery meal)/],
+  ['skipped', /(skipped|missed|forgot to eat|didn.?t eat|haven.?t eaten)/],
+  ['quick', /(quick|no time|10 min|in a hurry|busy|easy meal|lazy to cook)/],
+  ['travel', /(travel|trip|flight|train|road trip|journey|airport)/],
+  ['unwell', /(sick|fever|cold|unwell|low energy|weak|headache|period)/],
+];
+const sitOf = (q) => { const hit = SIT.find(([, re]) => re.test(q)); return hit ? hit[0] : null; };
+const mealOf = (snap, f, q = '') => {
+  const named = /(tonight|dinner|night)/.test(q) ? 'dinner' : /(lunch|afternoon)/.test(q) ? 'lunch' : /(breakfast|morning)/.test(q) ? 'breakfast' : /(snack|evening tea)/.test(q) ? 'snacks' : null;
+  if (named && f.target) return { key: named, budget: Math.max(0, Math.min(f.left ?? 9999, Math.round(f.target * (MEAL_SHARE[named] || 0.3)))) };
+  return mealOf0(snap, f);
+};
+const mealOf0 = (snap, f) => snap.meal || { key: nextMeal(f.hour), budget: f.left !== null ? Math.max(0, Math.min(f.left, Math.round(f.target * (MEAL_SHARE[nextMeal(f.hour)] || 0.3)))) : 500 };
+
+function scenarioAnswer(kind, snap, f, q = '') {
+  const m = mealOf(snap, f, q), d = snap.today || {}, left = f.left ?? 0;
+  const base = (txt, mood = 'think', actions = []) => ({ text: txt, mood, actions });
+  if (kind === 'eatingOut') {
+    const plan = Math.round(m.budget * 0.8);
+    return base(`Eating out for ${m.key}? You have about ${m.budget} kcal for it. Restaurant portions run ~20% bigger than they look, so plan for ${plan} kcal "on paper".\n• Start with protein: tandoori/grilled chicken, paneer tikka, dal, egg dishes.\n• Take half the rice or bread and ask for sauces on the side.\n• Skip fried starters and sweet drinks. Water first.\n${f.proteinLeft > 25 ? `• You still need ${f.proteinLeft} g protein today, so it's worth ordering a protein dish.\n` : ''}Log it afterwards with Eating out, which gives a calorie range for the dish.`, 'eat', [{ label: 'Open Log food', page: 'foodLogger' }]);
+  }
+  if (kind === 'craving') {
+    const room = Math.max(0, Math.min(180, Math.round(left * 0.35)));
+    const sleep = snap.sleepH && snap.sleepH < 6 ? ` Short sleep (${r1(snap.sleepH)} h) makes cravings stronger, so you're not weak, you're tired.` : '';
+    return base(left < 80
+      ? `You're nearly out of budget (${Math.max(0, left)} kcal left). Try water, then green tea or a warm drink and wait 10 minutes. Most cravings pass.${sleep}`
+      : `A treat of about ${room} kcal fits today.${sleep}\n• Curd with fruit or honey (~120 kcal)\n• 2 squares dark chocolate (~70 kcal)\n• Half a regular sweet instead of a whole one\nWait 10 minutes with a glass of water first. If you're still hungry, add protein (egg, curd, chana) rather than more sugar.`, 'think', [{ label: 'Log it', page: 'foodLogger' }]);
+  }
+  if (kind === 'late') return base(left > 150 ? `Late and hungry, with ${left} kcal left. Keep it under ~150 kcal: curd, a glass of milk, a boiled egg or roasted chana. Heavy meals late tend to cost sleep, and short sleep brings tomorrow's cravings.` : `You're at your budget. Water or herbal tea, and head to sleep. If this happens most nights, shift protein earlier in the day.`, 'sleep', [{ label: 'See my week', ask: 'How was my week?' }]);
+  if (kind === 'postWorkout') {
+    const mins = n0(d.exerciseMinutes);
+    return base(`${mins ? `You trained ${r0(mins)} min today. ` : ''}After training, aim for 20-30 g protein within a couple of hours, with some carbs: eggs and toast, curd with fruit, paneer wrap, dal and rice.${f.proteinLeft ? ` You still need ${f.proteinLeft} g protein today, so this meal is a good place for it.` : ''} Drink water too.`, 'lift', [{ label: 'What should I eat?', ask: 'What should I eat next?' }]);
+  }
+  if (kind === 'skipped') {
+    const mealsLeft = Math.max(1, ['breakfast', 'lunch', 'dinner', 'snacks'].filter((x) => !(snap.mealsToday || {})[x]).length - (f.hour >= 20 ? 1 : 0));
+    return base(`Don't double up later. You have ${Math.max(0, left)} kcal left, which is about ${Math.round(Math.max(0, left) / mealsLeft)} kcal per remaining meal. Eat the next one at a normal size with protein first.`, 'eat', [{ label: 'What should I eat?', ask: 'What should I eat next?' }]);
+  }
+  if (kind === 'quick') return base(`Quick options for ${m.key} (about ${m.budget} kcal available):\n• Curd + banana + a handful of nuts (~300 kcal, ~14 g protein)\n• 2-3 egg bhurji with 1 roti (~350 kcal, ~20 g protein)\n• Sprouts chaat with lemon (~200 kcal, ~12 g protein)\n• Paneer or chicken wrap, no mayo (~400 kcal, ~25 g protein)\nPick the one closest to your budget and log it.`, 'eat', [{ label: 'Log food', page: 'foodLogger' }]);
+  if (kind === 'travel') return base(`For travel, pack things that hold up: boiled eggs, fruit, roasted chana or nuts, and a water bottle. At stops pick grilled or dal-based dishes. Don't try to be perfect: log roughly with Eating out and keep within about ${r0(f.target)} kcal. Walking at stops counts toward steps.`, 'walk', [{ label: 'Open Log food', page: 'foodLogger' }]);
+  return base('Take it easy. Prioritise water, simple food you can digest (khichdi, curd rice, soup, banana) and rest. Don\'t chase calorie or step goals today. If symptoms are strong or last more than a couple of days, please see a doctor.', 'love', []);
+}
+
 const A = {
   overview(snap, f) {
     const d = snap.today || {}; const bits = [];
@@ -90,9 +155,11 @@ const A = {
     if (snap.targets?.steps) bits.push(`Steps ${r0(d.steps)} of ${snap.targets.steps}.`);
     const q = snap.journey?.today; if (q?.total) bits.push(`${q.done} of ${q.total} daily quests done.`);
     if (snap.streak?.current >= 2) bits.push(`${snap.streak.current}-day streak.`);
+    const pri = priority(snap, f)[0];
+    if (bits.length && pri) bits.push(`Focus now: ${pri.text}`);
     if (!bits.length) return { text: 'Nothing is logged yet today. Log your first meal or a glass of water and I can give you the full picture.', mood: 'think', actions: [{ label: 'Log food', page: 'foodLogger' }, { label: 'Add water', page: 'water' }] };
     const mood = f.target && f.eaten > f.target * 1.1 ? 'sad' : f.target && pct(f.eaten, f.target) >= 60 && pct(f.eaten, f.target) <= 105 ? 'thumbs' : 'hype';
-    return { text: bits.join(' '), mood, actions: [{ label: 'What should I eat next?', ask: 'What should I eat next?' }, { label: 'See my week', ask: 'How was my week?' }] };
+    return { text: bits.join(' '), mood, actions: [...(pri?.actions || []).slice(0, 1), { label: 'See my week', ask: 'How was my week?' }], follow: ['What should I eat next?', 'What should I change?', 'How was my week?'] };
   },
   calories(snap, f) {
     if (!f.target) return { text: 'I need your height, age and weight to size your calorie budget. Add them in Profile and I will do the math for you.', mood: 'think', actions: [{ label: 'Open Profile', page: 'profile' }] };
@@ -116,14 +183,26 @@ const A = {
     return { text: `${lines.join('. ')}. ${flags.join(' ') || 'Everything is inside range so far.'}`, mood: flags.length ? 'think' : 'thumbs', actions: flags.length ? [{ label: 'What should I eat next?', ask: 'What should I eat next?' }] : [] };
   },
   eat(snap, f) {
-    const meal = nextMeal(f.hour);
-    const ideas = ideasText(snap, f, 3);
-    if (f.left !== null && f.left < 60) return { text: `You're essentially at your budget (${Math.max(0, f.left)} kcal left). If you're still hungry: water first, then buttermilk, clear soup, cucumber or black coffee/green tea. Real hunger at night usually means protein was low earlier.`, mood: 'think', actions: [{ label: 'Fix my day', page: 'planner' }] };
-    const text = ideas
-      ? `For ${meal} you have about ${f.left ?? 'some'} kcal${f.proteinLeft ? ` and ${f.proteinLeft} g protein to place` : ''}. Based on what you already eat: ${ideas}.`
-      : `For ${meal}, aim for about ${f.left ? Math.min(f.left, Math.round(f.target * 0.3)) : 'a moderate'} kcal with a protein food (dal, paneer, egg, curd, chicken), a carb and some vegetables. Log a few more meals and I'll suggest from your own favourites.`;
-    return { text, mood: 'eat', actions: [{ label: 'Log food', page: 'foodLogger' }, { label: 'Plan my week', page: 'planner' }] };
+    const m = mealOf(snap, f), d = snap.today || {};
+    if (f.left !== null && f.left < 60) return { text: `You're essentially at your budget (${Math.max(0, f.left)} kcal left). If you're still hungry: water first, then buttermilk, clear soup, cucumber or green tea. Real hunger at night usually means protein was low earlier.`, mood: 'think', actions: [{ label: 'Fix my day', page: 'planner' }] };
+    const ideas = snap.ideas || [];
+    const ctx = [];
+    if (snap.targets?.waterMl && n0(d.waterMl) < snap.targets.waterMl * 0.4 && f.hour >= 11) ctx.push('Drink a glass of water first. You\'re behind on water, and thirst often feels like hunger.');
+    if (n0(d.exerciseMinutes) > 20) ctx.push('You trained today, so a good portion of carbs with the protein is fine.');
+    if (snap.sleepH && snap.sleepH < 6) ctx.push(`Short sleep (${r1(snap.sleepH)} h) means bigger appetite today: choose protein and fibre.`);
+    if (f.hour >= 18 && n0(d.steps) < n0(snap.targets?.steps) * 0.5) ctx.push('A 15-minute walk after you eat will help digestion and your step goal.');
+    const head = `For ${m.key} you have about ${m.budget} kcal${m.protein ? ` and ~${m.protein} g protein` : ''} to work with (not the whole day's ${Math.max(0, f.left)}).`;
+    if (!ideas.length) return { text: `${head} Aim for a protein food (dal, paneer, egg, curd, chicken), a carb and some vegetables. Log a few more meals and I'll suggest from your own foods.${ctx.length ? `\n${ctx.join(' ')}` : ''}`, mood: 'eat', actions: [{ label: 'Log food', page: 'foodLogger' }, { label: 'Plan my week', page: 'planner' }], follow: ['I\'m eating out', 'Something quick, 10 minutes', 'I\'m craving something sweet'] };
+    const by = (fn) => [...ideas].sort(fn)[0];
+    const light = by((a, b) => a.kcal - b.kcal), prot = by((a, b) => b.protein - a.protein), bal = by((a, b) => Math.abs(a.kcal - m.budget * 0.85) - Math.abs(b.kcal - m.budget * 0.85));
+    const seen = new Set(); const rows = [];
+    for (const [label, it, why] of [['Light', light, 'leaves room for a snack later'], ['Balanced', bal, 'fits the meal best'], ['Protein-first', prot, 'best for fullness and muscle']]) {
+      if (!it || seen.has(it.name)) continue; seen.add(it.name);
+      rows.push(`• ${label}: ${it.name} (${it.qty}) · ${it.kcal} kcal · ${it.protein} g protein, ${why}`);
+    }
+    return { text: `${head} From foods you already eat:\n${rows.join('\n')}${ctx.length ? `\n\n${ctx.join(' ')}` : ''}`, mood: 'eat', actions: [{ label: 'Log food', page: 'foodLogger' }, { label: 'Plan my week', page: 'planner' }], follow: ['I\'m eating out', 'Something quick, 10 minutes', 'I\'m craving something sweet'] };
   },
+  scenario(snap, f, q) { return { ...scenarioAnswer(sitOf(q) || 'quick', snap, f, q), follow: ['What should I eat next?', 'How am I doing today?'] }; },
   water(snap) {
     const t = n0(snap.targets?.waterMl), v = n0(snap.today?.waterMl);
     if (!t) return { text: `You've had ${r0(v)} ml. Add your weight in Profile and I'll set a daily target.`, mood: 'drink', actions: [{ label: 'Open Water', page: 'water' }] };
@@ -187,12 +266,10 @@ const A = {
     return { text: tips.slice(0, 4).join(' '), mood: 'think', actions: [{ label: 'Plan my week', page: 'planner' }, { label: 'See my week', ask: 'How was my week?' }] };
   },
   next(snap, f) {
-    const q = (snap.journey?.today?.quests || []).filter((x) => !x.done).sort((a, b) => b.pct - a.pct);
-    const steps = [];
-    if (q[0]) steps.push(`${q[0].title}: ${q[0].value}/${q[0].target} ${q[0].unit}${q[0].hint ? `. ${q[0].hint}` : ''}`);
-    if (f.proteinLeft > 20 && f.hour >= 11) steps.push(`get ${f.proteinLeft} g more protein into your next meal`);
-    if (snap.targets?.waterMl && n0(snap.today?.waterMl) < snap.targets.waterMl * (f.hour / 22)) steps.push('drink water, you are behind for this time of day');
-    return { text: steps.length ? `Best next moves: ${steps.join('; then ')}.` : 'Everything on your list is on track. Plan tomorrow or take a walk.', mood: 'think', actions: [{ label: 'Open Goals', page: 'goals' }] };
+    const p = priority(snap, f); const q = (snap.journey?.today?.quests || []).filter((x) => !x.done).sort((a, b) => b.pct - a.pct)[0];
+    const lines = p.slice(0, 2).map((x) => x.text);
+    if (q && lines.length < 2) lines.push(`Quest: ${q.title} (${q.value}/${q.target} ${q.unit}).`);
+    return { text: lines.join('\n'), mood: 'think', actions: p[0].actions || [], follow: ['What should I eat next?', 'How am I doing today?', 'What should I change?'], top: p[0].text };
   },
   motivate(snap) {
     const s = snap.streak?.current;
@@ -218,6 +295,8 @@ function suggestionsFor(snap) {
  * @param snap     data snapshot (see routes/assistantRoutes.js)
  * @returns { text, mood, actions: [{label, page?|ask?}], chips: [string], topic }
  */
+function followChips(follow, general) { return [...new Set([...(follow || []), ...general])].slice(0, 6); }
+
 function answer(question, snap) {
   const q = ` ${norm(question)} `;
   const f = buildFacts(snap || {});
@@ -229,17 +308,20 @@ function answer(question, snap) {
   const feat = matchFeature(q);
   if (feat && howTo) return { text: feat.how, mood: 'think', actions: [{ label: feat.label, page: feat.page }], chips, topic: `feature:${feat.id}` };
 
+  const sit = sitOf(q.trim());
+  if (sit && !howTo) { const r = A.scenario(snap || {}, f, q.trim()); return { ...r, chips: followChips(r.follow, chips), topic: `scenario:${sit}` }; }
+
   let best = null;
   for (const [id, words] of INTENTS) { const s = score(q, words); if (s && (!best || s > best.s)) best = { id, s }; }
   if (/\b(went over|ate too much|overate|over budget|cheated|binge)\b/.test(q)) best = { id: 'calories', s: 99 };
   if (/\b(why|stuck|plateau|not losing|improve|change)\b/.test(q) && best?.id !== 'overview') best = { id: 'why', s: 98 };
   if (best) {
-    let res = A[best.id](snap || {}, f);
+    let res = A[best.id](snap || {}, f, q.trim());
     if (best.s === 99 && f.target && f.eaten <= f.target) res = { ...res, text: `Good news: you're not over today. ${res.text}` };
-    return { ...res, chips, topic: best.id };
+    return { ...res, chips: followChips(res.follow, chips), topic: best.id };
   }
   if (feat) return { text: feat.how, mood: 'think', actions: [{ label: feat.label, page: feat.page }], chips, topic: `feature:${feat.id}` };
   return { text: 'I\'m not sure I understood that one. I can answer about your calories, protein, water, steps, weight, goals, habits and week, suggest what to eat, or explain any feature. Try one of these:', mood: 'think', actions: [], chips, topic: 'unknown' };
 }
 
-module.exports = { answer, suggestionsFor, matchFeature, FEATURES, buildFacts };
+module.exports = { priority, answer, suggestionsFor, matchFeature, FEATURES, buildFacts };

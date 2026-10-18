@@ -39,9 +39,9 @@ function idleScene() {
   return pick(["wave", "cheer", "task", "habit", "health"]);
 }
 const MOOD_SCENE = { drink: "drink", eat: "eat", lift: "lift", sad: "sad", party: "victory", thumbs: "habit", sleep: "sleep", think: "think", angry: "angry", laugh: "cheer", hype: "cheer" };
-const CHIP_SET = ["Ask me anything 💬", "How am I doing?", "What's next?", "Motivate me", "Play ball ⚽", "Follow me 👣", "Swap me 🔄", "Tell me a joke"];
+const CHIP_SET = ["Ask me anything 💬", "How am I doing?", "What's next?", "Play ball ⚽", "Follow me 👣", "Swap me 🔄"];
 // Questions about your data go to the full assistant (it reads your whole day, week and goals); fun chips stay local.
-const TO_ASSISTANT = { "How am I doing?": "How am I doing today?", "What's next?": "What should I do next?" };
+const TO_ASSISTANT = { "How am I doing?": "How am I doing today?", "What's next?": "What should I do next?", "Motivate me": "I need motivation" };
 const FOODS = ["🍛", "🍜", "🍔", "🍱", "🥗", "🍎", "🍕", "🥪"];
 
 export default function Companions() {
