@@ -13,9 +13,12 @@ const schema = new mongoose.Schema(
     calories: { type: Number, default: 0 },
     protein: { type: Number, default: 0 },
     fiber: { type: Number, default: 0 },
+    carbohydrates: { type: Number, default: 0 },
+    fat: { type: Number, default: 0 },
     logged: { type: Boolean, default: false },
     rescue: { type: Boolean, default: false }, // built by the "gentle day" button
-    auto: { type: Boolean, default: false },   // built by "Plan my week from what I eat"
+    auto: { type: Boolean, default: false },   // built by the smart planner ("Plan my week")
+    role: { type: String, default: '' },       // protein | carb | veg | dairy | fruit | snack (smart planner)
     why: { type: String, default: '', maxlength: 200 }, // short reason shown under an auto-planned item
   },
   { timestamps: true }

@@ -86,7 +86,6 @@ export default function AppNav({ current, go, theme, onToggleTheme, avatar, name
           </div>
         </nav>
         <div className="nv-right">
-          <button type="button" className="nv-round" onClick={() => onAsk?.()} aria-label="Ask FlexFit" title="Ask FlexFit (press ?)">🔍</button>
           <button type="button" className="nv-round" onClick={() => go("task")} aria-label="Tasks and reminders" title="Tasks and reminders">🔔</button>
           {flame}
           <button type="button" className="nv-round" onClick={onToggleTheme} aria-label={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"} title="Light / dark">{theme === "dark" ? "☀️" : "🌙"}</button>
@@ -115,7 +114,6 @@ export default function AppNav({ current, go, theme, onToggleTheme, avatar, name
         <div className="nv-sheet-wrap" onClick={() => setMore(false)}>
           <div className="nv-sheet" role="dialog" aria-label="All features" onClick={(e) => e.stopPropagation()}>
             <div className="nv-sheet-head"><b>Everything in FlexFit</b><button type="button" onClick={() => setMore(false)} aria-label="Close">✕</button></div>
-            <button type="button" className="nv-ask" onClick={() => { setMore(false); onAsk?.(); }}><span>💬</span> Ask FlexFit anything</button>
             {NAV_GROUPS.map((g) => (
               <div key={g.title} className="nv-group">
                 <div className="nv-title">{g.title}</div>

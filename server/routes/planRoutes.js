@@ -23,6 +23,7 @@ const { buildPatterns } = require('../lib/patterns');
 const { whatIf } = require('../lib/whatIf');
 const { navyBodyFat } = require('../lib/bodyFat');
 const { rescueDay } = require('../lib/mealBuilder');
+const { intakeAdvice } = require('../lib/intakeAdvice');
 const { buildDietDay, adoptFood } = require('../lib/healthyDiet');
 const { oilKcal } = require('../lib/oil');
 const { computeStreaks } = require('../lib/streaks');
@@ -201,7 +202,10 @@ router.get('/over-days', wrap(async (req, res) => {
     causes = rootCauses({ rows: rows.map((r) => ({ date: r.date, mealType: r.mealType, foodName: r.foodName, createdAt: r.createdAt, trigger: r.trigger, calories: Number(r.nutritionTotal?.calories || 0) })), days: core.days.map((d) => ({ date: d.date, calories: d.calories })).filter((d) => d.date > addDays(today, -28)), target: core.target, tzOffsetMin: tz });
   }
   const easierTarget = status.easierPace && core.energy ? Math.max(core.floor, Math.round((core.energy.tdee - (status.easierPace * 7700) / 7) / 10) * 10) : null;
-  res.json({ success: true, ...status, target: core.target, correction, causes, easierTarget, trendPerWeek: rate });
+  // "Go a little lighter" advice: also fires after a single over day, with the exact lighter target for the next days (the planner uses the same numbers)
+  const adv = intakeAdvice({ days, target: core.target, floor: core.floor, today, direction: core.direction, weightTrendPerWeek: rate });
+  const advice = adv.level === 'none' ? null : { level: adv.level, headline: adv.headline, detail: adv.detail, perDay: adv.perDay, days: adv.days, startDate: adv.startDate, skipCut: adv.skipCut, todayTarget: adv.todayTarget, tomorrowTarget: adv.tomorrowTarget, runDays: adv.runDays, weekExcess: adv.weekExcess, lastExcess: adv.lastExcess };
+  res.json({ success: true, ...status, target: core.target, correction, causes, easierTarget, trendPerWeek: rate, advice });
 }));
 
 // ---- gentle one-day plan from the planner

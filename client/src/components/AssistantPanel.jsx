@@ -82,11 +82,6 @@ export default function AssistantPanel({ go }) {
 
   return (
     <>
-      {!open && (
-        <button type="button" className="as-fab" onClick={() => openPanel()} aria-label="Ask FlexFit anything">
-          <img src={face("wave")} alt="" width="46" height="46" /><span>Ask FlexFit</span>
-        </button>
-      )}
       {open && (
         <section className="as-panel" role="dialog" aria-label="Ask FlexFit">
           <header className="as-head">

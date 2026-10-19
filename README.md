@@ -1,3 +1,9 @@
+# v33 (web + server)
+- Server (shared by web and mobile): lib/smartPlan.js (balanced planner), lib/intakeAdvice.js + lib/planAdvice.js (lighter days after heavy days),
+  new routes GET /api/meal-plans/context, POST /api/meal-plans/clear, GET /:id/alternatives, POST /:id/swap; /api/plan/over-days returns `advice`;
+  POST /api/meal-plans/auto takes mode ('balanced' | 'mine'), diet, variant. MealPlan stores carbohydrates, fat, role.
+- Web: hero slower with no dots, no separate Ask buttons (the floating character opens the chat), new planner UI, go-lighter banner.
+
 # FlexFit — Complete Source
 
 This is the cleaned, corrected source for the FlexFit web app, backend, and mobile app.

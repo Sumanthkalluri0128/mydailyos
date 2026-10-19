@@ -80,6 +80,7 @@ function Layer() {
   const lastTouch = useRef(performance.now());
   const swapRef = useRef(null);
   const lastTap = useRef([0, 0]); const tapRun = useRef([0, 0]);
+  const holdT = useRef(0); const tapT = useRef(0);
 
   const patch = (i, p) => setView((v) => v.map((x, k) => (k === i ? { ...x, ...p } : x)));
   const showBubble = (i, bubble, ms = 8000, scene) => {
@@ -259,17 +260,21 @@ function Layer() {
   const down = (i) => (e) => {
     lastTouch.current = performance.now();
     const s = sim.current[i]; e.preventDefault(); e.currentTarget.setPointerCapture?.(e.pointerId);
-    s.drag = { sx: e.clientX, sy: e.clientY, ox: s.x, oy: s.y, pts: [{ x: e.clientX, y: e.clientY, t: performance.now() }], moved: false };
+    s.drag = { sx: e.clientX, sy: e.clientY, ox: s.x, oy: s.y, pts: [{ x: e.clientX, y: e.clientY, t: performance.now() }], moved: false, long: false };
+    // press and hold = the quick-action menu (water, log food, play, follow, swap)
+    clearTimeout(holdT.current);
+    holdT.current = setTimeout(() => { const d = sim.current[i].drag; if (d && !d.moved) { d.long = true; buzz(14); openMenu(i); } }, 520);
   };
   const move = (i) => (e) => {
     const s = sim.current[i], d = s.drag; if (!d) return;
     const dx = e.clientX - d.sx, dy = e.clientY - d.sy;
-    if (!d.moved && Math.hypot(dx, dy) > 7) { d.moved = true; s.mode = "drag"; s.vy = 0; s.vx = 0; s.target = null; patch(i, { bubble: null, scene: "shock", seed: 1 }); buzz(8); }
+    if (!d.moved && Math.hypot(dx, dy) > 7) { clearTimeout(holdT.current); d.moved = true; s.mode = "drag"; s.vy = 0; s.vx = 0; s.target = null; patch(i, { bubble: null, scene: "shock", seed: 1 }); buzz(8); }
     if (d.moved) { s.x = Math.max(0, Math.min(window.innerWidth - SIZE, d.ox + dx)); s.y = Math.max(0, d.oy - dy); d.pts.push({ x: e.clientX, y: e.clientY, t: performance.now() }); if (d.pts.length > 6) d.pts.shift(); }
   };
   const up = (i) => (e) => {
-    const s = sim.current[i], d = s.drag; s.drag = null; if (!d) return;
+    const s = sim.current[i], d = s.drag; s.drag = null; clearTimeout(holdT.current); if (!d) return;
     const w = viewRef.current[i].w;
+    if (d.long) return;
     if (d.moved) {
       const a = d.pts[0], b = d.pts[d.pts.length - 1], dt = Math.max(0.016, (b.t - a.t) / 1000);
       s.vx = Math.max(-1400, Math.min(1400, (b.x - a.x) / dt)); s.vy = Math.max(-900, Math.min(1500, -(b.y - a.y) / dt)); s.mode = "fly"; s.squash = 0;
@@ -279,14 +284,21 @@ function Layer() {
       return;
     }
     const now = performance.now();
-    if (now - lastTap.current[i] < 320) { // double tap: celebrate
-      fireConfetti({ from: e.currentTarget, count: 60 }); hop(i, 760); buzz([14, 30, 14]); burst(i, "🎉", 3); feelBond(i, 2);
+    if (now - lastTap.current[i] < 320) { // double tap: celebrate (cancels the pending "open chat")
+      clearTimeout(tapT.current); fireConfetti({ from: e.currentTarget, count: 60 }); hop(i, 760); buzz([14, 30, 14]); burst(i, "🎉", 3); feelBond(i, 2);
       patch(i, { scene: "victory", seed: Date.now() % 97 }); setTimeout(() => patch(i, { scene: idleScene() }), 2600);
       lastTap.current[i] = 0; return;
     }
     lastTap.current[i] = now;
     hop(i, 520); buzz(12); burst(i, "❤️", 1); feelBond(i, 1);
     s.mode = "idle"; s.until = performance.now() + 9000; s.target = null;
+    // a single tap opens the chat with THIS character: it is the assistant
+    clearTimeout(tapT.current);
+    tapT.current = setTimeout(() => { patch(i, { bubble: null }); window.dispatchEvent(new CustomEvent("flexfit:ask", { detail: { who: w } })); }, 330);
+  };
+
+  const openMenu = (i) => {
+    const w = viewRef.current[i].w; hop(i, 420); burst(i, "❤️", 1);
     refreshCtx().then((ctx) => {
       const ins = insights(ctx, w); const k = viewRef.current[i].seed || 0;
       const line = ins.length ? ins[k % ins.length] : { mood: "hype", text: say(w, "hype") };
@@ -347,7 +359,7 @@ function Layer() {
         const st = stickerFor(v.w, v.scene, v.seed);
         return (
           <div key={`${i}-${v.w}`} ref={(el) => { els.current[i] = el; }} className={`cp ${sim.current[i]?.mode === "drag" ? "is-drag" : ""}`} style={{ width: SIZE, height: SIZE }}
-            onPointerDown={down(i)} onPointerMove={move(i)} onPointerUp={up(i)} onPointerCancel={up(i)} role="button" aria-label={`${CHARS[v.w]} — tap to pet and chat, drag to throw`}>
+            onPointerDown={down(i)} onPointerMove={move(i)} onPointerUp={up(i)} onPointerCancel={up(i)} role="button" aria-label={`${CHARS[v.w]} — tap to chat, hold for quick actions, drag to throw`}>
             <i className="cp-shadow" />
             <img src={st.src} alt="" width={SIZE} height={SIZE} draggable="false" />
             {v.zzz && <span className="cp-zzz">Z z z</span>}

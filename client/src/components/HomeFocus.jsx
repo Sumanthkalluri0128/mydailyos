@@ -101,7 +101,6 @@ export default function HomeFocus({ profile, summary, activity, water, waterTarg
         </div>
         <div className="hf-coach-actions">
           {next?.actions?.slice(0, 1).map((a) => <button key={a.label} type="button" className="hf-pill" onClick={() => act(a)}>{a.label}</button>)}
-          <button type="button" className="hf-pill hf-ghost" onClick={() => onAsk?.()}>💬 Ask</button>
         </div>
       </div>
 

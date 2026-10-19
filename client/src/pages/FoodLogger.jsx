@@ -9,6 +9,7 @@ import CalorieBalance from "../components/CalorieBalance";
 import TextLogger from "../components/TextLogger";
 import SmartSuggestions from "../components/SmartSuggestions";
 import EatingOut from "../components/EatingOut";
+import IntakeBanner from "../components/IntakeBanner";
 const MEALS = [
   {
     id: "breakfast",
@@ -441,6 +442,7 @@ function FoodLogger({ date, onBack, goTo }) {
           <p>
             Add everything you ate today.
           </p>
+          <IntakeBanner onPlan={() => goTo?.("planner")} />
         </div>
 
       </div>

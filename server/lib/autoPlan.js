@@ -89,8 +89,9 @@ function servingsFor(food, habit, factor = 1) {
  * @param o.meals      which meals to plan
  */
 function buildAutoPlan(o) {
-  const { habits, foods, catalogue = [], dates, target, floor = 1200, ranges, limits = {}, occupied = {}, dayBase = {}, meals = MEALS } = o;
-  const goal = Math.max(floor, Math.round(target));
+  const { habits, foods, catalogue = [], dates, target, floor = 1200, ranges, limits = {}, occupied = {}, dayBase = {}, meals = MEALS, targets = {} } = o;
+  const baseGoal = Math.max(floor, Math.round(target));
+  let goal = baseGoal;   // set per day below: lighter days after heavy days get a lower target (see intakeAdvice.js)
   const counts = new Map(o.weekCounts || []);
   const items = []; const days = []; const notes = new Set();
   const lastUsed = new Map(); // foodId -> last day index it was planned (rotation)
@@ -101,6 +102,7 @@ function buildAutoPlan(o) {
   const proteinMin = ranges?.protein?.min ?? 0, proteinGoal = ranges?.protein?.goal ?? 0;
 
   dates.forEach((date, di) => {
+    goal = Math.max(floor, Math.round(targets[date] ?? target));
     let day = { ...zero(), ...(dayBase[date] || {}) };
     const firstItem = items.length;
     for (const meal of meals) {
@@ -250,12 +252,12 @@ function buildAutoPlan(o) {
     if (day.calories > goal * 1.06) status.push('over budget');
     if (day.calories < Math.min(floor, goal) * 0.95) status.push('under the safe minimum');
     if (day.protein < proteinMin) status.push('protein below your minimum');
-    days.push({ date, totals: round(day), status });
+    days.push({ date, target: goal, baseTarget: baseGoal, trim: Math.max(0, baseGoal - goal), totals: round(day), status });
   });
 
   const limitsOut = [...counts.entries()].map(([id, used]) => { const h = habits.byFood.get(id); return h ? { foodId: id, name: h.name, usedThisWeek: used, weeklyCap: h.weeklyCap, usualQty: h.usualQty, maxQty: h.maxQty, unit: h.unit, indulgent: h.indulgent } : null; })
     .filter(Boolean).sort((a, b) => b.usedThisWeek - a.usedThisWeek).slice(0, 12);
-  return { items, days, notes: [...notes], limits: limitsOut, goal };
+  return { items, days, notes: [...notes], limits: limitsOut, goal: baseGoal };
 }
 
 module.exports = { analyzeHabits, buildAutoPlan, MEALS };

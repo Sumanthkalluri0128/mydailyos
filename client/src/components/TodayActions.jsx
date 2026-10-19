@@ -19,7 +19,7 @@ export default function TodayActions({ profile, summary, activity, water, waterT
   ];
   return (
     <section className="ta" aria-label="What would you like to do?">
-      <div className="ta-head"><h2>What would you like to do?</h2><button type="button" className="ta-ask" onClick={() => onAsk?.()}>💬 Ask FlexFit</button></div>
+      <div className="ta-head"><h2>What would you like to do?</h2></div>
       <div className="ta-grid">
         {tiles.map((t) => (
           <button key={t.id} type="button" className={`ta-tile tone-${t.tone} ${t.over ? "is-over" : ""}`} onClick={() => goTo(t.id)}>

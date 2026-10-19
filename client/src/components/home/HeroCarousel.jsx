@@ -6,7 +6,7 @@ import Buddy from "../../motion/Buddy";
 import { fireConfetti, prefersReducedMotion } from "../../motion/motion";
 import { SCENES, sceneAt, todayIndex } from "./scenes";
 
-const AUTO_MS = 7000;
+const AUTO_MS = 15000;   // slow on purpose: a picture stays long enough to enjoy
 const calm = () => { try { return prefersReducedMotion() || document.documentElement.classList.contains("ff-calm"); } catch { return false; } };
 const Fx = ({ kind }) => (
   <span className={`hr-fx fx-${kind}`} aria-hidden="true">
@@ -14,7 +14,7 @@ const Fx = ({ kind }) => (
   </span>
 );
 
-export default function HeroCarousel({ greeting, name, dateText, coach, onAsk, streakNote }) {
+export default function HeroCarousel({ greeting, name, dateText, coach, streakNote }) {
   const [idx, setIdx] = useState(todayIndex);
   const [paused, setPaused] = useState(false);
   const [drag, setDrag] = useState(0);
@@ -79,7 +79,6 @@ export default function HeroCarousel({ greeting, name, dateText, coach, onAsk, s
             <p>{coach?.text}</p>
             <span className="hr-bubble-actions">
               {coach?.action && <button type="button" onClick={coach.action.onClick}>{coach.action.label}</button>}
-              <button type="button" className="ghost" onClick={() => onAsk?.()}>💬 Ask</button>
             </span>
           </div>
         </div>
@@ -106,9 +105,6 @@ export default function HeroCarousel({ greeting, name, dateText, coach, onAsk, s
 
       <button type="button" className="hr-shuffle" onClick={() => setIdx(Math.floor(Math.random() * N))} aria-label="Random scene">↻</button>
 
-      <div className="hr-dots" role="tablist" aria-label="Choose a scene">
-        {SCENES.map((s, i) => <button key={s.slug} type="button" role="tab" aria-selected={i === idx} aria-label={`${s.who}, scene ${i + 1}`} className={i === idx ? "on" : ""} onClick={() => setIdx(i)}>{i === idx && !paused && !calm() ? <i key={idx} style={{ animationDuration: `${AUTO_MS}ms` }} /> : null}</button>)}
-      </div>
     </section>
   );
 }
