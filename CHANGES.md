@@ -1,3 +1,16 @@
+# v34 - Phase 1: accuracy and trust (web + server)
+
+- **Vitamins and minerals:** optional per-serving iron, calcium, potassium, magnesium, zinc, vitamin A/B12/C/D and folate on foods (blank = unknown, never 0). Custom foods can carry them (Food form > "Vitamins & minerals"). Barcode import reads them from Open Food Facts when present.
+- **Daily card (Progress, plus a collapsible one on Home):** each nutrient as a power-up bar against its ICMR-NIN range with arrow/word status, a character reacting to the day and explaining a low nutrient in their own voice, and "not enough data" instead of misleading zeros. `GET /api/progress/micronutrients?date=`.
+- **Weekly coach:** "low on iron 3 weeks in a row" style tip with food ideas from your own foods first.
+- **Confidence badges:** Verified / Typical / Added by you on food lists, the food picker and the selected food.
+- **Report wrong values:** `POST /api/foods/:id/report` (rate limited); review list `GET /api/foods/reports` and `PATCH /api/foods/reports/:id`, admin only via the new `ADMIN_EMAILS` env var.
+- **Data pipeline:** `server/data/micronutrients.csv` (one row per catalogue food, **all blank: no numbers were invented**) + `npm run import-micros` (re-runnable, `--dry-run`). `npm run audit-foods` now also checks micronutrient sanity and the CSV.
+- Tests: `server/test/micronutrients.unit.test.js` (17) with fixtures. Docs: CALCULATIONS.md.
+- New env var: `ADMIN_EMAILS` (optional). Database: new optional fields only, no migration.
+
+---
+
 # v28 - minimal Home, scenario-aware coach (web + server)
 
 - **Home:** one hero card (calories ring, protein, water, steps, weight, the coach's single next step, four actions). Insights/goals and meals/habits/tasks are collapsible sections that remember their state. Nothing was removed; duplicate tiles and buttons are gone.

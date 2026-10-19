@@ -5,6 +5,7 @@ import { apiFetch } from "../config/api";
 import WeeklyCoach from "../components/WeeklyCoach";
 import OverDayCard from "../components/OverDayCard";
 import PatternsCard from "../components/PatternsCard";
+import MicronutrientCard from "../components/MicronutrientCard";
 import { getLocalDate } from "../utils/date";
 import { notify } from "../utils/notify";
 
@@ -290,6 +291,7 @@ function ProgressPage({ onBack }) {
 
       <OverDayCard />
       <WeeklyCoach />
+      <MicronutrientCard />
       <PatternsCard />
 
       <section className="progress-toolbar card">

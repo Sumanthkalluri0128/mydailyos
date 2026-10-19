@@ -11,6 +11,7 @@ const { buildAchievements } = require('../lib/achievements');
 const { buildWeeklySummary } = require('../lib/weekly');
 const { dailyTarget, expectedEnergy, macroTargets, waterTargetMl } = require('../lib/energy');
 const { buildCoach } = require('../lib/weeklyCoach');
+const { microDay, microInsights } = require('../lib/microService');
 const { addDays, diffDays, todayUtc } = require('../lib/dates');
 const { materializeRecurring } = require('../lib/taskSeries');
 const { weeklyBundle, plateauFor, digestFor } = require('../lib/weeklyDigest');
@@ -91,7 +92,28 @@ router.get('/coach', wrap(async (req, res) => {
   };
   const meals = rows.map((l) => ({ date: l.date, mealType: l.mealType, calories: Number(l.nutritionTotal?.calories || 0) }));
   const foods = rows.map((l) => ({ name: l.foodName, calories: Number(l.nutritionTotal?.calories || 0) }));
-  res.json({ success: true, ...buildCoach({ days: history.days, meals, foods, targets, today, expectedTdee: e?.tdee || null }) });
+  const coach = buildCoach({ days: history.days, meals, foods, targets, today, expectedTdee: e?.tdee || null });
+  // Micronutrient insight ("low on iron 3 weeks in a row") — only when the data is good enough; never breaks the coach.
+  try {
+    const lows = await microInsights(uid, today, profile);
+    for (const n of lows) {
+      const own = n.suggestions.filter((x) => x.source === 'yours').map((x) => x.name);
+      const ideas = (own.length ? own : n.suggestions.map((x) => x.name)).slice(0, 3);
+      coach.tips = [...(coach.tips || []), {
+        id: `micro-${n.key}`, icon: '🥬', title: `${n.label} has been low ${n.weeks} weeks in a row`,
+        detail: `Your weekly average was about ${n.average} ${n.unit} a day against a range starting at ${n.min} ${n.unit}.${ideas.length ? ` ${own.length ? 'From your own foods' : 'Foods that help'}: ${ideas.join(', ')}.` : ''} This is an estimate from foods that have nutrient data; not medical advice.`,
+        impact: 50, micro: { key: n.key, suggestions: n.suggestions },
+      }];
+    }
+  } catch (err) { /* optional insight */ }
+  res.json({ success: true, ...coach });
+}));
+
+// Daily micronutrient card: each nutrient vs the person's ICMR-NIN range, or "not enough data" instead of misleading zeros.
+router.get('/micronutrients', wrap(async (req, res) => {
+  const date = req.query.date ? v.date(req.query.date, 'date') : todayUtc();
+  const profile = await Profile.findOne({ userId: req.user.id }).lean();
+  res.json({ success: true, ...(await microDay(req.user.id, date, profile)) });
 }));
 
 router.get('/achievements', wrap(async (req, res) => {

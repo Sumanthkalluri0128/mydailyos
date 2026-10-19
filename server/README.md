@@ -43,6 +43,8 @@ JWT_SECRET=your-long-random-secret
 CLIENT_URL=https://mydailyos.vercel.app
 ```
 
+Optional: `ADMIN_EMAILS=you@example.com` (comma-separated) lets those accounts open the food-report review list (`GET /api/foods/reports`). Without it the list is closed to everyone.
+
 `CLIENT_URL` can contain multiple comma-separated origins if needed, for example:
 
 ```text

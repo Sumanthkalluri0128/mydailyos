@@ -111,3 +111,18 @@ export function reply(chip, who, ctx) {
   if (chip === "Tell me a joke") return { mood: "laugh", text: pick(JOKES) };
   return { mood: "hype", text: pick(VOICE[who] || MOOD.hype) };
 }
+
+// ---- Micronutrients: a character explains a low nutrient in their own voice (plain facts stay plain underneath) ----
+const LOW_LEAD = {
+  asta: "Hey, no magic needed —", luffy: "Shishishi, listen —", naruto: "Believe it —", jinwoo: "Status check:", goku: "Hey, quick thing!",
+  kakashi: "Pay attention to the small things:", zoro: "Straight talk:", gojo: "Relax, easy fix~", tanjiro: "Gently, steady steps:",
+  killua: "Tch, simple fix:", vegeta: "Listen up:", zenitsu: "Aaah, don't panic —", bakugo: "Hey! Listen!",
+};
+const HELPERS = { iron: "dal, rajma, spinach, ragi or jaggery", calcium: "curd, milk, paneer, ragi or sesame", potassium: "banana, coconut water, potato or beans", magnesium: "nuts, seeds, whole grains or greens", zinc: "pulses, nuts, seeds or whole grains", vitaminA: "carrot, papaya, mango or leafy greens", vitaminB12: "milk, curd, eggs or paneer", vitaminC: "amla, guava, lemon or orange", vitaminD: "morning sun and eggs or fortified milk", folate: "dals, greens or sprouts" };
+/** One line: the character says what is low and which foods help. `own` = names from the person's own foods (used first). */
+export function explainNutrient(who, nutrient, own = []) {
+  const lead = LOW_LEAD[who] || "Heads up:";
+  const ideas = own.length ? own.slice(0, 3).join(", ") : HELPERS[nutrient.key] || "a varied plate";
+  return `${lead} ${nutrient.label.toLowerCase()} is low today. ${own.length ? "From your own foods, try" : "Foods that help:"} ${ideas}.`;
+}
+export const MICRO_CHEER = { victory: "Power level high — most nutrients are in range!", power: "Good progress — a few nutrients still to fill.", support: "A few gaps today — small additions at the next meal will help.", unknown: "Log a few more foods with nutrient data and I'll read your bars." };

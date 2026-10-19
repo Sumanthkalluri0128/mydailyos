@@ -7,7 +7,7 @@ async function catalogueFoods(Food, { now = Date.now, ttl = TTL_MS } = {}) {
   if (cache.foods && now() - cache.at < ttl) return cache.foods;
   if (cache.pending) return cache.pending; // several requests at once share one query
   cache.pending = Food.find({ $or: [{ userId: null }, { userId: { $exists: false } }] })
-    .select('name brand servingSize servingUnit units calories protein carbohydrates fat fiber sugar sodium barcode notes hidden')
+    .select('name brand servingSize servingUnit units calories protein carbohydrates fat fiber sugar sodium barcode notes hidden iron calcium potassium magnesium zinc vitaminA vitaminB12 vitaminC vitaminD folate dataSource verified')
     .lean()
     .then((foods) => { cache = { at: now(), foods, pending: null }; return foods; })
     .catch((e) => { cache.pending = null; throw e; });

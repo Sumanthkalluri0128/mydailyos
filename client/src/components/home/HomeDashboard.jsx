@@ -7,6 +7,7 @@ import "./home.css";
 import "../homefocus.css";
 import HeroCarousel from "./HeroCarousel";
 import OverDayCard from "../OverDayCard";
+import MicronutrientCard from "../MicronutrientCard";
 import FatLossCard from "../FatLossCard";
 import FixMyDay from "./FixMyDay";
 import HealthyDay from "./HealthyDay";
@@ -303,6 +304,7 @@ export default function HomeDashboard({ profile, summary, activity, water, water
             <Bar label="Sugar" icon="🍬" tone="sugar" value={summary?.sugar || 0} target={lim.sugar} limit />
             {n0(summary?.sodium) > 0 && <Bar label="Sodium" icon="🧂" tone="sodium" value={summary.sodium} target={lim.sodiumMg} unit="mg" limit />}
           </div>
+          <MicronutrientCard collapsible />
         </div>
 
         <div className="pn pn-hab">
