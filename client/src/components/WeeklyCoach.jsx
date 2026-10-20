@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { API_URL } from "../config";
 import { apiFetch } from "../config/api";
 import Buddy from "../motion/Buddy";
+import WeightReveal from "./WeightReveal";
 
 const NAMES = { zoro: "Zoro", naruto: "Naruto", luffy: "Luffy", jinwoo: "Jin-Woo", goku: "Goku", gojo: "Gojo" };
 
@@ -54,7 +55,7 @@ export default function WeeklyCoach() {
         <div className="card wc-budget">
           <h3>What your body seems to burn</h3>
           <strong>≈ {mt.estimate.toLocaleString()} kcal/day</strong>
-          <p>From {mt.loggedDays} logged days averaging {mt.avgIntake.toLocaleString()} kcal and a weight change of {mt.kgPerWeek > 0 ? "+" : ""}{mt.kgPerWeek} kg/week. Confidence: {mt.confidence}.
+          <p>From {mt.loggedDays} logged days averaging {mt.avgIntake.toLocaleString()} kcal and a weight change of <WeightReveal compact reaction={false} text={`${mt.kgPerWeek > 0 ? "+" : ""}${mt.kgPerWeek} kg/week`} />. Confidence: {mt.confidence}.
             {mt.diff !== null && mt.expected !== null && Math.abs(mt.diff) >= 150 ? ` The app's formula says ${mt.expected.toLocaleString()}, so your real maintenance looks ${mt.diff < 0 ? "lower" : "higher"} by about ${Math.abs(mt.diff)} kcal${mt.diff < 0 ? ", which may explain a slower loss than expected. Check that eating-out meals and oil are logged." : "."}` : ""}</p>
         </div>
       )}

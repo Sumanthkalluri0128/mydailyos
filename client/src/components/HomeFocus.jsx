@@ -8,6 +8,7 @@ import { dayBalance, expectedEnergy, macroTargets } from "../utils/energy";
 import { getLocalDate } from "../utils/date";
 import { notify } from "../utils/notify";
 import Buddy from "../motion/Buddy";
+import WeightReveal from "./WeightReveal";
 
 const n = (v) => Math.round(Number(v) || 0);
 const greet = (h) => (h < 5 ? "Still up" : h < 12 ? "Good morning" : h < 17 ? "Good afternoon" : h < 22 ? "Good evening" : "Good night");
@@ -87,8 +88,8 @@ export default function HomeFocus({ profile, summary, activity, water, waterTarg
           <Meter label="Steps" value={activity?.steps} target={stepsT} unit="" tone="steps" onClick={() => goTo("exercise")} />
           <button type="button" className="hf-weight" onClick={() => goTo("weight")}>
             <span>Weight</span>
-            <strong>{latestWeight != null ? `${Number(latestWeight).toFixed(1)} kg` : "Add"}</strong>
-            {latestWeight != null && tw ? <small>{Math.abs(latestWeight - tw).toFixed(1)} kg to {Number(tw).toFixed(1)}</small> : <small>See trend</small>}
+            <strong>{latestWeight != null ? <WeightReveal text={`${Number(latestWeight).toFixed(1)} kg`} /> : "Add"}</strong>
+            {latestWeight != null && tw ? <small><WeightReveal compact reaction={false} text={`${Math.abs(latestWeight - tw).toFixed(1)} kg to ${Number(tw).toFixed(1)}`} /></small> : <small>See trend</small>}
           </button>
         </div>
       </div>

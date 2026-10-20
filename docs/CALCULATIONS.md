@@ -24,24 +24,9 @@ sugar ≤ carbs, fibre ≤ carbs, no negatives, macros not heavier than the serv
 2 %, 95 % of foods within 8 %. This proves the numbers agree with *each other*; it cannot prove they match a lab analysis.
 Entries are labelled "typical values — approximate".
 
-## Vitamins and minerals (new in v34)
-Ten micronutrients are tracked per serving: iron, calcium, potassium, magnesium, zinc, vitamin A (µg RAE), vitamin B12, vitamin C,
-vitamin D and folate. Sodium stays in mg.
-
-| What | Rule | Source / limit |
-|---|---|---|
-| Targets | ICMR-NIN *Nutrient Requirements for Indians* (2020) RDA for healthy adults 19+, by sex. Iron for women drops to the men's figure from age 50. | ⚠️ **Typed from the published summary table; check every number in `server/lib/rda.js` against the PDF before launch.** |
-| "In range" | From **80 % of the RDA** up to a ceiling where one is meaningful (iron 45 mg, calcium 2,500 mg, zinc 40 mg, vitamin A 3,000 µg, vitamin C 2,000 mg, vitamin D 100 µg). Below the range = low; above = high. | The 80 % start is a FlexFit choice, not a published cut-off. |
-| Unknown is not zero | A food with no value for a nutrient adds nothing and is not counted as "covered". A nutrient is judged only when foods carrying it make up **≥ 60 % of the day's calories**; otherwise the card says "not enough data". | Avoids misleading zeros. |
-| Weekly insight | "Low N weeks in a row": the week's average per logged day is below the range start in each of the last **3** weeks, each week with **≥ 4 logged days** and ≥ 60 % coverage. Suggestions come from the person's own foods first. | Rule-based, shown as a coach tip. |
-| Out of scope | Under-18s (no card), age or sex missing (no card, asks for the profile detail), pregnancy, lactation and medical conditions. | A visible note is shown on the card. |
-| Data | Catalogue values come from `server/data/micronutrients.csv` (IFCT 2017, USDA FoodData Central), applied with `npm run import-micros`. Every row carries a source; blank stays unknown. **The file ships empty: nothing was invented.** | Fill it in, then run `npm run audit-foods`. |
-| Barcode foods | Open Food Facts minerals and vitamins are converted (g, mg or µg per 100 g to the app's unit, per serving) and range-checked; missing stays unknown. | Vitamin A in IU is skipped (ambiguous). |
-| Confidence badge | **Verified** = the importer marked the row verified and it has a source; **Typical** = approximate catalogue value; **Added by you** = your own food. | |
-
 ## What FlexFit does not track
-Pregnancy- and condition-specific requirements, supplements, and any nutrient not listed above. Catalogue micronutrient values
-are blank until `data/micronutrients.csv` is filled in; the app shows "not enough data" instead of guessing.
+Vitamins and minerals (iron, calcium, vitamin B12, D…) are not in the data, so the app shows none and doesn't pretend to.
+Adding them needs a data source (e.g. India's IFCT or USDA FoodData Central) — see the suggestions list.
 
 ## Known limits
 * Age is stored as a number, so it doesn't advance on its own — update it on your birthday.

@@ -18,11 +18,6 @@ const { buildHistory, getDayDetails } = require('../lib/progress');
 const { addDays } = require('../lib/dates');
 const { expandWord, englishify } = require('../lib/foodAliases');
 const { searchFoods, tokens } = require('../lib/foodSearch');
-const { confidenceOf } = require('../lib/confidence');
-const { parseMicros } = require('../lib/microParse');
-const FoodReport = require('../models/FoodReport');
-const { requireAdmin } = require('../lib/admin');
-const { rateLimit } = require('../middleware/rateLimit');
 const { dailyTarget, expectedEnergy, macroTargets, macroRanges, dayBalance } = require('../lib/energy');
 
 const router = express.Router();
@@ -37,7 +32,6 @@ function present(food, userId) {
   const fav = (f.favoriteBy || []).some((id) => String(id) === String(userId)) || (mine && f.isFavorite === true);
   delete f.favoriteBy;
   f.isCustom = !!mine;
-  f.confidence = confidenceOf(f);
   f.isFavorite = !!fav;
   return f;
 }
@@ -75,7 +69,6 @@ function parseFood(body = {}) {
     sugar: num('sugar'),
     sodium: sodiumMg(body.sodium),
     barcode: v.string(body.barcode, 'barcode', { max: 20 }),
-    ...parseMicros(body),
     units: parseUnits(body.units),
     notes: v.string(body.notes, 'notes', { max: 500 }),
   };
@@ -244,37 +237,6 @@ router.get('/barcode/:code', wrap(async (req, res) => {
   res.json({ success: true, found: true, saved: false, food: draft });
 }));
 
-// ---- "Report wrong values" -------------------------------------------------------------------------------------------
-const reportLimiter = rateLimit({ windowMs: 60 * 60_000, max: 20, keyFn: (req) => `food-report|${req.user?.id || req.ip}`, message: 'Too many reports. Try again later.' });
-
-// GET /api/foods/reports?status=open — admin only (ADMIN_EMAILS env var). Newest first.
-router.get('/reports', requireAdmin, wrap(async (req, res) => {
-  const status = ['open', 'fixed', 'dismissed'].includes(req.query.status) ? req.query.status : null;
-  const reports = await FoodReport.find(status ? { status } : {}).sort({ createdAt: -1 }).limit(200).lean();
-  res.json({ success: true, reports });
-}));
-
-// PATCH /api/foods/reports/:id { status } — admin only
-router.patch('/reports/:id', requireAdmin, wrap(async (req, res) => {
-  const status = v.string(req.body?.status, 'status', { max: 12, required: true });
-  if (!['open', 'fixed', 'dismissed'].includes(status)) throw new HttpError(400, 'status must be open, fixed or dismissed');
-  const report = await FoodReport.findByIdAndUpdate(v.objectId(req.params.id), { status }, { new: true }).lean();
-  if (!report) throw new HttpError(404, 'Report not found');
-  res.json({ success: true, report });
-}));
-
-// POST /api/foods/:id/report { note } — any signed-in person, on any food they can see.
-router.post('/:id/report', reportLimiter, wrap(async (req, res) => {
-  const note = v.string(req.body?.note, 'note', { max: 500, required: true });
-  if (note.trim().length < 3) throw new HttpError(400, 'Please say what looks wrong (a few words is enough).');
-  const food = await Food.findOne({ _id: v.objectId(req.params.id), ...visibleTo(req.user.id) }).select('name').lean();
-  if (!food) throw new HttpError(404, 'Food not found');
-  const recent = await FoodReport.countDocuments({ userId: req.user.id, foodId: food._id, createdAt: { $gt: new Date(Date.now() - 24 * 3600_000) } });
-  if (recent >= 3) throw new HttpError(429, 'You already reported this food a few times today. Thank you — we will review it.');
-  await FoodReport.create({ foodId: food._id, userId: req.user.id, foodName: food.name, note });
-  res.status(201).json({ success: true, message: 'Thanks — your report was saved and will be reviewed.' });
-}));
-
 router.get('/:id', wrap(async (req, res) => {
   const food = await Food.findOne({ _id: v.objectId(req.params.id), ...visibleTo(req.user.id) }).select('+favoriteBy');
   if (!food) throw new HttpError(404, 'Food not found');
@@ -292,7 +254,7 @@ router.post('/:id/duplicate', wrap(async (req, res) => {
   const src = await Food.findOne({ _id: v.objectId(req.params.id), ...visibleTo(req.user.id) }).lean();
   if (!src) throw new HttpError(404, 'Food not found');
   const { _id, createdAt, updatedAt, __v, favoriteBy, userId, isFavorite, ...rest } = src;
-  const copy = await Food.create({ ...rest, verified: false, name: `${src.name} (copy)`.slice(0, 120), userId: req.user.id });
+  const copy = await Food.create({ ...rest, name: `${src.name} (copy)`.slice(0, 120), userId: req.user.id });
   res.status(201).json({ success: true, food: present(copy, req.user.id) });
 }));
 

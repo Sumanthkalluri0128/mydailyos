@@ -5,6 +5,7 @@ import { apiFetch } from "../config/api";
 import { useEffect, useState } from "react";
 import { getLocalDate } from "../utils/date";
 import { API_URL } from "../config";
+import WeightReveal, { useWeightRevealed } from "../components/WeightReveal";
 
 function WeightPage({ onBack }) {
   const today = getLocalDate();
@@ -292,17 +293,17 @@ function WeightPage({ onBack }) {
 
       <section className="wt-hero">
         <div className="wt-now">
-          {latestWeight !== null ? (<><strong>{latestWeight.toFixed(1)}</strong><span>kg now</span></>) : (<BuddyEmpty scene="scale" size={84} title="No weight yet">Step on the scale and log it below.</BuddyEmpty>)}
+          {latestWeight !== null ? (<><strong><WeightReveal text={latestWeight.toFixed(1)} /></strong><span>kg now</span></>) : (<BuddyEmpty scene="scale" size={84} title="No weight yet">Step on the scale and log it below.</BuddyEmpty>)}
           {weightChange !== null && weightChange !== 0 && (
-            <em className={`wt-chip ${good ? "up" : "down"}`}>{weightChange < 0 ? "−" : "+"}{Math.abs(weightChange).toFixed(1)} kg since start</em>
+            <em className={`wt-chip ${good ? "up" : "down"}`}><WeightReveal compact reaction={false} text={`${weightChange < 0 ? "−" : "+"}${Math.abs(weightChange).toFixed(1)} kg since start`} /></em>
           )}
         </div>
         {latestWeight !== null && (
           <div className="wt-stats">
-            <div><small>Start</small><b>{startingWeight.toFixed(1)}</b></div>
+            <div><small>Start</small><b><WeightReveal compact reaction={false} text={startingWeight.toFixed(1)} /></b></div>
             {hasTargetWeight ? (<>
-              <div><small>Target</small><b>{targetWeight.toFixed(1)}</b></div>
-              <div><small>{direction === "Maintain" ? "Goal" : "To go"}</small><b>{direction === "Maintain" ? "Hold" : remainingWeight.toFixed(1)}</b></div>
+              <div><small>Target</small><b><WeightReveal compact reaction={false} text={targetWeight.toFixed(1)} /></b></div>
+              <div><small>{direction === "Maintain" ? "Goal" : "To go"}</small><b>{direction === "Maintain" ? "Hold" : <WeightReveal compact reaction={false} text={remainingWeight.toFixed(1)} />}</b></div>
             </>) : (<div className="wt-hint">Set a target weight in Profile to see goal progress.</div>)}
           </div>
         )}
@@ -315,7 +316,7 @@ function WeightPage({ onBack }) {
         <div className="wt-log-head"><h2>Log today</h2><span className="wt-date">{today}</span></div>
         <div className="wt-stepper">
           <button type="button" onClick={() => nudge(-0.1)} aria-label="Down 0.1 kg">−</button>
-          <label><input type="number" inputMode="decimal" min="1" step="0.1" placeholder={latestWeight !== null ? latestWeight.toFixed(1) : "0.0"} value={weight} onChange={(e) => setWeight(e.target.value)} /><span>kg</span></label>
+          <label><input type="number" inputMode="decimal" min="1" step="0.1" placeholder="0.0" value={weight} onChange={(e) => setWeight(e.target.value)} /><span>kg</span></label>
           <button type="button" onClick={() => nudge(0.1)} aria-label="Up 0.1 kg">+</button>
         </div>
         <input className="wt-note" type="text" placeholder="Note (optional): morning, after gym…" value={notes} onChange={(e) => setNotes(e.target.value)} />
@@ -332,7 +333,7 @@ function WeightPage({ onBack }) {
               const older = logs[i + 1], diff = older ? Number(log.weightKg) - Number(older.weightKg) : null;
               return (
                 <li key={log._id}>
-                  <div><b>{Number(log.weightKg).toFixed(1)} kg</b><small>{log.date}{log.notes ? ` · ${log.notes}` : ""}</small></div>
+                  <div><b><WeightReveal compact reaction={false} text={`${Number(log.weightKg).toFixed(1)} kg`} /></b><small>{log.date}{log.notes ? ` · ${log.notes}` : ""}</small></div>
                   {diff !== null && diff !== 0 && <em className={diff < 0 ? "d-down" : "d-up"}>{diff < 0 ? "▼" : "▲"} {Math.abs(diff).toFixed(1)}</em>}
                   <button className="delete-log-button" onClick={() => deleteWeight(log._id)} aria-label="Delete entry">✕</button>
                 </li>

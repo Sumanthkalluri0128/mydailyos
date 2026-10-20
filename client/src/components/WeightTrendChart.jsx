@@ -1,9 +1,11 @@
 import { useMemo } from "react";
 import { movingAverage } from "../utils/trend";
+import WeightReveal, { useWeightRevealed } from "./WeightReveal";
 
 // Raw daily weights as dots, with a smoothed 7-day moving average line on top,
 // so day-to-day water-weight noise doesn't hide the real trend.
 export default function WeightTrendChart({ logs }) {
+  const wr = useWeightRevealed();
   const data = useMemo(
     () => movingAverage((logs || []).map((l) => ({ date: l.date, value: Number(l.weightKg) })), 7),
     [logs]
@@ -37,7 +39,7 @@ export default function WeightTrendChart({ logs }) {
           <p>7-day moving average smooths out daily ups and downs.</p>
         </div>
         <div className="trend-now">
-          <strong>{last.avg.toFixed(1)} kg</strong>
+          <strong><WeightReveal text={`${last.avg.toFixed(1)} kg`} /></strong>
           <small>trend</small>
         </div>
       </div>
@@ -45,7 +47,7 @@ export default function WeightTrendChart({ logs }) {
         {ticks.map((t) => (
           <g key={t}>
             <line x1={PAD.l} x2={W - PAD.r} y1={y(t)} y2={y(t)} className="trend-grid" />
-            <text x={PAD.l - 6} y={y(t) + 4} textAnchor="end" className="trend-label">{t.toFixed(1)}</text>
+            <text x={PAD.l - 6} y={y(t) + 4} textAnchor="end" className="trend-label">{wr ? t.toFixed(1) : ""}</text>
           </g>
         ))}
         {data.map((d, i) => <circle key={d.date} cx={x(i)} cy={y(d.value)} r="3" className="trend-dot" />)}

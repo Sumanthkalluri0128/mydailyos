@@ -13,6 +13,7 @@ import { fireConfetti } from "../motion/motion";
 import { refreshCtx } from "../motion/ctxStore";
 import { CHARS, ALL, accent, stickerUrl, stickerFor, stickerList } from "../motion/chars";
 import { say } from "../motion/talk";
+import WeightReveal, { useWeightRevealed } from "../components/WeightReveal";
 
 const METRICS = [
   { id: "workouts", label: "Workout days", unit: "days", def: 12 },
@@ -164,11 +165,11 @@ export default function GoalsPage({ onBack }) {
 
       {wj && (
         <>
-          <h3>Your weight journey <small>{wj.startKg} → {wj.targetKg} kg</small></h3>
+          <h3>Your weight journey <small><WeightReveal compact reaction={false} text={`${wj.startKg} → ${wj.targetKg} kg`} /></small></h3>
           <div className="gp-card">
-            <div className="gp-row"><b>{wj.reached ? "Goal reached! 🏆" : `${wj.remainingKg} kg to go`}</b><span>{wj.pct}%</span></div>
+            <div className="gp-row"><b>{wj.reached ? "Goal reached! 🏆" : <WeightReveal compact reaction={false} text={`${wj.remainingKg} kg to go`} />}</b><span>{wj.pct}%</span></div>
             <Bar pct={wj.pct} tone={wj.reached ? "ok" : "xp"} />
-            <div className="gp-steps">{wj.checkpoints.map((c) => <span key={c.label} className={c.reached ? "on" : ""}>{c.reached ? "✓" : "○"} {c.label}<em>{c.kg} kg</em></span>)}</div>
+            <div className="gp-steps">{wj.checkpoints.map((c) => <span key={c.label} className={c.reached ? "on" : ""}>{c.reached ? "✓" : "○"} {c.label}<em><WeightReveal compact reaction={false} text={`${c.kg} kg`} /></em></span>)}</div>
           </div>
         </>
       )}
@@ -228,7 +229,7 @@ function GoalCard({ g, onDone, onDelete, onManual, onUndo }) {
     <div className={`gp-card ${g.done ? "is-done" : ""}`}>
       <div className="gp-row"><b>{g.title}</b><span className={`gp-badge gp-${tone}`}>{label}</span></div>
       <Bar pct={p.pct} tone={tone === "bad" ? "bad" : tone === "warn" ? "warn" : tone === "ok" ? "ok" : "mid"} />
-      <small>{g.metric === "weight" ? `${p.value} kg now · goal ${p.target} kg` : `${p.value.toLocaleString()} / ${p.target.toLocaleString()} ${unit}`} · {p.pct}%{p.daysLeft !== null && !g.done ? (p.daysLeft >= 0 ? ` · ${p.daysLeft} day${p.daysLeft === 1 ? "" : "s"} left` : " · deadline passed") : ""}</small>
+      <small>{g.metric === "weight" ? <WeightReveal compact reaction={false} text={`${p.value} kg now · goal ${p.target} kg`} /> : `${p.value.toLocaleString()} / ${p.target.toLocaleString()} ${unit}`} · {p.pct}%{p.daysLeft !== null && !g.done ? (p.daysLeft >= 0 ? ` · ${p.daysLeft} day${p.daysLeft === 1 ? "" : "s"} left` : " · deadline passed") : ""}</small>
       <div className="gp-actions">
         {g.metric === "custom" && !g.done && onManual && <><button type="button" onClick={() => onManual(Math.max(0, p.value - 1))}>−1</button><button type="button" onClick={() => onManual(p.value + 1)}>＋1</button></>}
         {!g.done && onDone && <button type="button" onClick={onDone}>Mark done</button>}

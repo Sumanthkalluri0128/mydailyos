@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { apiFetch } from "../config/api";
 import { getLocalDate } from "../utils/date";
+import WeightReveal from "./WeightReveal";
 
 const STREAK_LABELS = {
   water: ["💧", "Water goal"],
@@ -79,7 +80,7 @@ export default function Insights() {
         <div className={`large-card plateau-card ${plateau.status}`}>
           <h2>{plateau.status === "plateau" ? "⏸️ Weight plateau" : plateau.status === "wrong_direction" ? "↗️ Trend check" : "⚖️ Weight trend"}</h2>
           <p>{plateau.message}</p>
-          <small>Trend: {plateau.slopeKgPerWeek > 0 ? "+" : ""}{plateau.slopeKgPerWeek} kg/week from {plateau.weighIns} weigh-ins</small>
+          <small><WeightReveal compact reaction={false} prefix="Trend: " text={`${plateau.slopeKgPerWeek > 0 ? "+" : ""}${plateau.slopeKgPerWeek} kg/week from ${plateau.weighIns} weigh-ins`} /></small>
         </div>
       )}
 
@@ -99,7 +100,7 @@ export default function Insights() {
           </div>
           <p className="card-description">
             Active {weekly.activeDays}/7 days · water goal {weekly.goalDays.water}/7 · exercise goal {weekly.goalDays.exercise}/7
-            {weekly.weight ? ` · weight ${weekly.weight.change > 0 ? "+" : ""}${weekly.weight.change} kg` : ""}
+            {weekly.weight ? <> · <WeightReveal compact reaction={false} prefix="weight " text={`${weekly.weight.change > 0 ? "+" : ""}${weekly.weight.change} kg`} /></> : ""}
           </p>
           {weekly.days?.length > 0 && (
             <div className="week-strip" role="img" aria-label="Calories logged each day this week">

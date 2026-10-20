@@ -7,6 +7,7 @@ import DataControls from "../components/DataControls";
 import CharacterSettings from "../components/CharacterSettings";
 import ReportControls from "../components/ReportControls";
 import { expectedEnergy } from "../utils/energy";
+import WeightReveal from "../components/WeightReveal";
 
 function ProfilePage({ onBack }) {
   const [form, setForm] = useState({
@@ -655,7 +656,7 @@ function ProfilePage({ onBack }) {
                   </span>
 
                   <strong>
-                    {currentWeight.toFixed(1)} kg
+                    <WeightReveal compact reaction={false} text={`${currentWeight.toFixed(1)} kg`} />
                   </strong>
 
                 </div>
@@ -667,7 +668,7 @@ function ProfilePage({ onBack }) {
                   </span>
 
                   <strong>
-                    {targetWeight.toFixed(1)} kg
+                    <WeightReveal compact reaction={false} text={`${targetWeight.toFixed(1)} kg`} />
                   </strong>
 
                 </div>

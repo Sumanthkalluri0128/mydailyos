@@ -1,6 +1,5 @@
-import { useEffect, useMemo, useState } from 'react';
-
-const QUOTES = [
+// One calm motivational line per day for Home. No timers, no sliding: the same line all day, a different one tomorrow.
+export const QUOTES = [
   'You do not need a perfect day. You only need one good next step.',
   'Small actions repeated consistently become a completely different life.',
   'Progress is still progress when nobody else can see it yet.',
@@ -34,54 +33,6 @@ const QUOTES = [
   'Keep the promise: one more healthy choice, one more step forward.',
 ];
 
-function dayNumber() {
-  const d = new Date();
-  return Math.floor(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()) / 86400000);
-}
-
-function dailyOrder(seed) {
-  return QUOTES.map((quote, index) => ({
-    quote,
-    score: Math.sin((seed + index * 37.17) * 12.9898) * 43758.5453 % 1,
-  }))
-    .sort((a, b) => a.score - b.score)
-    .map((item) => item.quote);
-}
-
-export default function MotivationCarousel() {
-  const [dayKey, setDayKey] = useState(dayNumber);
-  const [index, setIndex] = useState(0);
-  const quotes = useMemo(() => dailyOrder(dayKey), [dayKey]);
-
-  useEffect(() => {
-    const dayTimer = window.setInterval(() => {
-      const nextDay = dayNumber();
-      if (nextDay !== dayKey) {
-        setDayKey(nextDay);
-        setIndex(0);
-      }
-    }, 60 * 1000);
-    return () => window.clearInterval(dayTimer);
-  }, [dayKey]);
-
-  useEffect(() => {
-    const timer = window.setInterval(() => setIndex((value) => (value + 1) % quotes.length), 5500);
-    return () => window.clearInterval(timer);
-  }, [quotes.length]);
-
-  return (
-    <button
-      type="button"
-      className="motivation-carousel"
-      onClick={() => setIndex((value) => (value + 1) % quotes.length)}
-      aria-label="Show another motivational quote"
-    >
-      <span className="motivation-quote-mark">“</span>
-      <span className="motivation-quote" key={`${dayKey}-${index}`}>
-        {quotes[index]}
-      </span>
-      <span className="motivation-progress"><span style={{ width: `${((index + 1) / quotes.length) * 100}%` }} /></span>
-      <span className="motivation-hint">Tap for another</span>
-    </button>
-  );
-}
+/** Whole days since 1970 for the LOCAL calendar date, so the line flips at local midnight. */
+export const dayNumber = (d = new Date()) => Math.floor(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()) / 86400000);
+export const dailyLine = (d = new Date()) => QUOTES[(dayNumber(d) * 7 + 3) % QUOTES.length];

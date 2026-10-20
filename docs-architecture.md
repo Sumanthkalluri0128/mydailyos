@@ -128,3 +128,10 @@ One energy model lives in three copies that are checked against shared test fixt
 - Vitamins and minerals other than sodium, sugar and fibre are not tracked yet.
 - The 7,700 kcal per kg rule overstates long-term loss; the real-maintenance card corrects for this.
 - Health Connect (Android) only; no Apple Health yet.
+
+
+## Phase 1 additions (v34 web / v30 mobile)
+- `client/src/components/WeightReveal.jsx` + `utils/weightReveal.js` (mobile: `components/WeightReveal.tsx` + `utils/weightReveal.ts`): the single place body weight is rendered. One shared reveal switch, 8 s timer, decoy digits while hidden.
+- `motion/stickerBlock.js` / `stickerBlocklist.json` (mobile: `motion/stickerBlock.ts`): written by `tools/stickers/audit_stickers.py` (mobile: `tools/audit_stickers.py`); every sticker lookup reads the filtered list. Re-run the script with `--apply` after regenerating stickers.
+- `components/home/HeroCard.*` replaces the hero carousel; `utils/dailyLine.*` picks one line per local day.
+- Mobile `utils/layoutSafe.ts`: placement helpers for characters, bubbles and corner stickers.

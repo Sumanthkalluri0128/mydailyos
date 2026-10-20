@@ -32,3 +32,14 @@
 .fl-medal.bronze { background: #b87333; } .fl-medal.silver { background: #9aa5b1; } .fl-medal.gold { background: #d4a017; }
 .fl-plate { border-top: 1px solid var(--border); padding: 10px 0; display: flex; justify-content: space-between; align-items: center; gap: 10px; text-align: left; width: 100%; background: none; border-left: 0; border-right: 0; border-bottom: 0; cursor: pointer; color: var(--text); }
 .fl-plate small { display: block; color: var(--text-muted); }
+
+/* Weekly review card: slim line by default, expands with a smooth height animation (grid 0fr -> 1fr), no persisted state */
+.od { padding-top: 4px; padding-bottom: 4px; }
+.od-bar { display: flex; align-items: center; gap: 10px; width: 100%; min-height: 48px; padding: 4px 2px; border: 0; background: transparent; color: inherit; font: inherit; text-align: left; cursor: pointer; border-radius: 12px; }
+.od-bar:focus-visible, .od-toggle:focus-visible { outline: 3px solid var(--od-accent, var(--primary)); outline-offset: 2px; }
+.od-t { flex: 1; min-width: 0; font-size: 14.5px; }
+.od-chev { font-weight: 900; font-size: 16px; color: var(--primary); transition: transform .28s ease; } .od-chev.open { transform: rotate(90deg); }
+.od-body { display: grid; grid-template-rows: 0fr; opacity: 0; visibility: hidden; transition: grid-template-rows .28s ease, opacity .28s ease, visibility 0s linear .28s; }
+.od-body.open { grid-template-rows: 1fr; opacity: 1; visibility: visible; transition: grid-template-rows .28s ease, opacity .28s ease, visibility 0s; }
+.od-inner { overflow: hidden; min-height: 0; padding-bottom: 6px; }
+.od-toggle { min-height: 44px; padding: 0 14px; border-radius: 99px; border: 1px solid var(--line, rgba(0,0,0,.15)); background: transparent; color: var(--text-muted); font-weight: 700; font-size: 12.5px; cursor: pointer; }

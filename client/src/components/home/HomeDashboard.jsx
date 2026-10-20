@@ -1,13 +1,13 @@
 // Home. One screen, each number shown exactly once:
 //   hero (greeting + scene carousel + coach) → five stat cards (with ＋ shortcuts) → nutrition · macros · habits → tasks · progress · scene.
 // Everything on it is tappable: cards open their page, water/steps have quick-add sheets, habits and tasks tick off with a cheer.
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import "./home.css";
 import "../homefocus.css";
-import HeroCarousel from "./HeroCarousel";
+import HeroCard from "./HeroCard";
+import WeightReveal from "../WeightReveal";
 import OverDayCard from "../OverDayCard";
-import MicronutrientCard from "../MicronutrientCard";
 import FatLossCard from "../FatLossCard";
 import FixMyDay from "./FixMyDay";
 import HealthyDay from "./HealthyDay";
@@ -19,7 +19,6 @@ import { notify } from "../../utils/notify";
 import { useCountUp, fireConfetti, buzz } from "../../motion/motion";
 import { ALL, dayChar, stickerFor } from "../../motion/chars";
 import { getCtx, onCtx, refreshCtx } from "../../motion/ctxStore";
-import { SCENES, sceneAt, todayIndex } from "./scenes";
 
 const n0 = (v) => Math.round(Number(v) || 0);
 const fmt = (v) => n0(v).toLocaleString();
@@ -203,12 +202,6 @@ export default function HomeDashboard({ profile, summary, activity, water, water
   useEffect(() => { const off = onCtx(setCtx); refreshCtx(true); return off; }, [syncTick]);
   const lv = ctx?.level, q = ctx?.today;
 
-  // ---- scene banner (second use of the pictures): a different scene every few seconds, tap to flip
-  const [bn, setBn] = useState(() => (todayIndex() + 8) % SCENES.length);
-  const bnRef = useRef(null);
-  useEffect(() => { const t = setInterval(() => { if (!document.hidden) setBn((i) => (i + 1) % SCENES.length); }, 9000); return () => clearInterval(t); }, []);
-  const banner = sceneAt(bn);
-
   const wpts = useMemo(() => [...(weightHistory || [])].sort((a, b) => String(a.date).localeCompare(String(b.date))).slice(-14).map((w) => Number(w.weightKg)).filter(Number.isFinite), [weightHistory]);
   const wLeft = latestWeight != null && tw ? Math.abs(latestWeight - tw) : null;
 
@@ -216,7 +209,7 @@ export default function HomeDashboard({ profile, summary, activity, water, water
 
   return (
     <div className="hd">
-      <HeroCarousel greeting={greet(hour)} name={name} dateText={new Date().toLocaleDateString(undefined, { weekday: "long", day: "numeric", month: "long" }).toUpperCase()} coach={coach} onAsk={onAsk} />
+      <HeroCard greeting={greet(hour)} name={name} dateText={new Date().toLocaleDateString(undefined, { weekday: "long", day: "numeric", month: "long" }).toUpperCase()} coach={coach} onAsk={onAsk} />
 
       {/* ---------- stat cards: each number appears once, in its own card ---------- */}
       <section className="hd-stats" aria-label="Today at a glance">
@@ -262,9 +255,9 @@ export default function HomeDashboard({ profile, summary, activity, water, water
 
         <article className="sc sc-w" role="button" tabIndex={0} onClick={open("weight")} onKeyDown={open("weight")}>
           <span className="ic v big">⚖️</span>
-          <div className="sc-val"><strong>{latestWeight != null ? `${Number(latestWeight).toFixed(1)} kg` : "Add"}</strong>{tw ? <small>Target: {Number(tw).toFixed(1)} kg</small> : <small>Set a target in Profile</small>}</div>
+          <div className="sc-val">{latestWeight != null ? <strong><WeightReveal text={`${Number(latestWeight).toFixed(1)} kg`} from={wpts.length > 1 ? wpts[wpts.length - 2] : undefined} /></strong> : <strong>Add</strong>}{tw ? <small><WeightReveal compact reaction={false} text={`Target: ${Number(tw).toFixed(1)} kg`} /></small> : <small>Set a target in Profile</small>}</div>
           <Spark points={wpts} />
-          {wLeft != null && <small className="sc-goal">{wLeft.toFixed(1)} kg to go</small>}
+          {wLeft != null && <small className="sc-goal"><WeightReveal compact reaction={false} text={`${wLeft.toFixed(1)} kg to go`} /></small>}
           <Peek src={cast(4, "scale")} />
         </article>
       </section>
@@ -289,7 +282,6 @@ export default function HomeDashboard({ profile, summary, activity, water, water
               );
             })}
           </ul>
-          <Peek src={cast(9, "chef")} className="pk-corner" />
         </div>
 
         <div className="pn pn-mac">
@@ -304,7 +296,6 @@ export default function HomeDashboard({ profile, summary, activity, water, water
             <Bar label="Sugar" icon="🍬" tone="sugar" value={summary?.sugar || 0} target={lim.sugar} limit />
             {n0(summary?.sodium) > 0 && <Bar label="Sodium" icon="🧂" tone="sodium" value={summary.sodium} target={lim.sodiumMg} unit="mg" limit />}
           </div>
-          <MicronutrientCard collapsible />
         </div>
 
         <div className="pn pn-hab">
@@ -323,7 +314,6 @@ export default function HomeDashboard({ profile, summary, activity, water, water
               })}
             </ul>
           )}
-          <Peek src={cast(10, "habit")} className="pk-corner" />
         </div>
       </section>
 
@@ -343,7 +333,6 @@ export default function HomeDashboard({ profile, summary, activity, water, water
             </ul>
           )}
           <form className="addrow" onSubmit={addTask}><input value={newTask} onChange={(e) => setNewTask(e.target.value)} placeholder="Add a task…" maxLength={120} aria-label="New task" /><button type="submit" disabled={!newTask.trim()}>+ Task</button></form>
-          <Peek src={cast(11, "task")} className="pk-corner" />
         </div>
 
         <div className="pn pn-prog" role="button" tabIndex={0} onClick={() => goTo("goals")} onKeyDown={open("goals")} aria-label="Open Goals and Journey">
@@ -360,10 +349,6 @@ export default function HomeDashboard({ profile, summary, activity, water, water
           <Peek src={cast(12, "levelup")} className="pk-corner big" />
         </div>
 
-        <div className="pn pn-scene" ref={bnRef} onClick={() => setBn((i) => (i + 1) % SCENES.length)} role="button" tabIndex={0} aria-label={`${banner.who} scene. Tap for the next one`} onKeyDown={(ev) => (ev.key === "Enter" || ev.key === " ") && setBn((i) => (i + 1) % SCENES.length)}>
-          <img className="bgb" src={banner.thumb} alt="" aria-hidden="true" />
-          {SCENES.map((s, i) => (i === bn ? <img key={s.slug} className={`fg ${s.land ? "land" : "port"}`} src={s.src} alt={`${s.who}: ${s.line}`} loading="lazy" decoding="async" draggable="false" /> : null))}
-        </div>
       </section>
 
       <HomeSection id="plan" icon="🧭" title="Plan & insights" summary="Your north star, reward milestones and weekly fat-loss score">

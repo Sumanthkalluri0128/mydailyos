@@ -3,6 +3,7 @@ import "./fatloss.css";
 import { apiFetch } from "../config/api";
 import { getLocalDate } from "../utils/date";
 import { notify } from "../utils/notify";
+import WeightReveal from "./WeightReveal";
 
 const api = async (method, path, body) => {
   const r = await apiFetch(path, { method, body: body ? JSON.stringify(body) : undefined });
@@ -88,7 +89,7 @@ export default function NorthStarPanel() {
         <p>Choose your own non-food rewards at milestones.</p>
         {d.rewards.map((r) => (
           <div key={r.id} className="fl-row" style={{ marginTop: 8 }}>
-            <span><strong>{r.reached ? "🎉" : "🔒"} {r.text}</strong><br /><small style={{ color: "var(--text-muted)" }}>{mask(`at ${r.atKg} kg lost`)}{r.claimedAt ? " · enjoyed" : r.reached ? " · unlocked!" : mask(` · ${r.remainingKg} kg to go`)}</small></span>
+            <span><strong>{r.reached ? "🎉" : "🔒"} {r.text}</strong><br /><small style={{ color: "var(--text-muted)" }}>{hide ? "••" : <WeightReveal compact reaction={false} text={`at ${r.atKg} kg lost${r.claimedAt ? " · enjoyed" : r.reached ? " · unlocked!" : ` · ${r.remainingKg} kg to go`}`} />}{hide && (r.claimedAt ? " · enjoyed" : r.reached ? " · unlocked!" : "")}</small></span>
             <span>{r.reached && !r.claimedAt && <button className="fl-chip" onClick={() => run(() => api("POST", `/api/plan/rewards/${r.id}/claim?today=${today}`, {}), "Enjoy it. You earned it.")}>I enjoyed it</button>}<button className="fl-chip" onClick={() => run(() => api("DELETE", `/api/plan/rewards/${r.id}`), "Removed.")} aria-label={`Remove ${r.text}`}>✕</button></span>
           </div>
         ))}
@@ -127,8 +128,8 @@ export default function NorthStarPanel() {
 
       <div className="fl-card">
         <h3>💛 Safety & comfort</h3>
-        <p>“Hide numbers” hides weights and calorie counts across the app. The plan keeps working behind the scenes.</p>
-        <button className={`fl-chip ${hide ? "on" : ""}`} onClick={() => run(() => api("PATCH", "/api/plan/safety", { hideNumbers: !hide }), hide ? "Numbers are visible again." : "Numbers are hidden.")}>{hide ? "Numbers are hidden" : "Hide numbers"}</button>
+        <p>Weights are always blurred until you tap them. “Hide calorie numbers” also hides calorie counts across the app. The plan keeps working behind the scenes.</p>
+        <button className={`fl-chip ${hide ? "on" : ""}`} onClick={() => run(() => api("PATCH", "/api/plan/safety", { hideNumbers: !hide }), hide ? "Numbers are visible again." : "Numbers are hidden.")}>{hide ? "Calorie numbers are hidden" : "Hide calorie numbers"}</button>
         {d.safety.flags.map((f) => <div key={f.id} className="fl-find"><span>💛</span><div><strong>{f.title}</strong><p>{f.detail}</p></div></div>)}
       </div>
     </section>

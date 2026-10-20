@@ -1,0 +1,42 @@
+{
+ "note": "Written by tools/stickers/audit_stickers.py. Add or remove an id by hand to override.",
+ "rules": {
+  "edgeRunFraction": 0.15,
+  "tinyLongSidePx": 96,
+  "emptyFraction": 0.3
+ },
+ "ids": [
+  "goku/lift-0",
+  "jinwoo/peace-0",
+  "tanjiro/chill-1"
+ ],
+ "details": {
+  "goku/lift-0": {
+   "reasons": [
+    "cropped: top edge 42% opaque"
+   ],
+   "size": [
+    224,
+    191
+   ]
+  },
+  "jinwoo/peace-0": {
+   "reasons": [
+    "cropped: right edge 54% opaque"
+   ],
+   "size": [
+    200,
+    153
+   ]
+  },
+  "tanjiro/chill-1": {
+   "reasons": [
+    "cropped: right edge 62% opaque"
+   ],
+   "size": [
+    213,
+    179
+   ]
+  }
+ }
+}

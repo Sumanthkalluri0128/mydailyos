@@ -2,11 +2,12 @@ import { useCallback, useEffect, useState } from "react";
 import "./fatloss.css";
 import { apiFetch } from "../config/api";
 import { getLocalDate } from "../utils/date";
+import WeightReveal from "./WeightReveal";
 
 const j = (p) => apiFetch(p).then((r) => (r.ok ? r.json() : null)).catch(() => null);
 
 // The north-star card: progress on the plan, this week's graded fat-loss score, whether the TREND sits inside the expected corridor,
-// the three weekly focus habits and any safety notes. "Hide numbers" mode masks weights and calories.
+// the three weekly focus habits and any safety notes. Weights are always blurred until tapped; "Hide calorie numbers" mode also masks calories.
 export default function FatLossCard({ onOpen, syncTick }) {
   const [p, setP] = useState(null);
   const [sc, setSc] = useState(null);
@@ -50,11 +51,11 @@ export default function FatLossCard({ onOpen, syncTick }) {
       )}
       <div className="fl-card" style={{ cursor: "pointer" }} onClick={onOpen} role="button" tabIndex={0} onKeyDown={(e) => e.key === "Enter" && onOpen?.()}>
         <p className="fl-eyebrow">Your north star</p>
-        <h3>{mask(`${pr?.lostKg ?? 0} of ${pr?.totalKg ?? 0} kg`)}{pr?.daysLeft >= 0 ? ` · ${pr.daysLeft} days left` : ""}</h3>
+        <h3>{hide ? "••" : <WeightReveal compact reaction={false} text={`${pr?.lostKg ?? 0} of ${pr?.totalKg ?? 0} kg`} />}{pr?.daysLeft >= 0 ? ` · ${pr.daysLeft} days left` : ""}</h3>
         <div className="fl-bar" role="progressbar" aria-valuenow={pr?.pct ?? 0} aria-valuemin={0} aria-valuemax={100}><i style={{ width: `${Math.max(2, pr?.pct ?? 0)}%` }} /></div>
         {corridor && <p>{corridor[0]} {corridor[1]}</p>}
         {ready && <p className="ink"><strong>🎁 Reward unlocked: {ready.text}</strong></p>}
-        {!ready && next && <p>Next reward: {next.text} {mask(`(${next.remainingKg} kg to go)`)}</p>}
+        {!ready && next && <p>Next reward: {next.text} {hide ? "••" : <WeightReveal compact reaction={false} text={`(${next.remainingKg} kg to go)`} />}</p>}
         {p.event.phase !== "none" && <p>🎉 {p.event.message}</p>}
         {["due", "soon", "on-break"].includes(p.break.state) && <p>🌿 {p.break.message}</p>}
       </div>

@@ -10,10 +10,6 @@ import TextLogger from "../components/TextLogger";
 import SmartSuggestions from "../components/SmartSuggestions";
 import EatingOut from "../components/EatingOut";
 import IntakeBanner from "../components/IntakeBanner";
-import FoodBadge from "../components/FoodBadge";
-import ReportFood from "../components/ReportFood";
-import { microSummary } from "../utils/micros";
-import "../components/micro.css";
 const MEALS = [
   {
     id: "breakfast",
@@ -576,7 +572,6 @@ function FoodLogger({ date, onBack, goTo }) {
                           {food.brand}
                         </small>
                       )}
-                      <FoodBadge food={food} />
                     </div>
 
                     <div>
@@ -626,9 +621,6 @@ function FoodLogger({ date, onBack, goTo }) {
                     {selectedFood.brand}
                   </p>
                 )}
-                <FoodBadge food={selectedFood} />
-                {microSummary(selectedFood) && <p className="food-micro-line">{microSummary(selectedFood)} per standard serving</p>}
-                <ReportFood key={selectedFood._id} food={selectedFood} />
               </div>
 
               <button

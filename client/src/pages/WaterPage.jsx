@@ -226,7 +226,7 @@ function WaterPage({ onBack }) {
         <p className="water-target-note">
           <strong>Daily target: {waterGoal.toLocaleString()} ml</strong>
           {weightKg
-            ? ` — based on your weight (35 ml × ${weightKg} kg). It updates when you log a new weight.`
+            ? " — based on your weight (35 ml per kg). It updates when you log a new weight."
             : " — add your weight in your profile and this target will be worked out for you (35 ml per kg)."}
         </p>
 

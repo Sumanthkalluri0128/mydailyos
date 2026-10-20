@@ -5,9 +5,9 @@ import { apiFetch } from "../config/api";
 import WeeklyCoach from "../components/WeeklyCoach";
 import OverDayCard from "../components/OverDayCard";
 import PatternsCard from "../components/PatternsCard";
-import MicronutrientCard from "../components/MicronutrientCard";
 import { getLocalDate } from "../utils/date";
 import { notify } from "../utils/notify";
+import WeightReveal from "../components/WeightReveal";
 
 function parseDate(value) {
   const [y, m, d] = String(value).split("-").map(Number);
@@ -291,7 +291,6 @@ function ProgressPage({ onBack }) {
 
       <OverDayCard />
       <WeeklyCoach />
-      <MicronutrientCard />
       <PatternsCard />
 
       <section className="progress-toolbar card">
@@ -334,7 +333,7 @@ function ProgressPage({ onBack }) {
       {loading ? <div className="card progress-empty">Loading your complete history…</div> : (
         <>
           <section className="stats-grid progress-summary-grid">
-            <div className="card"><span className="card-icon">⚖️</span><p>Weight</p><h3>{selectedDay?.weightKg != null ? Number(selectedDay.weightKg).toFixed(1) : "—"}<small> kg</small></h3><div className="card-description">Latest recorded weight for the selected date.</div></div>
+            <div className="card"><span className="card-icon">⚖️</span><p>Weight</p><h3>{selectedDay?.weightKg != null ? <WeightReveal compact reaction={false} text={Number(selectedDay.weightKg).toFixed(1)} /> : "—"}<small> kg</small></h3><div className="card-description">Latest recorded weight for the selected date.</div></div>
             <div className="card"><span className="card-icon">🍽️</span><p>Avg calories/day</p><h3>{Math.round(averages.calories)}<small> kcal</small></h3><div className="card-description">{Math.round(totals.calories || 0)} kcal across this period.</div></div>
             <div className="card"><span className="card-icon">💧</span><p>Avg water/day</p><h3>{(averages.water / 1000).toFixed(1)}<small> L</small></h3><div className="card-description">{((totals.waterMl || 0) / 1000).toFixed(1)} L recorded.</div></div>
             <div className="card"><span className="card-icon">🏃</span><p>Exercise</p><h3>{Math.round(totals.exerciseMinutes || 0)}<small> min</small></h3><div className="card-description">{Math.round(totals.caloriesBurned || 0)} kcal burned.</div></div>
@@ -361,7 +360,7 @@ function ProgressPage({ onBack }) {
             </div>
             <div className="daily-table-wrap">
               <table className="daily-table"><thead><tr><th>Date</th><th>Weight</th><th>Calories</th><th>Protein</th><th>Water</th><th>Exercise</th><th>Tasks</th><th>Habits</th></tr></thead>
-                <tbody>{days.slice().reverse().map((day) => <tr key={day.date} className={selectedDate === day.date ? 'selected' : ''} onClick={() => { setSelectedDate(day.date); setAnchor(day.date); }}><td>{fullDate(day.date)}</td><td>{day.weightKg == null ? '—' : `${Number(day.weightKg).toFixed(1)} kg`}</td><td>{Math.round(day.calories)} kcal</td><td>{Number(day.protein).toFixed(1)} g</td><td>{(day.waterMl / 1000).toFixed(1)} L</td><td>{Math.round(day.exerciseMinutes)} min</td><td>{day.tasksCompleted}/{day.tasksTotal}</td><td>{day.habitsCompleted}</td></tr>)}</tbody>
+                <tbody>{days.slice().reverse().map((day) => <tr key={day.date} className={selectedDate === day.date ? 'selected' : ''} onClick={() => { setSelectedDate(day.date); setAnchor(day.date); }}><td>{fullDate(day.date)}</td><td>{day.weightKg == null ? '—' : <WeightReveal compact reaction={false} text={`${Number(day.weightKg).toFixed(1)} kg`} />}</td><td>{Math.round(day.calories)} kcal</td><td>{Number(day.protein).toFixed(1)} g</td><td>{(day.waterMl / 1000).toFixed(1)} L</td><td>{Math.round(day.exerciseMinutes)} min</td><td>{day.tasksCompleted}/{day.tasksTotal}</td><td>{day.habitsCompleted}</td></tr>)}</tbody>
               </table>
             </div>
           </section>
@@ -372,7 +371,7 @@ function ProgressPage({ onBack }) {
               <div className="history-detail-block"><h4>🍽️ Food & calories</h4>{mealCalories.length ? mealCalories.map((log) => <div className="history-row" key={log._id}><div><strong>{log.foodName}</strong><span>{log.mealType} · {log.consumedQuantity} {log.servingUnit}</span></div><b>{Math.round(log.nutritionTotal?.calories || 0)} kcal</b></div>) : <p className="muted">No food logged.</p>}</div>
               <div className="history-detail-block"><h4>🏃 Exercise</h4>{activities.length ? activities.map((log) => <div className="history-row" key={log._id}><div><strong>{log.activityName}</strong><span>{log.durationMinutes} min · {log.category}</span></div><b>{Math.round(log.caloriesBurned || 0)} kcal</b></div>) : <p className="muted">No exercise logged.</p>}</div>
               <div className="history-detail-block"><h4>💧 Water</h4>{waterLogs.length ? waterLogs.map((log) => <div className="history-row" key={log._id}><div><strong>{log.amountMl} ml</strong><span>{log.notes || 'Water intake'}</span></div></div>) : <p className="muted">No water logged.</p>}</div>
-              <div className="history-detail-block"><h4>⚖️ Weight</h4>{weights.length ? weights.map((log) => <div className="history-row" key={log._id}><div><strong>{Number(log.weightKg).toFixed(1)} kg</strong><span>{log.notes || 'Weight entry'}</span></div></div>) : <p className="muted">No weight entry.</p>}</div>
+              <div className="history-detail-block"><h4>⚖️ Weight</h4>{weights.length ? weights.map((log) => <div className="history-row" key={log._id}><div><strong><WeightReveal compact reaction={false} text={`${Number(log.weightKg).toFixed(1)} kg`} /></strong><span>{log.notes || 'Weight entry'}</span></div></div>) : <p className="muted">No weight entry.</p>}</div>
               <div className="history-detail-block"><h4>✅ Tasks</h4>{tasks.length ? tasks.map((task) => <div className="history-row" key={task._id}><div><strong>{task.title}</strong><span>{task.priority} · {task.time || 'No time'}</span></div><b>{task.completed ? 'Done' : 'Open'}</b></div>) : <p className="muted">No tasks.</p>}</div>
               <div className="history-detail-block"><h4>🔥 Habits</h4>{habitLogs.length ? habitLogs.map((log) => <div className="history-row" key={log._id}><div><strong>{log.habitName}</strong><span>{log.completedValue}/{log.target} {log.unit}</span></div><b>{log.completed ? 'Done' : 'Open'}</b></div>) : <p className="muted">No habit logs.</p>}</div>
             </div>

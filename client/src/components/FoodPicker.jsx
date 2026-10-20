@@ -1,7 +1,5 @@
 import { useEffect, useRef, useState } from "react";
 import { apiFetch } from "../config/api";
-import FoodBadge from "./FoodBadge";
-import "./micro.css";
 
 // Search foods (catalogue + mine) and choose an amount. Calls onPick(food, quantityInFoodUnit).
 export default function FoodPicker({ onPick, onCancel, actionLabel = "Add", initialQuery = "" }) {
@@ -27,7 +25,7 @@ export default function FoodPicker({ onPick, onCancel, actionLabel = "Add", init
     const units = [{ label: food.servingUnit, quantity: 1 }, ...(food.units || []).map((u) => ({ label: u.label, quantity: u.quantity }))];
     return (
       <div className="food-picker">
-        <strong>{food.name}</strong> <FoodBadge food={food} />
+        <strong>{food.name}</strong>
         <div className="food-picker-row">
           <input type="number" min="0.01" step="any" value={qty} onChange={(e) => setQty(e.target.value)} aria-label="Amount" />
           <span>{food.servingUnit}</span>
@@ -51,7 +49,7 @@ export default function FoodPicker({ onPick, onCancel, actionLabel = "Add", init
       <div className="food-picker-results">
         {results.map((f) => (
           <button key={f._id} className="suggestion-chip" onClick={() => choose(f)}>
-            <strong>{f.name}</strong><small>{f.servingSize} {f.servingUnit} · {Math.round(f.calories)} kcal · <FoodBadge food={f} /></small>
+            <strong>{f.name}</strong><small>{f.servingSize} {f.servingUnit} · {Math.round(f.calories)} kcal</small>
           </button>
         ))}
         {q.trim() && !results.length && <small>No matches yet.</small>}

@@ -29,41 +29,6 @@ function codeVariants(code) {
   return [...out].filter((x) => CODE_RE.test(x)).slice(0, 4);
 }
 
-
-// ---- Micronutrients ---------------------------------------------------------------------------------------------------
-// Open Food Facts stores minerals/vitamins in GRAMS per 100 g unless `<key>_unit` says otherwise. Only values that are really
-// present are returned (unknown stays null, never 0), converted to the app's units and range-checked.
-const { MAX: MICRO_MAX } = require('./microParse');
-const OFF_MICRO = [
-  { key: 'iron', off: 'iron', unit: 'mg' }, { key: 'calcium', off: 'calcium', unit: 'mg' }, { key: 'potassium', off: 'potassium', unit: 'mg' },
-  { key: 'magnesium', off: 'magnesium', unit: 'mg' }, { key: 'zinc', off: 'zinc', unit: 'mg' }, { key: 'vitaminA', off: 'vitamin-a', unit: 'ug', noIU: true },
-  { key: 'vitaminB12', off: 'vitamin-b12', unit: 'ug' }, { key: 'vitaminC', off: 'vitamin-c', unit: 'mg' }, { key: 'vitaminD', off: 'vitamin-d', unit: 'ug' },
-  { key: 'folate', off: 'vitamin-b9', unit: 'ug' },
-];
-const TO_GRAMS = { g: 1, mg: 1e-3, mcg: 1e-6, 'µg': 1e-6, ug: 1e-6, μg: 1e-6 };
-/** grams-per-100g (or whatever unit OFF says) -> the app's unit; null when impossible to convert reliably. */
-function offMicroValue(raw, offUnit, target, { noIU = false } = {}) {
-  const v = Number(raw);
-  if (!Number.isFinite(v) || v < 0) return null;
-  const u = String(offUnit || 'g').trim().toLowerCase();
-  if (u === 'iu') { if (noIU || target !== 'ug') return null; return v * 0.025; } // vitamin D only: 1 IU = 0.025 µg
-  const grams = TO_GRAMS[u];
-  if (!grams) return null;
-  return Math.round(((v * grams) / (target === 'mg' ? 1e-3 : 1e-6)) * 1e6) / 1e6;
-}
-function offMicros(nutriments, per100, factor) {
-  const out = {};
-  for (const m of OFF_MICRO) {
-    const raw = per100(m.off);
-    if (!Number.isFinite(raw)) continue;
-    const per100InTarget = offMicroValue(raw, nutriments[`${m.off}_unit`], m.unit, { noIU: m.noIU });
-    if (per100InTarget === null) continue;
-    const perServing = Math.round(per100InTarget * factor * 100) / 100;
-    if (perServing <= MICRO_MAX[m.key]) out[m.key] = perServing;
-  }
-  return out;
-}
-
 /**
  * Pure: turn an Open Food Facts product into a draft food (not saved).
  * Returns { ...food, missing: [], estimated: [] }. With { lenient: false } returns null when there is no calorie data.
@@ -137,7 +102,6 @@ function offToDraft(code, product, { lenient = true } = {}) {
     fiber: r(grams('fiber')),
     sugar: r(grams('sugars')),
     sodium: Math.min(100000, Math.round(sodiumG * 1000 * f)),
-    ...offMicros(n, per100, f),
     barcode: String(code),
     missing,
     estimated,
@@ -193,4 +157,4 @@ async function lookupBarcode(code) {
   return offToDraft(code, best);
 }
 
-module.exports = { offToFood, offToDraft, lookupBarcode, codeVariants, CODE_RE, offMicroValue };
+module.exports = { offToFood, offToDraft, lookupBarcode, codeVariants, CODE_RE };

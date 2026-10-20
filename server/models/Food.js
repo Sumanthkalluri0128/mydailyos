@@ -17,20 +17,6 @@ const schema = new mongoose.Schema(
     fiber: { type: Number, default: 0, min: 0 },
     sugar: { type: Number, default: 0, min: 0 },
     sodium: { type: Number, default: 0, min: 0 }, // mg per serving
-    // Optional micronutrients per serving (null = unknown, NEVER 0 = "none"). Units: mg except vitaminA/folate/B12/D in µg.
-    iron: { type: Number, default: null, min: 0 },
-    calcium: { type: Number, default: null, min: 0 },
-    potassium: { type: Number, default: null, min: 0 },
-    magnesium: { type: Number, default: null, min: 0 },
-    zinc: { type: Number, default: null, min: 0 },
-    vitaminA: { type: Number, default: null, min: 0 }, // µg RAE
-    vitaminB12: { type: Number, default: null, min: 0 }, // µg
-    vitaminC: { type: Number, default: null, min: 0 },
-    vitaminD: { type: Number, default: null, min: 0 }, // µg
-    folate: { type: Number, default: null, min: 0 }, // µg DFE
-    // Where the numbers come from (e.g. "IFCT 2017 T3", "USDA FDC 170000"). `verified` is set only by the data importer.
-    dataSource: { type: String, default: '', trim: true, maxlength: 160 },
-    verified: { type: Boolean, default: false },
     barcode: { type: String, default: '', trim: true, maxlength: 20, index: true },
     // Household measures, e.g. { label: 'katori', quantity: 150 } => 1 katori = 150 (servingUnit).
     units: { type: [{ _id: false, label: { type: String, maxlength: 30 }, quantity: { type: Number, min: 0.01 } }], default: [] },

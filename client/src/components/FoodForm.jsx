@@ -2,8 +2,6 @@ import { useState } from "react";
 import { apiFetch } from "../config/api";
 import { API_URL } from "../config";
 import { notify } from "../utils/notify";
-import { MICROS, hasMicro } from "../utils/micros";
-import "./micro.css";
 
 // Units offered in the dropdown. A food saved with some other unit is still shown correctly.
 const UNITS = ["g", "ml", "piece", "serving", "cup", "tbsp", "tsp", "slice", "bowl"];
@@ -20,7 +18,6 @@ const emptyForm = {
   fiber: "",
   sugar: "",
   notes: "",
-  ...Object.fromEntries(MICROS.map((m) => [m.key, ""])),
 };
 
 const fromFood = (food) => ({
@@ -35,7 +32,6 @@ const fromFood = (food) => ({
   fiber: food.fiber ?? "",
   sugar: food.sugar ?? "",
   notes: food.notes || "",
-  ...Object.fromEntries(MICROS.map((m) => [m.key, hasMicro(food, m.key) ? food[m.key] : ""])),
 });
 
 /**
@@ -98,8 +94,6 @@ export default function FoodForm({ food, initialName = "", onSaved, onCancel }) 
       fiber: num(form.fiber),
       sugar: num(form.sugar),
       notes: form.notes.trim(),
-      // Blank = unknown (saved as unknown, not 0).
-      ...Object.fromEntries(MICROS.map((m) => [m.key, form[m.key] === "" ? null : Number(form[m.key])])),
     };
 
     try {
@@ -245,19 +239,6 @@ export default function FoodForm({ food, initialName = "", onSaved, onCancel }) 
             <label>Sugar (g)</label>
             <input type="number" name="sugar" value={form.sugar} onChange={handleChange} min="0" step="any" placeholder="0" />
           </div>
-
-          <details className="form-field full form-micro" open={MICROS.some((m) => form[m.key] !== "")}>
-            <summary>Vitamins & minerals (optional)</summary>
-            <p className="micro-hint">Per serving. Leave a box empty if you don't know it; empty is saved as unknown, not zero.</p>
-            <div className="form-grid">
-              {MICROS.map((m) => (
-                <div className="form-field" key={m.key}>
-                  <label>{m.label} ({m.unit})</label>
-                  <input type="number" name={m.key} value={form[m.key]} onChange={handleChange} min="0" step="any" inputMode="decimal" />
-                </div>
-              ))}
-            </div>
-          </details>
 
           <div className="form-field full">
             <label>Notes</label>

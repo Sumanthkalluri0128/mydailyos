@@ -1,6 +1,6 @@
 {
   "name": "flexfit-backend",
-  "version": "2.10.0",
+  "version": "2.9.0",
   "private": true,
   "scripts": {
     "start": "node server.js",
@@ -9,7 +9,6 @@
     "claim-foods": "node scripts/claimFoods.js",
     "send-weekly": "node scripts/sendWeekly.js",
     "audit-foods": "node scripts/auditFoods.js",
-    "import-micros": "node scripts/importMicros.js",
     "preview-email": "node scripts/previewEmail.js"
   },
   "dependencies": {
