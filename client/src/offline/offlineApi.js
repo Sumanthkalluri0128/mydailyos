@@ -17,6 +17,8 @@ const MAX_AGE_MS = 7 * 24 * 3600 * 1000; // a queued change older than a week is
 const QUEUEABLE = [
   /^\/api\/water$/, /^\/api\/food-logs$/, /^\/api\/activities\/logs$/, /^\/api\/health-logs$/,
   /^\/api\/weight$/, /^\/api\/tasks$/, /^\/api\/habits\/logs$/,
+  // meal planner: eating a planned item (one item at a time, so a replay can never log something twice) and adding to the plan
+  /^\/api\/meal-plans\/[^/]+\/log$/, /^\/api\/meal-plans$/,
 ];
 const pathOf = (url) => { try { return new URL(url, window.location.origin).pathname; } catch { return ""; } };
 export const isQueueable = (method, url) => String(method).toUpperCase() === "POST" && QUEUEABLE.some((r) => r.test(pathOf(url)));
@@ -48,7 +50,7 @@ export async function savedGet(url) {
 async function readQueue() { return (await kvGet(QUEUE_KEY)) || []; }
 async function writeQueue(q) { await kvSet(QUEUE_KEY, q); set({ pending: q.filter((x) => x.owner === currentOwner()).length }); }
 
-export async function enqueue({ method, url, body }) {
+export async function enqueue({ method, url, body, meta }) {
   const owner = currentOwner();
   if (!owner) return false;
   const q = await readQueue();
@@ -56,7 +58,7 @@ export async function enqueue({ method, url, body }) {
   let parsed = {};
   try { parsed = body ? JSON.parse(body) : {}; } catch { return false; }
   if (!parsed.clientId) parsed.clientId = newId();
-  q.push({ id: newId(), owner, method, url, body: JSON.stringify(parsed), at: Date.now() });
+  q.push({ id: newId(), owner, method, url, body: JSON.stringify(parsed), meta: meta || null, at: Date.now() });
   await writeQueue(q);
   return true;
 }
@@ -92,6 +94,12 @@ export function flushQueue(sender) {
     return { sent, dropped };
   })().finally(() => { flushing = null; });
   return flushing;
+}
+
+/** Changes of the signed-in person that are still waiting to be sent (oldest first), for showing them before they sync. */
+export async function pendingOps() {
+  const owner = currentOwner();
+  return (await readQueue()).filter((x) => x.owner === owner);
 }
 
 export async function refreshPending() {

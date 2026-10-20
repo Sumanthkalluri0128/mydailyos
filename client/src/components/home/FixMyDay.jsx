@@ -38,7 +38,7 @@ export default function FixMyDay({ over, hour, onChanged, onPlan, onClose }) {
       const r = await apiFetch("/api/plan/rescue-day", { method: "POST", body: JSON.stringify({ date: addDays(today, 1), today }) });
       const j = await r.json();
       if (!r.ok) throw new Error(j.message);
-      notify(`Gentle day planned for tomorrow (about ${j.goal} kcal).`, "success");
+      notify(`Gentle day planned for tomorrow (about ${j.goal} kcal${j.fixedMeals?.length ? `, around what you already logged` : ""}).`, "success");
       onClose(); onPlan?.();
     } catch (e) { notify(e.message || "Could not plan it.", "error"); } finally { setBusy(""); }
   };

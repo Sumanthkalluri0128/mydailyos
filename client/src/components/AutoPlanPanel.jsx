@@ -89,6 +89,8 @@ export default function AutoPlanPanel({ from, to, onClose, onSaved }) {
 
       {plan && (
         <>
+          {plan.fixed?.filter((f) => f.loggedMeals.length).map((f) => <p key={`fx${f.date}`} className="ap-sub">🔒 {dayName(f.date)}: {f.loggedMeals.join(", ")} already logged ({f.eaten} kcal) stays as is. Planning fills the {Math.max(0, f.remaining)} kcal that are left.</p>)}
+          {plan.addOns?.map((a) => <p key={`ao${a.date}${a.mealType}`} className="ap-sub">💡 {dayName(a.date)} {a.mealType}: {a.text}.</p>)}
           {plan.notes?.length > 0 && <div className="ap-notes">{plan.notes.map((n) => <p key={n}>ℹ️ {n}</p>)}</div>}
           <div className="ap-days">
             {plan.days.map((d) => (

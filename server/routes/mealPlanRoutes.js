@@ -17,6 +17,9 @@ const { adoptFood } = require('../lib/healthyDiet');
 const { catalogueFoods } = require('../lib/foodCache');
 const { limitTargets } = require('../lib/energy');
 const { todayUtc } = require('../lib/dates');
+const { buildHistory } = require('../lib/progress');
+const { dayBalance, dailyTarget } = require('../lib/energy');
+const { reconcile, buildDayViews, fixedSummary } = require('../lib/dayView');
 
 const router = express.Router();
 router.use(requireAuth);
@@ -24,6 +27,14 @@ router.use(requireAuth);
 const MEALS = ['breakfast', 'lunch', 'dinner', 'snacks'];
 const MAX_RANGE = 62;
 const visible = (uid) => ({ $or: [{ userId: null }, { userId: { $exists: false } }, { userId: uid }] });
+
+// Plans can only be made for today and later. `today` is the person's own date (the server's UTC day can be a day off); without it we
+// only refuse days that are clearly over in any time zone.
+function assertNotPast(date, today) {
+  const floor = today || addDays(todayUtc(), -1);
+  if (date < floor) throw new HttpError(400, 'That day is over. Past days show what you logged and cannot be planned.');
+}
+const todayOf = (x) => (x ? v.date(x, 'today') : null);
 
 function range(req) {
   const from = v.date(req.query.from, 'from'), to = v.date(req.query.to, 'to');
@@ -45,20 +56,26 @@ router.get('/', wrap(async (req, res) => {
 router.post('/', wrap(async (req, res) => {
   const uid = req.user.id;
   const date = v.date(req.body?.date);
+  assertNotPast(date, todayOf(req.body?.today));
   const mealType = v.oneOf(req.body?.mealType, 'mealType', MEALS);
   const quantity = v.number(req.body?.quantity, 'quantity', { min: 0.01, max: 100000 });
-  const food = await Food.findOne({ _id: v.objectId(String(req.body?.foodId || ''), 'foodId'), ...visible(uid) }).lean();
+  const clientId = v.clientId(req.body?.clientId);
+  // A suggested healthy food that is not in the person's list yet can be planned by name: it is added to their list first.
+  let food = null;
+  if (req.body?.foodId) food = await Food.findOne({ _id: v.objectId(String(req.body.foodId), 'foodId'), ...visible(uid) }).lean();
+  else if (req.body?.name) food = (await adoptFood(Food, uid, String(req.body.name)))?.toObject?.() || null;
   if (!food) throw new HttpError(404, 'Food not found');
   if ((await MealPlan.countDocuments({ userId: uid, date })) >= 60) throw new HttpError(400, 'That day is full');
-  const item = await MealPlan.create({ userId: uid, date, mealType, foodId: food._id, quantity, ...snapshot(food, quantity) });
-  res.status(201).json({ success: true, item });
+  const { doc, duplicate } = await createOnce(MealPlan, uid, clientId, { date, mealType, foodId: food._id, quantity, ...snapshot(food, quantity), ...(req.body?.why ? { why: String(req.body.why).slice(0, 200) } : {}) });
+  res.status(duplicate ? 200 : 201).json({ success: true, item: doc });
 }));
 
 router.patch('/:id', wrap(async (req, res) => {
   const item = await MealPlan.findOne({ _id: v.objectId(req.params.id), userId: req.user.id });
   if (!item) throw new HttpError(404, 'Planned item not found');
   if (req.body?.mealType !== undefined) item.mealType = v.oneOf(req.body.mealType, 'mealType', MEALS);
-  if (req.body?.date !== undefined) item.date = v.date(req.body.date);
+  if (req.body?.date !== undefined) { item.date = v.date(req.body.date); assertNotPast(item.date, todayOf(req.body?.today)); }
+  if (item.logged) throw new HttpError(400, 'That one is already eaten. Edit it in your food log.');
   if (req.body?.quantity !== undefined) {
     const quantity = v.number(req.body.quantity, 'quantity', { min: 0.01, max: 100000 });
     const food = await Food.findOne({ _id: item.foodId, ...visible(req.user.id) }).lean();
@@ -75,35 +92,46 @@ router.delete('/:id', wrap(async (req, res) => {
   res.json({ success: true });
 }));
 
+// Turns planned items into food logs, counting each one ONCE:
+//   * an item that is already eaten is skipped (a second tap, a retried request, "Log day" after logging one by hand)
+//   * an item the person already logged directly (same day + meal + food) is just marked done, no second log is created
+//   * the log it becomes is remembered on the plan row (logId), so every screen can pair them and never add them up twice
 async function logItems(uid, items, { date, clientId } = {}) {
-  const foods = await Food.find({ _id: { $in: items.map((i) => i.foodId) }, ...visible(uid) }).lean();
+  const fresh = items.filter((i) => !i.logged);
+  const foods = await Food.find({ _id: { $in: fresh.map((i) => i.foodId) }, ...visible(uid) }).lean();
   const byId = new Map(foods.map((f) => [String(f._id), f]));
-  const logs = []; let skipped = 0;
-  for (let idx = 0; idx < items.length; idx += 1) {
-    const it = items[idx], food = byId.get(String(it.foodId));
+  const dates = [...new Set(fresh.map((i) => date || i.date))];
+  const existing = dates.length ? await FoodLog.find({ userId: uid, date: { $in: dates } }).select('date mealType foodId').lean() : [];
+  const logs = []; let skipped = 0; let already = items.length - fresh.length; let matched = 0;
+  const claimed = new Set();
+  for (let idx = 0; idx < fresh.length; idx += 1) {
+    const it = fresh[idx], food = byId.get(String(it.foodId));
     if (!food) { skipped += 1; continue; }
-    const { doc } = await createOnce(FoodLog, uid, clientId ? `${clientId}:${idx}` : undefined, foodLogDoc(food, it.quantity, date || it.date, it.mealType));
+    const day = date || it.date;
+    const hit = existing.find((l) => !claimed.has(String(l._id)) && l.date === day && l.mealType === it.mealType && String(l.foodId) === String(it.foodId));
+    if (hit) { claimed.add(String(hit._id)); matched += 1; await MealPlan.updateOne({ _id: it._id }, { $set: { logged: true, logId: hit._id } }); continue; }
+    const { doc } = await createOnce(FoodLog, uid, clientId ? `${clientId}:${idx}` : undefined, foodLogDoc(food, it.quantity, day, it.mealType));
     logs.push(doc);
-    await MealPlan.updateOne({ _id: it._id }, { $set: { logged: true } });
+    await MealPlan.updateOne({ _id: it._id }, { $set: { logged: true, logId: doc._id } });
   }
-  return { logs, skipped };
+  return { logs, skipped, already, matched };
 }
 
-// Eat one planned item (defaults to its planned day; pass `date` to log it on a different day).
+// Eat one planned item (defaults to its planned day; pass `date` to log it on a different day). Safe to repeat: a second call changes nothing.
 router.post('/:id/log', wrap(async (req, res) => {
   const item = await MealPlan.findOne({ _id: v.objectId(req.params.id), userId: req.user.id }).lean();
   if (!item) throw new HttpError(404, 'Planned item not found');
   const date = req.body?.date ? v.date(req.body.date) : item.date;
   const out = await logItems(req.user.id, [item], { date, clientId: v.clientId(req.body?.clientId) });
-  res.status(201).json({ success: true, ...out });
+  res.status(out.logs.length ? 201 : 200).json({ success: true, ...out });
 }));
 
-// Eat everything still unlogged on a day.
+// Eat everything still unlogged on a day. Items already eaten (or already logged by hand) are skipped, never doubled.
 router.post('/log-day', wrap(async (req, res) => {
   const date = v.date(req.body?.date);
   const items = await MealPlan.find({ userId: req.user.id, date, logged: false }).sort({ createdAt: 1 }).lean();
   const out = await logItems(req.user.id, items, { date, clientId: v.clientId(req.body?.clientId) });
-  res.status(201).json({ success: true, ...out });
+  res.status(out.logs.length ? 201 : 200).json({ success: true, ...out });
 }));
 
 // Copy a 7-day block of plans to another 7-day block ("repeat last week").
@@ -186,6 +214,65 @@ router.get('/context', wrap(async (req, res) => {
   });
 }));
 
+// ---------------------------------------------------------------------------------------------------------------------
+// GET /api/meal-plans/view?from=&to=&today= — THE planner response: for every day, each meal with what is logged and what is planned
+// merged into one list (status 'logged' | 'planned'), the day bar (eaten / planned / remaining, the same budget Home uses), up to 3
+// add-on suggestions under every meal that already has food ('suggested', plus `more` for "show more"), and a hint for the chef.
+// Past days are history (logged only, read-only). Web and mobile both render exactly this, and both can cache it for offline use.
+const VIEW_MAX_DAYS = 14;
+const enumerateDays = (from, to) => { const out = []; for (let d = from; d <= to; d = addDays(d, 1)) out.push(d); return out; };
+
+async function homeBudgets(uid, core, dates, today) {
+  const pastDates = dates.filter((d) => d <= today);
+  const rows = new Map();
+  if (pastDates.length) {
+    const h = await buildHistory(uid, pastDates[0], pastDates[pastDates.length - 1]);
+    for (const d of h.days) rows.set(d.date, d);
+  }
+  const budgets = {};
+  for (const d of dates) {
+    const row = rows.get(d);
+    // Exactly Home's maths: target + the extra food earned by activity so far. Future days have no activity yet.
+    budgets[d] = d <= today && row ? dayBalance(core.profile, { eaten: row.calories, workout: row.caloriesBurned, steps: 0 }).budget : core.target;
+  }
+  return budgets;
+}
+
+router.get('/view', wrap(async (req, res) => {
+  const uid = req.user.id;
+  const today = req.query.today ? v.date(req.query.today, 'today') : todayUtc();
+  const { from, to } = range(req);
+  if (diffDays(from, to) + 1 > VIEW_MAX_DAYS) throw new HttpError(400, `Show at most ${VIEW_MAX_DAYS} days at a time`);
+  const dates = enumerateDays(from, to);
+  const [adv, hab, plans, logs] = await Promise.all([
+    loadAdvice(uid, today, { dates: dates.filter((d) => d >= today) }),
+    loadHabits(uid, today),
+    MealPlan.find({ userId: uid, date: { $gte: from, $lte: to } }).sort({ createdAt: 1 }).lean(),
+    FoodLog.find({ userId: uid, date: { $gte: from, $lte: to } }).sort({ createdAt: 1 }).lean(),
+  ]);
+  const { core } = adv;
+  const needSuggest = dates.some((d) => d >= today);
+  const [shared, mine, budgets] = await Promise.all([
+    needSuggest ? catalogueFoods(Food) : [],
+    needSuggest ? Food.find({ userId: uid, hidden: { $ne: true } }).limit(1500).lean() : [],
+    homeBudgets(uid, core, dates, today),
+  ]);
+  const trims = {};
+  for (const d of dates) trims[d] = d >= today && adv.targets[d] ? Math.max(0, Math.round(core.target - adv.targets[d])) : 0;
+  const days = buildDayViews({
+    dates, today, logs, plans, budgets, trims, ranges: core.ranges, diet: dietOf(req.query.diet, hab.names), suggest: needSuggest,
+    foods: hab.foods, userFoods: mine, catalogue: shared.filter((f) => !f.hidden), habits: hab.habits,
+  });
+  // A planned food that was logged directly (not through "Log") is marked done here, so it is paired for good and never counted twice.
+  const rec = reconcile(plans, logs);
+  const toMark = [...rec.paired.entries()].filter(([planId]) => plans.find((p) => String(p._id) === planId && !p.logged));
+  for (const [planId, logId] of toMark) MealPlan.updateOne({ _id: planId, userId: uid }, { $set: { logged: true, logId } }).catch(() => {});
+  res.json({
+    success: true, today, from, to, days,
+    ctx: { hasProfile: !!(core.ranges && core.target > 0), baseTarget: core.target || null, floor: core.floor, ranges: core.ranges || null, advice: adviceView(adv.advice), diet: dietOf(req.query.diet, hab.names) },
+  });
+}));
+
 // POST /api/meal-plans/auto { from, days (1-7), meals?, mode?, diet?, variant?, respectAdvice?, preview? }
 //   mode 'balanced' (default): every plate has protein + carb + vegetables, your own foods get a bonus, gaps are filled from a healthy pool.
 //   mode 'mine': only foods you really log, in your usual portions (needs a few days of history).
@@ -202,24 +289,34 @@ router.post('/auto', wrap(async (req, res) => {
   const today = req.body?.today ? v.date(req.body.today, 'today') : todayUtc();
   const mode = req.body?.mode === 'mine' ? 'mine' : 'balanced';
   const variant = clampInt(req.body?.variant, 0, 99, 0);
+  const planDates = dates.filter((d) => d >= today);            // days that are over are history: never planned
+  if (!planDates.length) throw new HttpError(400, 'That day is over. Past days show what you logged and cannot be planned.');
 
-  const [adv, hab] = await Promise.all([loadAdvice(uid, today, { dates }), loadHabits(uid, today)]);
+  const [adv, hab] = await Promise.all([loadAdvice(uid, today, { dates: planDates }), loadHabits(uid, today)]);
   const { core } = adv;
   if (!core.ranges || !(core.target > 0)) throw new HttpError(400, 'Add your height, age and weight in Profile first so each day can be sized for you');
   const { habits, foods, names } = hab;
   if (mode === 'mine' && !habits.byFood.size) throw new HttpError(422, 'Log a few days of meals first, or choose the balanced plan which does not need a food history');
   const diet = dietOf(req.body?.diet, names);
   const respect = req.body?.respectAdvice !== false;
-  const targets = respect ? adv.targets : Object.fromEntries(dates.map((d) => [d, core.target]));
+  const targets = respect ? { ...adv.targets } : Object.fromEntries(planDates.map((d) => [d, core.target]));
+  // Today's budget is Home's budget (target + the food earned by activity so far), minus any "lighter day" cut, so the plan fills what Home says is left.
+  if (planDates.includes(today)) {
+    const homeBudget = (await homeBudgets(uid, core, [today], today))[today];
+    targets[today] = Math.max(core.floor, homeBudget - Math.max(0, Math.round(core.target - (targets[today] ?? core.target))));
+  }
 
   const [existing, eaten, shared, mine] = await Promise.all([
-    MealPlan.find({ userId: uid, date: { $gte: from, $lte: to } }).lean(),
-    FoodLog.find({ userId: uid, date: { $gte: from, $lte: to } }).select('date mealType foodId nutritionTotal').lean(),
+    MealPlan.find({ userId: uid, date: { $in: planDates } }).lean(),
+    FoodLog.find({ userId: uid, date: { $in: planDates } }).select('date mealType foodId foodName consumedQuantity servingUnit nutritionTotal').lean(),
     catalogueFoods(Food),
     mode === 'balanced' ? Food.find({ userId: uid, hidden: { $ne: true } }).limit(1500).lean() : [],
   ]);
-  const replace = (i) => i.auto && !i.logged && meals.includes(i.mealType);      // earlier automatic, uneaten items of the meals being re-planned
-  const keep = existing.filter((i) => !replace(i));
+  // Logged food is FIXED. A plan row that was eaten (or matches something already logged) is covered by its log, so it is not
+  // counted again as "planned": only rows still to eat compete for the budget.
+  const rec = reconcile(existing, eaten);
+  const replace = (i) => i.auto && meals.includes(i.mealType);                    // earlier automatic, uneaten items of the meals being re-planned
+  const keep = rec.pending.filter((i) => !replace(i));
   const occupied = {}; const dayBase = {}; const weekCounts = new Map();
   const bump = (id) => weekCounts.set(String(id), (weekCounts.get(String(id)) || 0) + 1);
   for (const i of keep) {
@@ -229,12 +326,16 @@ router.post('/auto', wrap(async (req, res) => {
   }
   for (const l of eaten) { occupied[`${l.date}|${l.mealType}`] = true; bump(l.foodId); const b = (dayBase[l.date] ||= {}); for (const k of ['calories', 'protein', 'carbohydrates', 'fat', 'fiber', 'sugar', 'sodium']) b[k] = (b[k] || 0) + Number(l.nutritionTotal?.[k] || 0); }
 
-  const common = { habits, foods, catalogue: shared.filter((f) => !f.hidden), dates, target: core.target, targets, floor: core.floor, ranges: core.ranges, limits: limitTargets(core.target), occupied, dayBase, weekCounts, meals };
+  const common = { habits, foods, catalogue: shared.filter((f) => !f.hidden), dates: planDates, target: core.target, targets, floor: core.floor, ranges: core.ranges, limits: limitTargets(core.target), occupied, dayBase, weekCounts, meals };
   const plan = mode === 'mine'
     ? buildAutoPlan(common)
-    : buildSmartPlan({ ...common, userFoods: mine, diet, mode, needs: adv.needs, seed: `${uid}|${from}|${variant}`, avoidIndulgent: !!adv.advice && adv.advice.level !== 'none' });
+    : buildSmartPlan({ ...common, userFoods: mine, diet, mode, needs: adv.needs, seed: `${uid}|${planDates[0]}|${variant}`, avoidIndulgent: !!adv.advice && adv.advice.level !== 'none' });
   if (!plan.items.length) throw new HttpError(422, plan.notes[0] || 'Nothing to plan: every meal in that range already has food');
-  const meta = { mode, diet, variant, advice: respect ? adviceView(adv.advice) : null, needs: adv.needs, hasHistory: habits.byFood.size > 0 };
+  // What was treated as fixed, and add-ons for meals that are only partly logged (suggested, never saved on their own).
+  const sumPool = buildPool({ foods, userFoods: mine, catalogue: shared.filter((f) => !f.hidden), habits, diet });
+  const stillToEat = [...keep, ...plan.items].map((i) => ({ _id: i._id || `n:${i.date}|${i.mealType}|${i.foodName}`, date: i.date, mealType: i.mealType, foodId: i.foodId || '', foodName: i.foodName, quantity: i.quantity, servingUnit: i.servingUnit, calories: i.calories, protein: i.protein, fiber: i.fiber, carbohydrates: i.carbohydrates || 0, fat: i.fat || 0 }));
+  const { fixed, addOns } = fixedSummary({ dates: planDates, logs: eaten, plans: stillToEat, budgets: targets, ranges: core.ranges, pool: sumPool });
+  const meta = { mode, diet, variant, advice: respect ? adviceView(adv.advice) : null, needs: adv.needs, hasHistory: habits.byFood.size > 0, fixed, addOns };
 
   if (req.body?.preview === true) return res.json({ success: true, preview: true, ...meta, ...plan });
 
@@ -247,7 +348,7 @@ router.post('/auto', wrap(async (req, res) => {
     }
     rows.push({ userId: uid, date: i.date, mealType: i.mealType, foodId, foodName: i.foodName, quantity: i.quantity, servingUnit: unit, calories: i.calories, protein: i.protein, fiber: i.fiber, carbohydrates: i.carbohydrates || 0, fat: i.fat || 0, auto: true, why: String(i.why || '').slice(0, 200), role: i.role || '' });
   }
-  await MealPlan.deleteMany({ userId: uid, date: { $gte: from, $lte: to }, auto: true, logged: false, mealType: { $in: meals } });
+  await MealPlan.deleteMany({ userId: uid, date: { $in: planDates }, auto: true, logged: false, mealType: { $in: meals } });
   const saved = await MealPlan.insertMany(rows);
   res.status(201).json({ success: true, saved: saved.length, ...meta, ...plan });
 }));

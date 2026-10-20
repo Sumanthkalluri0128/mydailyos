@@ -213,14 +213,21 @@ router.post('/rescue-day', wrap(async (req, res) => {
   const uid = req.user.id;
   const date = v.date(req.body?.date, 'date');
   const today = req.body?.today ? v.date(req.body.today, 'today') : todayUtc();
+  if (date < today) throw new HttpError(400, 'That day is over. Past days cannot be planned.');
   const core = await loadCore(uid, today, { historyDays: 2 });
   if (!core.ranges) throw new HttpError(400, 'Add your height, age and weight first so we can size the day');
-  const [shared, mine, recent] = await Promise.all([catalogueFoods(Food), Food.find({ userId: uid, hidden: { $ne: true } }).limit(2000).lean(), FoodLog.find({ userId: uid }).sort({ createdAt: -1 }).limit(120).select('foodId').lean()]);
-  const day = rescueDay({ foods: [...mine, ...shared], target: core.target, floor: core.floor, ranges: core.ranges, recentIds: new Set(recent.map((r) => String(r.foodId))) });
-  if (!day.plan.length) throw new HttpError(422, 'Not enough foods to build a plan yet. Log a few meals first');
+  const [shared, mine, recent, logged] = await Promise.all([
+    catalogueFoods(Food), Food.find({ userId: uid, hidden: { $ne: true } }).limit(2000).lean(), FoodLog.find({ userId: uid }).sort({ createdAt: -1 }).limit(120).select('foodId').lean(),
+    FoodLog.find({ userId: uid, date }).select('mealType nutritionTotal').lean(),
+  ]);
+  // Anything already logged on that day is fixed: those meals are not re-planned and their kcal / protein come off the day's budget.
+  const eaten = logged.reduce((a, l) => ({ calories: a.calories + Number(l.nutritionTotal?.calories || 0), protein: a.protein + Number(l.nutritionTotal?.protein || 0) }), { calories: 0, protein: 0 });
+  const fixedMeals = [...new Set(logged.map((l) => l.mealType))];
+  const day = rescueDay({ foods: [...mine, ...shared], target: core.target, floor: core.floor, ranges: core.ranges, recentIds: new Set(recent.map((r) => String(r.foodId))), eaten, fixedMeals });
+  if (!day.plan.length) throw new HttpError(422, fixedMeals.length >= 4 ? 'Every meal of that day is already logged, so there is nothing left to plan.' : 'Not enough foods to build a plan yet. Log a few meals first');
   await MealPlan.deleteMany({ userId: uid, date, rescue: true, logged: false });
   const items = await MealPlan.insertMany(day.plan.map((p) => ({ userId: uid, date, rescue: true, mealType: p.mealType, foodId: p.foodId, foodName: p.foodName, quantity: p.quantity, servingUnit: p.servingUnit, calories: p.calories, protein: p.protein, fiber: p.fiber })));
-  res.status(201).json({ success: true, goal: day.goal, totalCalories: day.totalCalories, totalProtein: day.totalProtein, items });
+  res.status(201).json({ success: true, goal: day.goal, totalCalories: day.totalCalories, totalProtein: day.totalProtein, eatenCalories: day.eatenCalories, remaining: day.remaining, fixedMeals: day.fixedMeals, items });
 }));
 
 // ---- a balanced, varied healthy day built from a curated food pool (not limited to what the person has logged)

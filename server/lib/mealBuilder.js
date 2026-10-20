@@ -111,14 +111,21 @@ function makeItFit(rows, overBy = 0) {
 /**
  * A gentle one-day plan: four meals sized to a slightly lighter target (never below the floor). Returns plan rows ready for the planner.
  */
-function rescueDay({ foods, target, floor = 1200, ranges, recentIds = new Set(), trim = 200 }) {
+function rescueDay({ foods, target, floor = 1200, ranges, recentIds = new Set(), trim = 200, eaten = null, fixedMeals = [] }) {
   const goal = Math.max(floor, Math.round(target - Math.min(trim, Math.max(0, target - floor))));
-  const shares = { breakfast: 0.25, lunch: 0.32, dinner: 0.3, snacks: 0.13 };
+  const SHARES = { breakfast: 0.25, lunch: 0.32, dinner: 0.3, snacks: 0.13 };
+  // Food that is already logged is fixed: its meals are left alone and the day's budget is what is LEFT after it.
+  const fixed = new Set(fixedMeals);
+  const open = Object.keys(SHARES).filter((m) => !fixed.has(m));
+  const shareSum = open.reduce((a, m) => a + SHARES[m], 0) || 1;
+  const left = Math.max(0, goal - n0(eaten?.calories));
+  const proteinLeft = ranges ? Math.max(0, n0(ranges.protein.goal) - n0(eaten?.protein)) : 0;
   const plan = []; let total = 0; let protein = 0;
-  for (const [mealType, share] of Object.entries(shares)) {
-    const budget = Math.round(goal * share);
-    const caps = ranges ? { carbs: Math.round(ranges.carbs.max * share), fat: Math.round(ranges.fat.max * share) } : {};
-    const plates = mealType === 'snacks' ? [] : buildMeals(foods, { calories: budget, protein: ranges ? ranges.protein.goal * share : 0 }, { caps, limit: 1, recentIds, mealType });
+  for (const mealType of open) {
+    const share = SHARES[mealType] / shareSum;
+    const budget = Math.round(left * share);
+    const caps = ranges ? { carbs: Math.round(ranges.carbs.max * SHARES[mealType]), fat: Math.round(ranges.fat.max * SHARES[mealType]) } : {};
+    const plates = mealType === 'snacks' ? [] : buildMeals(foods, { calories: budget, protein: proteinLeft * share }, { caps, limit: 1, recentIds, mealType });
     if (plates[0]) {
       for (const it of plates[0].items) plan.push({ mealType, foodId: it.food._id, foodName: it.food.name, servings: it.servings, quantity: n0(it.food.servingSize) * it.servings, servingUnit: it.food.servingUnit, calories: Math.round(n0(it.food.calories) * it.servings), protein: Math.round(n0(it.food.protein) * it.servings * 10) / 10, fiber: Math.round(n0(it.food.fiber) * it.servings * 10) / 10 });
       total += plates[0].totals.calories; protein += plates[0].totals.protein;
@@ -127,7 +134,7 @@ function rescueDay({ foods, target, floor = 1200, ranges, recentIds = new Set(),
       if (l && l.food) { plan.push({ mealType, foodId: l.food._id, foodName: l.food.name, servings: 1, quantity: n0(l.food.servingSize), servingUnit: l.food.servingUnit, calories: Math.round(n0(l.food.calories)), protein: Math.round(n0(l.food.protein) * 10) / 10, fiber: Math.round(n0(l.food.fiber) * 10) / 10 }); total += n0(l.food.calories); }
     }
   }
-  return { goal, plan, totalCalories: Math.round(total), totalProtein: Math.round(protein) };
+  return { goal, plan, totalCalories: Math.round(total), totalProtein: Math.round(protein), eatenCalories: Math.round(n0(eaten?.calories)), remaining: Math.round(left), fixedMeals: [...fixed] };
 }
 
 module.exports = { buildMeals, lightOptions, makeItFit, rescueDay, macroCaps, CARB, PROTEIN, VEG, LIGHT };

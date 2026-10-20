@@ -265,3 +265,21 @@ button, a, select, summary, [role="button"], .suggestion-chip { touch-action: ma
 .eating-out-row { grid-template-columns: 2fr 1fr 1fr auto; }
 @media (max-width: 700px) { .eating-out-row { grid-template-columns: 1fr 1fr; } .eating-out-row input:first-child { grid-column: 1 / -1; } }
 .macro-row small { opacity: .6; font-weight: 400; }
+
+/* Planner: logged / planned / suggested labels, day bar, chef */
+.pl-badge { font-size: 10.5px; font-weight: 800; padding: 2px 8px; border-radius: 99px; border: 1px solid var(--border); white-space: nowrap; }
+.pl-badge.logged { background: var(--primary, #6c63ff); color: #fff; border-color: transparent; }
+.pl-badge.planned { background: var(--surface-soft); }
+.pl-badge.suggested { background: color-mix(in srgb, var(--primary, #6c63ff) 14%, transparent); }
+.planner-item.logged { opacity: 1; }
+.planner-item.pending { opacity: .7; }
+.pl-sub { opacity: .7; font-weight: 400; font-size: 12.5px; margin: 2px 0; }
+.pl-chef { display: flex; align-items: center; gap: 8px; padding: 4px 0; }
+.pl-chef p { margin: 0; font-size: 13.5px; }
+.pl-suggest { margin-top: 6px; padding: 10px; border-radius: 14px; background: color-mix(in srgb, var(--primary, #6c63ff) 8%, transparent); display: grid; gap: 4px; }
+.pl-daybar { display: flex; height: 8px; border-radius: 99px; overflow: hidden; background: var(--surface-soft); }
+.pl-daybar i { display: block; height: 100%; }
+.pl-daybar .eaten { background: var(--primary, #6c63ff); } .pl-daybar .eaten.over { background: #e5484d; }
+.pl-daybar .planned { background: color-mix(in srgb, var(--primary, #6c63ff) 35%, transparent); }
+.pl-chefcard { display: flex; align-items: center; gap: 10px; margin: 8px 0; }
+.pl-chefcard p { margin: 0; flex: 1; }

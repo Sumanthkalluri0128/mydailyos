@@ -1,6 +1,11 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Buddy from "../motion/Buddy";
 import { apiFetch } from "../config/api";
+import { pendingOps } from "../offline/offlineApi";
+import { fireConfetti } from "../motion/motion";
+import { dayChar } from "../motion/chars";
+import PlannerMeal from "../components/PlannerMeal";
+import { chefDayLine, dayBarText, itemsToLog, overlayWebQueue } from "../utils/mealView";
 import { notify } from "../utils/notify";
 import { confirmAction } from "../utils/confirm";
 import { getLocalDate } from "../utils/date";
@@ -18,30 +23,38 @@ const dayLabel = (s) => parse(s).toLocaleDateString(undefined, { weekday: "short
 export default function PlannerPage({ onBack, goTo }) {
   const today = getLocalDate();
   const [start, setStart] = useState(mondayOf(today));
-  const [items, setItems] = useState([]);
+  const [view, setView] = useState(null);
+  const who = useMemo(() => dayChar(), []);
+  const prevDone = useRef({});
   const [adding, setAdding] = useState(null); // `${date}|${meal}`
   const [shop, setShop] = useState(null);
   const [checked, setChecked] = useState({});
   const [dragId, setDragId] = useState(null);
   const [auto, setAuto] = useState(false);
-  const [ctx, setCtx] = useState(null);
   const [more, setMore] = useState(null);   // { id, kind: "move" | "swap", alts }
   const end = addDays(start, 6);
   const days = useMemo(() => Array.from({ length: 7 }, (_, i) => addDays(start, i)), [start]);
 
+  // ONE response: logged + planned merged, day bars, suggestions. Offline: the saved copy, with changes still waiting to sync layered on top.
   const load = useCallback(async () => {
     try {
-      const r = await apiFetch(`/api/meal-plans?from=${start}&to=${end}`);
+      const r = await apiFetch(`/api/meal-plans/view?from=${start}&to=${end}&today=${today}`);
       const d = await r.json();
-      if (d.success) setItems(d.items);
+      if (!d.success) { notify(d.message || "Could not load your plan.", "error"); return; }
+      const v = overlayWebQueue(d, await pendingOps().catch(() => []));
+      for (const day of v.days) {                       // finishing a day plays the victory scene
+        if (day.complete && prevDone.current[day.date] === false) fireConfetti({ count: 90 });
+        prevDone.current[day.date] = !!day.complete;
+      }
+      setView(v);
     } catch { notify("Could not load your plan.", "error"); }
-  }, [start, end]);
+  }, [start, end, today]);
   useEffect(() => { load(); setShop(null); }, [load]);
-  useEffect(() => { apiFetch(`/api/meal-plans/context?from=${start}&days=7&today=${today}`).then((r) => r.json()).then((d) => d.success && setCtx(d)).catch(() => {}); }, [start, items.length, today]);
+  useEffect(() => { const on = () => load(); window.addEventListener("flexfit:synced", on); return () => window.removeEventListener("flexfit:synced", on); }, [load]);
 
-  const call = async (path, method, body, okMsg) => {
+  const call = async (path, method, body, okMsg, meta) => {
     try {
-      const r = await apiFetch(`/api/meal-plans${path}`, { method, body: body ? JSON.stringify(body) : undefined });
+      const r = await apiFetch(`/api/meal-plans${path}`, { method, body: body ? JSON.stringify(body) : undefined, meta });
       const d = await r.json();
       if (!r.ok) { notify(d.message || "Something went wrong.", "error"); return null; }
       if (okMsg) notify(okMsg, "success");
@@ -51,19 +64,32 @@ export default function PlannerPage({ onBack, goTo }) {
   };
 
   const add = (date, mealType) => async (food, quantity) => {
-    if (await call("", "POST", { date, mealType, foodId: food._id, quantity })) setAdding(null);
+    if (await call("", "POST", { date, mealType, foodId: food._id, quantity, today })) setAdding(null);
   };
-  const dayTotals = (date) => items.filter((i) => i.date === date).reduce((a, i) => ({ k: a.k + i.calories, p: a.p + i.protein, f: a.f + i.fiber, c: a.c + (i.carbohydrates || 0), fat: a.fat + (i.fat || 0) }), { k: 0, p: 0, f: 0, c: 0, fat: 0 });
-  const resize = (i, f) => call(`/${i._id}`, "PATCH", { quantity: Math.max(0.1, Math.round(i.quantity * f * 10) / 10) });
+  const nut = (i) => ({ calories: i.calories, protein: i.protein, fiber: i.fiber, carbohydrates: i.carbohydrates || 0, fat: i.fat || 0 });
+  const logPlanned = (date, i, quiet) => call(`/${i.id}/log`, "POST", { date, clientId: `pl-${i.id}` }, quiet ? undefined : `Logged ${i.foodName}.`, { foodName: i.foodName, servingUnit: i.servingUnit });
+  // Items already logged (or waiting to sync) are skipped, so nothing is counted twice. One request per item keeps an offline replay safe.
+  const logDay = async (day) => { const todo = itemsToLog(day); if (!todo.length) { notify("Everything planned for this day is already logged.", "info"); return; } for (const i of todo) await logPlanned(day.date, i, true); notify(`Logged ${todo.length} planned food${todo.length === 1 ? "" : "s"}.`, "success"); };
+  const planSuggestion = (day, s) => call("", "POST", s.foodId ? { date: day.date, mealType: s.mealType || s._meal, foodId: s.foodId, quantity: s.quantity, today, why: s.why } : { date: day.date, mealType: s.mealType || s._meal, name: s.foodName, quantity: s.quantity, today, why: s.why }, `Added ${s.foodName} to the plan.`, { foodName: s.foodName, servingUnit: s.servingUnit, nutrition: nut(s) });
+  const logSuggestion = async (day, s) => {
+    try {
+      let foodId = s.foodId;
+      if (!foodId) { const a = await apiFetch("/api/foods/adopt", { method: "POST", body: JSON.stringify({ name: s.foodName }) }); const j = await a.json(); if (!a.ok) throw new Error(); foodId = j.food._id; }
+      const r = await apiFetch("/api/food-logs", { method: "POST", body: JSON.stringify({ foodId, date: today, mealType: s._meal, quantity: s.quantity }), meta: { foodName: s.foodName, servingUnit: s.servingUnit, nutritionTotal: nut(s) } });
+      if (!r.ok) throw new Error();
+      notify(`Logged ${s.foodName}.`, "success"); await load();
+    } catch { notify("Could not log that.", "error"); }
+  };
+    const resize = (i, f) => call(`/${i.id}`, "PATCH", { quantity: Math.max(0.1, Math.round(i.quantity * f * 10) / 10) });
   const planDay = async (date) => { const d = await call("/auto", "POST", { from: date, days: 1, today, mode: "balanced" }); if (d) notify(`Planned ${d.saved} foods for ${dayLabel(date)}.`, "success"); };
   const clearDay = async (date) => { if (!(await confirmAction("Removes what is planned and not yet eaten on this day.", { title: `Clear ${dayLabel(date)}?`, confirmText: "Clear", danger: true }))) return; call("/clear", "POST", { from: date }, "Day cleared."); };
   const clearWeek = async () => { if (!(await confirmAction("Removes everything planned and not yet eaten this week.", { title: "Clear this whole week?", confirmText: "Clear week", danger: true }))) return; call("/clear", "POST", { from: start, to: end }, "Week cleared."); };
   const openSwap = async (i) => {
-    if (more?.id === i._id && more.kind === "swap") { setMore(null); return; }
-    setMore({ id: i._id, kind: "swap", alts: null });
-    try { const r = await apiFetch(`/api/meal-plans/${i._id}/alternatives?today=${today}`); const d = await r.json(); setMore({ id: i._id, kind: "swap", alts: d.items || [] }); } catch { setMore(null); notify("Could not find swaps.", "error"); }
+    if (more?.id === i.id && more.kind === "swap") { setMore(null); return; }
+    setMore({ id: i.id, kind: "swap", alts: null });
+    try { const r = await apiFetch(`/api/meal-plans/${i.id}/alternatives?today=${today}`); const d = await r.json(); setMore({ id: i.id, kind: "swap", alts: d.items || [] }); } catch { setMore(null); notify("Could not find swaps.", "error"); }
   };
-  const doSwap = async (i, a) => { setMore(null); await call(`/${i._id}/swap`, "POST", { foodId: a.foodId || undefined, name: a.foodId ? undefined : a.name, servings: a.servings }, `Swapped to ${a.name}.`); };
+  const doSwap = async (i, a) => { setMore(null); await call(`/${i.id}/swap`, "POST", { foodId: a.foodId || undefined, name: a.foodId ? undefined : a.name, servings: a.servings }, `Swapped to ${a.name}.`); };
 
   const openShopping = async () => {
     if (shop) { setShop(null); return; }
@@ -125,73 +151,65 @@ export default function PlannerPage({ onBack, goTo }) {
       )}
 
       <div className="planner-grid">
-        {days.map((date) => {
-          const t = dayTotals(date);
-          const unlogged = items.some((i) => i.date === date && !i.logged);
-          const planned = items.some((i) => i.date === date && !i.logged);
-          const target = ctx?.targets?.[date] ?? ctx?.baseTarget ?? null;
-          const trimmed = !!ctx?.baseTarget && !!target && target < ctx.baseTarget;
-          const rg = ctx?.ranges;
+        {(view?.days || []).map((vd) => {
+          const date = vd.date; const b = vd.budget; const bt = dayBarText(b);
+          const rg = view.ctx?.ranges;
+          const hasPlanned = !vd.readOnly && MEALS.some(([id]) => vd.meals[id].planned.calories > 0);
+          const t = vd.total;
           return (
             <section key={date} className={`large-card planner-day ${date === today ? "today" : ""}`}>
               <div className="section-header">
-                <div><h3>{dayLabel(date)}{date === today ? " · today" : ""}</h3><p>{Math.round(t.k)}{target ? ` of ${Math.round(target)}` : ""} kcal{trimmed ? ` · lighter day (−${Math.round(ctx.baseTarget - target)})` : ""}</p></div>
-                {unlogged && <button className="secondary-button" onClick={() => call("/log-day", "POST", { date, clientId: `pd-${date}-${Date.now()}` }, "Logged the day's plan.")}>Log day</button>}
+                <div><h3>{dayLabel(date)}{vd.kind === "today" ? " · today" : vd.readOnly ? " · history" : ""}</h3>
+                  {vd.hasBudget && <p>{bt.eaten} · {bt.planned} · {bt.remaining} kcal{b.trim > 0 ? ` · lighter day (−${b.trim})` : ""}</p>}</div>
+                {vd.kind === "today" && hasPlanned && <button className="secondary-button" onClick={() => logDay(vd)}>Log day</button>}
               </div>
-              {!!target && <div className="pl-bar"><i className={t.k > target * 1.08 ? "over" : ""} style={{ width: `${Math.min(100, (t.k / target) * 100)}%` }} /></div>}
-              {t.k > 0 && (
-                <p className="pl-macros">Protein {Math.round(t.p)} g{rg ? ` (aim ${rg.protein.min}–${rg.protein.max})` : ""} · Carbs {Math.round(t.c)} g · Fat {Math.round(t.fat)} g · Fibre {Math.round(t.f * 10) / 10} g{rg ? ` (aim ${rg.fiber.goal}+)` : ""}
-                  {rg && t.p > 0 && t.p < rg.protein.min && <span className="pl-warn"> · Protein is low: try “Swap” on a dal or paneer.</span>}</p>
+              {b.budget > 0 && <div className="pl-daybar" aria-label="Eaten, planned and left"><i className={`eaten ${b.remaining < 0 ? "over" : ""}`} style={{ width: `${Math.min(100, (b.eaten / b.budget) * 100)}%` }} /><i className="planned" style={{ width: `${Math.max(0, Math.min(100 - (b.eaten / b.budget) * 100, (b.planned / b.budget) * 100))}%` }} /></div>}
+              <div className="pl-chefcard">
+                <Buddy scene={vd.complete ? "victory" : "chef"} size={60} who={who} talk={false} label="Chef" />
+                <p>{chefDayLine(vd, who) || (vd.readOnly ? "This day is history. It shows what you logged." : "")}</p>
+              </div>
+              {t.calories > 0 && (
+                <p className="pl-macros">Protein {Math.round(t.protein)} g{rg ? ` (aim ${rg.protein.min}–${rg.protein.max})` : ""} · Carbs {Math.round(t.carbohydrates)} g · Fat {Math.round(t.fat)} g · Fibre {Math.round(t.fiber * 10) / 10} g{rg ? ` (aim ${rg.fiber.goal}+)` : ""}
+                  {rg && !vd.readOnly && t.protein > 0 && t.protein < rg.protein.min && <span className="pl-warn"> · Protein is low: try an add-on below.</span>}</p>
               )}
-              <div className="pl-tools">
-                <button className="secondary-button" onClick={() => planDay(date)}>✨ Plan this day</button>
-                {planned && <button className="secondary-button" onClick={() => clearDay(date)}>🗑️ Clear day</button>}
-              </div>
-              {MEALS.map(([id, emoji, label]) => {
-                const slot = items.filter((i) => i.date === date && i.mealType === id);
+              {!vd.readOnly && (
+                <div className="pl-tools">
+                  <button className="secondary-button" onClick={() => planDay(date)}>✨ Plan this day</button>
+                  {hasPlanned && <button className="secondary-button" onClick={() => clearDay(date)}>🗑️ Clear day</button>}
+                </div>
+              )}
+              {MEALS.map(([id]) => {
                 const key = `${date}|${id}`;
                 return (
-                  <div key={id} className="planner-slot"
-                    onDragOver={(e) => dragId && e.preventDefault()}
-                    onDrop={(e) => { e.preventDefault(); if (dragId) call(`/${dragId}`, "PATCH", { date, mealType: id }); setDragId(null); }}>
-                    <div className="planner-slot-head"><span>{emoji} {label}</span>
-                      <button className="link-button" onClick={() => setAdding(adding === key ? null : key)}>{adding === key ? "Close" : "+ Add"}</button></div>
-                    {slot.map((i) => (
-                      <div key={i._id}>
-                        <div title={i.why || undefined} className={`planner-item ${i.logged ? "logged" : ""}`} draggable={!i.logged} onDragStart={() => setDragId(i._id)} onDragEnd={() => setDragId(null)}>
-                          <span><strong>{i.foodName}</strong><small>{i.quantity} {i.servingUnit} · {i.calories} kcal</small></span>
-                          {i.logged ? <em>✓ eaten</em> : (
+                  <PlannerMeal key={id} day={vd} meal={id} who={who} adding={adding === key} onToggleAdd={() => setAdding(adding === key ? null : key)}
+                    dragging={!!dragId} onDrop={() => { if (dragId) call(`/${dragId}`, "PATCH", { date, mealType: id, today }); setDragId(null); }}
+                    onLog={(i) => logPlanned(date <= today ? date : today, i)} onRemove={(i) => call(`/${i.id}`, "DELETE")}
+                    onAddSuggestion={(s) => planSuggestion(vd, { ...s, _meal: id })} onLogSuggestion={(s) => logSuggestion(vd, { ...s, _meal: id })}
+                    extras={{
+                      dragStart: (i) => setDragId(i.id), dragEnd: () => setDragId(null),
+                      buttons: (i) => (<><button className="link-button" onClick={() => openSwap(i)}>Swap</button><button className="link-button" onClick={() => setMore(more?.id === i.id && more.kind === "move" ? null : { id: i.id, kind: "move" })}>Move</button></>),
+                      panel: (i) => (
+                        <div className="pl-more" style={{ display: more?.id === i.id ? "block" : "none" }}>
+                          {more?.id === i.id && more.kind === "move" && (
                             <>
-                              <button className="secondary-button" onClick={() => call(`/${i._id}/log`, "POST", { date: date <= today ? date : today, clientId: `pl-${i._id}` }, `Logged ${i.foodName}.`)}>Log</button>
-                              <button className="link-button" onClick={() => openSwap(i)}>Swap</button>
-                              <button className="link-button" onClick={() => setMore(more?.id === i._id && more.kind === "move" ? null : { id: i._id, kind: "move" })}>Move</button>
+                              <div className="row"><b>Meal</b>{MEALS.filter(([m]) => m !== id).map(([m, e, l]) => <button key={m} onClick={() => { setMore(null); call(`/${i.id}`, "PATCH", { mealType: m }); }}>{e} {l}</button>)}</div>
+                              <div className="row"><b>Day</b>{days.filter((d) => d !== date && d >= today).map((d) => <button key={d} onClick={() => { setMore(null); call(`/${i.id}`, "PATCH", { date: d, today }); }}>{dayLabel(d)}</button>)}</div>
+                              <div className="row"><b>Portion</b><button onClick={() => resize(i, 0.75)}>− 25%</button><button onClick={() => resize(i, 1.25)}>+ 25%</button></div>
                             </>
                           )}
-                          <button className="delete-log-button" aria-label={`Remove ${i.foodName}`} onClick={() => call(`/${i._id}`, "DELETE")}>✕</button>
+                          {more?.id === i.id && more.kind === "swap" && (
+                            <>
+                              <b>Swap for something similar</b>
+                              {!more.alts && <div>Finding options…</div>}
+                              {more.alts?.length === 0 && <div>No similar foods found.</div>}
+                              {more.alts?.map((a) => <button key={a.foodId || a.name} className="pl-alt" onClick={() => doSwap(i, a)}><span>{a.name}{a.familiar ? " ★" : ""}</span><small>{a.quantity} {a.unit} · {a.calories} kcal · {a.protein} g protein</small></button>)}
+                            </>
+                          )}
                         </div>
-                        {!i.logged && (
-                          <div className="pl-more" style={{ display: more?.id === i._id ? "block" : "none" }}>
-                            {more?.id === i._id && more.kind === "move" && (
-                              <>
-                                <div className="row"><b>Meal</b>{MEALS.filter(([m]) => m !== id).map(([m, e, l]) => <button key={m} onClick={() => { setMore(null); call(`/${i._id}`, "PATCH", { mealType: m }); }}>{e} {l}</button>)}</div>
-                                <div className="row"><b>Day</b>{days.filter((d) => d !== date).map((d) => <button key={d} onClick={() => { setMore(null); call(`/${i._id}`, "PATCH", { date: d }); }}>{dayLabel(d)}</button>)}</div>
-                                <div className="row"><b>Portion</b><button onClick={() => resize(i, 0.75)}>− 25%</button><button onClick={() => resize(i, 1.25)}>+ 25%</button></div>
-                              </>
-                            )}
-                            {more?.id === i._id && more.kind === "swap" && (
-                              <>
-                                <b>Swap for something similar</b>
-                                {!more.alts && <div>Finding options…</div>}
-                                {more.alts?.length === 0 && <div>No similar foods found.</div>}
-                                {more.alts?.map((a) => <button key={a.foodId || a.name} className="pl-alt" onClick={() => doSwap(i, a)}><span>{a.name}{a.familiar ? " ★" : ""}</span><small>{a.quantity} {a.unit} · {a.calories} kcal · {a.protein} g protein</small></button>)}
-                              </>
-                            )}
-                          </div>
-                        )}
-                      </div>
-                    ))}
+                      ),
+                    }}>
                     {adding === key && <FoodPicker actionLabel="Add to plan" onPick={add(date, id)} onCancel={() => setAdding(null)} />}
-                  </div>
+                  </PlannerMeal>
                 );
               })}
             </section>

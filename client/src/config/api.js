@@ -52,7 +52,7 @@ export async function apiFetch(input, options = {}) {
       if (saved) return json(saved.data, 200, { "X-FlexFit-Offline": "1", "X-FlexFit-Saved-At": String(saved.at) });
       return json({ success: false, message: "You're offline and this hasn't been opened before, so there is nothing saved to show yet." }, 503, { "X-FlexFit-Offline": "1" });
     }
-    if (isQueueable(method, url) && (await enqueue({ method, url, body: init.body }))) {
+    if (isQueueable(method, url) && (await enqueue({ method, url, body: init.body, meta: options.meta }))) {
       window.dispatchEvent(new CustomEvent("mydailyos:toast", { detail: { message: "You're offline — saved on this device and will sync automatically.", type: "info", duration: 4000 } }));
       return json({ success: true, queued: true, offline: true }, 202, { "X-FlexFit-Offline": "1" });
     }
