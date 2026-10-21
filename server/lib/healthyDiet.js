@@ -92,7 +92,8 @@ const TEMPLATE = {
  * @param target   daily kcal budget   @param proteinGoal grams   @param diet 'v' | 'e' | 'n'   @param seed any string (e.g. date + version)
  * @returns { meals:[{mealType, budget, items:[{name, servings, unit, kcal, protein, fiber, note}], kcal}], totals, tips }
  */
-function buildDietDay({ target, proteinGoal = 0, floor = 1200, diet = 'v', seed = 'x' }) {
+function buildDietDay({ target, proteinGoal = 0, floor = 1200, diet = 'v', seed = 'x', excluder = null }) {
+  const POOL = excluder && !excluder.empty ? FOODS.filter((f) => excluder.ok(f.name)) : FOODS;   // allergens, diet mode and dislikes never reach the plate
   const goal = Math.max(floor, Math.round((Number(target) || 1800) / 10) * 10);
   const rand = rng(`${seed}|${diet}`);
   const used = new Set();
@@ -101,7 +102,7 @@ function buildDietDay({ target, proteinGoal = 0, floor = 1200, diet = 'v', seed 
     const budget = goal * share;
     let picked = [];
     for (const [role, m] of TEMPLATE[mealType]) {
-      const cands = FOODS.filter((f) => allowed(f, diet) && f.meals.includes(m) && f.role === role || (role === 'main' && f.role === 'main' && f.meals.includes(m) && allowed(f, diet)));
+      const cands = POOL.filter((f) => allowed(f, diet) && f.meals.includes(m) && f.role === role || (role === 'main' && f.role === 'main' && f.meals.includes(m) && allowed(f, diet)));
       if (!cands.length) continue;
       if (role === 'dairy' && mealType === 'breakfast' && picked.some((x) => /yogurt|milk|smoothie/i.test(x.f.name))) continue;
       picked.push({ f: pickFrom(cands, rand, used, role === 'protein' || role === 'main' ? 0.9 : 0.4), role });
@@ -148,11 +149,11 @@ async function adoptFood(Food, uid, name) {
 }
 
 /** Healthy foods that are NOT on the person's list yet, ranked by how well one serving fills what is left. */
-function freshPicks({ haveNames, remaining, mealType, limit = 4 }) {
+function freshPicks({ haveNames, remaining, mealType, limit = 4, excluder = null }) {
   const m = { breakfast: 'b', lunch: 'l', dinner: 'd', snacks: 's' }[mealType];
   const have = new Set(haveNames.map((n) => String(n).toLowerCase()));
   const kcalLeft = Math.max(0, Number(remaining?.calories) || 0);
-  return FOODS.filter((f) => !have.has(f.name.toLowerCase()) && (!m || f.meals.includes(m)) && f.kcal <= Math.max(120, kcalLeft * 1.05))
+  return FOODS.filter((f) => (!excluder || excluder.ok(f.name)) && !have.has(f.name.toLowerCase()) && (!m || f.meals.includes(m)) && f.kcal <= Math.max(120, kcalLeft * 1.05))
     .map((f) => ({ f, s: (f.protein * 4 + f.fiber * 6) / Math.max(f.kcal, 40) }))
     .sort((a, b) => b.s - a.s).slice(0, limit)
     .map(({ f }) => ({ name: f.name, unit: f.unit, size: f.size, kcal: f.kcal, protein: f.protein, fiber: f.fiber, note: f.note, vegetarian: f.diets === 'v' }));

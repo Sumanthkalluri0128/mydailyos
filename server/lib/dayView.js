@@ -8,6 +8,7 @@
 //   addOnsFor      up to `limit` add-ons that fill a REAL gap of a meal that already has something in it
 //   chefHint       a structured hint per meal / day that the clients turn into the chef character's line
 const { buildPool } = require('./smartPlan');
+const { explainDay } = require('./planExplain');
 
 const MEALS = ['breakfast', 'lunch', 'dinner', 'snacks'];
 // How the day's protein / fibre goal is shared between meals (same shares the planner uses).
@@ -39,6 +40,7 @@ function fromPlan(p) {
     foodId: idOf(p.foodId), foodName: p.foodName, quantity: r1(p.quantity), servingUnit: p.servingUnit || '',
     calories: r0(p.calories), protein: r1(p.protein), fiber: r1(p.fiber), carbohydrates: r0(p.carbohydrates), fat: r0(p.fat),
     why: p.why || '', auto: !!p.auto, rescue: !!p.rescue, role: p.role || '',
+    locked: !!p.locked, leftover: !!p.leftover, cookMin: p.cookMin ?? null, cookNote: p.cookNote || '',
   };
 }
 
@@ -251,7 +253,7 @@ function chefHint({ mealType, mealTotals, planned, gaps, remainingKcal, ranges }
  */
 function buildDayViews(o) {
   const { dates, today, logs = [], plans = [], budgets = {}, trims = {}, ranges, diet = 'v', suggest = true } = o;
-  const pool = suggest ? buildPool({ foods: o.foods || new Map(), userFoods: o.userFoods || [], catalogue: o.catalogue || [], habits: o.habits, diet }) : [];
+  const pool = suggest ? buildPool({ foods: o.foods || new Map(), userFoods: o.userFoods || [], catalogue: o.catalogue || [], habits: o.habits, diet, rules: o.rules || null }) : [];
   return dates.map((date) => {
     const day = mergeDay({ date, today, logs: logs.filter((l) => l.date === date), plans: plans.filter((p) => p.date === date) });
     const bud = dayBudget({ budget: budgets[date] ?? 0, trim: trims[date] || 0, logged: day.logged, planned: day.planned });
@@ -273,7 +275,9 @@ function buildDayViews(o) {
     }
     const allDone = !day.readOnly && MEALS.some((m) => day.meals[m].logged.calories > 0) && MEALS.every((m) => day.meals[m].planned.calories === 0 && !day.meals[m].items.some((it) => it.status === 'planned'))
       && MEALS.filter((m) => m !== 'snacks').every((m) => day.meals[m].logged.calories > 0);
-    return { ...day, budget: bud, complete: allDone, hasBudget };
+    explainDay(day, { proteinGoal: o.ranges && o.ranges.protein ? o.ranges.protein.goal : 0 });
+    const dayOut = o.dayInfo ? o.dayInfo(date, bud.homeBudget) : null;
+    return { ...day, budget: bud, complete: allDone, hasBudget, ...(dayOut ? { plan: dayOut } : {}) };
   });
 }
 

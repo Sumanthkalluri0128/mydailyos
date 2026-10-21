@@ -7,8 +7,12 @@ import { chefLine, STATUS_LABEL } from "../utils/mealView";
 const LABEL = { breakfast: "🌅 Breakfast", lunch: "☀️ Lunch", dinner: "🌙 Dinner", snacks: "🍎 Snacks" };
 const cap = (s) => (s ? s.charAt(0).toUpperCase() + s.slice(1) : s);
 
-export default function PlannerMeal({ day, meal, who, adding, onToggleAdd, onLog, onRemove, onAddSuggestion, onLogSuggestion, extras, children, onDrop, dragging }) {
+const FEEDBACK = [["loved", "😍 Loved it"], ["too_heavy", "😮‍💨 Too heavy"], ["too_long", "⏱️ Too long to cook"], ["not_available", "🛒 Not available"]];
+
+export default function PlannerMeal({ day, meal, who, adding, onToggleAdd, onLog, onRemove, onAddSuggestion, onLogSuggestion, onLock, onFeedback, extras, children, onDrop, dragging }) {
   const [more, setMore] = useState(false);
+  const [whyOpen, setWhyOpen] = useState(false);
+  const [fbFor, setFbFor] = useState(null);
   const m = day.meals[meal];
   const ro = day.readOnly;
   const empty = m.items.length === 0;
@@ -20,8 +24,14 @@ export default function PlannerMeal({ day, meal, who, adding, onToggleAdd, onLog
     <div className="planner-slot" onDragOver={(e) => dragging && e.preventDefault()} onDrop={(e) => { e.preventDefault(); onDrop?.(); }}>
       <div className="planner-slot-head">
         <span>{LABEL[meal]}{m.total.calories > 0 && <small className="pl-sub"> {m.logged.calories} logged{m.planned.calories > 0 ? ` + ${m.planned.calories} planned` : ""} kcal · {m.total.protein} g protein</small>}</span>
-        {!ro && <button className="link-button" onClick={onToggleAdd}>{adding ? "Close" : "+ Add"}</button>}
+        <span className="pl-slot-tools">
+          {!ro && m.planned.calories > 0 && onLock && <button className="link-button" aria-pressed={!!m.locked} aria-label={m.locked ? `Unlock ${meal}` : `Lock ${meal} so it stays when you re-shuffle`} onClick={() => onLock(!m.locked)}>{m.locked ? "🔒 Locked" : "🔓 Lock"}</button>}
+          {!ro && <button className="link-button" onClick={onToggleAdd}>{adding ? "Close" : "+ Add"}</button>}
+        </span>
       </div>
+      {!ro && m.why && <div className="pl-why"><button className="link-button" aria-expanded={whyOpen} onClick={() => setWhyOpen(!whyOpen)}>💬 Why this plate?</button>{whyOpen && <p role="note">{m.why}</p>}</div>}
+      {!ro && day.plan?.out?.some((o) => o.meal === meal) && <p className="pl-sub">🍱 Eaten out{day.plan.out.find((o) => o.meal === meal).kind ? ` (${day.plan.out.find((o) => o.meal === meal).kind})` : ""}: aim for about {day.plan.out.find((o) => o.meal === meal).aim} kcal with protein, a carb and vegetables.</p>}
+      {!ro && day.plan?.fasted?.includes(meal) && <p className="pl-sub">🌙 Fasting window: nothing planned for this meal.</p>}
 
       {empty && !ro && m.hint && (
         <div className="pl-chef"><Buddy scene="eat" size={52} who={who} talk={false} label="Hungry" /><p>{chefLine(m.hint, who)}</p></div>
@@ -32,11 +42,13 @@ export default function PlannerMeal({ day, meal, who, adding, onToggleAdd, onLog
         <div key={i.id}>
           <div title={i.why || undefined} className={`planner-item ${i.status}`} draggable={!ro && i.status === "planned" && !i.pending} onDragStart={() => extras?.dragStart?.(i)} onDragEnd={() => extras?.dragEnd?.()}>
             {badge(i.status, i.pending)}
-            <span><strong>{i.foodName}</strong><small>{line(i)}{i.fromPlan ? " · from your plan" : ""}</small></span>
+            <span><strong>{i.foodName}</strong><small>{line(i)}{i.fromPlan ? " · from your plan" : ""}{i.leftover ? " · leftover, no cooking" : ""}{i.cookMin ? ` · ${i.cookMin} min` : ""}</small>{i.cookNote && <small>👩‍🍳 {i.cookNote}</small>}</span>
             {!ro && i.status === "planned" && day.kind === "today" && !i.pending && <button className="secondary-button" onClick={() => onLog(i)}>Log</button>}
+            {!ro && i.status === "planned" && onFeedback && !i.pending && <button className="link-button" aria-expanded={fbFor === i.id} onClick={() => setFbFor(fbFor === i.id ? null : i.id)}>How was it?</button>}
             {!ro && i.status === "planned" && extras?.buttons?.(i)}
             {!ro && i.status === "planned" && !i.pending && <button className="delete-log-button" aria-label={`Remove ${i.foodName}`} onClick={() => onRemove(i)}>✕</button>}
           </div>
+          {fbFor === i.id && <div className="pl-feedback" role="group" aria-label={`Feedback on ${i.foodName}`}>{FEEDBACK.map(([k, l]) => <button key={k} className="sn-chip" onClick={() => { setFbFor(null); onFeedback(i, k); }}>{l}</button>)}</div>}
           {!ro && i.status === "planned" && extras?.panel?.(i)}
         </div>
       ))}

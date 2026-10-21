@@ -11,6 +11,7 @@ const { parseMealText } = require('../lib/foodParse');
 const { catalogueFoods } = require('../lib/foodCache');
 const { suggestFoods } = require('../lib/suggest');
 const { adoptFood, freshPicks } = require('../lib/healthyDiet');
+const { loadPlanContext } = require('../lib/planContext');
 const { buildMeals, lightOptions, makeItFit, macroCaps } = require('../lib/mealBuilder');
 const { previewFit } = require('../lib/fitCheck');
 const { weekUsage } = require('../lib/fatLossScore');
@@ -174,7 +175,9 @@ router.get('/suggest', wrap(async (req, res) => {
     Food.find({ userId: uid, hidden: { $ne: true } }).limit(2000).lean(),
     Food.find({ $or: [{ favoriteBy: uid }, { userId: uid, isFavorite: true }] }).select('_id').lean(),
   ]);
-  const foods = [...mine, ...shared];
+  const pc = await loadPlanContext(uid, {});
+  const safe = (list) => (pc.excluder.empty ? list : pc.excluder.keep(pc.decorate(list), (f) => f.name, (f) => ({ ingredients: f.ingredients })));
+  const foods = safe([...mine, ...shared]);
   const mealType = ['breakfast', 'lunch', 'dinner', 'snacks'].includes(req.query.mealType) ? req.query.mealType : undefined;
   const recentIds = new Set(recentLogs.map((l) => String(l.foodId)));
   const mode = remaining.calories < 40 ? 'over' : remaining.calories < 250 ? 'light' : 'meal';
@@ -183,8 +186,8 @@ router.get('/suggest', wrap(async (req, res) => {
   const meals = mode === 'meal' ? buildMeals(foods, remaining, { caps, recentIds, mealType, limit: 3 }) : [];
   const light = mode === 'meal' ? [] : lightOptions(foods, { recentIds });
   const fit = mode === 'over' || mode === 'light' ? makeItFit(logs, Math.max(0, -remaining.calories)) : [];
-  const fresh = mode === 'over' ? [] : suggestFoods(shared.filter((f) => !recentIds.has(String(f._id))), remaining, { mealType, limit: 4 });
-  const healthy = mode === 'over' ? [] : freshPicks({ haveNames: mine.map((f) => f.name), remaining, mealType, limit: 4 });
+  const fresh = mode === 'over' ? [] : suggestFoods(safe(shared.filter((f) => !recentIds.has(String(f._id)))), remaining, { mealType, limit: 4 });
+  const healthy = mode === 'over' ? [] : freshPicks({ haveNames: mine.map((f) => f.name), remaining, mealType, limit: 4, excluder: pc.excluder });
   res.json({
     success: true, mode, fresh: fresh.map((p) => ({ food: present(p.food, uid), reason: p.reason })), healthy,
     remaining: { calories: Math.round(remaining.calories), protein: Math.round(remaining.protein), fiber: Math.round(remaining.fiber) },

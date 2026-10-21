@@ -45,3 +45,5 @@
 .pl-more .row { display: flex; flex-wrap: wrap; gap: 6px; margin: 4px 0; align-items: center; }
 .pl-more button { border: 1px solid var(--border, #ddd); background: transparent; color: inherit; border-radius: 999px; padding: 4px 10px; cursor: pointer; font-size: 12.5px; }
 .pl-alt { display: flex; justify-content: space-between; gap: 8px; width: 100%; text-align: left; border-radius: 10px !important; padding: 6px 10px !important; }
+.ap-setup { border: 1px solid var(--border); border-radius: 14px; background: var(--surface); padding: 12px 14px; margin: 10px 0 12px; }
+.ap-setup-head { display: flex; justify-content: space-between; align-items: center; } .ap-setup .ap-sub { margin: 6px 0 10px; overflow-wrap: anywhere; }

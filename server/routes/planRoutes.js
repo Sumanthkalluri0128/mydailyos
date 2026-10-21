@@ -23,6 +23,7 @@ const { buildPatterns } = require('../lib/patterns');
 const { whatIf } = require('../lib/whatIf');
 const { navyBodyFat } = require('../lib/bodyFat');
 const { rescueDay } = require('../lib/mealBuilder');
+const { loadPlanContext } = require('../lib/planContext');
 const { intakeAdvice } = require('../lib/intakeAdvice');
 const { buildDietDay, adoptFood } = require('../lib/healthyDiet');
 const { oilKcal } = require('../lib/oil');
@@ -223,7 +224,9 @@ router.post('/rescue-day', wrap(async (req, res) => {
   // Anything already logged on that day is fixed: those meals are not re-planned and their kcal / protein come off the day's budget.
   const eaten = logged.reduce((a, l) => ({ calories: a.calories + Number(l.nutritionTotal?.calories || 0), protein: a.protein + Number(l.nutritionTotal?.protein || 0) }), { calories: 0, protein: 0 });
   const fixedMeals = [...new Set(logged.map((l) => l.mealType))];
-  const day = rescueDay({ foods: [...mine, ...shared], target: core.target, floor: core.floor, ranges: core.ranges, recentIds: new Set(recent.map((r) => String(r.foodId))), eaten, fixedMeals });
+  const pc = await loadPlanContext(uid, { today, profile: core.profile });
+  const safeFoods = pc.excluder.empty ? [...mine, ...shared] : pc.excluder.keep(pc.decorate([...mine, ...shared]), (f) => f.name, (f) => ({ ingredients: f.ingredients }));
+  const day = rescueDay({ foods: safeFoods, target: core.target, floor: core.floor, ranges: core.ranges, recentIds: new Set(recent.map((r) => String(r.foodId))), eaten, fixedMeals });
   if (!day.plan.length) throw new HttpError(422, fixedMeals.length >= 4 ? 'Every meal of that day is already logged, so there is nothing left to plan.' : 'Not enough foods to build a plan yet. Log a few meals first');
   await MealPlan.deleteMany({ userId: uid, date, rescue: true, logged: false });
   const items = await MealPlan.insertMany(day.plan.map((p) => ({ userId: uid, date, rescue: true, mealType: p.mealType, foodId: p.foodId, foodName: p.foodName, quantity: p.quantity, servingUnit: p.servingUnit, calories: p.calories, protein: p.protein, fiber: p.fiber })));
@@ -237,8 +240,9 @@ async function dietDayFor(req, src) {
   const today = todayOf(req);
   const date = src.date ? v.date(src.date, 'date') : today;
   const core = await loadCore(uid, today, { historyDays: 2 });
-  const diet = dietOf(src.diet), variant = Math.max(0, Math.min(50, Number(src.variant) || 0));
-  const day = buildDietDay({ target: core.target || 1800, proteinGoal: core.ranges?.protein?.goal || 0, floor: core.floor, diet, seed: `${date}|${variant}` });
+  const pc = await loadPlanContext(uid, { today, profile: core.profile });
+  const diet = ['v', 'e', 'n'].includes(src.diet) ? src.diet : (pc.settings.diet || 'v'), variant = Math.max(0, Math.min(50, Number(src.variant) || 0));
+  const day = buildDietDay({ target: core.target || 1800, proteinGoal: core.ranges?.protein?.goal || 0, floor: core.floor, diet, seed: `${date}|${variant}`, excluder: pc.excluder });
   return { date, diet, variant, needsProfile: !core.ranges, ...day };
 }
 router.get('/diet-day', wrap(async (req, res) => { res.json({ success: true, ...(await dietDayFor(req, req.query)) }); }));

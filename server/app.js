@@ -25,6 +25,8 @@ const fastingRoutes = require('./routes/fastingRoutes');
 const savedMealRoutes = require('./routes/savedMealRoutes');
 const emailRoutes = require('./routes/emailRoutes');
 const mealPlanRoutes = require('./routes/mealPlanRoutes');
+const planTemplateRoutes = require('./routes/planTemplateRoutes');
+const foodPrefRoutes = require('./routes/foodPrefRoutes');
 const recipeRoutes = require('./routes/recipeRoutes');
 const goalRoutes = require('./routes/goalRoutes');
 const planRoutes = require('./routes/planRoutes');
@@ -77,7 +79,9 @@ function createApp({ allowedOrigins = [] } = {}) {
   app.use('/api/fasting', fastingRoutes);
   app.use('/api/saved-meals', savedMealRoutes);
   app.use('/api/email', emailRoutes);
+  app.use('/api/meal-plans/templates', planTemplateRoutes);   // before /api/meal-plans so "templates" is never read as an :id
   app.use('/api/meal-plans', mealPlanRoutes);
+  app.use('/api/food-prefs', foodPrefRoutes);
   app.use('/api/recipes', recipeRoutes);
   app.use('/api/goals', goalRoutes);
   app.use('/api/plan', planRoutes);

@@ -12,6 +12,8 @@ import { getLocalDate } from "../utils/date";
 import FoodPicker from "../components/FoodPicker";
 import AutoPlanPanel from "../components/AutoPlanPanel";
 import IntakeBanner from "../components/IntakeBanner";
+import SenseiChat from "../components/SenseiChat";
+import "../components/sensei.css";
 
 const MEALS = [["breakfast", "🌅", "Breakfast"], ["lunch", "☀️", "Lunch"], ["dinner", "🌙", "Dinner"], ["snacks", "🍎", "Snacks"]];
 const parse = (s) => { const [y, m, d] = s.split("-").map(Number); return new Date(Date.UTC(y, m - 1, d)); };
@@ -32,6 +34,8 @@ export default function PlannerPage({ onBack, goTo }) {
   const [dragId, setDragId] = useState(null);
   const [auto, setAuto] = useState(false);
   const [more, setMore] = useState(null);   // { id, kind: "move" | "swap", alts }
+  const [improve, setImprove] = useState(false);
+  const [tpls, setTpls] = useState(null);     // week templates (null = closed)
   const end = addDays(start, 6);
   const days = useMemo(() => Array.from({ length: 7 }, (_, i) => addDays(start, i)), [start]);
 
@@ -91,13 +95,40 @@ export default function PlannerPage({ onBack, goTo }) {
   };
   const doSwap = async (i, a) => { setMore(null); await call(`/${i.id}/swap`, "POST", { foodId: a.foodId || undefined, name: a.foodId ? undefined : a.name, servings: a.servings }, `Swapped to ${a.name}.`); };
 
-  const openShopping = async () => {
-    if (shop) { setShop(null); return; }
+  const lockMeal = (date, mealType) => (locked) => call("/lock", "POST", { date, mealType, locked }, locked ? "Locked. It stays when you re-shuffle." : "Unlocked.");
+  const giveFeedback = async (i, kind) => {
+    try {
+      const r = await apiFetch("/api/food-prefs/feedback", { method: "POST", body: JSON.stringify({ planId: i.id, kind }) });
+      const d = await r.json();
+      if (!r.ok) { notify(d.message || "Could not save that.", "error"); return; }
+      notify({ loved: "Noted. You will see this one more often.", too_heavy: "Noted. I will go lighter next time.", too_long: "Noted. I will pick quicker foods.", not_available: "Noted. I will leave it out for a few weeks." }[kind], "success");
+    } catch { notify("Could not save that.", "error"); }
+  };
+  const resetFeedback = async () => { if (!(await confirmAction("Your loved / too heavy / too long / not available choices are cleared.", { title: "Reset what I learned?", confirmText: "Reset", danger: true }))) return; await apiFetch("/api/food-prefs/feedback", { method: "DELETE" }); notify("Feedback reset.", "success"); };
+  const loadTemplates = async () => { const r = await apiFetch("/api/meal-plans/templates"); const d = await r.json(); setTpls(d.success ? d.templates : []); };
+  const saveTemplate = async () => {
+    const name = window.prompt("Name this week (for example, My cutting week)");
+    if (!name) return;
+    const r = await apiFetch("/api/meal-plans/templates", { method: "POST", body: JSON.stringify({ name, from: start }) });
+    const d = await r.json();
+    if (!r.ok) { notify(d.message || "Could not save the template.", "error"); return; }
+    notify(d.replaced ? "Template updated." : "Template saved.", "success"); loadTemplates();
+  };
+  const applyTemplate = async (t, replace) => {
+    const r = await apiFetch(`/api/meal-plans/templates/${t.id}/apply`, { method: "POST", body: JSON.stringify({ from: start, today, replace }) });
+    const d = await r.json();
+    if (!r.ok) { notify(d.message || "Could not load it.", "error"); return; }
+    notify(`Loaded ${d.saved} foods${d.skipped?.length ? `. Skipped ${d.skipped.map((x) => `${x.name} (${x.reason})`).join(", ")}` : ""}.`, d.skipped?.length ? "info" : "success"); load();
+  };
+  const deleteTemplate = async (t) => { if (!(await confirmAction(`Delete "${t.name}"?`, { title: "Delete template", confirmText: "Delete", danger: true }))) return; await apiFetch(`/api/meal-plans/templates/${t.id}`, { method: "DELETE" }); loadTemplates(); };
+
+  const openShopping = async (force) => {
+    if (shop && force !== true) { setShop(null); return; }
     const r = await apiFetch(`/api/meal-plans/shopping-list?from=${start}&to=${end}`);
     const d = await r.json();
-    if (d.success) { setShop(d.items); setChecked({}); }
+    if (d.success) { setShop(d); setChecked({}); }
   };
-  const shopText = () => (shop || []).map((i) => `• ${i.name} — ${i.quantity} ${i.unit}${i.approx ? ` (≈ ${i.approx.count} ${i.approx.label})` : ""}`).join("\n");
+  const shopText = () => (shop?.items || []).map((i) => `• ${i.name} — ${i.quantity} ${i.unit}${i.approx ? ` (≈ ${i.approx.count} ${i.approx.label})` : ""}`).join("\n");
   const copyShop = async () => {
     try { await navigator.clipboard.writeText(`Shopping list ${start} → ${end}\n${shopText()}`); notify("Shopping list copied.", "success"); }
     catch { notify("Could not copy. Select the text instead.", "error"); }
@@ -128,25 +159,42 @@ export default function PlannerPage({ onBack, goTo }) {
         <button className="secondary-button" onClick={() => setStart(mondayOf(today))}>This week</button>
         <button className="secondary-button" onClick={copyWeek}>Copy last week</button>
         <button className="primary-button" onClick={() => setAuto(!auto)}>✨ Plan my week</button>
-        <button className="secondary-button" onClick={openShopping}>🛒 Shopping list</button>
+        <button className="secondary-button" onClick={() => openShopping()}>🛒 Shopping list</button>
+        <button className="secondary-button" onClick={() => (tpls ? setTpls(null) : loadTemplates())}>📑 Templates</button>
         <button className="secondary-button" onClick={clearWeek}>🗑️ Clear week</button>
         {goTo && <button className="secondary-button" onClick={() => goTo("recipes")}>🍲 Recipes</button>}
       </div>
 
-      {auto && <AutoPlanPanel from={start} to={end} onClose={() => setAuto(false)} onSaved={load} />}
+      {view?.ctx?.sensei && !auto && !improve && (!view.ctx.sensei.setupDone || view.ctx.sensei.improve > 0) && (
+        <div className="large-card ap-setup" role="note"><div className="ap-setup-head"><b>{view.ctx.sensei.setupDone ? "Improve my plan" : "Plan with the sensei"}</b></div>
+          <p className="ap-sub">{view.ctx.sensei.setupDone ? "A couple of quick questions keep your plan right for this week." : "Answer a few quick questions and I will build a plan around your food, time and kitchen."}</p>
+          <button className="secondary-button" onClick={() => setImprove(true)}>{view.ctx.sensei.setupDone ? "Improve my plan" : "Start"}</button></div>
+      )}
+      {improve && <SenseiChat onClose={() => { setImprove(false); load(); }} onDone={() => { setImprove(false); setAuto(true); load(); }} />}
+      {view?.ctx?.safety?.flagged && <div className="ib is-hot" role="note"><span className="ib-ic" aria-hidden="true">🩺</span><div><b>Please check with a doctor or dietitian</b><p>{view.ctx.safety.note}</p></div></div>}
+      {auto && <AutoPlanPanel from={start} to={end} onClose={() => setAuto(false)} onSaved={(o) => { load(); if (o?.shop) setTimeout(() => openShopping(true), 400); }} />}
+      {tpls && (
+        <div className="large-card shopping-list"><div className="section-header"><div><h2>📑 Week templates</h2><p>Save this week as a template, or load one onto this week.</p></div><button className="secondary-button" onClick={saveTemplate}>Save this week</button></div>
+          {!tpls.length && <p className="card-description">No templates yet.</p>}
+          {tpls.map((t) => <div key={t.id} className="shop-row"><span>{t.name}<small> · {t.days} day{t.days === 1 ? "" : "s"} · about {t.kcalPerDay} kcal a day</small></span><span><button className="link-button" onClick={() => applyTemplate(t, false)}>Load into empty meals</button> <button className="link-button" onClick={() => applyTemplate(t, true)}>Replace this week</button> <button className="link-button" onClick={() => deleteTemplate(t)}>Delete</button></span></div>)}
+          <button className="link-button" onClick={resetFeedback}>Reset what the sensei learned from my feedback</button>
+        </div>
+      )}
 
       {shop && (
         <div className="large-card shopping-list">
           <div className="section-header"><div><h2>🛒 Shopping list</h2><p>Planned and not yet eaten, {dayLabel(start)} – {dayLabel(end)}</p></div>
             <button className="secondary-button" onClick={copyShop}>Copy</button></div>
-          {!shop.length && <p className="card-description">Nothing to buy — plan some meals first.</p>}
-          {shop.map((i) => (
+          {shop.people?.scaled && <p className="ap-sub">Scaled for {shop.people.adults} adult{shop.people.adults === 1 ? "" : "s"}{shop.people.kids ? `, ${shop.people.kids} kid${shop.people.kids === 1 ? "" : "s"}` : ""}{shop.people.elders ? `, ${shop.people.elders} elder${shop.people.elders === 1 ? "" : "s"}` : ""} (about {shop.people.factor} portions; estimates).</p>}
+          {!shop.items.length && <p className="card-description">Nothing to buy — plan some meals first.</p>}
+          {shop.items.map((i) => (
             <label key={i.foodId} className={`shop-row ${checked[i.foodId] ? "done" : ""}`}>
               <input type="checkbox" checked={!!checked[i.foodId]} onChange={() => setChecked({ ...checked, [i.foodId]: !checked[i.foodId] })} />
               <span>{i.name}</span>
               <strong>{i.quantity} {i.unit}{i.approx ? ` · ≈ ${i.approx.count} ${i.approx.label}` : ""}</strong>
             </label>
           ))}
+          {shop.alreadyHave?.length > 0 && <details className="ap-habits"><summary>You already have ({shop.alreadyHave.length})</summary>{shop.alreadyHave.map((i) => <p key={i.foodId} className="ap-sub">{i.name}: {i.quantity} {i.unit} (not on the list)</p>)}</details>}
         </div>
       )}
 
@@ -181,7 +229,7 @@ export default function PlannerPage({ onBack, goTo }) {
               {MEALS.map(([id]) => {
                 const key = `${date}|${id}`;
                 return (
-                  <PlannerMeal key={id} day={vd} meal={id} who={who} adding={adding === key} onToggleAdd={() => setAdding(adding === key ? null : key)}
+                  <PlannerMeal key={id} day={vd} meal={id} who={who} adding={adding === key} onToggleAdd={() => setAdding(adding === key ? null : key)} onLock={lockMeal(date, id)} onFeedback={giveFeedback}
                     dragging={!!dragId} onDrop={() => { if (dragId) call(`/${dragId}`, "PATCH", { date, mealType: id, today }); setDragId(null); }}
                     onLog={(i) => logPlanned(date <= today ? date : today, i)} onRemove={(i) => call(`/${i.id}`, "DELETE")}
                     onAddSuggestion={(s) => planSuggestion(vd, { ...s, _meal: id })} onLogSuggestion={(s) => logSuggestion(vd, { ...s, _meal: id })}
@@ -199,10 +247,10 @@ export default function PlannerPage({ onBack, goTo }) {
                           )}
                           {more?.id === i.id && more.kind === "swap" && (
                             <>
-                              <b>Swap for something similar</b>
+                              <b>Top 3 swaps, with the reason for each</b>
                               {!more.alts && <div>Finding options…</div>}
                               {more.alts?.length === 0 && <div>No similar foods found.</div>}
-                              {more.alts?.map((a) => <button key={a.foodId || a.name} className="pl-alt" onClick={() => doSwap(i, a)}><span>{a.name}{a.familiar ? " ★" : ""}</span><small>{a.quantity} {a.unit} · {a.calories} kcal · {a.protein} g protein</small></button>)}
+                              {more.alts?.map((a) => <button key={a.foodId || a.name} className="pl-alt" onClick={() => doSwap(i, a)}><span>{a.name}{a.familiar ? " ★" : ""}</span><small>{a.quantity} {a.unit} · {a.calories} kcal · {a.protein} g protein</small>{a.reason && <small className="pl-alt-why">{a.reason}</small>}</button>)}
                             </>
                           )}
                         </div>

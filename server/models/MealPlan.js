@@ -22,6 +22,10 @@ const schema = new mongoose.Schema(
     auto: { type: Boolean, default: false },   // built by the smart planner ("Plan my week")
     role: { type: String, default: '' },       // protein | carb | veg | dairy | fruit | snack (smart planner)
     why: { type: String, default: '', maxlength: 200 }, // short reason shown under an auto-planned item
+    locked: { type: Boolean, default: false },  // kept when the rest of the week is re-shuffled
+    leftover: { type: Boolean, default: false }, // eaten from an earlier batch (no cooking)
+    cookMin: { type: Number, default: null },    // known cook time, when tagged
+    cookNote: { type: String, default: '', maxlength: 120 }, // e.g. "cook it without onion and garlic"
   },
   { timestamps: true }
 );

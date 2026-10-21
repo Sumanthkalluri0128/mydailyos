@@ -21,7 +21,7 @@ router.use(requireAuth);
 
 const PERSONAL_MODELS = [
   'Profile', 'WeightLog', 'WaterLog', 'Task', 'Habit', 'HabitLog', 'FoodLog', 'ActivityLog', 'WorkoutTemplate',
-  'HealthLog', 'Fast', 'SavedMeal', 'MealPlan', 'Recipe', 'Goal', 'Collection',
+  'HealthLog', 'Fast', 'SavedMeal', 'MealPlan', 'Recipe', 'Goal', 'Collection', 'FoodPreference', 'PlanTemplate',
 ];
 
 const passwordLimiter = rateLimit({
@@ -60,15 +60,16 @@ router.post('/change-password', passwordLimiter, wrap(async (req, res) => {
 // ---------------------------------------------------------------- export
 async function collectExport(userId) {
   const load = (name, sort = { date: 1, createdAt: 1 }) => require(`../models/${name}`).find({ userId }).sort(sort).lean();
-  const [user, profile, foodLogs, activityLogs, waterLogs, weightLogs, tasks, habits, habitLogs, templates, customFoods, healthLogs, fasts, goals] = await Promise.all([
+  const [user, profile, foodLogs, activityLogs, waterLogs, weightLogs, tasks, habits, habitLogs, templates, customFoods, healthLogs, fasts, goals, foodPrefs, planTemplates] = await Promise.all([
     User.findById(userId).select('name email createdAt').lean(),
     load('Profile', {}),
     load('FoodLog'), load('ActivityLog'), load('WaterLog'), load('WeightLog'),
     load('Task'), load('Habit', { createdAt: 1 }), load('HabitLog'), load('WorkoutTemplate', { name: 1 }),
     Food.find({ userId }).sort({ name: 1 }).lean(),
     load('HealthLog'), load('Fast', { startedAt: 1 }), load('Goal', { createdAt: 1 }),
+    load('FoodPreference', {}), load('PlanTemplate', { name: 1 }),
   ]);
-  return { user, profile: profile[0] || null, foodLogs, activityLogs, waterLogs, weightLogs, tasks, habits, habitLogs, templates, customFoods, healthLogs, fasts, goals };
+  return { user, profile: profile[0] || null, foodLogs, activityLogs, waterLogs, weightLogs, tasks, habits, habitLogs, templates, customFoods, healthLogs, fasts, goals, foodPreferences: foodPrefs[0] || null, planTemplates };
 }
 
 const CSV_HEADERS = ['type', 'date', 'name', 'quantity', 'unit', 'calories', 'protein_g', 'carbs_g', 'fat_g', 'details', 'notes'];

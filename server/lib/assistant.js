@@ -152,10 +152,10 @@ const MEAL_LABEL = { breakfast: 'Breakfast', lunch: 'Lunch', dinner: 'Dinner', s
 
 const A = {
   dietDay(snap, f, q = '') {
-    const diet = /non[- ]?veg|chicken|fish|meat|mutton/.test(q) ? 'n' : /\begg/.test(q) ? 'e' : 'v';
+    const diet = /non[- ]?veg|chicken|fish|meat|mutton/.test(q) ? 'n' : /\begg/.test(q) ? 'e' : (snap.prefDiet || 'v');
     const variant = /another|different|else|new one|more|change/.test(q) ? 1 + (Date.now() % 7) : 0;
     const date = new Date().toISOString().slice(0, 10);
-    const day = buildDietDay({ target: f.baseTarget || f.target || 1800, proteinGoal: f.proteinGoal || 0, diet, seed: `${date}|${variant}` });
+    const day = buildDietDay({ target: f.baseTarget || f.target || 1800, proteinGoal: f.proteinGoal || 0, diet, seed: `${date}|${variant}`, excluder: snap.excluder || null });
     const lines = day.meals.map((m) => `${MEAL_LABEL[m.mealType]} (${m.kcal} kcal)\n${m.items.map((i) => `• ${i.servings !== 1 ? `${i.servings} × ` : ''}${i.name}`).join('\n')}`);
     const label = diet === 'n' ? 'non-vegetarian' : diet === 'e' ? 'egg-friendly vegetarian' : 'vegetarian';
     const text = `Here is a balanced ${label} day, about ${day.totals.kcal} kcal with ${day.totals.protein} g protein and ${day.totals.fiber} g fibre:\n\n${lines.join('\n\n')}\n\n${day.tips.slice(0, 2).join(' ')}\nAsk again for a different version any day, or say "non-veg" / "with eggs" to change the style.`;

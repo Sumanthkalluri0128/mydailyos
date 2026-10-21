@@ -16,6 +16,7 @@ const { smoothTrend, trendRate } = require('../lib/trendWeight');
 const { detectPlateau } = require('../lib/plateau');
 const { weeksToGoal, limitTargets, dayBalance } = require('../lib/energy');
 const { suggestFoods } = require('../lib/suggest');
+const { loadPlanContext } = require('../lib/planContext');
 const { answer, suggestionsFor } = require('../lib/assistant');
 
 const router = express.Router();
@@ -31,6 +32,7 @@ const sum = (a) => a.reduce((x, y) => x + y, 0);
 
 async function buildSnapshot(uid, today, hour) {
   const core = await loadCore(uid, today, { historyDays: 14 });
+  const pcA = await loadPlanContext(uid, { today, profile: core.profile });
   const day = core.days.find((d) => d.date === today) || {};
   const week = core.days.filter((d) => d.date > addDays(today, -7));
   const [journey, logs, habitCount, recentLogs] = await Promise.all([
@@ -83,7 +85,7 @@ async function buildSnapshot(uid, today, hour) {
   const recentIds = new Set(ids);
   let ideas = [];
   if (ids.length && mealBudget > 60) {
-    const foods = (await Food.find({ _id: { $in: ids }, hidden: { $ne: true }, ...visible(uid) }).lean()).filter((f) => !PLACEHOLDER.test(f.name) && Number(f.calories) <= mealBudget * 1.05);
+    const foods = pcA.excluder.keep(pcA.decorate((await Food.find({ _id: { $in: ids }, hidden: { $ne: true }, ...visible(uid) }).lean()).filter((f) => !PLACEHOLDER.test(f.name) && Number(f.calories) <= mealBudget * 1.05)), (f) => f.name, (f) => ({ ingredients: f.ingredients }));
     ideas = suggestFoods(foods, { calories: mealBudget, protein: mealProtein, fiber: 0 }, { mealType: mealKey, recentIds, limit: 8 })
       .map((x) => ({ name: x.food.name, qty: `${x.food.servingSize} ${x.food.servingUnit}`, kcal: Math.round(x.food.calories), protein: Math.round(x.food.protein) }));
   }
@@ -93,6 +95,7 @@ async function buildSnapshot(uid, today, hour) {
     name: (p.name || '').split(' ')[0] || '', hour, balance: { target: balance.target, budget: balance.budget, bonus: balance.bonus, remaining: balance.remaining }, today: day, week, targets: { ...(journey?.targets || {}), calories: target }, ranges: core.ranges,
     limits: target ? limitTargets(balance.budget || target) : null, journey, streak: journey?.streak || null, weight, topFoods, weekendSkew, ideas, habitCount, mealsToday, sleepH, meal: { key: mealKey, budget: mealBudget, protein: mealProtein },
     steps7: week.length ? sum(week.map((d) => d.steps || 0)) / week.length : 0,
+    excluder: pcA.excluder, prefDiet: pcA.settings.diet,
   };
 }
 

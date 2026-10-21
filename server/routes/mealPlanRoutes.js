@@ -20,9 +20,20 @@ const { todayUtc } = require('../lib/dates');
 const { buildHistory } = require('../lib/progress');
 const { dayBalance, dailyTarget } = require('../lib/energy');
 const { reconcile, buildDayViews, fixedSummary } = require('../lib/dayView');
+const Recipe = require('../models/Recipe');
+const Q = require('../lib/planQuestions');
+const { loadPlanContext, filterHabits, adjustCoreForSafety } = require('../lib/planContext');
+const { createRules } = require('../lib/planRules');
+const { rankAlternatives } = require('../lib/planSwap');
+const { findViolations, norm } = require('../lib/foodSafety');
+const { buildGroceryList } = require('../lib/groceryList');
 
+const FoodPreference = require('../models/FoodPreference');
 const router = express.Router();
 router.use(requireAuth);
+
+/** The meals the person chose to plan in the Planning sensei (null = never chose: all four). */
+async function savedMeals(uid) { const d = await FoodPreference.findOne({ userId: uid }).select('scope').lean(); const m = d && d.scope && d.scope.meals; return m && m.length ? m : null; }
 
 const MEALS = ['breakfast', 'lunch', 'dinner', 'snacks'];
 const MAX_RANGE = 62;
@@ -66,8 +77,11 @@ router.post('/', wrap(async (req, res) => {
   else if (req.body?.name) food = (await adoptFood(Food, uid, String(req.body.name)))?.toObject?.() || null;
   if (!food) throw new HttpError(404, 'Food not found');
   if ((await MealPlan.countDocuments({ userId: uid, date })) >= 60) throw new HttpError(400, 'That day is full');
+  const pc = await loadPlanContext(uid, {});
+  const hit = pc.excluder.test(pc.decorate([food])[0]);
+  if (hit && hit.kind !== 'dislike') throw new HttpError(409, `I kept ${food.name} out of your plan: it ${hit.reason}. You asked me to keep that out, and I will not override it.`);
   const { doc, duplicate } = await createOnce(MealPlan, uid, clientId, { date, mealType, foodId: food._id, quantity, ...snapshot(food, quantity), ...(req.body?.why ? { why: String(req.body.why).slice(0, 200) } : {}) });
-  res.status(duplicate ? 200 : 201).json({ success: true, item: doc });
+  res.status(duplicate ? 200 : 201).json({ success: true, item: doc, ...(hit ? { warning: `You said you do not like this (${hit.id}). Added anyway because you chose it.` } : {}) });
 }));
 
 router.patch('/:id', wrap(async (req, res) => {
@@ -141,34 +155,36 @@ router.post('/copy-week', wrap(async (req, res) => {
   if (from === to) throw new HttpError(400, 'Choose a different week to copy into');
   const src = await MealPlan.find({ userId: uid, date: { $gte: from, $lte: addDays(from, 6) } }).lean();
   const shift = diffDays(from, to);
-  const docs = src.map(({ _id, createdAt, updatedAt, __v, ...rest }) => ({ ...rest, date: addDays(rest.date, shift), logged: false }));
+  const pc = await loadPlanContext(uid, {});
+  const bad = new Set(findViolations(src, pc.excluder).map((b) => b.item));        // a food you now keep out is not copied
+  const docs = src.filter((i) => !bad.has(i)).map(({ _id, createdAt, updatedAt, __v, clientId, logId, ...rest }) => ({ ...rest, date: addDays(rest.date, shift), logged: false, logId: null }));
   if (docs.length) await MealPlan.insertMany(docs);
-  res.status(201).json({ success: true, copied: docs.length });
+  res.status(201).json({ success: true, copied: docs.length, skipped: bad.size });
 }));
 
 // Everything needed for the plan, grouped by food: "Paneer – 600 g (6 servings)".
+// GET /api/meal-plans/shopping-list?from&to — the grocery list for planned (not yet eaten) meals.
+//   * the same food is merged; a recipe is expanded into its ingredients and merged with the same ingredient elsewhere
+//   * what you said you already have (Food Preferences) moves to `alreadyHave` instead of the buying list
+//   * quantities are scaled for the people who eat (adults 1, kids 0.5, elders 0.8 portions; estimates), `perPerson` keeps your own amount
+//   * a dish cooked in a batch counts for everything cooked (the leftover lunch is part of the same pot)
 router.get('/shopping-list', wrap(async (req, res) => {
   const { from, to } = range(req);
   const uid = req.user.id;
   const filter = { userId: uid, date: { $gte: from, $lte: to } };
   if (req.query.includeLogged !== 'true') filter.logged = false;
-  const items = await MealPlan.find(filter).lean();
-  const foods = await Food.find({ _id: { $in: [...new Set(items.map((i) => String(i.foodId)))] }, ...visible(uid) }).lean();
+  const [items, pc] = await Promise.all([MealPlan.find(filter).lean(), loadPlanContext(uid, {})]);
+  const foodIds = [...new Set(items.map((i) => String(i.foodId)))];
+  const [foods, recipes] = await Promise.all([
+    Food.find({ _id: { $in: foodIds }, ...visible(uid) }).lean(),
+    Recipe.find({ userId: uid, foodId: { $in: foodIds } }).lean(),
+  ]);
   const byId = new Map(foods.map((f) => [String(f._id), f]));
-  const groups = new Map();
-  for (const it of items) {
-    const key = String(it.foodId);
-    const g = groups.get(key) || { foodId: key, name: it.foodName, unit: it.servingUnit, quantity: 0, calories: 0, times: 0 };
-    g.quantity += it.quantity; g.calories += it.calories; g.times += 1;
-    groups.set(key, g);
-  }
-  const list = [...groups.values()].map((g) => {
-    const f = byId.get(g.foodId);
-    const unit = (f?.units || [])[0];
-    const approx = unit && unit.quantity ? { count: Math.round((g.quantity / unit.quantity) * 10) / 10, label: unit.label } : null;
-    return { ...g, quantity: Math.round(g.quantity * 10) / 10, calories: Math.round(g.calories), approx };
-  }).sort((a, b) => a.name.localeCompare(b.name));
-  res.json({ success: true, from, to, items: list });
+  const ingredientIds = recipes.flatMap((r) => (r.ingredients || []).map((x) => String(x.foodId))).filter((k) => !byId.has(k));
+  if (ingredientIds.length) for (const f of await Food.find({ _id: { $in: ingredientIds }, ...visible(uid) }).lean()) byId.set(String(f._id), f);
+  const factor = pc.settings.portions.factor || 1;
+  const list = buildGroceryList({ items, recipes, foodsById: byId, have: pc.settings.have, factor });
+  res.json({ success: true, from, to, ...list, people: { ...pc.settings.portions, scaled: factor !== 1 } });
 }));
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -182,7 +198,7 @@ async function loadHabits(uid, today) {
   const foodDocs = await Food.find({ _id: { $in: [...habits.byFood.keys()] }, hidden: { $ne: true }, ...visible(uid) }).lean();
   return { habits, foods: new Map(foodDocs.map((f) => [String(f._id), f])), names: logs.map((l) => l.foodName).filter(Boolean) };
 }
-const dietOf = (x, names) => (['v', 'e', 'n'].includes(x) ? x : inferDiet(names));
+const dietOf = (x, names, pcDiet) => (['v', 'e', 'n'].includes(x) ? x : pcDiet || inferDiet(names));
 const adviceView = (a) => (a && a.level !== 'none' ? { level: a.level, headline: a.headline, detail: a.detail, perDay: a.perDay, days: a.days, startDate: a.startDate, skipCut: a.skipCut, runDays: a.runDays, weekExcess: a.weekExcess, lastExcess: a.lastExcess } : null);
 
 // GET /api/meal-plans/habits — what I eat at each meal, how often, usual and biggest portion, and the weekly cap this implies.
@@ -209,7 +225,7 @@ router.get('/context', wrap(async (req, res) => {
   const { core } = adv;
   res.json({
     success: true, hasProfile: !!(core.ranges && core.target > 0), baseTarget: core.target || null, floor: core.floor,
-    advice: adviceView(adv.advice), targets: adv.targets, needs: adv.needs, diet: inferDiet(hab.names), loggedDays: hab.habits.loggedDays, hasHistory: hab.habits.byFood.size > 0,
+    advice: adviceView(adv.advice), targets: adv.targets, needs: adv.needs, diet: dietOf(req.query.diet, hab.names), loggedDays: hab.habits.loggedDays, hasHistory: hab.habits.byFood.size > 0,
     ranges: core.ranges || null,
   });
 }));
@@ -250,7 +266,10 @@ router.get('/view', wrap(async (req, res) => {
     MealPlan.find({ userId: uid, date: { $gte: from, $lte: to } }).sort({ createdAt: 1 }).lean(),
     FoodLog.find({ userId: uid, date: { $gte: from, $lte: to } }).sort({ createdAt: 1 }).lean(),
   ]);
-  const { core } = adv;
+  const pc = await loadPlanContext(uid, { today, profile: adv.core.profile });
+  const core = adjustCoreForSafety(adv.core, pc.safety);
+  const rules = createRules({ settings: pc.settings, excluder: pc.excluder, now: pc.now });
+  const diet = dietOf(req.query.diet, hab.names, pc.settings.diet);
   const needSuggest = dates.some((d) => d >= today);
   const [shared, mine, budgets] = await Promise.all([
     needSuggest ? catalogueFoods(Food) : [],
@@ -260,8 +279,12 @@ router.get('/view', wrap(async (req, res) => {
   const trims = {};
   for (const d of dates) trims[d] = d >= today && adv.targets[d] ? Math.max(0, Math.round(core.target - adv.targets[d])) : 0;
   const days = buildDayViews({
-    dates, today, logs, plans, budgets, trims, ranges: core.ranges, diet: dietOf(req.query.diet, hab.names), suggest: needSuggest,
-    foods: hab.foods, userFoods: mine, catalogue: shared.filter((f) => !f.hidden), habits: hab.habits,
+    dates, today, logs, plans, budgets, trims, ranges: core.ranges, diet, suggest: needSuggest,
+    foods: hab.foods, userFoods: pc.decorate(mine), catalogue: shared.filter((f) => !f.hidden), habits: hab.habits, rules,
+    dayInfo: (d, bud) => {
+      const i = rules.dayInfo(d, bud || core.target, core.floor);
+      return { out: i.out.map((m) => ({ meal: m, kind: pc.settings.out ? pc.settings.out.kind : '', aim: Math.round((bud || core.target) * (pc.settings.shares[m] || 0)) })), fasted: i.fasted, vrat: i.vrat, ramadan: i.ramadan, travel: i.travel, festivalRoom: i.room };
+    },
   });
   // A planned food that was logged directly (not through "Log") is marked done here, so it is paired for good and never counted twice.
   const rec = reconcile(plans, logs);
@@ -269,7 +292,10 @@ router.get('/view', wrap(async (req, res) => {
   for (const [planId, logId] of toMark) MealPlan.updateOne({ _id: planId, userId: uid }, { $set: { logged: true, logId } }).catch(() => {});
   res.json({
     success: true, today, from, to, days,
-    ctx: { hasProfile: !!(core.ranges && core.target > 0), baseTarget: core.target || null, floor: core.floor, ranges: core.ranges || null, advice: adviceView(adv.advice), diet: dietOf(req.query.diet, hab.names) },
+    ctx: {
+      hasProfile: !!(core.ranges && core.target > 0), baseTarget: core.target || null, floor: core.floor, ranges: core.ranges || null, advice: adviceView(adv.advice), diet,
+      safety: pc.safety, sensei: { setupDone: Q.isSetupDone(pc.prefs), improve: Q.isSetupDone(pc.prefs) ? Q.pickQuestions({ prefs: pc.prefs, ctx: { today, age: Number(core.profile.age) || 0, mode: 'update' } }).length : 0, coach: pc.prefs.coach || null },
+    },
   });
 }));
 
@@ -284,7 +310,8 @@ router.post('/auto', wrap(async (req, res) => {
   const nDays = clampInt(req.body?.days, 1, 7, 7);
   const to = addDays(from, nDays - 1);
   const dates = Array.from({ length: nDays }, (_, i) => addDays(from, i));
-  const meals = Array.isArray(req.body?.meals) && req.body.meals.length ? req.body.meals.filter((m) => MEALS.includes(m)) : MEALS;
+  const pcEarly = await savedMeals(uid);
+  const meals = Array.isArray(req.body?.meals) && req.body.meals.length ? req.body.meals.filter((m) => MEALS.includes(m)) : (pcEarly || MEALS);
   if (!meals.length) throw new HttpError(400, 'Choose at least one meal to plan');
   const today = req.body?.today ? v.date(req.body.today, 'today') : todayUtc();
   const mode = req.body?.mode === 'mine' ? 'mine' : 'balanced';
@@ -293,12 +320,15 @@ router.post('/auto', wrap(async (req, res) => {
   if (!planDates.length) throw new HttpError(400, 'That day is over. Past days show what you logged and cannot be planned.');
 
   const [adv, hab] = await Promise.all([loadAdvice(uid, today, { dates: planDates }), loadHabits(uid, today)]);
-  const { core } = adv;
+  const pc = await loadPlanContext(uid, { today, profile: adv.core.profile });
+  const core = adjustCoreForSafety(adv.core, pc.safety);
   if (!core.ranges || !(core.target > 0)) throw new HttpError(400, 'Add your height, age and weight in Profile first so each day can be sized for you');
-  const { habits, foods, names } = hab;
+  const { names } = hab;
+  const habitsFoods = mode === 'mine' ? filterHabits(hab.habits, new Map([...hab.foods].map(([id, f]) => [id, pc.decorate([f])[0]])), pc.excluder) : { habits: hab.habits, foods: hab.foods };
+  const { habits, foods } = habitsFoods;
   if (mode === 'mine' && !habits.byFood.size) throw new HttpError(422, 'Log a few days of meals first, or choose the balanced plan which does not need a food history');
-  const diet = dietOf(req.body?.diet, names);
-  const respect = req.body?.respectAdvice !== false;
+  const diet = dietOf(req.body?.diet, names, pc.settings.diet);
+  const respect = req.body?.respectAdvice !== false && !pc.safety.maintenanceOnly;   // pregnancy / under 18 / medical: no lighter-day cuts either
   const targets = respect ? { ...adv.targets } : Object.fromEntries(planDates.map((d) => [d, core.target]));
   // Today's budget is Home's budget (target + the food earned by activity so far), minus any "lighter day" cut, so the plan fills what Home says is left.
   if (planDates.includes(today)) {
@@ -315,7 +345,9 @@ router.post('/auto', wrap(async (req, res) => {
   // Logged food is FIXED. A plan row that was eaten (or matches something already logged) is covered by its log, so it is not
   // counted again as "planned": only rows still to eat compete for the budget.
   const rec = reconcile(existing, eaten);
-  const replace = (i) => i.auto && meals.includes(i.mealType);                    // earlier automatic, uneaten items of the meals being re-planned
+  // a locked meal is kept as it is while the rest is re-shuffled
+  const lockedMeals = new Set(rec.pending.filter((i) => i.locked).map((i) => `${i.date}|${i.mealType}`));
+  const replace = (i) => i.auto && !i.locked && !lockedMeals.has(`${i.date}|${i.mealType}`) && meals.includes(i.mealType);   // earlier automatic, uneaten items of the meals being re-planned
   const keep = rec.pending.filter((i) => !replace(i));
   const occupied = {}; const dayBase = {}; const weekCounts = new Map();
   const bump = (id) => weekCounts.set(String(id), (weekCounts.get(String(id)) || 0) + 1);
@@ -329,13 +361,18 @@ router.post('/auto', wrap(async (req, res) => {
   const common = { habits, foods, catalogue: shared.filter((f) => !f.hidden), dates: planDates, target: core.target, targets, floor: core.floor, ranges: core.ranges, limits: limitTargets(core.target), occupied, dayBase, weekCounts, meals };
   const plan = mode === 'mine'
     ? buildAutoPlan(common)
-    : buildSmartPlan({ ...common, userFoods: mine, diet, mode, needs: adv.needs, seed: `${uid}|${planDates[0]}|${variant}`, avoidIndulgent: !!adv.advice && adv.advice.level !== 'none' });
+    : buildSmartPlan({ ...common, userFoods: pc.decorate(mine), diet, mode, needs: adv.needs, seed: `${uid}|${planDates[0]}|${variant}`, avoidIndulgent: !!adv.advice && adv.advice.level !== 'none', settings: pc.settings, excluder: pc.excluder, now: pc.now });
+  // last gate: whatever the engine did, an excluded allergen is never shown or saved
+  const leaked = findViolations(plan.items, pc.excluder);
+  if (leaked.length) { plan.items = plan.items.filter((i) => !leaked.some((l) => l.item === i)); plan.notes = [...(plan.notes || []), 'A food that you keep out of your plan was removed.']; }
+  if (pc.safety.flagged) plan.notes = [pc.safety.note, ...(plan.notes || [])];
   if (!plan.items.length) throw new HttpError(422, plan.notes[0] || 'Nothing to plan: every meal in that range already has food');
   // What was treated as fixed, and add-ons for meals that are only partly logged (suggested, never saved on their own).
-  const sumPool = buildPool({ foods, userFoods: mine, catalogue: shared.filter((f) => !f.hidden), habits, diet });
+  const sumRules = createRules({ settings: pc.settings, excluder: pc.excluder, now: pc.now });
+  const sumPool = buildPool({ foods, userFoods: pc.decorate(mine), catalogue: shared.filter((f) => !f.hidden), habits, diet, rules: sumRules });
   const stillToEat = [...keep, ...plan.items].map((i) => ({ _id: i._id || `n:${i.date}|${i.mealType}|${i.foodName}`, date: i.date, mealType: i.mealType, foodId: i.foodId || '', foodName: i.foodName, quantity: i.quantity, servingUnit: i.servingUnit, calories: i.calories, protein: i.protein, fiber: i.fiber, carbohydrates: i.carbohydrates || 0, fat: i.fat || 0 }));
   const { fixed, addOns } = fixedSummary({ dates: planDates, logs: eaten, plans: stillToEat, budgets: targets, ranges: core.ranges, pool: sumPool });
-  const meta = { mode, diet, variant, advice: respect ? adviceView(adv.advice) : null, needs: adv.needs, hasHistory: habits.byFood.size > 0, fixed, addOns };
+  const meta = { mode, diet, variant, advice: respect ? adviceView(adv.advice) : null, needs: adv.needs, hasHistory: habits.byFood.size > 0, fixed, addOns, safety: pc.safety, usedPreferences: pc.hasPrefs, portions: pc.settings.portions, locked: [...lockedMeals] };
 
   if (req.body?.preview === true) return res.json({ success: true, preview: true, ...meta, ...plan });
 
@@ -346,11 +383,21 @@ router.post('/auto', wrap(async (req, res) => {
       const f = await adoptFood(Food, uid, i.foodName); if (!f) continue;
       foodId = f._id; unit = f.servingUnit;
     }
-    rows.push({ userId: uid, date: i.date, mealType: i.mealType, foodId, foodName: i.foodName, quantity: i.quantity, servingUnit: unit, calories: i.calories, protein: i.protein, fiber: i.fiber, carbohydrates: i.carbohydrates || 0, fat: i.fat || 0, auto: true, why: String(i.why || '').slice(0, 200), role: i.role || '' });
+    rows.push({ userId: uid, date: i.date, mealType: i.mealType, foodId, foodName: i.foodName, quantity: i.quantity, servingUnit: unit, calories: i.calories, protein: i.protein, fiber: i.fiber, carbohydrates: i.carbohydrates || 0, fat: i.fat || 0, auto: true, why: String(i.why || '').slice(0, 200), role: i.role || '', leftover: !!i.leftover, cookMin: i.cookMin ?? null, cookNote: String(i.cookNote || '').slice(0, 120) });
   }
-  await MealPlan.deleteMany({ userId: uid, date: { $in: planDates }, auto: true, logged: false, mealType: { $in: meals } });
+  const delFilter = { userId: uid, date: { $in: planDates }, auto: true, logged: false, locked: { $ne: true }, mealType: { $in: meals } };
+  if (lockedMeals.size) delFilter.$nor = [...lockedMeals].map((k) => { const [date, mealType] = k.split('|'); return { date, mealType }; });
+  await MealPlan.deleteMany(delFilter);
   const saved = await MealPlan.insertMany(rows);
   res.status(201).json({ success: true, saved: saved.length, ...meta, ...plan });
+}));
+
+// POST /api/meal-plans/lock { date, mealType, locked } — keep a planned meal while the rest of the week is re-shuffled ("Plan my week" again).
+router.post('/lock', wrap(async (req, res) => {
+  const date = v.date(req.body?.date); const mealType = v.oneOf(req.body?.mealType, 'mealType', MEALS);
+  const locked = req.body?.locked !== false;
+  const r = await MealPlan.updateMany({ userId: req.user.id, date, mealType, logged: false }, { $set: { locked } });
+  res.json({ success: true, locked, items: r.modifiedCount ?? r.nModified ?? 0 });
 }));
 
 // POST /api/meal-plans/clear { from, to?, meals? } — remove everything planned (and not yet eaten) in a range: a day, or a whole week.
@@ -358,31 +405,32 @@ router.post('/clear', wrap(async (req, res) => {
   const from = v.date(req.body?.from, 'from'); const to = req.body?.to ? v.date(req.body.to, 'to') : from;
   if (from > to || diffDays(from, to) > MAX_RANGE) throw new HttpError(400, `Range must be 1–${MAX_RANGE} days`);
   const filter = { userId: req.user.id, date: { $gte: from, $lte: to }, logged: false };
+  if (req.body?.keepLocked === true) filter.locked = { $ne: true };
   if (Array.isArray(req.body?.meals) && req.body.meals.length) filter.mealType = { $in: req.body.meals.filter((m) => MEALS.includes(m)) };
   const r = await MealPlan.deleteMany(filter);
   res.json({ success: true, removed: r.deletedCount || 0 });
 }));
 
-// GET /api/meal-plans/:id/alternatives — same kind of food (protein / carb / veg ...), similar calories, for the "Swap" button.
+// GET /api/meal-plans/:id/alternatives — the 3 best swaps for a planned food, each with the reason it was ranked there (same kind of food,
+// similar calories). Anything you keep out (allergies, dislikes, no-stove kitchen ...) is never offered.
 router.get('/:id/alternatives', wrap(async (req, res) => {
   const uid = req.user.id;
   const item = await MealPlan.findOne({ _id: v.objectId(req.params.id), userId: uid }).lean();
   if (!item) throw new HttpError(404, 'Planned item not found');
   const today = req.query.today ? v.date(req.query.today, 'today') : todayUtc();
-  const [hab, shared, mine] = await Promise.all([loadHabits(uid, today), catalogueFoods(Food), Food.find({ userId: uid, hidden: { $ne: true } }).limit(1500).lean()]);
+  const profile = await require('../models/Profile').findOne({ userId: uid }).lean();
+  const [hab, shared, mine, pc, dayItems, weekItems] = await Promise.all([
+    loadHabits(uid, today), catalogueFoods(Food), Food.find({ userId: uid, hidden: { $ne: true } }).limit(1500).lean(), loadPlanContext(uid, { today, profile: profile || {} }),
+    MealPlan.find({ userId: uid, date: item.date }).select('foodName role').lean(),
+    MealPlan.find({ userId: uid, date: { $gte: addDays(item.date, -3), $lte: addDays(item.date, 3) } }).select('foodId').lean(),
+  ]);
   const role = item.role || classify(item.foodName).role;
-  const pool = buildPool({ foods: hab.foods, userFoods: mine, catalogue: shared.filter((f) => !f.hidden), habits: hab.habits, diet: dietOf(req.query.diet, hab.names) });
-  const round2 = (x) => Math.round(x * 2) / 2;
-  const out = pool.filter((c) => c.role === role && (c.meals.has(item.mealType) || c.famMeals.has(item.mealType)) && c.key !== String(item.foodId) && c.name !== item.foodName && (!c.heavy || c.habit))
-    .map((c) => {
-      const servings = Math.min(4, Math.max(0.5, round2(item.calories / Math.max(c.per.calories, 20))));
-      const kcal = c.per.calories * servings;
-      const close = 1 - Math.abs(kcal - item.calories) / Math.max(item.calories, 60);
-      return { c, servings, kcal, score: close + (c.habit ? 0.35 : 0) + Math.min(0.4, (c.per.protein * servings * 4) / Math.max(kcal, 40)) };
-    })
-    .filter((x) => Math.abs(x.kcal - item.calories) <= Math.max(40, item.calories * 0.3))
-    .sort((a, b) => b.score - a.score).slice(0, 6)
-    .map(({ c, servings, kcal }) => ({ foodId: c.id, name: c.name, servings, quantity: Math.round(c.size * servings * 10) / 10, unit: c.unit, calories: Math.round(kcal), protein: Math.round(c.per.protein * servings * 10) / 10, familiar: !!c.habit, curated: c.source === 'curated' && !c.id }));
+  const rules = createRules({ settings: pc.settings, excluder: pc.excluder, now: pc.now });
+  const pool = buildPool({ foods: hab.foods, userFoods: pc.decorate(mine), catalogue: shared.filter((f) => !f.hidden), habits: hab.habits, diet: dietOf(req.query.diet, hab.names, pc.settings.diet), rules, allowSweet: role === 'sweet' });
+  const weekCounts = new Map(); for (const w of weekItems) weekCounts.set(String(w.foodId), (weekCounts.get(String(w.foodId)) || 0) + 1);
+  const { familyOf } = require('../lib/smartPlan');
+  const otherFamilies = new Set(dayItems.filter((d) => d.role === 'protein' && d.foodName !== item.foodName).map((d) => familyOf(d.foodName)));
+  const out = rankAlternatives({ item, pool, rules, weekCounts, plannedNames: new Set(dayItems.map((d) => d.foodName.toLowerCase())), otherFamilies, limit: 3, role });
   res.json({ success: true, role, items: out });
 }));
 
@@ -396,9 +444,12 @@ router.post('/:id/swap', wrap(async (req, res) => {
   if (req.body?.foodId) food = await Food.findOne({ _id: v.objectId(String(req.body.foodId), 'foodId'), ...visible(uid) }).lean();
   else if (req.body?.name) food = (await adoptFood(Food, uid, String(req.body.name)))?.toObject?.() || null;
   if (!food) throw new HttpError(404, 'Food not found');
+  const pc = await loadPlanContext(uid, {});
+  const hit = pc.excluder.test(pc.decorate([food])[0]);
+  if (hit && hit.kind !== 'dislike') throw new HttpError(409, `I kept ${food.name} out: it ${hit.reason}. You asked me to keep that out, and I will not override it.`);
   const servings = req.body?.servings !== undefined ? v.number(req.body.servings, 'servings', { min: 0.25, max: 20 }) : 1;
   const quantity = Math.round((Number(food.servingSize) || 1) * servings * 10) / 10;
-  item.foodId = food._id; item.quantity = quantity; item.why = 'Swapped by you'; item.role = classify(food.name).role === 'other' ? item.role : classify(food.name).role;
+  item.foodId = food._id; item.quantity = quantity; item.why = 'Swapped by you'; item.leftover = false; item.cookNote = ''; item.role = classify(food.name).role === 'other' ? item.role : classify(food.name).role;
   Object.assign(item, snapshot(food, quantity));
   await item.save();
   res.json({ success: true, item });
