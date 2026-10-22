@@ -485,7 +485,7 @@ function FoodLogger({ date, onBack, goTo }) {
 
         {/* Search */}
 
-        <div className="logger-search">
+        <div className="logger-search" data-tour="food-search">
 
           <input
             type="text"

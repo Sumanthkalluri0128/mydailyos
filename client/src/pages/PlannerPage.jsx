@@ -158,7 +158,7 @@ export default function PlannerPage({ onBack, goTo }) {
         <button className="secondary-button" onClick={() => setStart(addDays(start, 7))} aria-label="Next week">›</button>
         <button className="secondary-button" onClick={() => setStart(mondayOf(today))}>This week</button>
         <button className="secondary-button" onClick={copyWeek}>Copy last week</button>
-        <button className="primary-button" onClick={() => setAuto(!auto)}>✨ Plan my week</button>
+        <button className="primary-button" data-tour="plan-open" onClick={() => setAuto(!auto)}>✨ Plan my week</button>
         <button className="secondary-button" onClick={() => openShopping()}>🛒 Shopping list</button>
         <button className="secondary-button" onClick={() => (tpls ? setTpls(null) : loadTemplates())}>📑 Templates</button>
         <button className="secondary-button" onClick={clearWeek}>🗑️ Clear week</button>

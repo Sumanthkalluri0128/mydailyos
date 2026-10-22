@@ -312,7 +312,7 @@ function WeightPage({ onBack }) {
         )}
       </section>
 
-      <form className="wt-log" onSubmit={handleSubmit}>
+      <form className="wt-log" data-tour="weight-add" onSubmit={handleSubmit}>
         <div className="wt-log-head"><h2>Log today</h2><span className="wt-date">{today}</span></div>
         <div className="wt-stepper">
           <button type="button" onClick={() => nudge(-0.1)} aria-label="Down 0.1 kg">−</button>

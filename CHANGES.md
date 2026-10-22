@@ -1,3 +1,12 @@
+# v38 - Phase 3 / Section C: the app tour (web + server)
+- New tour (replaces nothing on web: there was none): welcome (3 screens, skips what we already know), up to 5 interactive first-win steps with a real spotlight, finish screen with the **Rookie** sticker, "Your first week" checklist on Home, one-time coachmarks with a "?" replay, "What's new" dots, Profile > Help and tour (replay, don't show again).
+- Server: `/api/tour` (GET, PATCH, DELETE), `/api/tour/event`, `/api/tour/complete`; `lib/tour.js` (pure); progress in `Profile.tour` (exported and deleted with the account).
+- One shared content file `tourContent.json` (client/src/tour, server/data, mobile src/utils); copy tested at 20 words max in three tones.
+- Real actions are detected centrally in `apiFetch` (no per-button code). New `data-tour` anchors: add-water, food-search, weight-add, exercise-add, plan-open, home-goal, coach-char, tab-*.
+- Custom component, no new dependency. Tests: server/test/tour.unit.test.js, client/src/tour/engine.test.js. See docs/PHASE3_APP_TOUR.md.
+- Needs mobile v34 for the same tour on the phone.
+---
+
 # v37 - Phase 3 / Section B: one goal, one daily focus, one level, one badge shelf (web + server)
 - Server: lib/simpleGoals.js (pure, tested) + lib/simpleData.js; new GET /api/goals/simple and POST /api/goals/check-target; journey endpoint now shares the one level and the 3 quests. Copy is written once on the server and sent to web and mobile.
 - Web: components/simple (GoalCard, FocusCard, LevelBar, BadgeShelf, DetailsPanel, TargetsPanel). Home: one goal card; Goals page: the simplified block, then Plan/rewards and Stickers folded away. Removed FatLossCard, JourneyCard, the duplicate quest list and the Real progress badge card. Weekly review shows the Weekly score parts and one win.

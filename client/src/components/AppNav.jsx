@@ -72,7 +72,7 @@ export default function AppNav({ current, go, theme, onToggleTheme, avatar, name
                   <div key={g.title} className="nv-group">
                     <div className="nv-title">{g.title}</div>
                     {g.items.map(([id, icon, label, hint]) => (
-                      <button key={id} type="button" role="menuitem" className={`nv-item ${is(id) ? "is-on" : ""}`} onClick={() => { setMenu(false); go(id); }}>
+                      <button key={id} type="button" role="menuitem" data-tour={`tab-${id}`} className={`nv-item ${is(id) ? "is-on" : ""}`} onClick={() => { setMenu(false); go(id); }}>
                         <span className="nv-ic" aria-hidden="true">{icon}</span><span><b>{label}</b><small>{hint}</small></span>
                       </button>
                     ))}
@@ -106,7 +106,7 @@ export default function AppNav({ current, go, theme, onToggleTheme, avatar, name
       </header>
       <nav className="nv-tabs" aria-label="Main navigation">
         {TABS.map(([id, icon, label]) => (
-          <button key={id} type="button" className={`nv-tab ${is(id) ? "is-on" : ""}`} onClick={() => go(id)} aria-current={is(id) ? "page" : undefined}><span aria-hidden="true">{icon}</span>{label}</button>
+          <button key={id} type="button" data-tour={`tab-${id}`} className={`nv-tab ${is(id) ? "is-on" : ""}`} onClick={() => go(id)} aria-current={is(id) ? "page" : undefined}><span aria-hidden="true">{icon}</span>{label}</button>
         ))}
         <button type="button" className={`nv-tab ${more ? "is-on" : ""}`} onClick={() => setMore(!more)} aria-expanded={more} aria-haspopup="dialog"><span aria-hidden="true">⋯</span>More</button>
       </nav>

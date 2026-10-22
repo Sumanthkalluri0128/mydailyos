@@ -69,6 +69,8 @@ const schema = new mongoose.Schema(
       type: [{ _id: false, date: String, key: String, label: String, from: mongoose.Schema.Types.Mixed, to: mongoose.Schema.Types.Mixed, reason: { type: String, default: '' } }],
       default: [],
     },
+    // Section C: app tour progress (what was done, seen and unlocked). Cleaned by lib/tour.js; included in the account export and deleted with the account.
+    tour: { type: mongoose.Schema.Types.Mixed, default: undefined },
     // Safety layer. hideNumbers hides weights and calorie counts in the apps (the plan still works).
     safety: { hideNumbers: { type: Boolean, default: false } },
     // Existing accounts default to true so they are never pushed through first-run onboarding;

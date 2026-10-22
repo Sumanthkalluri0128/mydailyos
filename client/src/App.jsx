@@ -21,6 +21,9 @@ import { PageSkeleton } from "./motion/PageTransition";
 import { withTransition } from "./motion/motion";
 import AppNav from "./components/AppNav";
 import AssistantPanel from "./components/AssistantPanel";
+import TourHost from "./tour/TourHost";
+import { setTourPage } from "./tour/page";
+import { queueTour } from "./tour/store";
 import HomeDashboard from "./components/home/HomeDashboard";
 
 import { getLocalDate } from "./utils/date";
@@ -63,6 +66,7 @@ function App() {
 
   const [currentPage, setCurrentPageRaw] =
     useState("dashboard");
+  useEffect(() => { setTourPage(currentPage); }, [currentPage]);
   // Cross-fade between pages with the View Transitions API (falls back to the .fx-page CSS entrance).
   const setCurrentPage = (page) => withTransition(() => setCurrentPageRaw(page));
 
@@ -370,6 +374,7 @@ function App() {
       <OnboardingPage
         profile={profile}
         onDone={(updated) => {
+          queueTour();            // a short guided tour opens on Home once setup is done
           setProfile(updated);
           try {
             const saved = JSON.parse(localStorage.getItem("mydailyos_dash_v1") || "null");
@@ -696,4 +701,6 @@ function App() {
   );
 }
 
-export default App;
+export default function AppWithTour() {
+  return (<><App /><TourHost /></>);
+}

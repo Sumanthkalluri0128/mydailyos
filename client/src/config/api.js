@@ -1,4 +1,5 @@
 import { API_URL } from "../config";
+import { noteRequest } from "../tour/store";
 import { enqueue, flushQueue, isQueueable, saveGet, savedGet, refreshPending, purgeOthers, wipeAll } from "../offline/offlineApi";
 
 export function clearSession() {
@@ -28,7 +29,7 @@ function buildRequest(input, options) {
   return { url, init: { ...options, headers }, token };
 }
 
-export async function apiFetch(input, options = {}) {
+async function apiFetchRaw(input, options = {}) {
   const method = String(options.method || "GET").toUpperCase();
   const { url, init, token } = buildRequest(input, options);
   const isApi = typeof url === "string" && url.startsWith(API_URL);
@@ -67,6 +68,13 @@ export async function apiFetch(input, options = {}) {
     response.clone().json().then((data) => saveGet(url, data)).catch(() => {});
   }
   return response;
+}
+
+/** Every request goes through here. After a successful write, the tour is told which real action happened (water logged, ...). */
+export async function apiFetch(input, options = {}) {
+  const res = await apiFetchRaw(input, options);
+  try { noteRequest(options.method || "GET", typeof input === "string" ? input : "", res.ok); } catch { /* the tour never breaks a request */ }
+  return res;
 }
 
 /** Sends one queued change (used by the replay loop). Returns { ok, status }. */

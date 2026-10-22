@@ -359,7 +359,7 @@ function Layer() {
         const st = stickerFor(v.w, v.scene, v.seed);
         return (
           <div key={`${i}-${v.w}`} ref={(el) => { els.current[i] = el; }} className={`cp ${sim.current[i]?.mode === "drag" ? "is-drag" : ""}`} style={{ width: SIZE, height: SIZE }}
-            onPointerDown={down(i)} onPointerMove={move(i)} onPointerUp={up(i)} onPointerCancel={up(i)} role="button" aria-label={`${CHARS[v.w]} — tap to chat, hold for quick actions, drag to throw`}>
+            onPointerDown={down(i)} onPointerMove={move(i)} onPointerUp={up(i)} onPointerCancel={up(i)} data-tour={i === 0 ? "coach-char" : undefined} role="button" aria-label={`${CHARS[v.w]} — tap to chat, hold for quick actions, drag to throw`}>
             <i className="cp-shadow" />
             <img src={st.src} alt="" width={SIZE} height={SIZE} draggable="false" />
             {v.zzz && <span className="cp-zzz">Z z z</span>}

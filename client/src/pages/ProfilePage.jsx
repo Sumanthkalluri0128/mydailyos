@@ -1,4 +1,5 @@
 import { notify } from "../utils/notify";
+import TourSettings from "../tour/TourSettings";
 import Buddy from "../motion/Buddy";
 import { apiFetch } from "../config/api";
 import { useEffect, useState } from "react";
@@ -340,6 +341,8 @@ function ProfilePage({ onBack }) {
         {/* ==================================================== */}
         {/* PERSONAL INFORMATION */}
         {/* ==================================================== */}
+
+        <TourSettings onStart={onBack} />
 
         <div className="card">
 
