@@ -17,7 +17,6 @@ const api = async (method, path, body) => {
 export default function NorthStarPanel() {
   const today = getLocalDate();
   const [d, setD] = useState(null);
-  const [out, setOut] = useState(null);
   const [targetKg, setTargetKg] = useState("");
   const [byDate, setByDate] = useState("");
   const [preview, setPreview] = useState(null);
@@ -30,7 +29,6 @@ export default function NorthStarPanel() {
       const r = await api("GET", `/api/plan?today=${today}`);
       setD(r);
       if (r.plan.active) { setTargetKg((v) => v || String(r.plan.targetKg || "")); setByDate((v) => v || r.plan.byDate || ""); }
-      api("GET", `/api/plan/outcomes?today=${today}`).then(setOut).catch(() => {});
     } catch { /* optional panel */ }
   }, [today]);
   useEffect(() => { load(); }, [load]);
@@ -62,27 +60,6 @@ export default function NorthStarPanel() {
         )}
         <button className="fl-btn" disabled={!preview || preview.ok === false} onClick={() => run(() => api("PUT", `/api/plan?today=${today}`, { targetKg: Number(targetKg), byDate }), "Your plan is set.")}>{active ? "Update my plan" : "Start my plan"}</button>
       </div>
-
-      {out && (
-        <div className="fl-card">
-          <h3>Real progress</h3>
-          <p>Badges for what changed, not just what you logged. {out.streak?.weekly && `Weekly streak: ${out.streak.weekly.weeks} week${out.streak.weekly.weeks === 1 ? "" : "s"} (a week counts at ${out.streak.weekly.need} of 7 days; this week ${out.streak.weekly.daysThisWeek}).`}</p>
-          {out.streak?.comeback && <p className="ink"><strong>🌅 Welcome back! Coming back after {out.streak.comeback.missedDays} days is what matters most.</strong></p>}
-          <div className="fl-badges">
-            {out.badges.map((b) => (
-              <div key={b.id} className={`fl-badge ${b.tier ? "" : "locked"}`}>
-                <div className={`fl-medal ${b.tier || ""}`}>{b.emoji}</div>
-                <div style={{ flex: 1 }}>
-                  <strong>{b.name}{b.tier ? ` · ${b.tier}` : ""}</strong>
-                  <p>{b.description}</p>
-                  {b.nextAt && <><div className="fl-bar"><i style={{ width: `${Math.round(b.progress * 100)}%` }} /></div><p>next: {b.nextAt} {b.unit}</p></>}
-                </div>
-              </div>
-            ))}
-          </div>
-          {out.bodyFat?.current != null && <p className="ink" style={{ marginTop: 10 }}>Estimated body fat: <strong>{out.bodyFat.current}%</strong>{out.bodyFat.change != null ? ` (${out.bodyFat.change > 0 ? "+" : ""}${out.bodyFat.change} since you started)` : ""}. Estimated from tape measurements; use it to see change over time.</p>}
-        </div>
-      )}
 
       <div className="fl-card">
         <h3>🎁 Reward ladder</h3>

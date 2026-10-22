@@ -60,6 +60,15 @@ const schema = new mongoose.Schema(
       breakPrev: { mode: { type: String, default: '' }, target: { type: Number, default: null } },
       lastBreakEnd: { type: String, default: '' },
     },
+    // Section B: highest XP ever shown (so the level never drops), when each badge family was first earned, and a short history of target changes.
+    journey: {
+      xpFloor: { type: Number, default: 0 },
+      earnedAt: { type: mongoose.Schema.Types.Mixed, default: {} },
+    },
+    targetHistory: {
+      type: [{ _id: false, date: String, key: String, label: String, from: mongoose.Schema.Types.Mixed, to: mongoose.Schema.Types.Mixed, reason: { type: String, default: '' } }],
+      default: [],
+    },
     // Safety layer. hideNumbers hides weights and calorie counts in the apps (the plan still works).
     safety: { hideNumbers: { type: Boolean, default: false } },
     // Existing accounts default to true so they are never pushed through first-run onboarding;

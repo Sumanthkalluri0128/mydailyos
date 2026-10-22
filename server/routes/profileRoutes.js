@@ -6,6 +6,7 @@ const v = require('../lib/validate');
 const { refreshStoredTarget } = require('../lib/profileEnergy');
 const { endBreak, breakExpired } = require('../lib/planState');
 const { todayUtc } = require('../lib/dates');
+const { diffTargets } = require('../lib/simpleGoals');
 
 const router = express.Router();
 router.use(requireAuth);
@@ -54,9 +55,14 @@ router.get('/', wrap(async (req, res) => {
 
 router.patch('/', wrap(async (req, res) => {
   const set = parseUpdate(req.body);
+  // Keep a short history of target changes (shown as one calm line and under Targets).
+  const before = Object.keys(set).some((k) => k.startsWith('goals.')) ? await Profile.findOne({ userId: req.user.id }).select('goals').lean() : null;
+  const history = before ? diffTargets(before.goals || {}, set, req.body?.today || todayUtc(), 'you asked for it') : [];
+  const update = { $set: set };
+  if (history.length) update.$push = { targetHistory: { $each: history, $slice: -50 } };
   const profile = await Profile.findOneAndUpdate(
     { userId: req.user.id },
-    { $set: set },
+    update,
     { new: true, upsert: true, setDefaultsOnInsert: true, runValidators: true }
   );
   // In auto mode the saved calorie goal mirrors the plan, so exports and other readers never see a stale number.

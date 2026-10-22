@@ -5,6 +5,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import "./goals.css";
 import NorthStarPanel from "../components/NorthStarPanel";
+import SimpleProgress from "../components/simple/SimpleProgress";
 import Buddy from "../motion/Buddy";
 import { apiFetch } from "../config/api";
 import { getLocalDate } from "../utils/date";
@@ -92,7 +93,7 @@ export default function GoalsPage({ onBack }) {
   const ownedSet = useMemo(() => new Set(album?.owned || []), [album]);
   if (err && !data) return <section className="gp"><button className="gp-back" onClick={onBack}>← Back</button><p className="gp-err">{err}</p></section>;
   if (!data) return <section className="gp"><button className="gp-back" onClick={onBack}>← Back</button><p>Loading your journey…</p></section>;
-  const { level: lv, today: dq, streak, weightJourney: wj, goals, chapter } = data;
+  const { goals, chapter } = data;
   const list = goals.filter((g) => g.kind === tab);
   const active = list.filter((g) => !g.done), finished = list.filter((g) => g.done);
   const packs = album?.packs;
@@ -102,7 +103,9 @@ export default function GoalsPage({ onBack }) {
   return (
     <section className="gp">
       <button className="gp-back" onClick={onBack}>← Back</button>
-      <NorthStarPanel />
+      <SimpleProgress onOpenGoals={() => document.getElementById('gp-plan')?.setAttribute('open', '')} />
+      <details id="gp-plan" className="sp-card sp-details"><summary>Plan, rewards and events</summary><NorthStarPanel /></details>
+      <details className="sp-card sp-details"><summary>Sticker packs, album and this week's path</summary>
 
       <div className="gp-hero2">
         <Buddy scene={packs?.available ? "cheer" : "wave"} size={104} who={mate} says={packs?.available ? `${packs.available} pack${packs.available === 1 ? "" : "s"} ready!` : say(mate || "naruto", "hype")} />
@@ -135,18 +138,6 @@ export default function GoalsPage({ onBack }) {
         <div className={`gp-chest ${chapter.chestReady ? "open" : ""}`}>{chapter.chestReady ? "🎁" : "📦"}</div>
       </div>
 
-      <h3>Today's moves <small>{dq.done}/{dq.total} · +{dq.xpEarned} XP · lvl {lv.level}</small></h3>
-      <div className="gp-moves">
-        {dq.quests.length === 0 && <p className="gp-muted">Finish your profile to unlock today's moves.</p>}
-        {dq.quests.map((q) => (
-          <div key={q.id} className={`gp-move ${q.done ? "done" : ""}`}>
-            <span className="gp-ico">{q.done ? "✅" : q.icon}</span>
-            <div><b>{q.title}</b><small>{q.done ? `Done! +${q.xp} XP` : `${q.hint} · +${q.xp} XP`}</small></div>
-            <em style={{ "--p": `${q.pct}%` }}>{q.pct}%</em>
-          </div>
-        ))}
-      </div>
-
       <h3>Your album</h3>
       <div className="gp-albums">
         {ALL.map((w) => {
@@ -163,16 +154,7 @@ export default function GoalsPage({ onBack }) {
         })}
       </div>
 
-      {wj && (
-        <>
-          <h3>Your weight journey <small><WeightReveal compact reaction={false} text={`${wj.startKg} → ${wj.targetKg} kg`} /></small></h3>
-          <div className="gp-card">
-            <div className="gp-row"><b>{wj.reached ? "Goal reached! 🏆" : <WeightReveal compact reaction={false} text={`${wj.remainingKg} kg to go`} />}</b><span>{wj.pct}%</span></div>
-            <Bar pct={wj.pct} tone={wj.reached ? "ok" : "xp"} />
-            <div className="gp-steps">{wj.checkpoints.map((c) => <span key={c.label} className={c.reached ? "on" : ""}>{c.reached ? "✓" : "○"} {c.label}<em><WeightReveal compact reaction={false} text={`${c.kg} kg`} /></em></span>)}</div>
-          </div>
-        </>
-      )}
+      </details>
 
       <details className="gp-fold">
         <summary>🎯 My goals (optional)</summary>

@@ -3,12 +3,14 @@ import { API_URL } from "../config";
 import { apiFetch } from "../config/api";
 import Buddy from "../motion/Buddy";
 import WeightReveal from "./WeightReveal";
+import { useSimple } from "./simple/useSimple";
 
 const NAMES = { zoro: "Zoro", naruto: "Naruto", luffy: "Luffy", jinwoo: "Jin-Woo", goku: "Goku", gojo: "Gojo" };
 
 // Weekly review, "what to change" tips and the boss-fight challenge — all computed on the server (/api/progress/coach).
 export default function WeeklyCoach() {
   const [d, setD] = useState(null);
+  const [sim] = useSimple();
   useEffect(() => {
     let live = true;
     const t = new Date();
@@ -32,7 +34,8 @@ export default function WeeklyCoach() {
           <p className="eyebrow">Your week</p>
           <h3>{review.headline}</h3>
           <p>{review.text}</p>
-          <strong>Score {review.score}/100 · {review.loggedDays}/7 days logged</strong>
+          <strong>{sim?.weeklyScore?.score != null ? `${sim.weeklyScore.title} ${sim.weeklyScore.score}/100 · ${sim.weeklyScore.parts.filter((p) => p.score !== null).map((p) => `${p.label} ${p.score}`).join(" · ")}` : `Score ${review.score}/100`} · {review.loggedDays}/7 days logged</strong>
+          {sim?.recap && <p>{sim.recap.win}</p>}
         </div>
       </div>
       {tips.length > 0 && (

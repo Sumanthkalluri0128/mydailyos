@@ -6,6 +6,8 @@ const { requireAuth } = require('../middleware/auth');
 const { wrap, HttpError } = require('../lib/http');
 const v = require('../lib/validate');
 const { loadJourney } = require('../lib/journeyData');
+const { loadSimple } = require('../lib/simpleData');
+const { checkTargetChange } = require('../lib/simpleGoals');
 const { GOAL_METRICS } = require('../lib/journey');
 const { todayUtc } = require('../lib/dates');
 
@@ -35,6 +37,19 @@ function parseGoal(body = {}, today, { partial = false } = {}) {
 router.get('/journey', wrap(async (req, res) => {
   const today = req.query.today ? v.date(req.query.today, 'today') : todayUtc();
   res.json({ success: true, ...(await loadJourney(req.user.id, today)) });
+}));
+
+// GET /api/goals/simple?today=  the whole simplified screen: one goal, today's quests, one level, weekly score, badge shelves, targets, recap.
+router.get('/simple', wrap(async (req, res) => {
+  const today = req.query.today ? v.date(req.query.today, 'today') : todayUtc();
+  res.json({ success: true, ...(await loadSimple(req.user.id, today)) });
+}));
+
+// POST /api/goals/check-target { key, value }  runs the app's safety rules on a typed target before it is saved.
+router.post('/check-target', wrap(async (req, res) => {
+  const profile = await Profile.findOne({ userId: req.user.id }).lean();
+  const floor = profile?.sex === 'male' ? 1500 : 1200;
+  res.json({ success: true, ...checkTargetChange(String(req.body?.key || ''), req.body?.value, { profile: profile || {}, floor }) });
 }));
 
 router.get('/', wrap(async (req, res) => {

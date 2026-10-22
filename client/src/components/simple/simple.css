@@ -1,0 +1,25 @@
+.sp-card{background:var(--surface,#fff);border:1px solid var(--border,#e4e6ef);border-radius:16px;padding:14px 16px;margin:10px 0}
+.sp-card h3{margin:0 0 4px;font-size:1.05rem}
+.sp-row{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.sp-muted{color:var(--text-muted,#6b7088);font-size:.88rem;margin:4px 0}
+.sp-bar{height:10px;border-radius:99px;background:var(--border,#e4e6ef);overflow:hidden;margin:8px 0}
+.sp-bar>i{display:block;height:100%;border-radius:99px;background:var(--primary,#5b6cff);transition:width .5s}
+.sp-pill{display:inline-block;padding:2px 10px;border-radius:99px;font-size:.8rem;font-weight:600;background:var(--primary-soft,#eceeff);color:var(--primary,#5b6cff)}
+.sp-pill.ahead,.sp-pill.reached{background:#e3f6ea;color:#1c7a43}.sp-pill.behind{background:#fff1dc;color:#9a5b00}
+.sp-quest{display:flex;align-items:center;gap:10px;padding:8px 0;min-height:44px}
+.sp-quest.done b{text-decoration:none;color:#1c7a43}.sp-quest small{display:block;color:var(--text-muted,#6b7088)}
+.sp-tick{width:28px;height:28px;border-radius:50%;border:2px solid var(--border,#d3d6e6);display:grid;place-items:center;flex:none}
+.sp-quest.done .sp-tick{background:#1c7a43;border-color:#1c7a43;color:#fff}
+.sp-reward{margin-top:8px;padding:8px 12px;border-radius:12px;background:#fff6d6;color:#6d5200;font-weight:600}
+.sp-shelf{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:10px}
+.sp-badge{border:1px solid var(--border,#e4e6ef);border-radius:14px;padding:10px;display:flex;gap:10px;align-items:flex-start}
+.sp-badge.locked{opacity:.75}
+.sp-badge .em{font-size:1.6rem;line-height:1}
+.sp-badge.common .em{filter:none}.sp-badge.rare{border-color:#3d8bff}.sp-badge.epic{border-color:#ffb020}.sp-badge.legendary{border-color:#c04bff}
+.sp-rar{font-size:.7rem;text-transform:uppercase;letter-spacing:.04em;color:var(--text-muted,#6b7088)}
+.sp-btn{min-height:44px;padding:0 16px;border-radius:12px;border:1px solid var(--border,#d3d6e6);background:var(--surface,#fff);cursor:pointer;font:inherit}
+.sp-btn.primary{background:var(--primary,#5b6cff);color:#fff;border-color:transparent}
+.sp-details>summary{cursor:pointer;min-height:44px;display:flex;align-items:center;font-weight:600}
+.sp-target{padding:10px 0;border-top:1px solid var(--border,#eceef6)}
+.sp-target input{min-height:44px;width:7rem;font:inherit;padding:0 10px;border-radius:10px;border:1px solid var(--border,#d3d6e6)}
+.sp-note{font-size:.88rem;color:#7a4a00}

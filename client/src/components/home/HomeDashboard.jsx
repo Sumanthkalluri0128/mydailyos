@@ -8,7 +8,7 @@ import "../homefocus.css";
 import HeroCard from "./HeroCard";
 import WeightReveal from "../WeightReveal";
 import OverDayCard from "../OverDayCard";
-import FatLossCard from "../FatLossCard";
+import { HomeGoal } from "../simple/SimpleProgress";
 import FixMyDay from "./FixMyDay";
 import HealthyDay from "./HealthyDay";
 import HomeSection from "../HomeSection";
@@ -341,9 +341,9 @@ export default function HomeDashboard({ profile, summary, activity, water, water
             <h2>Your Progress</h2>
             <b className="pg-lv">{lv ? `Level ${lv.level} · ${lv.rank}` : "Level 1 · Rookie"}</b>
             <i className="pg-bar"><b style={{ width: `${Math.max(4, lv?.pct ?? 0)}%` }} /></i>
-            <small>{q?.total ? `${q.done}/${q.total} quests done today` : "Set up your profile for daily quests"}</small>
+            <small>{lv?.nextLine ? `${lv.nextLine} · ` : ""}{q?.total ? `${q.done}/${q.total} quests done today` : "Set up your profile for daily quests"}</small>
             {q?.quests?.length > 0 && (
-              <ul className="pg-q">{q.quests.slice(0, 4).map((x) => <li key={x.id || x.title} className={x.done ? "done" : ""}><span aria-hidden="true">{x.done ? "✔" : "○"}</span>{x.title}</li>)}</ul>
+              <ul className="pg-q">{q.quests.slice(0, 3).map((x) => <li key={x.id || x.title} className={x.done ? "done" : ""}><span aria-hidden="true">{x.done ? "✔" : "○"}</span>{x.title}</li>)}</ul>
             )}
           </div>
           <Peek src={cast(12, "levelup")} className="pk-corner big" />
@@ -351,8 +351,8 @@ export default function HomeDashboard({ profile, summary, activity, water, water
 
       </section>
 
-      <HomeSection id="plan" icon="🧭" title="Plan & insights" summary="Your north star, reward milestones and weekly fat-loss score">
-        <FatLossCard onOpen={() => goTo("goals")} syncTick={syncTick} />
+      <HomeSection id="plan" icon="🧭" title="Your goal" summary="Progress so far and your likely finish date">
+        <HomeGoal onOpen={() => goTo("goals")} syncTick={syncTick} />
       </HomeSection>
 
       {sheet === "fix" && (
