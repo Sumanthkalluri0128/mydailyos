@@ -21,7 +21,7 @@ router.use(requireAuth);
 
 const PERSONAL_MODELS = [
   'Profile', 'WeightLog', 'WaterLog', 'Task', 'Habit', 'HabitLog', 'FoodLog', 'ActivityLog', 'WorkoutTemplate',
-  'HealthLog', 'Fast', 'SavedMeal', 'MealPlan', 'Recipe', 'Goal', 'Collection', 'FoodPreference', 'PlanTemplate',
+  'HealthLog', 'Fast', 'SavedMeal', 'MealPlan', 'Recipe', 'Goal', 'Collection', 'FoodPreference', 'PlanTemplate', 'FoodReport',
 ];
 
 const passwordLimiter = rateLimit({

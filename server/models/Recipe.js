@@ -10,7 +10,9 @@ const schema = new mongoose.Schema(
     ingredients: [
       {
         _id: false,
-        foodId: { type: mongoose.Schema.Types.ObjectId, ref: 'Food', required: true },
+        // Shared pot: grams of one serving of the latest pot (total cooked weight / servings). 0 = weight not entered.
+    potServingG: { type: Number, default: 0, min: 0, max: 100000 },
+    foodId: { type: mongoose.Schema.Types.ObjectId, ref: 'Food', required: true },
         foodName: { type: String, default: '' },
         quantity: { type: Number, required: true, min: 0.01 },
         servingUnit: { type: String, default: 'g' },

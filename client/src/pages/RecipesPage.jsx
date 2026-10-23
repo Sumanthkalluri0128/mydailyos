@@ -4,6 +4,7 @@ import { apiFetch } from "../config/api";
 import { notify } from "../utils/notify";
 import { confirmAction } from "../utils/confirm";
 import FoodPicker from "../components/FoodPicker";
+import "../components/logging1.css";
 
 const KEYS = ["calories", "protein", "carbohydrates", "fat", "fiber"];
 const blank = { name: "", servings: 4, notes: "", ingredients: [] };
@@ -16,17 +17,38 @@ export default function RecipesPage({ onBack }) {
 
   const mealNow = () => { const h = new Date().getHours(); return h < 10 ? "breakfast" : h < 16 ? "lunch" : h < 18 ? "snacks" : "dinner"; };
   const localToday = () => { const t = new Date(); return `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, "0")}-${String(t.getDate()).padStart(2, "0")}`; };
-  // Meal prep: cook a batch once, then log "1 portion" per meal and watch the count go down.
-  const cookBatch = async (r) => {
-    const res = await apiFetch(`/api/recipes/${r._id}/cook`, { method: "POST", body: JSON.stringify({}) });
-    if (!res.ok) return notify("Could not save the batch.", "error");
-    notify(`${r.servings} portions of ${r.name} in the fridge.`, "success"); load();
+  // Shared pot: "I cooked a pot" (servings and/or total cooked weight), then "I ate x servings / x g". Nutrition scales from the recipe.
+  const [pot, setPot] = useState(null); // { id, mode: 'cook' | 'eat', servings, totalG, grams, by, meal }
+  const openPot = (r, mode) => setPot({ id: r._id, mode, servings: String(mode === "cook" ? r.servings : 1), totalG: "", grams: "", by: "servings", meal: mealNow(), hasWeight: (r.potServingG || 0) > 0 });
+  const sendPot = async (r) => {
+    const body = pot.mode === "cook"
+      ? { servings: Number(pot.servings) || undefined, totalG: pot.totalG ? Number(pot.totalG) : undefined }
+      : { date: localToday(), mealType: pot.meal, ...(pot.by === "grams" ? { grams: Number(pot.grams) } : { portions: Number(pot.servings) }), clientId: `pot-${Date.now()}-${Math.random().toString(36).slice(2, 7)}` };
+    const res = await apiFetch(`/api/recipes/${r._id}/${pot.mode === "cook" ? "cook" : "eat"}`, { method: "POST", body: JSON.stringify(body) });
+    const d = await res.json().catch(() => ({}));
+    if (!res.ok) return notify(d.message || "Could not save that.", "error");
+    if (pot.mode === "cook") notify(`${d.pot?.servings ?? r.servings} servings of ${r.name} in the pot${d.pot?.servingG ? ` (about ${Math.round(d.pot.servingG)} g each)` : ""}.`, "success");
+    else {
+      notify(`${d.servings} serving${d.servings === 1 ? "" : "s"} of ${r.name} added to ${pot.meal}.${d.moreThanLeft ? " That was more than the pot had left, so the pot is now empty." : ""}`, "success");
+      if (d.sticker === "pot") notify("🥘 Sticker unlocked: Pot Boss! Your first shared-pot meal.", "success");
+    }
+    setPot(null); load();
   };
-  const eatPortion = async (r) => {
-    const meal = mealNow();
-    const res = await apiFetch(`/api/recipes/${r._id}/eat`, { method: "POST", body: JSON.stringify({ date: localToday(), mealType: meal, portions: 1, clientId: `mp-${Date.now()}-${Math.random().toString(36).slice(2, 7)}` }) });
-    if (!res.ok) return notify("Could not log that portion.", "error");
-    notify(`1 portion of ${r.name} added to ${meal}.`, "success"); load();
+
+  // Paste ingredients -> editable draft (nothing saved until you press Save recipe)
+  const [pasting, setPasting] = useState(null); // { text, servings, draft }
+  const readPaste = async () => {
+    const res = await apiFetch("/api/recipes/parse-ingredients", { method: "POST", body: JSON.stringify({ text: pasting.text, servings: Number(editing.servings) || 4 }) });
+    const d = await res.json();
+    if (!res.ok) return notify(d.message || "Could not read that list.", "error");
+    setPasting({ ...pasting, draft: d });
+  };
+  const usePaste = async () => {
+    const items = pasting.draft.items.filter((i) => Number(i.quantity) > 0);
+    const entries = await Promise.all(items.map((i) => apiFetch(`/api/foods/${i.foodId}`).then((x) => x.json()).then((d) => d.food).catch(() => null)));
+    setFoodMap((m) => ({ ...m, ...Object.fromEntries(entries.filter(Boolean).map((f) => [f._id, f])) }));
+    setEditing({ ...editing, ingredients: [...editing.ingredients, ...items.map((i) => ({ foodId: i.foodId, foodName: i.foodName, quantity: Number(i.quantity), servingUnit: i.servingUnit }))] });
+    setPasting(null);
   };
 
   const load = () => apiFetch("/api/recipes").then((r) => r.json()).then((d) => d.success && setRecipes(d.recipes)).catch(() => notify("Could not load recipes.", "error"));
@@ -96,6 +118,31 @@ export default function RecipesPage({ onBack }) {
               <button className="delete-log-button" aria-label={`Remove ${ing.foodName}`} onClick={() => setEditing({ ...editing, ingredients: editing.ingredients.filter((_, j) => j !== i) })}>✕</button>
             </div>
           ))}
+          {pasting ? (
+            <div className="ingr-draft large-card">
+              <strong>Paste your ingredients</strong>
+              <textarea rows={4} placeholder="2 cups rice, 1 cup toor dal, 2 tbsp oil, 1 tsp ghee" value={pasting.text} maxLength={2000} onChange={(e) => setPasting({ ...pasting, text: e.target.value, draft: null })} aria-label="Ingredient list" />
+              {!pasting.draft && <button className="primary-button" disabled={!pasting.text.trim()} onClick={readPaste}>Read the list</button>}
+              {pasting.draft && (
+                <>
+                  {pasting.draft.items.map((it, i) => (
+                    <div key={`${it.foodId}-${i}`}>
+                      <div className="text-logger-item"><span>{it.foodName}{it.confidence === "medium" ? " ?" : ""}</span>
+                        <input type="number" min="0.01" step="any" value={it.quantity ?? ""} placeholder="grams" aria-label={`Amount of ${it.foodName}`}
+                          onChange={(e) => setPasting({ ...pasting, draft: { ...pasting.draft, items: pasting.draft.items.map((x, j) => (j === i ? { ...x, quantity: e.target.value } : x)) } })} />
+                        <small>{it.servingUnit}</small>
+                        <button className="delete-log-button" aria-label={`Remove ${it.foodName}`} onClick={() => setPasting({ ...pasting, draft: { ...pasting.draft, items: pasting.draft.items.filter((_, j) => j !== i) } })}>✕</button></div>
+                      {it.warnings.map((w) => <p className="warn-line" key={w}>{w}</p>)}
+                    </div>
+                  ))}
+                  {pasting.draft.unmatched.length > 0 && <p className="card-description">Could not find: {pasting.draft.unmatched.join(", ")}. Add them with + Add ingredient.</p>}
+                  {pasting.draft.oilTspPerServing > 0 && <p className="card-description">Added oil: about {pasting.draft.oilTspPerServing} tsp per serving, roughly {Math.round(pasting.draft.oilTspPerServing * 40)} kcal.</p>}
+                  <button className="primary-button" onClick={usePaste}>Use these ingredients</button>
+                </>
+              )}
+              <button className="secondary-button" onClick={() => setPasting(null)}>Cancel</button>
+            </div>
+          ) : <button className="secondary-button" onClick={() => setPasting({ text: "", draft: null })}>📋 Paste ingredients</button>}
           {picking
             ? <FoodPicker actionLabel="Add ingredient" onCancel={() => setPicking(false)} onPick={(f, q) => {
                 setFoodMap((m) => ({ ...m, [f._id]: f }));
@@ -127,10 +174,31 @@ export default function RecipesPage({ onBack }) {
             <button className="secondary-button" onClick={() => edit(r)}>Edit</button>
             <button className="delete-log-button" aria-label={`Delete ${r.name}`} onClick={() => remove(r)}>✕</button>
             <div className="meal-prep-row">
-              <strong>🥘 {r.portionsLeft || 0} portion{(r.portionsLeft || 0) === 1 ? "" : "s"} left</strong>
-              <button className="secondary-button" onClick={() => cookBatch(r)}>＋ Cooked a batch</button>
-              <button className="secondary-button" onClick={() => eatPortion(r)}>Ate 1 portion ({mealNow()})</button>
+              <strong><Buddy scene="chef" size={28} talk={false} /> {r.portionsLeft || 0} serving{(r.portionsLeft || 0) === 1 ? "" : "s"} left in the pot</strong>
+              <button className="secondary-button" onClick={() => openPot(r, "cook")}>🥘 I cooked a pot</button>
+              <button className="secondary-button" onClick={() => openPot(r, "eat")}>I ate…</button>
             </div>
+            {pot?.id === r._id && (
+              <div className="pot-panel" role="group" aria-label={pot.mode === "cook" ? "Cooked a pot" : "Ate from the pot"}>
+                {pot.mode === "cook" ? (
+                  <>
+                    <label>Servings the pot makes <input type="number" min="0.25" step="any" value={pot.servings} onChange={(e) => setPot({ ...pot, servings: e.target.value })} /></label>
+                    <label>Total cooked weight in grams (optional, lets you log by grams) <input type="number" min="1" step="any" value={pot.totalG} onChange={(e) => setPot({ ...pot, totalG: e.target.value })} /></label>
+                  </>
+                ) : (
+                  <>
+                    <div className="chai-cups"><button type="button" className={pot.by === "servings" ? "chip active" : "chip"} onClick={() => setPot({ ...pot, by: "servings" })}>Servings</button>
+                      {pot.hasWeight && <button type="button" className={pot.by === "grams" ? "chip active" : "chip"} onClick={() => setPot({ ...pot, by: "grams" })}>Grams</button>}</div>
+                    {pot.by === "grams"
+                      ? <label>Grams eaten <input type="number" min="1" step="any" value={pot.grams} onChange={(e) => setPot({ ...pot, grams: e.target.value })} /></label>
+                      : <label>Servings eaten <input type="number" min="0.1" step="any" value={pot.servings} onChange={(e) => setPot({ ...pot, servings: e.target.value })} /></label>}
+                    {!pot.hasWeight && <small>To log by grams, enter the total cooked weight when you cook the pot.</small>}
+                    <select value={pot.meal} onChange={(e) => setPot({ ...pot, meal: e.target.value })} aria-label="Meal">{["breakfast", "lunch", "dinner", "snacks"].map((m) => <option key={m} value={m}>{m}</option>)}</select>
+                  </>
+                )}
+                <div className="repeat-row"><button className="primary-button" onClick={() => sendPot(r)}>{pot.mode === "cook" ? "Save the pot" : "Log it"}</button><button className="secondary-button" onClick={() => setPot(null)}>Cancel</button></div>
+              </div>
+            )}
           </div>
         ))}
       </div>

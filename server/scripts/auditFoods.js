@@ -2,6 +2,7 @@
 //   Atwater:  kcal ≈ 4·protein + 4·(carbs − fibre) + 2·fibre + 9·fat   (general factors; ±15 % or ±15 kcal is normal rounding)
 //   Rules:    sugar ≤ carbs, fibre ≤ carbs, nothing negative, macros can't weigh more than the serving, sodium plausible.
 const { CATALOGUE } = require('../lib/foodCatalogue');
+const { auditMicros } = require('../lib/micro');
 
 const num = (x) => Number(x) || 0;
 function audit(foods = CATALOGUE) {
@@ -21,7 +22,7 @@ function audit(foods = CATALOGUE) {
     if (kcal === 0 && (p || c || fat)) add('zero_kcal_with_macros', 'has macros but 0 kcal');
     if (gramsLike && num(f.servingSize) > 0 && kcal / f.servingSize > 9.2) add('density', `${Math.round((kcal / f.servingSize) * 10) / 10} kcal per ${f.servingUnit} is above pure fat (9)`);
   }
-  return issues;
+  return [...issues, ...auditMicros(foods)]; // micronutrients: no negatives, plausible upper bounds, a source for every catalogue value
 }
 
 if (require.main === module) {

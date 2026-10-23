@@ -10,6 +10,11 @@ import TextLogger from "../components/TextLogger";
 import SmartSuggestions from "../components/SmartSuggestions";
 import EatingOut from "../components/EatingOut";
 import IntakeBanner from "../components/IntakeBanner";
+import FoodTrust from "../components/FoodTrust";
+import ChaiCounter from "../components/ChaiCounter";
+import RepeatPreview from "../components/RepeatPreview";
+import PortionGuide from "../components/PortionGuide";
+import "../components/logging1.css";
 const MEALS = [
   {
     id: "breakfast",
@@ -60,26 +65,27 @@ function FoodLogger({ date, onBack, goTo }) {
   const quantity = total > 0 ? String(Math.round(total * 100) / 100) : "";
   const resetServing = () => { setServings("1"); setServeSize(""); };
 
-  // Copy everything logged for the selected meal yesterday onto today.
-  const copyYesterday = async () => {
-    const d = new Date(`${date}T00:00:00`);
-    d.setDate(d.getDate() - 1);
-    const pad = (n) => String(n).padStart(2, "0");
-    const from = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+  // Copy yesterday / same as last time: opens a preview (quantities editable) before anything is saved.
+  const [repeatMode, setRepeatMode] = useState(null);
+
+  // Multi-select: tick several foods, edit amounts, add them all in one tap.
+  const [multi, setMulti] = useState(false);
+  const [picked, setPicked] = useState({}); // foodId -> { food, quantity }
+  const togglePick = (food) => setPicked((p) => {
+    if (p[food._id]) { const { [food._id]: _drop, ...rest } = p; return rest; } // eslint-disable-line no-unused-vars
+    return { ...p, [food._id]: { food, quantity: String(food.servingSize || 1) } };
+  });
+  const addPicked = async () => {
+    const items = Object.values(picked).map((x) => ({ foodId: x.food._id, quantity: Number(x.quantity) || x.food.servingSize || 1 }));
+    if (!items.length) return;
     try {
-      const response = await apiFetch(`${API_URL}/api/food-logs/copy`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ fromDate: from, toDate: date, mealType: selectedMeal }),
-      });
+      const response = await apiFetch(`${API_URL}/api/food-logs/bulk`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ date, mealType: selectedMeal, items, clientId: `multi-${Date.now()}-${Math.random().toString(36).slice(2, 8)}` }) });
       const data = await response.json();
-      if (!response.ok) throw new Error(data.message || "Could not copy");
-      if (!data.logs?.length) notify(`You didn't log any ${selectedMeal} yesterday.`, "error");
-      else notify(`Copied ${data.logs.length} item(s) from yesterday's ${selectedMeal}.`, "success");
+      if (!response.ok) throw new Error(data.message || "Could not add those");
+      notify(`Added ${items.length} food${items.length === 1 ? "" : "s"} to ${selectedMeal}.`, "success");
+      setPicked({}); setMulti(false);
       await fetchFoodLogs();
-    } catch (error) {
-      notify(error.message || "Could not copy", "error");
-    }
+    } catch (error) { notify(error.message || "Could not add those", "error"); }
   };
 
   const [search, setSearch] = useState("");
@@ -485,10 +491,11 @@ function FoodLogger({ date, onBack, goTo }) {
 
         {/* Search */}
 
-        <div className="logger-search" data-tour="food-search">
+        <div className="logger-search">
 
           <input
             type="text"
+            data-tour="food-search"
             placeholder="🔍 Search your saved foods..."
             value={search}
             onFocus={() => setSearchFocus(true)}
@@ -515,10 +522,25 @@ function FoodLogger({ date, onBack, goTo }) {
 
         {!selectedFood && (
           <div className="serving-chips logger-quick">
-            <button type="button" className="chip" onClick={copyYesterday}>⟲ Same {selectedMeal} as yesterday</button>
+            <button type="button" className="chip" onClick={() => setRepeatMode("yesterday")}>⟲ Copy yesterday's {selectedMeal}</button>
+            <button type="button" className="chip" onClick={() => setRepeatMode("last")}>⟲ Same as last time</button>
+            <button type="button" className="chip" aria-pressed={multi} onClick={() => { setMulti(!multi); setPicked({}); }}>{multi ? "✕ Stop selecting" : "☑ Select several"}</button>
             <button type="button" className="chip" onClick={() => setShowExtras((v) => !v)}>{showExtras ? "− Fewer options" : "＋ Type a meal · Eating out · Suggestions"}</button>
           </div>
         )}
+
+        {multi && Object.keys(picked).length > 0 && (
+          <div className="multi-bar" role="group" aria-label="Selected foods">
+            {Object.values(picked).map(({ food, quantity: q }) => (
+              <span key={food._id} className="repeat-row">{food.name}
+                <input type="number" min="0.01" step="any" value={q} aria-label={`Amount of ${food.name}`} onChange={(e) => setPicked({ ...picked, [food._id]: { food, quantity: e.target.value } })} />
+                <small>{food.servingUnit}</small></span>
+            ))}
+            <button type="button" className="primary-button" onClick={addPicked}>Add {Object.keys(picked).length} to {selectedMeal}</button>
+          </div>
+        )}
+
+        {repeatMode && <RepeatPreview date={date} meal={selectedMeal} mode={repeatMode} onClose={() => setRepeatMode(null)} onDone={() => { setRepeatMode(null); fetchFoodLogs(); }} />}
 
         {/* Food list */}
 
@@ -554,13 +576,11 @@ function FoodLogger({ date, onBack, goTo }) {
                 (food) => (
                   <button
                     key={food._id}
-                    className="logger-food-item"
-                    onClick={() =>
-                      handleSelectFood(
-                        food
-                      )
-                    }
+                    className={`logger-food-item${picked[food._id] ? " picked" : ""}`}
+                    aria-pressed={multi ? !!picked[food._id] : undefined}
+                    onClick={() => (multi ? togglePick(food) : handleSelectFood(food))}
                   >
+                    {multi && <span aria-hidden="true">{picked[food._id] ? "☑" : "☐"}</span>}
 
                     <div>
                       <strong>
@@ -621,6 +641,7 @@ function FoodLogger({ date, onBack, goTo }) {
                     {selectedFood.brand}
                   </p>
                 )}
+                <FoodTrust food={selectedFood} />
               </div>
 
               <button
@@ -697,6 +718,8 @@ function FoodLogger({ date, onBack, goTo }) {
                   </button>
                 ))}
               </div>
+
+              <PortionGuide />
 
               <small>
                 Standard serving: {selectedFood.servingSize} {selectedFood.servingUnit}
@@ -808,6 +831,7 @@ function FoodLogger({ date, onBack, goTo }) {
       {showExtras && (
         <div className="logger-extras">
           <TextLogger date={date} defaultMeal={selectedMeal} onLogged={fetchFoodLogs} />
+          <ChaiCounter date={date} onLogged={fetchFoodLogs} />
           <EatingOut date={date} defaultMeal={selectedMeal} onLogged={fetchFoodLogs} />
           <SmartSuggestions date={date} mealType={selectedMeal} refreshKey={foodLogs.length} onLogged={fetchFoodLogs} />
         </div>

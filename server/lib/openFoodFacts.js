@@ -85,6 +85,17 @@ function offToDraft(code, product, { lenient = true } = {}) {
   while (sodiumG > 40) sodiumG /= 1000;
   sodiumG = Math.min(40, Math.max(0, sodiumG));
 
+  // Micronutrients: Open Food Facts stores GRAMS per 100 g. Only values that are really present are kept (absent = unknown, never 0).
+  const OFF_MICRO = [['iron', 'iron', 1e3], ['calcium', 'calcium', 1e3], ['potassium', 'potassium', 1e3], ['magnesium', 'magnesium', 1e3], ['zinc', 'zinc', 1e3],
+    ['vitaminA', 'vitamin-a', 1e6], ['vitaminB12', 'vitamin-b12', 1e6], ['vitaminC', 'vitamin-c', 1e3], ['vitaminD', 'vitamin-d', 1e6], ['folate', 'vitamin-b9', 1e6]];
+  const micro = {};
+  for (const [field, key, mult] of OFF_MICRO) {
+    let g = per100(key);
+    if (!Number.isFinite(g) && field === 'folate') g = per100('folates');
+    if (Number.isFinite(g) && g >= 0 && g <= 1) micro[field] = Math.round(g * mult * f * 100) / 100; // > 1 g per 100 g is a typing slip: ignored
+  }
+  const hasMicro = Object.keys(micro).length > 0;
+
   const name = [product.product_name, product.product_name_en, product.generic_name, product.generic_name_en, product.abbreviated_product_name]
     .map((x) => String(x || '').trim()).find(Boolean);
   if (!name) missing.push('name');
@@ -102,6 +113,8 @@ function offToDraft(code, product, { lenient = true } = {}) {
     fiber: r(grams('fiber')),
     sugar: r(grams('sugars')),
     sodium: Math.min(100000, Math.round(sodiumG * 1000 * f)),
+    ...micro,
+    ...(hasMicro ? { dataSource: 'Open Food Facts' } : {}),
     barcode: String(code),
     missing,
     estimated,

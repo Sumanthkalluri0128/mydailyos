@@ -1,4 +1,5 @@
 const express = require('express');
+const { microForDay, microForWeeks } = require('../lib/microData');
 const Profile = require('../models/Profile');
 const Habit = require('../models/Habit');
 const WeightLog = require('../models/WeightLog');
@@ -91,7 +92,20 @@ router.get('/coach', wrap(async (req, res) => {
   };
   const meals = rows.map((l) => ({ date: l.date, mealType: l.mealType, calories: Number(l.nutritionTotal?.calories || 0) }));
   const foods = rows.map((l) => ({ name: l.foodName, calories: Number(l.nutritionTotal?.calories || 0) }));
-  res.json({ success: true, ...buildCoach({ days: history.days, meals, foods, targets, today, expectedTdee: e?.tdee || null }) });
+  // "Low on iron 3 weeks in a row" with foods from the person's own log first (only when there is enough vitamin / mineral data).
+  let microInsights = [];
+  try { microInsights = (await microForWeeks(uid, today)).insights.slice(0, 2); } catch { /* optional */ }
+  res.json({ success: true, ...buildCoach({ days: history.days, meals, foods, targets, today, expectedTdee: e?.tdee || null }), microInsights });
+}));
+
+// Vitamins and minerals for one day (min-max range per nutrient, "not enough data" instead of misleading zeros) and the week view.
+router.get('/micro', wrap(async (req, res) => {
+  const date = req.query.date ? v.date(req.query.date, 'date') : todayUtc();
+  res.json({ success: true, ...(await microForDay(req.user.id, date)) });
+}));
+router.get('/micro/weekly', wrap(async (req, res) => {
+  const end = req.query.end ? v.date(req.query.end, 'end') : todayUtc();
+  res.json({ success: true, ...(await microForWeeks(req.user.id, end)) });
 }));
 
 router.get('/achievements', wrap(async (req, res) => {

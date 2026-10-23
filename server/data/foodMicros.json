@@ -1,0 +1,1 @@
+{ "_about": "Per-serving micronutrients for catalogue foods. Fill via scripts/importMicros.js --import <csv>. Each food: { iron, calcium, potassium, magnesium, zinc, vitaminA, vitaminB12, vitaminC, vitaminD, folate, sodium, source }. A value is only accepted with a source (IFCT 2017 table row or USDA FoodData Central id). Empty = unknown. Nothing here is invented.", "foods": {} }

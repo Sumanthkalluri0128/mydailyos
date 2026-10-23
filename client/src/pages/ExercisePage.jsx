@@ -526,7 +526,6 @@ function ExercisePage({ onBack }) {
           <button
             className="primary-button"
             type="submit"
-            data-tour="exercise-add"
             disabled={loading}
           >
             {loading

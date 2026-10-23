@@ -1,10 +1,35 @@
-# v38 - Phase 3 / Section C: the app tour (web + server)
-- New tour (replaces nothing on web: there was none): welcome (3 screens, skips what we already know), up to 5 interactive first-win steps with a real spotlight, finish screen with the **Rookie** sticker, "Your first week" checklist on Home, one-time coachmarks with a "?" replay, "What's new" dots, Profile > Help and tour (replay, don't show again).
-- Server: `/api/tour` (GET, PATCH, DELETE), `/api/tour/event`, `/api/tour/complete`; `lib/tour.js` (pure); progress in `Profile.tour` (exported and deleted with the account).
-- One shared content file `tourContent.json` (client/src/tour, server/data, mobile src/utils); copy tested at 20 words max in three tones.
-- Real actions are detected centrally in `apiFetch` (no per-button code). New `data-tour` anchors: add-water, food-search, weight-add, exercise-add, plan-open, home-goal, coach-char, tab-*.
-- Custom component, no new dependency. Tests: server/test/tour.unit.test.js, client/src/tour/engine.test.js. See docs/PHASE3_APP_TOUR.md.
-- Needs mobile v34 for the same tour on the phone.
+# v40 - Phase 3 / Section E: faster food logging, part 1 (web + server)
+- **Copy / repeat**: "Copy yesterday's lunch" and "Same as last time" open a preview with editable amounts before anything is saved. **Select several** foods from search and add them in one tap (`/api/food-logs/bulk`).
+- **Voice logging**: Speak button (hidden where the browser has no speech recognition) with English, Hindi, Telugu, Tamil. The heard text goes through the existing meal parser into an editable review. Sticker for the first spoken meal.
+- **Shared pot**: "I cooked a pot" (servings and/or total cooked weight), then "I ate" by servings or grams; nutrition scales from the recipe and the pot's servings left go down. Sticker for the first one.
+- **Paste ingredients** into a recipe ("2 cups rice, 1 cup toor dal, 2 tbsp oil"): amounts converted to grams, raw rice and dal converted to cooked weight (calories kept), warnings where it had to assume, added-oil line. Nothing guessed: unknown weights are left for you.
+- **Portion guides**: drawn katori, roti, ladle, glass and spoon sizes next to the quantity box.
+- **Chai and coffee counter**: cups, sugar spoons, milk, cup size; calories from the catalogue's milk and sugar; weekly "hidden calories" note in kind wording.
+- Tests: server/test/logging1.unit.test.js (10), client portionGuides.test.js (2). Docs: docs/PHASE3_LOGGING1.md.
+- NOT built or run here (no npm registry): run `npm run build` in client and `npm test` in server.
+---
+# v39 - Phase 3 / Section D: food data accuracy and trust (web + server)
+- **Vitamins and minerals** (iron, calcium, potassium, magnesium, zinc, A, B12, C, D, folate): power-up card on Progress with the macro arrows, a character reaction, bars against adult ICMR-NIN ranges, and tap-a-low-nutrient for foods you already log that help. Too little data shows "Not enough data", never a zero.
+- **Confidence label** on every food (Verified / Typical / Added by you) and **Report wrong values** (reports saved for the admin list; `GET /api/admin/food-reports`, `ADMIN_EMAILS` env var).
+- Optional vitamin/mineral inputs in the food form (blank = unknown). Open Food Facts scans now import vitamins and minerals when present.
+- Weekly coach: "Low on iron 3 weeks in a row" with foods from your own log.
+- Data pipeline with no invented values: `server/data/foodMicros.json` is empty on purpose; fill `foodMicros.template.csv` from IFCT/USDA and run `node scripts/importMicros.js --import file.csv`. `rdaIcmrNin.json` is marked unverified: check it against the ICMR-NIN 2020 PDF.
+- Food reports are included in export and account deletion. Migration: none. Docs: CALCULATIONS.md, docs/PHASE3_FOOD_TRUST.md.
+- Tests: server/test/micro.unit.test.js (12).
+- NOT built or run here (no npm registry): run `npm run build` in client and `npm test` in server.
+---
+# v38 - Phase 3 / Section C: a real onboarding and app tour (web + server)
+- **Welcome (3 screens)**: what the app gives you, your goal (pre-filled from your profile), your coach (saved with the Planning sensei coach). Opens once after sign-up; "Not now" and "Don't show again" on every screen.
+- **First-win steps (max 5, goal-based path)**: the person does the thing ("Tap + and log a glass of water", "Search 'dal' and add it", "Plan tomorrow"). Real actions are detected from successful API writes (`flexfit:api-write`, offline-queued writes count too), the coach cheers with a power-up scene.
+- **Real spotlight**: dimmed page with a cut-out around the actual element (measured with getBoundingClientRect, follows scroll / resize / keyboard), pulse ring, pointer, tooltip that flips to fit (tested at 360 x 640). A missing anchor skips that step instead of breaking. Anchors are `data-tour="..."`.
+- **Your first week checklist** on Home (log a meal, water, weight, plan tomorrow, meet your coach), "3 of 5", collapsible, dismissible, resumable; finishing shows the **Rookie** sticker.
+- **Coachmarks**: 1-3 hints the first time you open Log, Planner, Progress, Tasks, Profile, with "Got it" and a "?" button that replays them. **What's new** dots from one config list.
+- **Control**: Skip tour at any time (resume from Home or Profile), replay and resume from Profile > Help and tour. Short copy (max 20 words, tested).
+- **Accessibility**: focus trap and Esc on the welcome and spotlight, polite screen-reader announcements, 44 px targets, reduced-motion respected.
+- **One shared content file**: `client/src/tour/tourContent.js` + `tourEngine.js` are byte-identical to the mobile copies. Progress is kept in the browser and on the server (`GET/PUT /api/tour`, merged so nothing completed is lost). No third-party library or tracker (custom component, no licence needed).
+- Server: `Profile.tour`, `routes/tourRoutes.js`, `lib/tourState.js`. Migration: none.
+- Tests: client/src/tour/tourEngine.test.js (14), server/test/tourState.unit.test.js.
+- NOT built or run here (no npm registry): run `npm run build` in client and `npm test` in server.
 ---
 
 # v37 - Phase 3 / Section B: one goal, one daily focus, one level, one badge shelf (web + server)

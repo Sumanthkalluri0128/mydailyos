@@ -3,6 +3,7 @@ import Buddy from "../motion/Buddy";
 import { API_URL } from "../config";
 import { apiFetch } from "../config/api";
 import WeeklyCoach from "../components/WeeklyCoach";
+import MicroCard from "../components/MicroCard";
 import OverDayCard from "../components/OverDayCard";
 import PatternsCard from "../components/PatternsCard";
 import { getLocalDate } from "../utils/date";
@@ -291,6 +292,7 @@ function ProgressPage({ onBack }) {
 
       <OverDayCard />
       <WeeklyCoach />
+      <MicroCard />
       <PatternsCard />
 
       <section className="progress-toolbar card">

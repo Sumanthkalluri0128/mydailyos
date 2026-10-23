@@ -312,7 +312,7 @@ function WeightPage({ onBack }) {
         )}
       </section>
 
-      <form className="wt-log" data-tour="weight-add" onSubmit={handleSubmit}>
+      <form className="wt-log" onSubmit={handleSubmit}>
         <div className="wt-log-head"><h2>Log today</h2><span className="wt-date">{today}</span></div>
         <div className="wt-stepper">
           <button type="button" onClick={() => nudge(-0.1)} aria-label="Down 0.1 kg">−</button>
@@ -320,7 +320,7 @@ function WeightPage({ onBack }) {
           <button type="button" onClick={() => nudge(0.1)} aria-label="Up 0.1 kg">+</button>
         </div>
         <input className="wt-note" type="text" placeholder="Note (optional): morning, after gym…" value={notes} onChange={(e) => setNotes(e.target.value)} />
-        <button type="submit" className="primary-button wt-save" disabled={loading || weight === ""}>{loading ? "Saving…" : "Save weight"}</button>
+        <button type="submit" data-tour="weight-add" className="primary-button wt-save" disabled={loading || weight === ""}>{loading ? "Saving…" : "Save weight"}</button>
       </form>
 
       <section className="wt-history">

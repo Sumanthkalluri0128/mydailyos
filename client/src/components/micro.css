@@ -1,0 +1,17 @@
+.micro-card .micro-head{display:flex;gap:12px;align-items:center}
+.micro-rows{list-style:none;margin:12px 0 0;padding:0;display:grid;gap:6px}
+.micro-line{display:grid;grid-template-columns:96px 1fr auto;gap:8px;align-items:center;width:100%;background:none;border:0;padding:6px 0;color:inherit;text-align:left;font:inherit}
+.micro-line:disabled{cursor:default}
+.micro-bar{height:8px;border-radius:6px;background:rgba(127,127,127,.2);overflow:hidden}
+.micro-bar i{display:block;height:100%;background:var(--accent,#4f8cff);border-radius:6px}
+.micro-row.low .micro-bar i{background:#e0a030}
+.micro-row.high .micro-bar i{background:#d9822b}
+.micro-row.nodata .micro-val{opacity:.65;grid-column:2/4}
+.micro-val small{opacity:.7}
+.micro-why{padding:4px 0 8px 96px;font-size:.9em}
+.micro-note{font-size:.82em;opacity:.75;margin-top:8px}
+.food-trust{display:inline-flex;gap:8px;align-items:center;flex-wrap:wrap;font-size:.85em}
+.trust-badge{display:inline-flex;gap:4px;align-items:center;padding:2px 8px;border-radius:999px;border:1px solid rgba(127,127,127,.4)}
+.trust-badge.verified{border-color:#3aa76d}
+.trust-report{background:none;border:0;text-decoration:underline;color:inherit;cursor:pointer;padding:0;font:inherit}
+.trust-form{display:grid;gap:6px;margin-top:6px}

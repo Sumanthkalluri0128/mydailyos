@@ -368,6 +368,7 @@ const [editingFood, setEditingFood] = useState(null);
 <div className="food-filters">
   <input
     type="text"
+    data-tour="food-search"
     placeholder="🔍 Search foods..."
     value={search}
     onChange={(event) => {

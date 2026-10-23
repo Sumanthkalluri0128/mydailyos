@@ -8,6 +8,7 @@ const v = require('../lib/validate');
 const { lookupBarcode, CODE_RE } = require('../lib/openFoodFacts');
 const Profile = require('../models/Profile');
 const { parseMealText } = require('../lib/foodParse');
+const { normalizeSpoken } = require('../lib/voiceText');
 const { catalogueFoods } = require('../lib/foodCache');
 const { suggestFoods } = require('../lib/suggest');
 const { adoptFood, freshPicks } = require('../lib/healthyDiet');
@@ -21,6 +22,9 @@ const { expandWord, englishify } = require('../lib/foodAliases');
 const { searchFoods, tokens } = require('../lib/foodSearch');
 const { dailyTarget, expectedEnergy, macroTargets, macroRanges, dayBalance } = require('../lib/energy');
 
+const { MICROS, microsOf, confidenceOf } = require('../lib/micro');
+const FoodReport = require('../models/FoodReport');
+
 const router = express.Router();
 router.use(requireAuth);
 
@@ -32,6 +36,8 @@ function present(food, userId) {
   const mine = f.userId && String(f.userId) === String(userId);
   const fav = (f.favoriteBy || []).some((id) => String(id) === String(userId)) || (mine && f.isFavorite === true);
   delete f.favoriteBy;
+  const m = microsOf(f);
+  f.micros = m.values; f.microSource = m.source; f.confidence = confidenceOf(f);
   f.isCustom = !!mine;
   f.isFavorite = !!fav;
   return f;
@@ -55,6 +61,12 @@ function sodiumMg(raw) {
   return Math.round(n * 10) / 10;
 }
 
+/** Optional micronutrient: blank / missing stays null (unknown); a number must be 0 or more. */
+function microNum(raw, key) {
+  if (raw === undefined || raw === null || raw === '') return null;
+  return v.number(raw, key, { min: 0, max: 100000 });
+}
+
 function parseFood(body = {}) {
   const num = (k, o = {}) => v.number(body[k], k, { min: 0, max: 100000, required: false, def: 0, ...o });
   return {
@@ -69,6 +81,8 @@ function parseFood(body = {}) {
     fiber: num('fiber'),
     sugar: num('sugar'),
     sodium: sodiumMg(body.sodium),
+    ...Object.fromEntries(MICROS.map((m) => [m.field, microNum(body[m.field], m.field)])),
+    dataSource: v.string(body.dataSource, 'dataSource', { max: 160 }),
     barcode: v.string(body.barcode, 'barcode', { max: 20 }),
     units: parseUnits(body.units),
     notes: v.string(body.notes, 'notes', { max: 500 }),
@@ -149,7 +163,9 @@ router.get('/dish-range', wrap(async (req, res) => {
 router.post('/parse', wrap(async (req, res) => {
   const text = v.string(req.body?.text, 'text', { max: 600, required: true });
   const [shared, mine] = await Promise.all([catalogueFoods(Food), Food.find({ userId: req.user.id, hidden: { $ne: true } }).select('name brand servingSize servingUnit units userId').limit(2000).lean()]);
-  res.json({ success: true, ...parseMealText(englishify(text), [...mine, ...shared]) });
+  // Spoken text (from on-device speech-to-text) is tidied first; the answer is always a review list, never saved here.
+  const spoken = req.body?.spoken ? normalizeSpoken(text) : null;
+  res.json({ success: true, ...parseMealText(englishify(spoken ? spoken.text : text), [...mine, ...shared]), ...(spoken ? { heardText: spoken.text, meal: spoken.meal } : {}) });
 }));
 
 // GET /api/foods/suggest?date=YYYY-MM-DD&mealType=lunch — what fits what's left today.
@@ -270,6 +286,15 @@ router.put('/:id', wrap(async (req, res) => {
   Object.assign(food, parseFood(req.body));
   await food.save();
   res.json({ success: true, food: present(food, req.user.id) });
+}));
+
+// "Report wrong values": stores a note for the admin list. One open report per person per food (a second one updates the note).
+router.post('/:id/report', wrap(async (req, res) => {
+  const food = await Food.findOne({ _id: v.objectId(req.params.id), ...visibleTo(req.user.id) }).select('name userId').lean();
+  if (!food) throw new HttpError(404, 'Food not found');
+  const note = v.string(req.body?.note, 'note', { max: 500, required: true });
+  await FoodReport.findOneAndUpdate({ foodId: food._id, userId: req.user.id, status: 'open' }, { $set: { note, foodName: food.name, catalogue: !food.userId } }, { upsert: true, new: true, setDefaultsOnInsert: true });
+  res.status(201).json({ success: true, message: 'Thank you. We will check these values.' });
 }));
 
 router.patch('/:id/favorite', wrap(async (req, res) => {

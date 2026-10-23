@@ -18,7 +18,21 @@ const emptyForm = {
   fiber: "",
   sugar: "",
   notes: "",
+  iron: "",
+  calcium: "",
+  potassium: "",
+  magnesium: "",
+  zinc: "",
+  vitaminA: "",
+  vitaminB12: "",
+  vitaminC: "",
+  vitaminD: "",
+  folate: "",
 };
+
+const optNum = (v) => (v === "" || v === null || v === undefined ? null : Number(v));
+
+const MICRO_FIELDS = [["iron", "Iron (mg)"], ["calcium", "Calcium (mg)"], ["potassium", "Potassium (mg)"], ["magnesium", "Magnesium (mg)"], ["zinc", "Zinc (mg)"], ["vitaminA", "Vitamin A (µg)"], ["vitaminB12", "Vitamin B12 (µg)"], ["vitaminC", "Vitamin C (mg)"], ["vitaminD", "Vitamin D (µg)"], ["folate", "Folate (µg)"]];
 
 const fromFood = (food) => ({
   name: food.name || "",
@@ -32,6 +46,16 @@ const fromFood = (food) => ({
   fiber: food.fiber ?? "",
   sugar: food.sugar ?? "",
   notes: food.notes || "",
+  iron: food.iron ?? "",
+  calcium: food.calcium ?? "",
+  potassium: food.potassium ?? "",
+  magnesium: food.magnesium ?? "",
+  zinc: food.zinc ?? "",
+  vitaminA: food.vitaminA ?? "",
+  vitaminB12: food.vitaminB12 ?? "",
+  vitaminC: food.vitaminC ?? "",
+  vitaminD: food.vitaminD ?? "",
+  folate: food.folate ?? "",
 });
 
 /**
@@ -94,6 +118,17 @@ export default function FoodForm({ food, initialName = "", onSaved, onCancel }) 
       fiber: num(form.fiber),
       sugar: num(form.sugar),
       notes: form.notes.trim(),
+      // blank = unknown (never saved as 0)
+      iron: optNum(form.iron),
+      calcium: optNum(form.calcium),
+      potassium: optNum(form.potassium),
+      magnesium: optNum(form.magnesium),
+      zinc: optNum(form.zinc),
+      vitaminA: optNum(form.vitaminA),
+      vitaminB12: optNum(form.vitaminB12),
+      vitaminC: optNum(form.vitaminC),
+      vitaminD: optNum(form.vitaminD),
+      folate: optNum(form.folate),
     };
 
     try {
@@ -239,6 +274,18 @@ export default function FoodForm({ food, initialName = "", onSaved, onCancel }) 
             <label>Sugar (g)</label>
             <input type="number" name="sugar" value={form.sugar} onChange={handleChange} min="0" step="any" placeholder="0" />
           </div>
+
+          <details className="form-field full">
+            <summary>Vitamins and minerals (optional, leave blank if you do not know)</summary>
+            <div className="form-grid">
+              {MICRO_FIELDS.map(([k, label]) => (
+                <div className="form-field" key={k}>
+                  <label>{label}</label>
+                  <input type="number" name={k} value={form[k]} onChange={handleChange} min="0" step="any" placeholder="unknown" />
+                </div>
+              ))}
+            </div>
+          </details>
 
           <div className="form-field full">
             <label>Notes</label>

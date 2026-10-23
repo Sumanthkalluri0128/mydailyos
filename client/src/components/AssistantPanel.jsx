@@ -4,7 +4,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import "./assistant.css";
 import { apiFetch } from "../config/api";
-import { emitTour } from "../tour/store";
 import { getLocalDate } from "../utils/date";
 import { CHARS, dayChar, stickerFor } from "../motion/chars";
 import { getCtx, refreshCtx } from "../motion/ctxStore";
@@ -55,7 +54,6 @@ export default function AssistantPanel({ go }) {
   const openPanel = useCallback((detail = {}) => {
     if (detail.who && CHARS[detail.who]) setWho(detail.who);
     setOpen(true);
-    emitTour("coach_opened");
     refreshCtx();
     if (!booted.current && !load().length) {
       booted.current = true;

@@ -6,10 +6,10 @@ import { createPortal } from "react-dom";
 import "./home.css";
 import "../homefocus.css";
 import HeroCard from "./HeroCard";
+import { FirstWeekChecklist } from "../../tour/TourHost";
 import WeightReveal from "../WeightReveal";
 import OverDayCard from "../OverDayCard";
 import { HomeGoal } from "../simple/SimpleProgress";
-import GettingStarted from "../../tour/GettingStarted";
 import FixMyDay from "./FixMyDay";
 import HealthyDay from "./HealthyDay";
 import HomeSection from "../HomeSection";
@@ -211,7 +211,7 @@ export default function HomeDashboard({ profile, summary, activity, water, water
   return (
     <div className="hd">
       <HeroCard greeting={greet(hour)} name={name} dateText={new Date().toLocaleDateString(undefined, { weekday: "long", day: "numeric", month: "long" }).toUpperCase()} coach={coach} onAsk={onAsk} />
-      <GettingStarted />
+      <FirstWeekChecklist />
 
       {/* ---------- stat cards: each number appears once, in its own card ---------- */}
       <section className="hd-stats" aria-label="Today at a glance">
@@ -232,7 +232,7 @@ export default function HomeDashboard({ profile, summary, activity, water, water
 
         <article className="sc sc-water" role="button" tabIndex={0} onClick={open("water")} onKeyDown={open("water")}>
           <span className="ic b big">💧</span>
-          <button type="button" data-tour="add-water" className="sc-plus" aria-label="Add water" onClick={(e) => { e.stopPropagation(); setCustom(""); setSheet("water"); }}>＋</button>
+          <button type="button" className="sc-plus" data-tour="add-water" aria-label="Add water" onClick={(e) => { e.stopPropagation(); setCustom(""); setSheet("water"); }}>＋</button>
           <div className="sc-val"><strong>{waterL.toFixed(2)} L</strong><small>of {(waterTarget / 1000).toFixed(1)} L</small></div>
           <i className="sc-bar"><b style={{ width: `${Math.min(100, ((water?.totalMl || 0) / (waterTarget || 1)) * 100)}%` }} /></i>
           <Peek src={cast(1, "drink")} />

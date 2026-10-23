@@ -1,3 +1,4 @@
+const { sodiumFor } = require('./micro');
 const KEYS = ['calories', 'protein', 'carbohydrates', 'fat', 'fiber', 'sugar', 'sodium'];
 const round1 = (x) => Math.round(x * 10) / 10;
 
@@ -5,6 +6,7 @@ const round1 = (x) => Math.round(x * 10) / 10;
 function nutritionFor(food, quantity) {
   const servings = Number(quantity) / (Number(food.servingSize) || 1);
   const per = Object.fromEntries(KEYS.map((k) => [k, Number(food[k] || 0)]));
+  per.sodium = sodiumFor(food);
   const total = Object.fromEntries(KEYS.map((k) => [k, round1(per[k] * servings)]));
   return { servings, per, total };
 }

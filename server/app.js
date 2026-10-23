@@ -27,9 +27,10 @@ const emailRoutes = require('./routes/emailRoutes');
 const mealPlanRoutes = require('./routes/mealPlanRoutes');
 const planTemplateRoutes = require('./routes/planTemplateRoutes');
 const foodPrefRoutes = require('./routes/foodPrefRoutes');
-const tourRoutes = require('./routes/tourRoutes');
 const recipeRoutes = require('./routes/recipeRoutes');
 const goalRoutes = require('./routes/goalRoutes');
+const tourRoutes = require('./routes/tourRoutes');
+const adminRoutes = require('./routes/adminRoutes');
 const planRoutes = require('./routes/planRoutes');
 const albumRoutes = require('./routes/albumRoutes');
 const assistantRoutes = require('./routes/assistantRoutes');
@@ -83,9 +84,10 @@ function createApp({ allowedOrigins = [] } = {}) {
   app.use('/api/meal-plans/templates', planTemplateRoutes);   // before /api/meal-plans so "templates" is never read as an :id
   app.use('/api/meal-plans', mealPlanRoutes);
   app.use('/api/food-prefs', foodPrefRoutes);
-  app.use('/api/tour', tourRoutes);
   app.use('/api/recipes', recipeRoutes);
   app.use('/api/goals', goalRoutes);
+  app.use('/api/tour', tourRoutes);
+  app.use('/api/admin', adminRoutes);
   app.use('/api/plan', planRoutes);
   app.use('/api/assistant', assistantRoutes);
   app.use('/api/album', albumRoutes);

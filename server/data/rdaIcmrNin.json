@@ -1,0 +1,14 @@
+{
+  "_about": "Daily targets per adult for the micronutrient card. min = ICMR-NIN 2020 RDA (or AI where no RDA is set: potassium). max = tolerable upper limit where ICMR-NIN gives one (null = none set). Entered by the developer from the published tables 'Nutrient Requirements for Indians (ICMR-NIN 2020)': PLEASE CHECK EVERY NUMBER against the PDF before release (this build had no internet access). Out of scope on purpose: pregnancy, breastfeeding, under 18, medical conditions.",
+  "source": "ICMR-NIN 2020, Nutrient Requirements for Indians",
+  "verified": false,
+  "units": { "iron": "mg", "calcium": "mg", "potassium": "mg", "magnesium": "mg", "zinc": "mg", "vitaminA": "µg RAE", "vitaminB12": "µg", "vitaminC": "mg", "vitaminD": "µg", "folate": "µg" },
+  "adult": {
+    "male":   { "iron": [19, 45], "calcium": [1000, 2500], "potassium": [3510, null], "magnesium": [440, 350], "zinc": [17, 40], "vitaminA": [1000, 3000], "vitaminB12": [2.2, null], "vitaminC": [80, 2000], "vitaminD": [15, 100], "folate": [300, 1000] },
+    "female": { "iron": [29, 45], "calcium": [1000, 2500], "potassium": [3510, null], "magnesium": [370, 350], "zinc": [13.2, 40], "vitaminA": [840, 3000], "vitaminB12": [2.2, null], "vitaminC": [65, 2000], "vitaminD": [15, 100], "folate": [300, 1000] }
+  },
+  "overrides": {
+    "female_51_plus": { "iron": [19, 45] }
+  },
+  "_notes": "Magnesium upper limit is for supplements only, so it is shown as a note, not a warning, and food-only totals above it are never flagged. For sex 'other' or not set, the lower of the two RDAs is NOT used: the card asks for sex in the profile instead of guessing."
+}

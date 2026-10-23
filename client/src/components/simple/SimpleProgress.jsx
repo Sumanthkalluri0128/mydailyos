@@ -18,7 +18,7 @@ export function GoalCard({ d, onOpen }) {
     return <button type="button" className="sp-card sp-btn" style={{ width: "100%", textAlign: "left" }} onClick={onOpen}><h3>{g.title}</h3><p className="sp-muted">{g.empty}</p></button>;
   }
   return (
-    <div className="sp-card" data-tour="home-goal">
+    <div className="sp-card" data-tour="goal-card">
       <div className="sp-row"><h3>{g.title}</h3><span className={`sp-pill ${g.status}`}>{g.statusLine}</span></div>
       <div><WeightReveal compact reaction={false} text={g.progressLine} /></div>
       <div className="sp-bar" role="progressbar" aria-valuenow={g.pct} aria-valuemin={0} aria-valuemax={100}><i style={{ width: `${Math.max(2, g.pct)}%` }} /></div>

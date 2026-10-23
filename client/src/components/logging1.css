@@ -1,0 +1,11 @@
+.portion-guide{margin:8px 0}.pg-tabs{display:flex;gap:6px;flex-wrap:wrap}.pg-row{display:flex;gap:16px;align-items:flex-end;flex-wrap:wrap;margin:10px 0}.pg-item{margin:0;text-align:center;font-size:.85em}.pg-item svg{display:block;margin:0 auto 4px;color:inherit}
+.repeat-preview,.chai-counter,.pot-panel,.voice-review,.ingr-draft{display:grid;gap:8px}
+.repeat-row,.multi-bar{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.multi-bar{position:sticky;bottom:8px;padding:10px;border-radius:12px;background:var(--card,#fff);box-shadow:0 2px 12px rgba(0,0,0,.2);z-index:5}
+.logger-food-item.picked{outline:2px solid var(--accent,#4f8cff)}
+.voice-mic{display:inline-flex;align-items:center;gap:6px}.voice-mic.listening{animation:vmpulse 1s infinite}
+@keyframes vmpulse{50%{opacity:.6}}
+@media (prefers-reduced-motion:reduce){.voice-mic.listening{animation:none}}
+.chai-cups{display:flex;gap:6px;align-items:center;flex-wrap:wrap}.chai-cups button{min-width:44px;min-height:44px}
+.warn-line{font-size:.85em;opacity:.8}
+.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}

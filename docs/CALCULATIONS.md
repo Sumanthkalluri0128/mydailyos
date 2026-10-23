@@ -24,9 +24,14 @@ sugar ≤ carbs, fibre ≤ carbs, no negatives, macros not heavier than the serv
 2 %, 95 % of foods within 8 %. This proves the numbers agree with *each other*; it cannot prove they match a lab analysis.
 Entries are labelled "typical values — approximate".
 
-## What FlexFit does not track
-Vitamins and minerals (iron, calcium, vitamin B12, D…) are not in the data, so the app shows none and doesn't pretend to.
-Adding them needs a data source (e.g. India's IFCT or USDA FoodData Central) — see the suggestions list.
+## Vitamins and minerals (v39)
+Tracked: iron, calcium, potassium, magnesium, zinc, vitamins A, B12, C, D and folate (sodium already existed).
+* **Sources.** Values come only from (1) the reviewed overlay `server/data/foodMicros.json`, filled from India's IFCT 2017 or USDA FoodData Central through `node scripts/importMicros.js --import file.csv` (a source is required on every import), (2) Open Food Facts barcode data, (3) values you type in yourself. Nothing is estimated or invented; an unknown value stays blank (`null`), never 0.
+* **Confidence label on every food:** Verified (reviewed source), Typical (generic catalogue average), Added by you.
+* **Targets.** Adult ICMR-NIN 2020 recommended ranges by sex (`server/data/rdaIcmrNin.json`, min-max, with an upper limit where one exists). The file is marked `"verified": false`: check each number against the ICMR-NIN PDF before trusting it. Ranges are for adults only; under-18s, pregnancy and breastfeeding need different targets and are not shown.
+* **Day total.** Sum of logged servings. A nutrient is shown only when foods covering at least 60 % of the day's calories have a value for it; otherwise the card says "Not enough data" instead of a misleading low number.
+* **Low streaks.** "Low on iron 3 weeks in a row" needs 3+ days with enough data per week and a weekly average under 70 % of the minimum.
+* **Limits.** Cooking, soil and brand differences change real content; absorption (iron with vitamin C, for example) is not modelled; this is not a medical test. Food reports ("Report wrong values") go to the admin list (`ADMIN_EMAILS`).
 
 ## Known limits
 * Age is stored as a number, so it doesn't advance on its own — update it on your birthday.

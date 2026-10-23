@@ -1,0 +1,6 @@
+{
+  "dal": { "name": "Dal fixture", "userId": null, "servingSize": 150, "servingUnit": "g", "calories": 150, "iron": 3.0, "calcium": 40, "folate": 90 },
+  "rajma": { "name": "Rajma fixture", "userId": null, "servingSize": 150, "servingUnit": "g", "calories": 200, "iron": 4.5, "folate": 150 },
+  "ricePlain": { "name": "Rice fixture", "userId": null, "servingSize": 150, "servingUnit": "g", "calories": 200 },
+  "mine": { "name": "My smoothie", "userId": "u1", "servingSize": 250, "servingUnit": "ml", "calories": 180, "calcium": 220, "dataSource": "label" }
+}

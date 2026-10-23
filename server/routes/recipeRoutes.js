@@ -8,6 +8,9 @@ const { requireAuth } = require('../middleware/auth');
 const { wrap, HttpError } = require('../lib/http');
 const { nutritionFor, KEYS } = require('../lib/nutritionCalc');
 const v = require('../lib/validate');
+const { potFrom, eatenServings, afterEating } = require('../lib/sharedPot');
+const { parseIngredients } = require('../lib/ingredientParse');
+const { catalogueFoods } = require('../lib/foodCache');
 
 const router = express.Router();
 router.use(requireAuth);
@@ -49,6 +52,14 @@ async function syncFood(uid, recipe, existingFoodId) {
   return Food.create({ ...data, userId: uid });
 }
 
+// Paste "2 cups rice, 1 cup toor dal, 2 tbsp oil" -> an editable recipe draft (nothing is saved).
+router.post('/parse-ingredients', wrap(async (req, res) => {
+  const text = v.string(req.body?.text, 'text', { max: 2000, required: true });
+  const servings = v.number(req.body?.servings, 'servings', { min: 0.25, max: 200, required: false, def: 4 });
+  const [shared, mine] = await Promise.all([catalogueFoods(Food), Food.find({ userId: req.user.id, hidden: { $ne: true } }).select('name brand servingSize servingUnit calories units userId').limit(2000).lean()]);
+  res.json({ success: true, ...parseIngredients(text, [...mine, ...shared], { servings }) });
+}));
+
 router.get('/', wrap(async (req, res) => {
   res.json({ success: true, recipes: await Recipe.find({ userId: req.user.id }).sort({ name: 1 }).lean() });
 }));
@@ -73,14 +84,18 @@ router.put('/:id', wrap(async (req, res) => {
   res.json({ success: true, recipe, food });
 }));
 
-// Meal prep: "I cooked a batch" adds portions (default: everything the recipe makes).
+// Shared pot / meal prep: "I cooked a pot" = number of servings and/or the total cooked weight. Adds to the portions left.
 router.post('/:id/cook', wrap(async (req, res) => {
   const recipe = await Recipe.findOne({ _id: v.objectId(req.params.id), userId: req.user.id });
   if (!recipe) throw new HttpError(404, 'Recipe not found');
-  const portions = v.number(req.body?.portions, 'portions', { min: 0.25, max: 200, required: false, def: recipe.servings });
-  recipe.portionsLeft = Math.min(1000, (recipe.portionsLeft || 0) + portions);
+  const hasPot = req.body?.totalG !== undefined && req.body?.totalG !== '' && req.body?.totalG !== null;
+  const legacy = req.body?.portions !== undefined;
+  const pot = potFrom({ servings: legacy ? req.body.portions : req.body?.servings, totalG: hasPot ? Number(req.body.totalG) : null, recipeServings: recipe.servings });
+  if (!pot.ok) throw new HttpError(400, pot.message);
+  recipe.portionsLeft = Math.min(1000, (recipe.portionsLeft || 0) + pot.servings);
+  if (pot.servingG) recipe.potServingG = pot.servingG;
   await recipe.save();
-  res.json({ success: true, recipe });
+  res.json({ success: true, recipe, pot });
 }));
 
 // "Ate 1 portion": logs it to a meal in one step and takes it off the batch.
@@ -90,15 +105,19 @@ router.post('/:id/eat', wrap(async (req, res) => {
   if (!recipe) throw new HttpError(404, 'Recipe not found');
   const date = v.date(req.body?.date);
   const mealType = v.oneOf(req.body?.mealType, 'mealType', ['breakfast', 'lunch', 'dinner', 'snacks']);
-  const portions = v.number(req.body?.portions, 'portions', { min: 0.25, max: 20, required: false, def: 1 });
+  const ate = eatenServings({ servingG: recipe.potServingG }, req.body?.grams ? { grams: Number(req.body.grams) } : { servings: req.body?.portions === undefined ? 1 : Number(req.body.portions) });
+  if (!ate.ok) throw new HttpError(400, ate.message);
+  const portions = v.number(ate.servings, 'portions', { min: 0.01, max: 50 });
   const per = Object.fromEntries(KEYS.map((k) => [k, Number(recipe.perServing?.[k] || 0)]));
   const total = Object.fromEntries(KEYS.map((k) => [k, per[k] * portions]));
+  const firstPot = !(await FoodLog.exists({ userId: uid, source: 'pot' }));
   const { doc, duplicate } = await createOnce(FoodLog, uid, v.clientId(req.body?.clientId), {
     foodId: recipe.foodId, date, mealType, foodName: recipe.name, baseServingSize: 1, servingUnit: 'serving', consumedQuantity: portions, servings: portions,
-    nutritionPerServing: per, nutritionTotal: total, notes: 'Meal prep portion',
+    nutritionPerServing: per, nutritionTotal: total, source: 'pot', notes: req.body?.grams ? `Shared pot, ${Math.round(Number(req.body.grams))} g` : 'Shared pot portion',
   });
-  if (!duplicate) { recipe.portionsLeft = Math.max(0, (recipe.portionsLeft || 0) - portions); await recipe.save(); }
-  res.status(duplicate ? 200 : 201).json({ success: true, log: doc, recipe, duplicate });
+  const after = afterEating(recipe.portionsLeft, portions);
+  if (!duplicate) { recipe.portionsLeft = after.left; await recipe.save(); }
+  res.status(duplicate ? 200 : 201).json({ success: true, log: doc, recipe, duplicate, servings: portions, moreThanLeft: after.over, sticker: firstPot && !duplicate ? 'pot' : null });
 }));
 
 router.delete('/:id', wrap(async (req, res) => {

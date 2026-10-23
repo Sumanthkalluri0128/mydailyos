@@ -22,7 +22,7 @@ export default function WeeklyCoach() {
     return () => { live = false; };
   }, []);
   if (!d) return null;
-  const { review, tips, challenge: ch, weekBudget: wb, maintenance: mt } = d;
+  const { review, tips, challenge: ch, weekBudget: wb, maintenance: mt, microInsights: mi = [] } = d;
   const hpLeft = Math.max(0, ch.target - ch.progress);
   const boss = NAMES[ch.who] || "The boss";
   const fight = ch.defeated ? `${boss} is defeated! 🎉` : !ch.canStillWin ? `${boss} wins this round. Rematch next Monday.` : `${hpLeft} more ${ch.unit} to beat ${boss} · ${ch.daysLeft} day${ch.daysLeft === 1 ? "" : "s"} left`;
@@ -43,6 +43,14 @@ export default function WeeklyCoach() {
           <h3>What to change this week</h3>
           {tips.map((t) => (
             <div key={t.id} className="wc-tip"><span aria-hidden="true">{t.icon}</span><div><strong>{t.title}</strong><p>{t.detail}</p></div></div>
+          ))}
+        </div>
+      )}
+      {mi.length > 0 && (
+        <div className="card wc-tips">
+          <h3>Power-ups to look at</h3>
+          {mi.map((m) => (
+            <div key={m.id} className="wc-tip"><span aria-hidden="true">🥬</span><div><strong>{m.line}</strong><p>{m.sources?.foods?.length ? `Try more of: ${m.sources.foods.map((f) => f.name).join(", ")}.` : m.sources?.hint || ""}</p></div></div>
           ))}
         </div>
       )}

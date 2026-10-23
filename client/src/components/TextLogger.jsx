@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { apiFetch } from "../config/api";
 import { notify } from "../utils/notify";
+import VoiceMic from "./VoiceMic";
+import "./logging1.css";
 
 const MEAL_OPTIONS = [["breakfast", "🌅 Breakfast"], ["lunch", "☀️ Lunch"], ["dinner", "🌙 Dinner"], ["snacks", "🍎 Snacks"]];
 
@@ -11,15 +13,18 @@ export default function TextLogger({ date, defaultMeal = "lunch", onLogged }) {
   const [items, setItems] = useState(null);
   const [unmatched, setUnmatched] = useState([]);
   const [busy, setBusy] = useState(false);
+  const [voice, setVoice] = useState(false); // current review came from speech
 
-  const parse = async (override) => {
+  const parse = async (override, spoken = false) => {
     const t = typeof override === "string" ? override : text;
     if (!t.trim()) return;
     setBusy(true);
+    setVoice(!!spoken);
     try {
-      const res = await apiFetch("/api/foods/parse", { method: "POST", body: JSON.stringify({ text: t }) });
+      const res = await apiFetch("/api/foods/parse", { method: "POST", body: JSON.stringify({ text: t, spoken }) });
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || "Could not read that");
+      if (spoken) { setText(data.heardText || t); if (data.meal) setMeal(data.meal); }
       setItems(data.items);
       setUnmatched(data.unmatched);
       if (!data.items.length) notify("No foods matched. Try simpler names, like \"roti, dal, rice\".", "info");
@@ -31,12 +36,13 @@ export default function TextLogger({ date, defaultMeal = "lunch", onLogged }) {
   const logAll = async () => {
     setBusy(true);
     try {
-      for (const it of items) {
-        await apiFetch("/api/food-logs", {
-          method: "POST",
-          body: JSON.stringify({ foodId: it.foodId, date, mealType: meal, quantity: Number(it.quantity) || 1, clientId: `txt-${Date.now()}-${Math.random().toString(36).slice(2, 8)}` }),
-        });
-      }
+      const res = await apiFetch("/api/food-logs/bulk", {
+        method: "POST",
+        body: JSON.stringify({ date, mealType: meal, source: voice ? "voice" : "", clientId: `txt-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`, items: items.map((it) => ({ foodId: it.foodId, quantity: Number(it.quantity) || 1 })) }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || "fail");
+      if (data.sticker === "voice") notify("🎤 Sticker unlocked: Mic Check! Your first spoken meal.", "success");
       notify(`Logged ${items.length} item${items.length === 1 ? "" : "s"} to ${meal}.`, "success");
       setText(""); setItems(null); setUnmatched([]);
       onLogged?.();
@@ -49,14 +55,16 @@ export default function TextLogger({ date, defaultMeal = "lunch", onLogged }) {
     <div className="large-card text-logger">
       <div className="section-header"><div><h2>✍️ Type what you ate</h2><p>e.g. “2 roti, dal, 1 cup rice, 100 g paneer”</p></div></div>
       <div className="text-logger-row">
-        <input value={text} maxLength={600} placeholder="What did you eat?" onChange={(e) => setText(e.target.value)} onKeyDown={(e) => e.key === "Enter" && parse()} aria-label="Describe your meal" />
+        <input value={text} maxLength={600} placeholder="What did you eat?" onChange={(e) => setText(e.target.value)} onKeyDown={(e) => e.key === "Enter" && parse(text, false)} aria-label="Describe your meal" />
         <select value={meal} onChange={(e) => setMeal(e.target.value)} aria-label="Meal">
           {MEAL_OPTIONS.map(([id, label]) => <option key={id} value={id}>{label}</option>)}
         </select>
-        <button className="primary-button" disabled={busy || !text.trim()} onClick={parse}>Find foods</button>
+        <button className="primary-button" disabled={busy || !text.trim()} onClick={() => parse(text, false)}>Find foods</button>
+        <VoiceMic onText={(t) => { setText(t); parse(t, true); }} onError={(m) => notify(m, "info")} />
       </div>
       {items && items.length > 0 && (
         <div className="text-logger-results">
+          {voice && <p className="card-description">Check what I heard, then log. Names I did not recognise are listed below.</p>}
           {items.map((it, i) => (
             <div className="text-logger-item" key={`${it.foodId}-${i}`}>
               <span>{it.foodName}{it.confidence === "medium" ? " ?" : ""}</span>

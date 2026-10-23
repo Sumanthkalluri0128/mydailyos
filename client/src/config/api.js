@@ -1,5 +1,4 @@
 import { API_URL } from "../config";
-import { noteRequest } from "../tour/store";
 import { enqueue, flushQueue, isQueueable, saveGet, savedGet, refreshPending, purgeOthers, wipeAll } from "../offline/offlineApi";
 
 export function clearSession() {
@@ -29,7 +28,7 @@ function buildRequest(input, options) {
   return { url, init: { ...options, headers }, token };
 }
 
-async function apiFetchRaw(input, options = {}) {
+export async function apiFetch(input, options = {}) {
   const method = String(options.method || "GET").toUpperCase();
   const { url, init, token } = buildRequest(input, options);
   const isApi = typeof url === "string" && url.startsWith(API_URL);
@@ -55,6 +54,7 @@ async function apiFetchRaw(input, options = {}) {
     }
     if (isQueueable(method, url) && (await enqueue({ method, url, body: init.body, meta: options.meta }))) {
       window.dispatchEvent(new CustomEvent("mydailyos:toast", { detail: { message: "You're offline — saved on this device and will sync automatically.", type: "info", duration: 4000 } }));
+      try { window.dispatchEvent(new CustomEvent("flexfit:api-write", { detail: { method, url } })); } catch { /* ignore */ }
       return json({ success: true, queued: true, offline: true }, 202, { "X-FlexFit-Offline": "1" });
     }
     return json({ success: false, message: "You're offline. This change needs a connection — please try again when you're back online." }, 503, { "X-FlexFit-Offline": "1" });
@@ -67,14 +67,11 @@ async function apiFetchRaw(input, options = {}) {
   if (isApi && method === "GET" && response.ok) {
     response.clone().json().then((data) => saveGet(url, data)).catch(() => {});
   }
+  // The tour learns about real actions (a logged glass of water, a planned day) from this one event; nothing leaves the browser.
+  if (isApi && method !== "GET" && response.ok) {
+    try { window.dispatchEvent(new CustomEvent("flexfit:api-write", { detail: { method, url } })); } catch { /* ignore */ }
+  }
   return response;
-}
-
-/** Every request goes through here. After a successful write, the tour is told which real action happened (water logged, ...). */
-export async function apiFetch(input, options = {}) {
-  const res = await apiFetchRaw(input, options);
-  try { noteRequest(options.method || "GET", typeof input === "string" ? input : "", res.ok); } catch { /* the tour never breaks a request */ }
-  return res;
 }
 
 /** Sends one queued change (used by the replay loop). Returns { ok, status }. */

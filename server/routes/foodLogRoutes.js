@@ -5,6 +5,10 @@ const { requireAuth } = require('../middleware/auth');
 const { wrap, HttpError } = require('../lib/http');
 const { createOnce } = require('../lib/idempotent');
 const v = require('../lib/validate');
+const { pickRepeat, applyEdits } = require('../lib/repeatMeal');
+const { chaiNutrition, weeklyChai } = require('../lib/chaiCounter');
+const { catalogueFoods } = require('../lib/foodCache');
+const { addDays } = require('../lib/dates');
 
 const router = express.Router();
 router.use(requireAuth);
@@ -102,14 +106,84 @@ router.patch('/:id', wrap(async (req, res) => {
   res.json({ success: true, log });
 }));
 
+// Preview for "Copy yesterday's lunch" / "Same as last time": nothing is saved here.
+router.get('/repeat', wrap(async (req, res) => {
+  const meal = v.oneOf(req.query.meal, 'meal', MEALS);
+  const today = v.date(req.query.date, 'date');
+  const mode = v.oneOf(req.query.mode, 'mode', ['yesterday', 'last'], 'last');
+  const logs = await FoodLog.find({ userId: req.user.id, mealType: meal, date: { $gte: addDays(today, -60), $lt: today } })
+    .select('date mealType foodId foodName consumedQuantity servingUnit nutritionTotal').lean();
+  const pick = pickRepeat(logs, { meal, today, mode });
+  res.json({ success: true, found: !!pick, date: pick?.date || null, kcal: pick?.kcal || 0,
+    entries: (pick?.entries || []).map((l) => ({ _id: l._id, foodId: l.foodId, foodName: l.foodName, quantity: l.consumedQuantity, servingUnit: l.servingUnit, calories: Math.round(l.nutritionTotal?.calories || 0) })) });
+}));
+
+// Add several foods in one go (multi-select from search, parsed text, or a repeat preview). Each item may carry its own clientId so a retry never doubles.
+router.post('/bulk', wrap(async (req, res) => {
+  const date = v.date(req.body?.date);
+  const mealType = v.oneOf(req.body?.mealType, 'mealType', MEALS);
+  const raw = Array.isArray(req.body?.items) ? req.body.items.slice(0, 40) : [];
+  if (!raw.length) throw new HttpError(400, 'Choose at least one food');
+  const ids = raw.map((i) => v.objectId(String(i?.foodId || ''), 'foodId'));
+  const foods = await Food.find({ _id: { $in: ids }, $or: [{ userId: null }, { userId: { $exists: false } }, { userId: req.user.id }] }).lean();
+  const byId = new Map(foods.map((f) => [String(f._id), f]));
+  const source = req.body?.source === 'voice' ? 'voice' : '';
+  const firstVoice = source === 'voice' && !(await FoodLog.exists({ userId: req.user.id, source: 'voice' }));
+  const logs = [];
+  const base = v.string(req.body?.clientId, 'clientId', { max: 60 }) || `bulk-${Date.now()}`;
+  for (let n = 0; n < raw.length; n += 1) {
+    const food = byId.get(String(raw[n].foodId));
+    if (!food) throw new HttpError(404, 'One of the foods was not found');
+    const quantity = v.number(raw[n].quantity, 'quantity', { min: 0.01, max: 100000, required: false, def: Number(food.servingSize) || 1 });
+    const servings = quantity / Number(food.servingSize || 1);
+    const per = perServing(food);
+    const { doc } = await createOnce(FoodLog, req.user.id, `${base}-${n}`, {
+      foodId: food._id, date, mealType, foodName: food.name, baseServingSize: food.servingSize, servingUnit: food.servingUnit,
+      consumedQuantity: quantity, servings, nutritionPerServing: per, nutritionTotal: scale(per, servings), notes: '', source,
+    });
+    logs.push(doc);
+  }
+  res.status(201).json({ success: true, logs, sticker: firstVoice ? 'voice' : null });
+}));
+
+// Chai / coffee counter: calories come from the catalogue's milk and sugar, the parts are stored for the weekly note.
+router.post('/chai', wrap(async (req, res) => {
+  const uid = req.user.id;
+  const date = v.date(req.body?.date);
+  const mealType = v.oneOf(req.body?.mealType, 'mealType', MEALS, 'snacks');
+  const calc = chaiNutrition({ ...req.body, drink: req.body?.drink === 'coffee' ? 'coffee' : 'tea' }, await catalogueFoods(Food));
+  if (!calc.ok) throw new HttpError(400, calc.message);
+  const total = { calories: calc.kcal, protein: 0, carbohydrates: 0, fat: 0, fiber: 0, sugar: calc.sugarG, sodium: 0 };
+  let base = await Food.findOne({ userId: uid, hidden: true, name: 'Quick add' });
+  if (!base) base = await Food.create({ userId: uid, hidden: true, name: 'Quick add', servingSize: 1, servingUnit: 'serving', calories: 0, units: [{ label: 'serving', quantity: 1 }], notes: 'Placeholder for estimated entries' });
+  const { doc, duplicate } = await createOnce(FoodLog, uid, v.clientId(req.body?.clientId), {
+    foodId: base._id, date, mealType, foodName: calc.label, baseServingSize: 1, servingUnit: 'serving', consumedQuantity: 1, servings: 1,
+    nutritionPerServing: total, nutritionTotal: total, notes: 'Chai counter',
+    chai: { cups: calc.cups, sugarSpoons: calc.sugarSpoons, sugarKcal: calc.sugarKcal, milk: calc.milk, cupMl: calc.cupMl },
+  });
+  res.status(duplicate ? 200 : 201).json({ success: true, log: doc, calc, duplicate });
+}));
+router.get('/chai/preview', wrap(async (req, res) => {
+  const calc = chaiNutrition({ cups: req.query.cups, sugarSpoons: req.query.sugarSpoons, milk: req.query.milk, cupSize: req.query.cupSize, drink: req.query.drink }, await catalogueFoods(Food));
+  res.json({ success: true, calc });
+}));
+router.get('/chai/weekly', wrap(async (req, res) => {
+  const end = v.date(req.query.end, 'end');
+  const logs = await FoodLog.find({ userId: req.user.id, chai: { $exists: true }, date: { $gte: addDays(end, -6), $lte: end } }).select('date chai').lean();
+  res.json({ success: true, ...weeklyChai(logs) });
+}));
+
 // Copy every entry (optionally one meal) from one day to another — "same breakfast as yesterday".
 router.post('/copy', wrap(async (req, res) => {
   const from = v.date(req.body?.fromDate, 'fromDate');
   const to = v.date(req.body?.toDate, 'toDate');
   const filter = { userId: req.user.id, date: from };
   if (req.body?.mealType) filter.mealType = v.oneOf(req.body.mealType, 'mealType', MEALS);
-  const source = await FoodLog.find(filter).lean();
+  if (Array.isArray(req.body?.ids)) filter._id = { $in: req.body.ids.slice(0, 100).map((x) => v.objectId(String(x), 'id')) };
+  let source = await FoodLog.find(filter).lean();
   if (!source.length) return res.json({ success: true, logs: [] });
+  // Quantities edited in the preview: nutrition is rescaled from the stored per-serving snapshot.
+  source = applyEdits(source, req.body?.edits).map((l) => { const servings = l.consumedQuantity / Number(l.baseServingSize || 1); return { ...l, servings, nutritionTotal: scale(l.nutritionPerServing || {}, servings) }; });
   if (source.length > 100) throw new HttpError(400, 'Too many entries to copy at once');
   const logs = await FoodLog.insertMany(source.map((l) => {
     const { _id, createdAt, updatedAt, __v, clientId, ...rest } = l;
