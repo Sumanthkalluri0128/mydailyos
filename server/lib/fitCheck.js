@@ -10,7 +10,7 @@ function previewFit({ add, today, week = null }) {
   const eatenAfter = n0(today.eaten) + n0(add.calories);
   const leftAfter = Math.round(n0(today.budget) - eatenAfter);
   const status = leftAfter < 0 ? 'over' : leftAfter < n0(today.budget) * 0.1 ? 'tight' : 'fits';
-  const out = { status, eatenAfter: Math.round(eatenAfter), leftAfter, proteinAfter: Math.round(n0(today.protein) + n0(add.protein)), proteinTarget: n0(today.proteinTarget) || null, week: null, message: '' };
+  const out = { status, eatenAfter: Math.round(eatenAfter), leftAfter, proteinAfter: Math.round(n0(today.protein) + n0(add.protein)), proteinTarget: n0(today.proteinTarget) || null, proteinLeft: n0(today.proteinTarget) > 0 ? Math.max(0, Math.round(n0(today.proteinTarget) - n0(today.protein) - n0(add.protein))) : null, kcalLeftNow: Math.round(n0(today.budget) - n0(today.eaten)), week: null, message: '' };
   if (week && n0(week.budget) > 0) {
     const used = n0(week.usedBeforeToday) + eatenAfter;
     const weekLeft = Math.round(week.budget - used);
@@ -21,6 +21,7 @@ function previewFit({ add, today, week = null }) {
   else if (status === 'tight') out.message = `Fits, just. About ${leftAfter} kcal left, so keep the rest of today light.`;
   else if (out.week && out.week.absorbed) out.message = `${-leftAfter} kcal over today, but your week can absorb it. That leaves about ${out.week.perDayAfter ?? 0} kcal a day for the rest of the week.`;
   else out.message = `${-leftAfter} kcal over today. Not a problem on its own. A half portion or a lighter next meal would balance it.`;
+  out.proteinLine = out.proteinLeft === null ? '' : out.proteinLeft > 0 ? `${out.proteinLeft} g protein still to go today.` : 'Protein target reached for today.';
   return out;
 }
 

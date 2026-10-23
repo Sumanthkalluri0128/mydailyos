@@ -28,6 +28,8 @@ const schema = new S({
   ramadan: { from: String, days: Number },
   event: { kind: String, from: String, to: String },
   have: [{ type: String, maxlength: 40 }],
+  // Office lunch / tiffin planner: canteen favourites (ids of the person's own foods) and the evening reminder time on web.
+  tiffin: { favs: [{ type: S.Types.ObjectId, ref: 'Food' }] },
   coach: { who: { type: String, default: '' }, tone: { type: String, enum: ['', 'cheer', 'calm', 'strict'], default: '' } },
   answered: { type: S.Types.Mixed, default: {} },       // { questionId: { at, skipped, usual } }
   feedback: [{

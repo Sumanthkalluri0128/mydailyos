@@ -28,6 +28,8 @@ const mealPlanRoutes = require('./routes/mealPlanRoutes');
 const planTemplateRoutes = require('./routes/planTemplateRoutes');
 const foodPrefRoutes = require('./routes/foodPrefRoutes');
 const recipeRoutes = require('./routes/recipeRoutes');
+const tiffinRoutes = require('./routes/tiffinRoutes');
+const importRoutes = require('./routes/importRoutes');
 const goalRoutes = require('./routes/goalRoutes');
 const tourRoutes = require('./routes/tourRoutes');
 const adminRoutes = require('./routes/adminRoutes');
@@ -54,6 +56,7 @@ function createApp({ allowedOrigins = [] } = {}) {
     })
   );
   app.use(compression());
+  app.use('/api/import', express.json({ limit: '4mb' })); // CSV files are bigger than normal requests
   app.use(express.json({ limit: '100kb' }));
 
   app.get('/api/health', (req, res) =>
@@ -85,6 +88,8 @@ function createApp({ allowedOrigins = [] } = {}) {
   app.use('/api/meal-plans', mealPlanRoutes);
   app.use('/api/food-prefs', foodPrefRoutes);
   app.use('/api/recipes', recipeRoutes);
+  app.use('/api/tiffin', tiffinRoutes);
+  app.use('/api/import', importRoutes);
   app.use('/api/goals', goalRoutes);
   app.use('/api/tour', tourRoutes);
   app.use('/api/admin', adminRoutes);

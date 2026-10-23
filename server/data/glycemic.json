@@ -1,0 +1,25 @@
+{
+  "_note": "Glycemic INDEX values per food, from published tables only. Leave a food out when no published value matches it: it then shows 'GI not listed', never a guess. Glycemic LOAD per serving is calculated by the app: GI x (carbohydrates - fibre in one serving) / 100. verified:false = copied from memory of the tables, check every value against the source before release.",
+  "verified": false,
+  "source": "Atkinson FS, Brand-Miller JC, Foster-Powell K, Buyken AE, Goletzke J. International tables of glycemic index and glycemic load values 2021. Am J Clin Nutr 2021;114(5):1625-1632 (and Atkinson FS et al., Diabetes Care 2008;31:2281-2283). Look up any food in the University of Sydney GI database: glycemicindex.com",
+  "bands": { "gi": { "low": "55 or less", "medium": "56 to 69", "high": "70 or more" }, "gl": { "low": "10 or less", "medium": "11 to 19", "high": "20 or more" } },
+  "foods": {
+    "white rice (cooked)": { "gi": 73, "note": "boiled white rice, average; basmati is usually lower" },
+    "brown rice (cooked)": { "gi": 68 },
+    "bread slice (white)": { "gi": 75 },
+    "cornflakes": { "gi": 81 },
+    "apple": { "gi": 36 },
+    "banana": { "gi": 51 },
+    "orange": { "gi": 43 },
+    "mango": { "gi": 51 },
+    "watermelon": { "gi": 76 },
+    "boiled potato": { "gi": 78 },
+    "sweet potato (boiled)": { "gi": 63 },
+    "corn (boiled)": { "gi": 52 },
+    "boiled chickpeas": { "gi": 28 },
+    "milk (full cream)": { "gi": 39 },
+    "milk (toned)": { "gi": 37, "note": "skimmed milk value" },
+    "sugar": { "gi": 65 },
+    "honey": { "gi": 61 }
+  }
+}

@@ -48,4 +48,39 @@ function buildGroceryList({ items = [], recipes = [], foodsById = new Map(), hav
   return { items: all.filter((g) => !g.have), alreadyHave: all.filter((g) => g.have).map((g) => ({ ...g, haveAs: g.have })) };
 }
 
-module.exports = { buildGroceryList, matchHave, portionFactor };
+// Aisles: plain keyword rules on the food name. Anything unrecognised goes to "Other" rather than being guessed.
+const AISLES = [
+  ['Vegetables', /\b(onion|tomato|potato|aloo|carrot|beans?|cabbage|cauliflower|gobi|brinjal|baingan|okra|bhindi|spinach|palak|methi|lauki|bottle gourd|tinda|karela|capsicum|peas|corn|cucumber|salad|sabzi|vegetable|veg|mushroom|beetroot|radish|pumpkin|drumstick|sprouts?)\b/],
+  ['Fruit', /\b(apple|banana|orange|mango|papaya|grapes?|guava|pomegranate|watermelon|pineapple|pear|melon|fruit|berries|lemon|dates?|raisins?|chikoo)\b/],
+  ['Dairy and eggs', /\b(milk|curd|dahi|yogh?urt|paneer|cheese|butter|ghee|cream|lassi|chaas|buttermilk|egg|eggs|omelette|anda)\b/],
+  ['Meat and fish', /\b(chicken|mutton|lamb|fish|prawns?|shrimp|crab|keema|salmon|tuna|pomfret|rohu|seafood)\b/],
+  ['Pulses and dal', /\b(dal|dhal|lentils?|rajma|chole|chana|chickpeas?|moong|toor|masoor|urad|beans|soya|soy chunks?)\b/],
+  ['Grains and flour', /\b(rice|roti|chapati|phulka|paratha|atta|flour|maida|besan|rava|sooji|semolina|poha|oats?|daliya|bread|pav|pasta|noodles|idli|dosa|upma|khichdi|pulao|biryani|ragi|jowar|bajra|millet|cornflakes|muesli|quinoa)\b/],
+  ['Oils, spices and sauces', /\b(oil|spices?|masala|salt|pepper|jeera|haldi|turmeric|chutney|sauce|ketchup|pickle|achar|vinegar|mustard)\b/],
+  ['Snacks and sweets', /\b(biscuits?|cookies?|chips|namkeen|chivda|mixture|laddu|barfi|halwa|jalebi|chocolate|sweets?|cake|nuts?|almonds?|cashews?|peanuts?|walnuts?|makhana|bhel)\b/],
+  ['Drinks', /\b(tea|chai|coffee|juice|shake|soda|cola|water|drink|protein powder|whey)\b/],
+];
+const aisleOf = (name) => { const n = norm(name); for (const [a, re] of AISLES) if (re.test(n)) return a; return 'Other'; };
+const AISLE_ORDER = [...AISLES.map((a) => a[0]), 'Other'];
+
+/** Items -> [{ aisle, items }] in shop-walking order, items A to Z inside each aisle. */
+function groupByAisle(items = []) {
+  const by = new Map();
+  for (const it of items) { const a = aisleOf(it.name); if (!by.has(a)) by.set(a, []); by.get(a).push({ ...it, aisle: a }); }
+  return AISLE_ORDER.filter((a) => by.has(a)).map((a) => ({ aisle: a, items: by.get(a).sort((x, y) => x.name.localeCompare(y.name)) }));
+}
+
+/** Plain text for WhatsApp / notes. `checked` = Set of item foodIds already ticked (left out). */
+function shareText(list, { from = '', to = '', checked = new Set() } = {}) {
+  const lines = [`Grocery list${from ? ` (${from}${to && to !== from ? ` to ${to}` : ''})` : ''}`];
+  for (const g of groupByAisle(list.items || [])) {
+    const rows = g.items.filter((i) => !checked.has(i.foodId));
+    if (!rows.length) continue;
+    lines.push('', g.aisle.toUpperCase());
+    for (const i of rows) lines.push(`[ ] ${i.name}: ${i.quantity} ${i.unit}${i.approx ? ` (about ${i.approx.count} ${i.approx.label})` : ''}`);
+  }
+  if ((list.alreadyHave || []).length) lines.push('', `Already at home: ${list.alreadyHave.map((i) => i.name).join(', ')}`);
+  return lines.join('\n');
+}
+
+module.exports = { buildGroceryList, matchHave, portionFactor, aisleOf, groupByAisle, shareText, AISLE_ORDER };

@@ -26,7 +26,7 @@ const { loadPlanContext, filterHabits, adjustCoreForSafety } = require('../lib/p
 const { createRules } = require('../lib/planRules');
 const { rankAlternatives } = require('../lib/planSwap');
 const { findViolations, norm } = require('../lib/foodSafety');
-const { buildGroceryList } = require('../lib/groceryList');
+const { buildGroceryList, groupByAisle, shareText } = require('../lib/groceryList');
 
 const FoodPreference = require('../models/FoodPreference');
 const router = express.Router();
@@ -184,7 +184,15 @@ router.get('/shopping-list', wrap(async (req, res) => {
   if (ingredientIds.length) for (const f of await Food.find({ _id: { $in: ingredientIds }, ...visible(uid) }).lean()) byId.set(String(f._id), f);
   const factor = pc.settings.portions.factor || 1;
   const list = buildGroceryList({ items, recipes, foodsById: byId, have: pc.settings.have, factor });
-  res.json({ success: true, from, to, ...list, people: { ...pc.settings.portions, scaled: factor !== 1 } });
+  res.json({ success: true, from, to, ...list, aisles: groupByAisle(list.items), text: shareText(list, { from, to }), people: { ...pc.settings.portions, scaled: factor !== 1 } });
+}));
+
+// "I already have this at home" / "I need to buy it": keeps the list's "already at home" shelf in step with Food Preferences.
+router.post('/shopping-list/have', wrap(async (req, res) => {
+  const name = v.string(req.body?.name, 'name', { max: 40, required: true }).trim().toLowerCase();
+  const have = req.body?.have !== false;
+  await FoodPreference.updateOne({ userId: req.user.id }, have ? { $addToSet: { have: name } } : { $pull: { have: name } }, { upsert: true, setDefaultsOnInsert: true });
+  res.json({ success: true, name, have });
 }));
 
 // ---------------------------------------------------------------------------------------------------------------------

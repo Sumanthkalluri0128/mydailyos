@@ -122,16 +122,45 @@ export default function PlannerPage({ onBack, goTo }) {
   };
   const deleteTemplate = async (t) => { if (!(await confirmAction(`Delete "${t.name}"?`, { title: "Delete template", confirmText: "Delete", danger: true }))) return; await apiFetch(`/api/meal-plans/templates/${t.id}`, { method: "DELETE" }); loadTemplates(); };
 
+  // Grocery list: grouped by aisle, tick things off (kept on this device, works offline from the last loaded list), mark what you already have, share as text.
+  const CK = "ff-shop-checked", CACHE = "ff-shop-cache";
+  const lsGet = (key, d) => { try { return JSON.parse(localStorage.getItem(key)) ?? d; } catch { return d; } };
+  const lsSet = (key, val) => { try { localStorage.setItem(key, JSON.stringify(val)); } catch { /* private mode */ } };
   const openShopping = async (force) => {
     if (shop && force !== true) { setShop(null); return; }
-    const r = await apiFetch(`/api/meal-plans/shopping-list?from=${start}&to=${end}`);
-    const d = await r.json();
-    if (d.success) { setShop(d); setChecked({}); }
+    try {
+      const r = await apiFetch(`/api/meal-plans/shopping-list?from=${start}&to=${end}`);
+      const d = await r.json();
+      if (d.success) { setShop(d); setChecked(lsGet(CK, {})); lsSet(CACHE, d); }
+    } catch {
+      const c = lsGet(CACHE, null);
+      if (c) { setShop({ ...c, offline: true }); setChecked(lsGet(CK, {})); } else notify("The list needs a connection the first time.", "error");
+    }
   };
-  const shopText = () => (shop?.items || []).map((i) => `• ${i.name} — ${i.quantity} ${i.unit}${i.approx ? ` (≈ ${i.approx.count} ${i.approx.label})` : ""}`).join("\n");
+  const tick = (i) => {
+    const next = { ...checked, [i.foodId]: !checked[i.foodId] };
+    setChecked(next); lsSet(CK, next);
+    if (next[i.foodId]) notify(`✓ ${i.name} in the bag`, "success");
+  };
+  const haveIt = async (i, have) => {
+    await apiFetch("/api/meal-plans/shopping-list/have", { method: "POST", body: JSON.stringify({ name: i.name, have }) }).catch(() => null);
+    openShopping(true);
+  };
+  const shopText = () => {
+    const lines = [`Grocery list (${start} to ${end})`];
+    for (const g of shop?.aisles || []) {
+      const rows = g.items.filter((i) => !checked[i.foodId]);
+      if (!rows.length) continue;
+      lines.push("", g.aisle.toUpperCase(), ...rows.map((i) => `[ ] ${i.name}: ${i.quantity} ${i.unit}${i.approx ? ` (about ${i.approx.count} ${i.approx.label})` : ""}`));
+    }
+    if (shop?.alreadyHave?.length) lines.push("", `Already at home: ${shop.alreadyHave.map((i) => i.name).join(", ")}`);
+    return lines.join("\n");
+  };
   const copyShop = async () => {
-    try { await navigator.clipboard.writeText(`Shopping list ${start} → ${end}\n${shopText()}`); notify("Shopping list copied.", "success"); }
-    catch { notify("Could not copy. Select the text instead.", "error"); }
+    try {
+      if (navigator.share) await navigator.share({ title: "Grocery list", text: shopText() });
+      else { await navigator.clipboard.writeText(shopText()); notify("Grocery list copied.", "success"); }
+    } catch { /* cancelled */ }
   };
 
   const copyWeek = async () => {
@@ -184,17 +213,24 @@ export default function PlannerPage({ onBack, goTo }) {
       {shop && (
         <div className="large-card shopping-list">
           <div className="section-header"><div><h2>🛒 Shopping list</h2><p>Planned and not yet eaten, {dayLabel(start)} – {dayLabel(end)}</p></div>
-            <button className="secondary-button" onClick={copyShop}>Copy</button></div>
+            <button className="secondary-button" onClick={copyShop}>Share</button></div>
           {shop.people?.scaled && <p className="ap-sub">Scaled for {shop.people.adults} adult{shop.people.adults === 1 ? "" : "s"}{shop.people.kids ? `, ${shop.people.kids} kid${shop.people.kids === 1 ? "" : "s"}` : ""}{shop.people.elders ? `, ${shop.people.elders} elder${shop.people.elders === 1 ? "" : "s"}` : ""} (about {shop.people.factor} portions; estimates).</p>}
           {!shop.items.length && <p className="card-description">Nothing to buy — plan some meals first.</p>}
-          {shop.items.map((i) => (
-            <label key={i.foodId} className={`shop-row ${checked[i.foodId] ? "done" : ""}`}>
-              <input type="checkbox" checked={!!checked[i.foodId]} onChange={() => setChecked({ ...checked, [i.foodId]: !checked[i.foodId] })} />
-              <span>{i.name}</span>
-              <strong>{i.quantity} {i.unit}{i.approx ? ` · ≈ ${i.approx.count} ${i.approx.label}` : ""}</strong>
-            </label>
+          {shop.offline && <p className="card-description">Offline: showing the last list you opened.</p>}
+          {(shop.aisles || []).map((g) => (
+            <div key={g.aisle} className="shop-aisle">
+              <h4>{g.aisle}</h4>
+              {g.items.map((i) => (
+                <div key={i.foodId} className={`shop-row ${checked[i.foodId] ? "done" : ""}`}>
+                  <label><input type="checkbox" checked={!!checked[i.foodId]} onChange={() => tick(i)} /> <span>{i.name}</span></label>
+                  <strong>{i.quantity} {i.unit}{i.approx ? ` · ≈ ${i.approx.count} ${i.approx.label}` : ""}</strong>
+                  <button type="button" className="chip" onClick={() => haveIt(i, true)} aria-label={`I already have ${i.name}`}>Have it</button>
+                </div>
+              ))}
+            </div>
           ))}
-          {shop.alreadyHave?.length > 0 && <details className="ap-habits"><summary>You already have ({shop.alreadyHave.length})</summary>{shop.alreadyHave.map((i) => <p key={i.foodId} className="ap-sub">{i.name}: {i.quantity} {i.unit} (not on the list)</p>)}</details>}
+          {Object.keys(checked).length > 0 && <p className="card-description"><button type="button" className="chip" onClick={() => { setChecked({}); lsSet(CK, {}); }}>Clear ticks</button></p>}
+          {shop.alreadyHave?.length > 0 && <details className="ap-habits"><summary>You already have ({shop.alreadyHave.length})</summary>{shop.alreadyHave.map((i) => <p key={i.foodId} className="ap-sub">{i.name}: {i.quantity} {i.unit} (not on the list) <button type="button" className="chip" onClick={() => haveIt(i, false)}>Need to buy</button></p>)}</details>}
         </div>
       )}
 

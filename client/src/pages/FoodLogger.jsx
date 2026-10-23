@@ -12,6 +12,11 @@ import EatingOut from "../components/EatingOut";
 import IntakeBanner from "../components/IntakeBanner";
 import FoodTrust from "../components/FoodTrust";
 import ChaiCounter from "../components/ChaiCounter";
+import CookIdeas from "../components/CookIdeas";
+import TiffinPlanner from "../components/TiffinPlanner";
+import FitPreview from "../components/FitPreview";
+import { GlycemicTag, PairingTip } from "../components/GlycemicTag";
+import "../components/logging2.css";
 import RepeatPreview from "../components/RepeatPreview";
 import PortionGuide from "../components/PortionGuide";
 import "../components/logging1.css";
@@ -176,7 +181,14 @@ function FoodLogger({ date, onBack, goTo }) {
   // ============================================================
 
   const searching = search.trim().length > 0;
-  const filteredFoods = useMemo(() => (searching ? foods : recent), [foods, recent, searching]);
+  // Optional diabetes-friendly view (kept on this device only): foods with a LOW glycemic load first, HIGH ones last, unlisted ones in between.
+  const [diab, setDiab] = useState(() => { try { return localStorage.getItem("ff-diabetes-view") === "1"; } catch { return false; } });
+  const toggleDiab = () => setDiab((v) => { const n = !v; try { localStorage.setItem("ff-diabetes-view", n ? "1" : "0"); } catch { /* private mode */ } return n; });
+  const glRank = (f) => ({ low: 0, medium: 1 }[f.glycemic?.glBand || f.glycemic?.giBand] ?? (f.glycemic?.known ? 3 : 2));
+  const filteredFoods = useMemo(() => {
+    const base = searching ? foods : recent;
+    return diab ? [...base].sort((a, b) => glRank(a) - glRank(b)) : base;
+  }, [foods, recent, searching, diab]);
   const visibleFoods = showAll ? filteredFoods : filteredFoods.slice(0, 8);
 
   // ============================================================
@@ -524,6 +536,7 @@ function FoodLogger({ date, onBack, goTo }) {
           <div className="serving-chips logger-quick">
             <button type="button" className="chip" onClick={() => setRepeatMode("yesterday")}>⟲ Copy yesterday's {selectedMeal}</button>
             <button type="button" className="chip" onClick={() => setRepeatMode("last")}>⟲ Same as last time</button>
+            <button type="button" className="chip" aria-pressed={diab} onClick={toggleDiab}>{diab ? "✓ Diabetes-friendly view" : "🩺 Diabetes-friendly view"}</button>
             <button type="button" className="chip" aria-pressed={multi} onClick={() => { setMulti(!multi); setPicked({}); }}>{multi ? "✕ Stop selecting" : "☑ Select several"}</button>
             <button type="button" className="chip" onClick={() => setShowExtras((v) => !v)}>{showExtras ? "− Fewer options" : "＋ Type a meal · Eating out · Suggestions"}</button>
           </div>
@@ -539,6 +552,8 @@ function FoodLogger({ date, onBack, goTo }) {
             <button type="button" className="primary-button" onClick={addPicked}>Add {Object.keys(picked).length} to {selectedMeal}</button>
           </div>
         )}
+
+        {diab && <p className="diabetes-note">{"This view is general information, not medical advice. If you have diabetes or take medicines for it, please follow your doctor's or dietitian's advice. Glycemic values are averages and only some foods have one."}</p>}
 
         {repeatMode && <RepeatPreview date={date} meal={selectedMeal} mode={repeatMode} onClose={() => setRepeatMode(null)} onDone={() => { setRepeatMode(null); fetchFoodLogs(); }} />}
 
@@ -586,6 +601,7 @@ function FoodLogger({ date, onBack, goTo }) {
                       <strong>
                         {food.name}
                       </strong>
+                      <GlycemicTag food={food} />
 
                       {food.brand && (
                         <small>
@@ -720,6 +736,8 @@ function FoodLogger({ date, onBack, goTo }) {
               </div>
 
               <PortionGuide />
+              <PairingTip food={selectedFood} />
+              <FitPreview foodId={selectedFood._id} quantity={quantity} date={date} />
 
               <small>
                 Standard serving: {selectedFood.servingSize} {selectedFood.servingUnit}
@@ -831,6 +849,8 @@ function FoodLogger({ date, onBack, goTo }) {
       {showExtras && (
         <div className="logger-extras">
           <TextLogger date={date} defaultMeal={selectedMeal} onLogged={fetchFoodLogs} />
+          <CookIdeas date={date} mealType={selectedMeal} onLogged={fetchFoodLogs} />
+          <TiffinPlanner />
           <ChaiCounter date={date} onLogged={fetchFoodLogs} />
           <EatingOut date={date} defaultMeal={selectedMeal} onLogged={fetchFoodLogs} />
           <SmartSuggestions date={date} mealType={selectedMeal} refreshKey={foodLogs.length} onLogged={fetchFoodLogs} />

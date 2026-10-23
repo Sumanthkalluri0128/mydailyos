@@ -23,6 +23,9 @@ const { searchFoods, tokens } = require('../lib/foodSearch');
 const { dailyTarget, expectedEnergy, macroTargets, macroRanges, dayBalance } = require('../lib/energy');
 
 const { MICROS, microsOf, confidenceOf } = require('../lib/micro');
+const { glycemicOf, pairingTip, load: loadGly, DIABETES_NOTE } = require('../lib/glycemic');
+const { cookIdeas } = require('../lib/cookIdeas');
+const Recipe = require('../models/Recipe');
 const FoodReport = require('../models/FoodReport');
 
 const router = express.Router();
@@ -38,6 +41,10 @@ function present(food, userId) {
   delete f.favoriteBy;
   const m = microsOf(f);
   f.micros = m.values; f.microSource = m.source; f.confidence = confidenceOf(f);
+  const gly = glycemicOf(f);
+  if (gly.known) f.glycemic = gly;   // only foods with a published value get a tag
+  const tip = pairingTip(f.name);
+  if (tip) f.pairing = tip.text;
   f.isCustom = !!mine;
   f.isFavorite = !!fav;
   return f;
@@ -221,6 +228,32 @@ router.post('/adopt', wrap(async (req, res) => {
   const food = await adoptFood(Food, req.user.id, String(req.body?.name || ''));
   if (!food) throw new HttpError(404, 'That food is not in the healthy list');
   res.status(201).json({ success: true, food: present(food.toObject ? food.toObject() : food, req.user.id) });
+}));
+
+// GET /api/foods/glycemic-info — the source and the doctor's-advice note shown with the optional diabetes-friendly view.
+router.get('/glycemic-info', wrap(async (req, res) => {
+  const d = loadGly();
+  res.json({ success: true, note: DIABETES_NOTE, source: d.source, verified: !!d.verified, listed: Object.keys(d.foods).length, bands: d.bands });
+}));
+
+// POST /api/foods/cook-ideas { have: ["paneer","rice"], date, mealType } — meal ideas from what is at home: my recipes first, then my foods, then the catalogue.
+// Allergies and foods to avoid are removed first and never added back.
+router.post('/cook-ideas', wrap(async (req, res) => {
+  const uid = req.user.id;
+  const date = v.date(req.body?.date, 'date');
+  const have = (Array.isArray(req.body?.have) ? req.body.have : String(req.body?.have || '').split(',')).map((x) => String(x).trim().slice(0, 40)).filter(Boolean).slice(0, 30);
+  const [profile, details] = await Promise.all([Profile.findOne({ userId: uid }).lean(), getDayDetails(uid, date)]);
+  const bal = dayBalance(profile, { eaten: details.summary.calories, workout: details.summary.workoutCalories, steps: details.summary.stepCalories });
+  const e = expectedEnergy(profile);
+  const macros = macroTargets(bal.target, profile?.currentWeightKg, e?.direction, profile?.goals?.proteinTarget);
+  const remaining = { calories: Math.round(bal.budget - details.summary.calories), protein: Math.round(macros.protein - details.summary.protein) };
+  const [shared, mine, recipes, pc] = await Promise.all([
+    catalogueFoods(Food), Food.find({ userId: uid, hidden: { $ne: true } }).limit(2000).lean(), Recipe.find({ userId: uid }).lean(), loadPlanContext(uid, {}),
+  ]);
+  const safe = (list, name = (f) => f.name, extra = (f) => ({ ingredients: f.ingredients })) => (pc.excluder.empty ? list : pc.excluder.keep(list, name, extra));
+  const okRecipes = safe(recipes.map((r) => ({ ...r, ingredients: r.ingredients || [] })).map((r) => ({ ...r, _ing: r.ingredients.map((i) => i.foodName) })), (r) => r.name, (r) => ({ ingredients: r._ing }));
+  const out = cookIdeas({ have, recipes: okRecipes, myFoods: safe(pc.decorate(mine)), catalogue: safe(shared), remaining });
+  res.json({ success: true, remaining, ...out });
 }));
 
 // POST /api/foods/fit { foodId, quantity, date } — "will this fit?": what one food does to today and to the week, nothing is saved.

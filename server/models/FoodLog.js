@@ -27,8 +27,8 @@ const schema = new mongoose.Schema(
     notes: { type: String, default: '' },
     // Optional "why did I eat this?" tag, used only to surface patterns (never to judge).
     // Chai / coffee counter entries keep their parts so the weekly "hidden calories" note can be worked out.
-    // How it was logged, for first-time stickers only: 'voice' (spoken), 'pot' (shared pot).
-    source: { type: String, enum: ['', 'voice', 'pot'], default: '' },
+    // How it was logged, for first-time stickers only: 'voice' (spoken), 'pot' (shared pot), 'import' (from a CSV).
+    source: { type: String, enum: ['', 'voice', 'pot', 'import'], default: '' },
     chai: { type: Object, default: undefined },
     trigger: { type: String, enum: ['', 'stress', 'social', 'bored', 'late-night', 'hungry', 'celebration'], default: '' },
   },

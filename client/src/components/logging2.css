@@ -1,0 +1,7 @@
+.fit-preview{padding:10px 12px;border-radius:12px;background:rgba(127,127,127,.12);margin:8px 0}.fit-preview p{margin:2px 0}.fit-over strong{color:#b7791f}.fit-fits strong{color:#2f855a}
+.gly-tag{display:inline-block;padding:1px 8px;border-radius:999px;font-size:.75em;font-weight:700;border:1px solid currentColor;margin-left:6px}.gly-low{color:#2f855a}.gly-medium{color:#b7791f}.gly-high{color:#c05621}
+.pairing-tip{margin:8px 0;font-size:.9em}.diabetes-note{font-size:.82em;opacity:.85;border-left:3px solid #b7791f;padding-left:8px;margin:6px 0}
+.cook-ideas,.tiffin-card,.csv-import{display:grid;gap:8px}.cook-group h4{margin:8px 0 4px}.cook-item{display:flex;gap:8px;align-items:center;justify-content:space-between;flex-wrap:wrap;padding:6px 0;border-bottom:1px solid rgba(127,127,127,.2)}
+.cook-item small{display:block;opacity:.75}.pantry-chips{display:flex;gap:6px;flex-wrap:wrap}
+.csv-map{display:grid;grid-template-columns:140px 1fr;gap:6px;align-items:center}
+.shop-aisle h4{margin:12px 0 4px}.shop-row{display:flex;gap:8px;align-items:center;justify-content:space-between;flex-wrap:wrap}.shop-row.done span{text-decoration:line-through;opacity:.6}

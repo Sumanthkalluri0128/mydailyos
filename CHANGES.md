@@ -1,3 +1,8 @@
+# v41 - Phase 3 / Section F: faster food logging, part 2 (web + server)
+- Fit preview protein line; "What can I cook?"; glycemic tags, pairing tips and diabetes-friendly view (published values only); CSV import with dry run; tomorrow's lunch planner with canteen favourites; grocery list by aisle with tick-off, "have it" and share.
+- Tests: server/test/logging2.unit.test.js (15). Docs: docs/PHASE3_LOGGING2.md.
+- NOT built or run here (no npm registry): run `npm run build` in client and `npm test` in server.
+---
 # v40 - Phase 3 / Section E: faster food logging, part 1 (web + server)
 - **Copy / repeat**: "Copy yesterday's lunch" and "Same as last time" open a preview with editable amounts before anything is saved. **Select several** foods from search and add them in one tap (`/api/food-logs/bulk`).
 - **Voice logging**: Speak button (hidden where the browser has no speech recognition) with English, Hindi, Telugu, Tamil. The heard text goes through the existing meal parser into an editable review. Sticker for the first spoken meal.

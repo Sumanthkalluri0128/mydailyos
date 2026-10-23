@@ -2,6 +2,7 @@ import { useState } from "react";
 import { apiFetch, signOutCompletely } from "../config/api";
 import { confirmAction } from "../utils/confirm";
 import { notify } from "../utils/notify";
+import CsvImport from "./CsvImport";
 import "../auth/account.css";
 
 async function download(format) {
@@ -65,6 +66,7 @@ export default function DataControls() {
         <button className="secondary-button" disabled={busy} onClick={() => run(() => download("csv"))}>⬇ Export CSV</button>
         <button className="secondary-button" disabled={busy} onClick={() => run(() => download("json"))}>⬇ Export JSON</button>
       </div>
+      <CsvImport />
 
       <form onSubmit={changePassword} className="password-form">
         <h3>Change password</h3>
