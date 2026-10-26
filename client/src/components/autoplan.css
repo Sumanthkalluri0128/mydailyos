@@ -32,12 +32,12 @@
 .ib b { display: block; } .ib p { margin: 2px 0 4px; font-size: 13.5px; opacity: .85; }
 .ap-seg { display: flex; flex-wrap: wrap; gap: 8px; margin: 6px 0 4px; }
 .ap-seg button { border: 1.5px solid var(--border, #ddd); background: transparent; color: inherit; border-radius: 999px; padding: 8px 14px; font-weight: 700; cursor: pointer; }
-.ap-seg button.on { background: var(--primary); border-color: var(--primary); color: #fff; }
+.ap-seg button.on { background:var(--primary-solid,var(--primary)); border-color: var(--primary); color: #fff; }
 .ap-sub { font-size: 13px; opacity: .75; margin: 2px 0 8px; }
 .ap-light { font-weight: 800; color: var(--primary); font-size: 12px; margin-left: 6px; }
 .ap-flag { color: #d97a00; font-weight: 800; }
 .pl-bar { height: 8px; border-radius: 99px; background: rgba(120, 120, 160, .18); overflow: hidden; margin: 6px 0; }
-.pl-bar i { display: block; height: 100%; border-radius: 99px; background: var(--primary); } .pl-bar i.over { background: #e5484d; }
+.pl-bar i { display: block; height: 100%; border-radius: 99px; background:var(--primary-solid,var(--primary)); } .pl-bar i.over { background: #e5484d; }
 .pl-macros { font-size: 12.5px; opacity: .85; margin: 2px 0 6px; } .pl-warn { color: #d97a00; font-weight: 700; }
 .pl-tools { display: flex; flex-wrap: wrap; gap: 6px; margin: 6px 0 4px; }
 .pl-tools button { font-size: 12.5px; padding: 6px 10px; }

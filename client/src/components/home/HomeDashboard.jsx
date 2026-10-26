@@ -11,6 +11,9 @@ import WeightReveal from "../WeightReveal";
 import OverDayCard from "../OverDayCard";
 import { HomeGoal } from "../simple/SimpleProgress";
 import FixMyDay from "./FixMyDay";
+import { useT } from "../../i18n";
+import { RoughDay, SideQuest, useCoachState, PlateCard, EventMode, CravingTimer } from "../CoachCards";
+import { useCoachTone } from "../../utils/coachTone";
 import HealthyDay from "./HealthyDay";
 import HomeSection from "../HomeSection";
 import { apiFetch } from "../../config/api";
@@ -143,10 +146,23 @@ export default function HomeDashboard({ profile, summary, activity, water, water
       .then((r) => r.json()).then((d) => { if (alive && d?.success) setNext({ text: d.top || d.text.split("\n")[0], actions: d.actions || [] }); }).catch(() => {});
     return () => { alive = false; };
   }, [syncTick, summary?.calories, water?.totalMl]); // eslint-disable-line react-hooks/exhaustive-deps
+  // adaptive step: time of day + what is logged (server rules in lib/nextStep.js); falls back to the coach line above
+  const [step, setStep] = useState(null);
+  const { t } = useT();
+  useEffect(() => {
+    let alive = true;
+    apiFetch("/api/coach/next-step", { method: "POST", body: JSON.stringify({ hour, meals: summary?.meals || {}, waterMl: n0(water?.totalMl), waterTargetMl: n0(waterTarget), steps: n0(activity?.steps), stepsTarget: stepsT, budget: n0(bal.budget), eaten: n0(summary?.calories) }) })
+      .then((r) => r.json()).then((d) => { if (alive && d?.success) setStep(d.step); }).catch(() => {});
+    return () => { alive = false; };
+  }, [syncTick, summary?.calories, water?.totalMl, activity?.steps]); // eslint-disable-line react-hooks/exhaustive-deps
   const act = (a) => { if (/fix my day/i.test(a.label || "")) setSheet("fix"); else if (a.page) goTo(a.page); else if (a.ask) onAsk?.({ question: a.ask }); };
   const fallbackCoach = over ? "You're over today. Keep the rest light and take a walk after dinner."
     : !(summary?.meals?.breakfast > 0) && hour < 11 ? "Log breakfast to start the day strong!" : "Log what you eat as you go. I'll tell you what matters most.";
-  const coach = { scene: over ? "sad" : "wave", title: hour < 12 ? "Fuel your morning" : "Your next step", text: next?.text || fallbackCoach, action: next?.actions?.[0] && { label: next.actions[0].label, onClick: () => act(next.actions[0]) } };
+  const adaptive = step && step.id !== "steady" ? step : null;
+  const stepAct = adaptive?.cta && { label: t(`next.${adaptive.id}.cta`), onClick: () => (adaptive.id === "fix" ? setSheet("fix") : goTo(adaptive.cta.page)) };
+  const coach = adaptive
+    ? { scene: adaptive.scene, title: hour < 12 ? t("home.morningTitle") : t("home.nextTitle"), text: t(`next.${adaptive.id}.text`), action: stepAct }
+    : { scene: over ? "sad" : "wave", title: hour < 12 ? t("home.morningTitle") : t("home.nextTitle"), text: next?.text || (step ? t("next.steady.text") : fallbackCoach), action: next?.actions?.[0] && { label: next.actions[0].label, onClick: () => act(next.actions[0]) } };
 
   // ---- quick-add sheets
   const [busy, setBusy] = useState(false);
@@ -206,12 +222,19 @@ export default function HomeDashboard({ profile, summary, activity, water, water
   const wpts = useMemo(() => [...(weightHistory || [])].sort((a, b) => String(a.date).localeCompare(String(b.date))).slice(-14).map((w) => Number(w.weightKg)).filter(Number.isFinite), [weightHistory]);
   const wLeft = latestWeight != null && tw ? Math.abs(latestWeight - tw) : null;
 
+  const [coachState, setCoachState, reloadCoach] = useCoachState();
+  const tone = useCoachTone();
   const open = (page) => (ev) => { if (ev.key && ev.key !== "Enter" && ev.key !== " ") return; if (ev.key) ev.preventDefault(); goTo(page); };
 
   return (
-    <div className="hd">
+    <div className={`hd${tone.gentle ? " hd-gentle" : ""}`}>
       <HeroCard greeting={greet(hour)} name={name} dateText={new Date().toLocaleDateString(undefined, { weekday: "long", day: "numeric", month: "long" }).toUpperCase()} coach={coach} onAsk={onAsk} />
       <FirstWeekChecklist />
+      <RoughDay state={coachState} reload={reloadCoach} />
+      <EventMode event={coachState?.event} reload={reloadCoach} />
+      {tone.gentle && <PlateCard refreshKey={syncTick} />}
+      <div className="cc-strip"><span>Feeling a craving?</span><CravingTimer onLogged={onChanged} /></div>
+      <SideQuest state={coachState} setState={setCoachState} reload={reloadCoach} />
 
       {/* ---------- stat cards: each number appears once, in its own card ---------- */}
       <section className="hd-stats" aria-label="Today at a glance">
@@ -264,7 +287,7 @@ export default function HomeDashboard({ profile, summary, activity, water, water
         </article>
       </section>
 
-      <OverDayCard onPlan={() => goTo("planner")} />
+      {!tone.gentle && <OverDayCard onPlan={() => goTo("planner")} />}
 
       {/* ---------- nutrition · macros · habits ---------- */}
       <section className="hd-mid">

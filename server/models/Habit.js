@@ -11,6 +11,8 @@ const schema = new mongoose.Schema(
     unit: { type: String, default: 'times', maxlength: 30 },
     isActive: { type: Boolean, default: true },
     notes: { type: String, default: '', maxlength: 500 },
+    // Habit anchor: tie the habit to an existing routine ("after brushing my teeth") and an optional reminder time.
+    anchor: { text: { type: String, default: '', maxlength: 80 }, time: { type: String, default: '' } },
   },
   { timestamps: true }
 );

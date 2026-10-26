@@ -131,7 +131,7 @@ body:has(.hd) {
 .addrow { display: flex; gap: 8px; margin-top: auto; padding-top: 6px; padding-right: 98px; }
 .addrow input { flex: 1; min-width: 0; min-height: 42px; padding: 8px 12px; border-radius: 12px; border: 1px solid var(--line); background: var(--soft); color: var(--text); font: inherit; font-size: 14px; }
 .addrow input:focus { outline: 2px solid var(--primary); outline-offset: 1px; background: var(--card); }
-.addrow button { min-height: 42px; padding: 8px 14px; border: 0; border-radius: 12px; font-weight: 800; cursor: pointer; color: #fff; background: var(--primary); } .addrow button:disabled { opacity: .45; cursor: default; }
+.addrow button { min-height: 42px; padding: 8px 14px; border: 0; border-radius: 12px; font-weight: 800; cursor: pointer; color: #fff; background:var(--primary-solid,var(--primary)); } .addrow button:disabled { opacity: .45; cursor: default; }
 
 .pn-prog { cursor: pointer; background: linear-gradient(135deg, color-mix(in srgb, #ffb347 30%, var(--card)), color-mix(in srgb, #ff7e5f 16%, var(--card))); transition: transform .22s cubic-bezier(.3, 1.4, .5, 1); }
 .pn-prog:hover { transform: translateY(-3px); }
@@ -154,7 +154,7 @@ body:has(.hd) {
 .sh-chips button { display: grid; justify-items: center; gap: 2px; min-height: 64px; padding: 10px 6px; border-radius: 16px; border: 1px solid var(--line); background: var(--soft); color: var(--text); font-weight: 800; font-size: 15px; cursor: pointer; transition: transform .15s, border-color .15s, background .15s; }
 .sh-chips button span { font-size: 20px; } .sh-chips button:hover:not(:disabled) { transform: translateY(-2px); border-color: var(--primary); background: color-mix(in srgb, var(--primary) 10%, transparent); } .sh-chips button:disabled { opacity: .5; }
 .sh-custom { display: flex; gap: 8px; } .sh-custom input { flex: 1; min-width: 0; min-height: 46px; padding: 8px 12px; border-radius: 14px; border: 1px solid var(--line); background: var(--soft); color: var(--text); font: inherit; font-size: 15px; }
-.sh-custom button { min-height: 46px; padding: 8px 18px; border: 0; border-radius: 14px; background: var(--primary); color: #fff; font-weight: 800; cursor: pointer; } .sh-custom button:disabled { opacity: .45; }
+.sh-custom button { min-height: 46px; padding: 8px 18px; border: 0; border-radius: 14px; background:var(--primary-solid,var(--primary)); color: #fff; font-weight: 800; cursor: pointer; } .sh-custom button:disabled { opacity: .45; }
 
 /* ============ RESPONSIVE ============ */
 @media (max-width: 1180px) {
@@ -209,7 +209,7 @@ html.ff-calm .pk, html.ff-calm .hr-sun, html.ff-calm .pg-crown { animation: none
 .hdy-row { display: flex; gap: 8px; flex-wrap: wrap; justify-content: space-between; }
 .hdy-seg { display: inline-flex; padding: 3px; border-radius: 999px; background: var(--soft); }
 .hdy-seg button { min-height: 34px; padding: 6px 12px; border: 0; border-radius: 999px; background: transparent; color: var(--text-muted); font-weight: 800; font-size: 12.5px; cursor: pointer; }
-.hdy-seg button.on { background: var(--primary); color: #fff; }
+.hdy-seg button.on { background:var(--primary-solid,var(--primary)); color: #fff; }
 .hdy-tot { display: flex; gap: 10px; flex-wrap: wrap; align-items: baseline; padding: 10px 12px; border-radius: 14px; background: color-mix(in srgb, var(--tint-g, #2fbf84) 14%, transparent); } .hdy-tot b { font-size: 18px; } .hdy-tot span { font-size: 12.5px; color: var(--text-muted); font-weight: 700; }
 .hdy-note, .hdy-tip { margin: 0; font-size: 13px; color: var(--text-muted); line-height: 1.45; }
 .hdy-meal h4 { display: flex; align-items: center; gap: 8px; margin: 4px 0 2px; font-size: 14.5px; } .hdy-meal h4 small { margin-left: auto; color: var(--text-muted); font-weight: 700; }

@@ -1,4 +1,5 @@
 import { confirmAction } from "../utils/confirm";
+import { undoGate } from "../utils/undo";
 import Buddy, { BuddyEmpty } from "../motion/Buddy";
 import { notify } from "../utils/notify";
 import { apiFetch } from "../config/api";
@@ -6,6 +7,7 @@ import { useEffect, useState } from "react";
 import { API_URL } from "../config";
 import { getLocalDate } from "../utils/date";
 import { estimateBurn } from "../utils/energy";
+import Training from "../components/Training";
 
 function ExercisePage({ onBack }) {
   const [activities, setActivities] = useState([]);
@@ -195,13 +197,8 @@ function ExercisePage({ onBack }) {
   // ============================================================
 
   const handleDelete = async (id) => {
-    const confirmed = await confirmAction(
-      "Delete this activity?"
-    );
-
-    if (!confirmed) {
-      return;
-    }
+    const go = await undoGate({ what: "Activity", hide: () => setLogs((cur) => cur.filter((x) => x._id !== id)), restore: () => fetchLogs() });
+    if (!go) return;
 
     try {
       const response = await apiFetch(
@@ -288,6 +285,8 @@ function ExercisePage({ onBack }) {
 
       </div>
 
+
+      <Training activities={activities} onLogged={fetchLogs} />
 
       {/* ======================================================
           TODAY SUMMARY

@@ -26,7 +26,7 @@
 .hf-coach b { font-size: 12px; letter-spacing: .06em; text-transform: uppercase; color: var(--primary); }
 .hf-coach p { margin: 3px 0 0; font-size: 15px; line-height: 1.45; color: var(--text); }
 .hf-coach-actions { display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
-.hf-pill { border: 0; border-radius: 999px; padding: 10px 16px; font-weight: 800; font-size: 13px; cursor: pointer; background: var(--primary); color: #fff; min-height: 44px; }
+.hf-pill { border: 0; border-radius: 999px; padding: 10px 16px; font-weight: 800; font-size: 13px; cursor: pointer; background:var(--primary-solid,var(--primary)); color: #fff; min-height: 44px; }
 .hf-pill.hf-ghost { background: transparent; color: var(--primary); border: 1px solid var(--primary-soft-hover-border, #d7d2ff); }
 .hf-actions { display: grid; grid-template-columns: 1.4fr 1fr 1fr 1fr; gap: 10px; margin-top: 14px; }
 .hf-actions button { display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 54px; border-radius: 16px; border: 1px solid var(--border); background: var(--bg); color: var(--text); font-weight: 800; font-size: 15px; cursor: pointer; transition: transform .12s, border-color .15s; }

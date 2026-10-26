@@ -6,6 +6,9 @@ const { wrap, HttpError } = require('../lib/http');
 const { createOnce } = require('../lib/idempotent');
 const { stepCalories, stepDistanceKm, profileWeight } = require('../lib/steps');
 const v = require('../lib/validate');
+const WeightLog = require('../models/WeightLog');
+const { measureTrends, TYPES: BODY_TYPES } = require('../lib/measurements');
+const { addDays, todayUtc } = require('../lib/dates');
 
 const router = express.Router();
 router.use(requireAuth);
@@ -22,6 +25,17 @@ router.get('/', wrap(async (req, res) => {
   if (req.query.from || req.query.to) q.date = { $gte: v.date(req.query.from || '0000-01-01', 'from'), $lte: v.date(req.query.to || '9999-12-31', 'to') };
   const limit = Math.min(Math.max(parseInt(req.query.limit, 10) || 120, 1), 1000);
   res.json({ success: true, logs: await HealthLog.find(q).sort({ date: -1, createdAt: -1 }).limit(limit).lean() });
+}));
+
+// Waist / hips / chest / arm / thigh trends next to weight (last `days` days, default 90).
+router.get('/measure-trends', wrap(async (req, res) => {
+  const days = Math.min(Math.max(parseInt(req.query.days, 10) || 90, 7), 730);
+  const to = req.query.today ? v.date(req.query.today, 'today') : todayUtc(); const from = addDays(to, -days);
+  const [logs, weights] = await Promise.all([
+    HealthLog.find({ userId: req.user.id, type: { $in: BODY_TYPES }, date: { $gte: from, $lte: to } }).select('type date value createdAt').lean(),
+    WeightLog.find({ userId: req.user.id, date: { $gte: from, $lte: to } }).select('date weightKg').lean(),
+  ]);
+  res.json({ success: true, from, to, ...measureTrends({ weights, logs: logs.map((l) => ({ ...l, at: l.createdAt && new Date(l.createdAt).toISOString() })) }) });
 }));
 
 // Latest reading of every type (for the Health overview).

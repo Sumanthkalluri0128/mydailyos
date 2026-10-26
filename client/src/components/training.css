@@ -1,0 +1,47 @@
+.tr-hub { margin: 18px 0; display: grid; gap: 14px; }
+.tr-card h3, .tr-card h4 { margin: 0 0 6px; }
+.tr-gap { flex: 1; min-width: 8px; }
+.tr-reasons, .tr-plan, .tr-list, .tr-pick, .tr-eps, .tr-muscles { list-style: none; padding: 0; margin: 8px 0; }
+.tr-reasons li::before { content: "• "; color: var(--primary); }
+.tr-plan li { padding: 4px 0; }
+.tr-list > li { padding: 10px 0; border-bottom: 1px solid var(--border); display: grid; gap: 8px; }
+.tr-list small, .tr-eps small { display: block; color: var(--text-muted); font-size: .85rem; }
+.tr-row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.tr-hint { background: var(--primary-soft, var(--surface-soft)); border-radius: 12px; padding: 8px 12px; margin: 8px 0; }
+.tr-warn { background: var(--primary-soft, var(--surface-soft)); border-left: 4px solid var(--primary); border-radius: 8px; padding: 8px 12px; margin: 6px 0; grid-column: 1 / -1; }
+.tr-safe { color: var(--text-muted); font-size: .85rem; margin: 10px 0 0; }
+.tr-formula { font-size: .85rem; color: var(--text-muted); }
+.tr-bigpower { font-size: 2.4rem; font-weight: 800; margin: 0; line-height: 1.1; color: var(--primary); }
+.tr-power { margin: 4px 0; }
+.tr-step { margin: 8px 0; }
+.tr-lift { all: unset; display: grid; gap: 2px; width: 100%; cursor: pointer; min-height: 44px; box-sizing: border-box; }
+.tr-lift:focus-visible { outline: 3px solid var(--primary); outline-offset: 2px; }
+.tr-detail { padding: 8px 0 0; overflow-x: auto; }
+.tr-detail table { width: 100%; border-collapse: collapse; font-size: .9rem; }
+.tr-detail th, .tr-detail td { text-align: left; padding: 4px 8px 4px 0; }
+.tr-muscles li { display: grid; grid-template-columns: 90px 1fr 70px; align-items: center; gap: 8px; margin: 6px 0; }
+.tr-muscles i { display: block; height: 10px; border-radius: 6px; background: var(--primary); min-width: 2px; }
+.tr-muscles b { font-size: .85rem; text-align: right; }
+.tr-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; margin: 10px 0; }
+.tr-grid label, .tr-item label, .tr-set label { display: grid; gap: 2px; font-weight: 700; font-size: .85rem; }
+.tr-bar { display: flex; align-items: center; gap: 2px; margin: 8px 0; min-height: 110px; }
+.tr-bar i { width: 10px; background: var(--primary); border-radius: 3px; display: block; }
+.tr-bar b { flex: 0 0 90px; height: 8px; background: var(--text-muted); border-radius: 4px; }
+.tr-item { display: flex; flex-wrap: wrap; gap: 8px; align-items: end; border: 1px solid var(--border); border-radius: 12px; padding: 8px 10px; }
+.tr-item input { width: 64px; }
+.tr-modal { position: fixed; inset: 0; background: rgba(15, 18, 35, .55); z-index: 1000; display: flex; align-items: flex-end; justify-content: center; }
+.tr-sheet { background: var(--surface, #fff); color: inherit; width: min(640px, 100%); max-height: 92vh; overflow: auto; border-radius: 20px 20px 0 0; padding: 18px 16px 24px; box-sizing: border-box; }
+.tr-center { text-align: center; display: grid; justify-items: center; gap: 6px; }
+.tr-head { display: flex; align-items: center; gap: 12px; } .tr-head > div { flex: 1; } .tr-head h3 { margin: 0; }
+.tr-sets { display: grid; gap: 8px; margin: 10px 0; }
+.tr-set { display: grid; grid-template-columns: 56px 1fr 1fr auto; gap: 8px; align-items: end; padding: 6px 0; border-bottom: 1px solid var(--border); }
+.tr-set.done { opacity: .75; }
+.tr-set input { width: 100%; min-height: 44px; box-sizing: border-box; }
+.tr-rest { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 12px 0; padding: 10px; border-radius: 12px; background: var(--primary-soft, var(--surface-soft)); }
+.tr-breath-wrap { display: grid; justify-items: center; gap: 8px; padding: 12px 0; }
+.tr-breath { width: 180px; height: 180px; border-radius: 50%; background: var(--primary-soft, var(--surface-soft)); display: grid; place-items: center; transition: transform 1s linear; }
+.tr-phase { font-size: 1.2rem; font-weight: 800; margin: 0; }
+.tr-cue { text-align: center; min-height: 3em; margin: 0; }
+.tr-clock { text-align: center; color: var(--text-muted); margin: 4px 0 10px; }
+.tr-sound { display: flex; gap: 6px; align-items: center; font-weight: 600; }
+@media (prefers-reduced-motion: reduce) { .tr-breath { transition: none; } }

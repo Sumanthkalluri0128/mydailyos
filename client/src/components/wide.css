@@ -1,0 +1,23 @@
+/* Wide screens and tablets. Loaded last so it only adds room; phones are untouched. */
+@media (min-width: 1500px) {
+  .dashboard { max-width: 1560px; }
+  .hd-stats { gap: 18px; } .hd-mid, .hd-low { gap: 18px; }
+}
+@media (min-width: 1900px) {
+  .dashboard { max-width: 1760px; }
+  .hd-low { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+/* tablets (portrait and landscape): keep the Home cards in two roomy columns instead of one long stack */
+@media (min-width: 721px) and (max-width: 1180px) {
+  .dashboard { padding-left: 22px; padding-right: 22px; }
+  .hd-stats { grid-template-columns: repeat(3, minmax(0, 1fr)); } .sc-cal { grid-column: 1 / -1; }
+  .hd-mid { grid-template-columns: repeat(2, minmax(0, 1fr)); } .pn-mac { grid-column: 1 / -1; order: -1; }
+}
+/* big touch targets on touch tablets */
+@media (pointer: coarse) and (min-width: 721px) { .toast-action, .nv-pi, .pal-list li { min-height: 48px; } }
+
+/* Large-text mode (Profile > Accessibility). zoom keeps layouts proportional; the extra rules make touch targets bigger still. */
+html.ff-large body { zoom: 1.2; }
+html.ff-large :where(button, [role="button"], select, input) { min-height: 52px; }
+html.ff-large .toast-stack { width: min(460px, calc(100vw - 32px)); }
+@supports not (zoom: 1) { html.ff-large { font-size: 120%; } }

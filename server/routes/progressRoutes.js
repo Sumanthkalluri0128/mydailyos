@@ -12,6 +12,10 @@ const { buildAchievements } = require('../lib/achievements');
 const { buildWeeklySummary } = require('../lib/weekly');
 const { dailyTarget, expectedEnergy, macroTargets, waterTargetMl } = require('../lib/energy');
 const { buildCoach } = require('../lib/weeklyCoach');
+const CoachState = require('../models/CoachState');
+const coachG = require('../lib/coachG');
+const coachH = require('../lib/coachH');
+const toneLines = require('../lib/toneLines');
 const { addDays, diffDays, todayUtc } = require('../lib/dates');
 const { materializeRecurring } = require('../lib/taskSeries');
 const { weeklyBundle, plateauFor, digestFor } = require('../lib/weeklyDigest');
@@ -69,6 +73,8 @@ router.get('/day/:date', dayHandler((req) => req.params.date));
 router.get('/streaks', wrap(async (req, res) => {
   const today = v.date(req.query.today);
   const dates = await FoodLog.distinct('date', { userId: req.user.id });
+  // Rough-day mode: a day with at least one tiny action still counts toward the streak.
+  try { dates.push(...(await require('./coachRoutes').roughKeptFor(req.user.id))); } catch { /* optional */ }
   res.json({ success: true, streaks: computeStreaks(dates, today, { freeze: true }) });
 }));
 
@@ -95,7 +101,16 @@ router.get('/coach', wrap(async (req, res) => {
   // "Low on iron 3 weeks in a row" with foods from the person's own log first (only when there is enough vitamin / mineral data).
   let microInsights = [];
   try { microInsights = (await microForWeeks(uid, today)).insights.slice(0, 2); } catch { /* optional */ }
-  res.json({ success: true, ...buildCoach({ days: history.days, meals, foods, targets, today, expectedTdee: e?.tdee || null }), microInsights });
+  const cs = await CoachState.findOne({ userId: uid }).lean();
+  const coach = buildCoach({ days: history.days, meals, foods, targets, today, expectedTdee: e?.tdee || null, learn: cs?.learn || {} });
+  const tv = coachG.treatView({ treat: cs?.treat, today });
+  // Festival / trip window and diet break widen the week; the per-day figure never drops below the calorie floor. Tone changes the review wording.
+  const tdee = e?.tdee || null; const monday = coachG.mondayOf(today);
+  const extra = coachH.weeklyExtra({ event: cs?.event, dietBreak: cs?.dietBreak, weekStart: monday, target, tdee, profile });
+  const wb = coachH.applyWeekExtra(coachG.applyTreat(coach.weekBudget, tv), extra, profile);
+  const [rh, rt] = toneLines.reviewLine(cs?.tone, coach.review.mood);
+  const review = { ...coach.review, headline: rh, text: rt };
+  res.json({ success: true, ...coach, review, weekBudget: wb, treat: tv, microInsights, tone: toneLines.norm(cs?.tone), gentle: !!cs?.gentle });
 }));
 
 // Vitamins and minerals for one day (min-max range per nutrient, "not enough data" instead of misleading zeros) and the week view.

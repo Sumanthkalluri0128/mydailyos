@@ -5,6 +5,9 @@ import { useEffect, useState } from "react";
 import { API_URL } from "../config";
 import DataControls from "../components/DataControls";
 import CharacterSettings from "../components/CharacterSettings";
+import { CoachLearning, ToneSettings } from "../components/CoachCards";
+import UiSettings from "../components/UiSettings";
+import ShareLinkCard from "../components/ShareLinkCard";
 import { TourSettings } from "../tour/TourHost";
 import ReportControls from "../components/ReportControls";
 import { expectedEnergy } from "../utils/energy";
@@ -721,7 +724,11 @@ function ProfilePage({ onBack }) {
 
       {/* Export your data, change password, log out, delete account */}
       <CharacterSettings />
+      <UiSettings />
+      <ToneSettings />
+      <CoachLearning />
       <TourSettings />
+      <ShareLinkCard />
       <ReportControls />
       <DataControls />
 

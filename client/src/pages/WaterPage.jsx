@@ -1,4 +1,5 @@
 import { confirmAction } from "../utils/confirm";
+import { undoGate } from "../utils/undo";
 import Buddy, { BuddyEmpty } from "../motion/Buddy";
 import { notify } from "../utils/notify";
 import { apiFetch } from "../config/api";
@@ -139,13 +140,8 @@ function WaterPage({ onBack }) {
   // ============================================================
 
   const deleteWater = async (id) => {
-    const confirmed = await confirmAction(
-      "Remove this water entry?"
-    );
-
-    if (!confirmed) {
-      return;
-    }
+    const go = await undoGate({ what: "Water entry", hide: () => setLogs((cur) => cur.filter((x) => x._id !== id)), restore: () => fetchWater() });
+    if (!go) return;
 
     try {
       const response = await apiFetch(

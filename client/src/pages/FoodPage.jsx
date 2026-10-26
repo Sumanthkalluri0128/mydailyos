@@ -1,4 +1,5 @@
 import { confirmAction } from "../utils/confirm";
+import { undoGate } from "../utils/undo";
 import Buddy from "../motion/Buddy";
 import { notify } from "../utils/notify";
 import { apiFetch } from "../config/api";
@@ -484,13 +485,8 @@ const [editingFood, setEditingFood] = useState(null);
       className="food-action-button delete-button"
       aria-label="Delete food"
       onClick={async () => {
-        const confirmed = await confirmAction(
-          `Are you sure you want to delete "${food.name}"?`
-        );
-
-        if (!confirmed) {
-          return;
-        }
+        const go = await undoGate({ what: food.name, hide: () => setFoods((cur) => cur.filter((x) => x._id !== food._id)), restore: () => fetchFoods() });
+    if (!go) return;
 
         try {
           const response = await apiFetch(

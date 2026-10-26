@@ -7,8 +7,10 @@
   --text-muted-2: #8a93a1;
   --border: #e7eaf0;
   --primary: #6847e8;
+  --primary-solid: #6847e8; /* behind white text */
+  --danger-solid: #b83232;
   --primary-soft: #f0edff;
-  --danger: #d64545;
+  --danger: #b83232;
   --success: #20a46b;
   --shadow: rgba(23, 32, 51, 0.08);
   --chip-bg: #eef1f6;
@@ -29,9 +31,11 @@
   --text-muted-2: #8890a6;
   --border: #2c2d3a;
   --primary: #8f7dff;
+  --primary-solid: #6a55e8;
+  --danger-solid: #c62f32;
   --primary-soft: #2a2447;
-  --danger: #ff6b6b;
-  --success: #3ecf8e;
+  --danger: #e85a5a;
+  --success: #5be0a4;
   --shadow: rgba(0, 0, 0, 0.35);
   --chip-bg: #262735;
   --danger-soft: #3a2028;
@@ -53,7 +57,7 @@
   --md-water-soft: #142e42;
   --md-orange: #fbbf24;
   --md-orange-soft: #3a2c12;
-  --md-danger: #ff6b6b;
+  --md-danger: #e85a5a;
   --md-danger-soft: #3a2028;
   --md-card: rgba(26, 27, 35, 0.96);
   --md-shadow: 0 12px 35px rgba(0, 0, 0, 0.35);
@@ -74,9 +78,11 @@
     --text-muted-2: #8890a6;
     --border: #2c2d3a;
     --primary: #8f7dff;
+    --primary-solid: #6a55e8;
+    --danger-solid: #c62f32;
     --primary-soft: #2a2447;
-    --danger: #ff6b6b;
-    --success: #3ecf8e;
+    --danger: #e85a5a;
+    --success: #5be0a4;
     --shadow: rgba(0, 0, 0, 0.35);
     --chip-bg: #262735;
     --danger-soft: #3a2028;
@@ -95,7 +101,7 @@
     --md-water-soft: #142e42;
     --md-orange: #fbbf24;
     --md-orange-soft: #3a2c12;
-    --md-danger: #ff6b6b;
+    --md-danger: #e85a5a;
     --md-danger-soft: #3a2028;
     --md-card: rgba(26, 27, 35, 0.96);
     --md-shadow: 0 12px 35px rgba(0, 0, 0, 0.35);
@@ -170,7 +176,7 @@ button {
   width: 40px;
   height: 40px;
   border-radius: 50%;
-  background: var(--primary);
+  background:var(--primary-solid,var(--primary));
   color: #fff;
   display: flex;
   align-items: center;
@@ -294,7 +300,7 @@ button {
 }
 
 .primary-button {
-  background: var(--primary);
+  background:var(--primary-solid,var(--primary));
   color: #fff;
 }
 
@@ -646,7 +652,7 @@ button {
 }
 
 .food-filters button.filter-active {
-  background: var(--primary);
+  background:var(--primary-solid,var(--primary));
   color: #fff;
 }
 
@@ -727,7 +733,7 @@ button {
 }
 
 .meal-button.active {
-  background: var(--primary);
+  background:var(--primary-solid,var(--primary));
   color: #fff;
   border-color: var(--primary);
 }
@@ -2502,7 +2508,7 @@ label {
 
 .period-mode.active {
   color: #fff;
-  background: var(--primary);
+  background:var(--primary-solid,var(--primary));
   border-color: var(--primary);
 }
 
@@ -2595,7 +2601,7 @@ label {
 
 .daily-day-chip strong { font-size: 12px; color: var(--text); }
 .daily-day-chip span { font-size:12px; color: var(--text-muted-2); }
-.daily-day-chip.active { background: var(--primary); border-color: var(--primary); }
+.daily-day-chip.active { background:var(--primary-solid,var(--primary)); border-color: var(--primary); }
 .daily-day-chip.active strong { color: #fff; }
 .daily-day-chip.active span { color: #e7e2ff; }
 

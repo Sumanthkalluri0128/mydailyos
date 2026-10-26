@@ -7,6 +7,11 @@ const itemSchema = new mongoose.Schema(
     category: { type: String, default: 'General' },
     met: { type: Number, required: true, min: 0 },
     durationMinutes: { type: Number, required: true, min: 1, max: 1440 },
+    // optional strength targets: old duration-only items simply do not have them
+    targetSets: { type: Number, min: 1, max: 20 },
+    targetReps: { type: Number, min: 1, max: 1000 },
+    targetWeightKg: { type: Number, min: 0, max: 1000 },
+    restSec: { type: Number, min: 0, max: 600 },
   },
   { _id: false }
 );

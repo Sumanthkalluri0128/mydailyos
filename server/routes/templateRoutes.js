@@ -7,6 +7,8 @@ const WorkoutTemplate = require('../models/WorkoutTemplate');
 const { requireAuth } = require('../middleware/auth');
 const { wrap, HttpError } = require('../lib/http');
 const v = require('../lib/validate');
+const { buildLogs, cleanSets } = require('../lib/workoutBuild');
+const { recordsBroken } = require('../lib/trainingData');
 
 const router = express.Router();
 router.use(requireAuth);
@@ -23,10 +25,18 @@ async function parseTemplate(body) {
   const items = body.items.map((i) => {
     const a = byId.get(String(i.activityId));
     if (!a) throw new HttpError(404, 'One of the activities no longer exists');
-    return {
+    const item = {
       activityId: a._id, activityName: a.name, category: a.category, met: a.met,
       durationMinutes: v.number(i.durationMinutes, 'durationMinutes', { min: 1, max: 1440 }),
     };
+    // optional strength targets (old duration-only templates simply leave these out)
+    const opt = (key, max, min = 1) => (i[key] === undefined || i[key] === null || i[key] === '' ? undefined : v.number(i[key], key, { min, max }));
+    const ts = opt('targetSets', 20), tr = opt('targetReps', 1000), tw = opt('targetWeightKg', 1000, 0), rs = opt('restSec', 600, 0);
+    if (ts !== undefined) item.targetSets = Math.round(ts);
+    if (tr !== undefined) item.targetReps = Math.round(tr);
+    if (tw !== undefined) item.targetWeightKg = tw;
+    if (rs !== undefined) item.restSec = Math.round(rs);
+    return item;
   });
   return { name, notes, items };
 }
@@ -69,15 +79,19 @@ router.post('/:id/log', wrap(async (req, res) => {
   let weight = v.number(req.body.weightKg, 'weightKg', { min: 1, max: 500, required: false, def: 0 });
   if (!weight) weight = Number((await Profile.findOne({ userId: req.user.id }).lean())?.currentWeightKg || 70);
 
-  const logs = await ActivityLog.insertMany(t.items.map((i, idx) => ({
-    userId: req.user.id, activityId: i.activityId, date, activityName: i.activityName, category: i.category,
-    durationMinutes: i.durationMinutes, weightKg: weight, met: i.met,
-    caloriesBurned: (i.met * 3.5 * weight / 200) * i.durationMinutes,
-    notes: `From template: ${t.name}`,
-    clientId: clientId ? `${clientId}#${idx}` : undefined,
-  })));
+  // Workout mode sends `results` (sets done per exercise, by position). Without it, the template is logged as planned.
+  const results = Array.isArray(req.body.results) ? req.body.results : null;
+  const items = t.items.map((i, idx) => {
+    const done = results ? results.find((r) => Number(r?.index) === idx) : null;
+    if (results && !done) return null; // skipped exercise: not logged
+    return { ...i, sets: done ? cleanSets(done.sets) : [], durationMinutes: done && Number(done.durationMinutes) > 0 ? Number(done.durationMinutes) : i.durationMinutes };
+  }).filter(Boolean);
+  if (!items.length) throw new HttpError(400, 'Nothing to log');
+  // a planned (not performed) template does not log sets, so records only come from real results
+  const records = results ? await recordsBroken(req.user.id, items.map((i) => ({ activityName: i.activityName, sets: i.sets }))) : [];
+  const logs = await ActivityLog.insertMany(buildLogs({ userId: req.user.id, items, date, weightKg: weight, label: `From template: ${t.name}`, clientId }));
   res.status(201).json({
-    success: true, logs,
+    success: true, logs, records,
     totals: { minutes: logs.reduce((s, l) => s + l.durationMinutes, 0), caloriesBurned: Math.round(logs.reduce((s, l) => s + l.caloriesBurned, 0)) },
   });
 }));

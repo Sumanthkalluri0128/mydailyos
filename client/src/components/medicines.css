@@ -1,0 +1,18 @@
+.md-card { margin-top: 16px; }
+.md-head { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+.md-head h3 { margin: 0; }
+.md-note { margin: 8px 0; padding: 8px 12px; border-radius: 12px; background: var(--primary-soft); font-size: .9rem; }
+.md-sub { color: var(--text-muted); font-size: .9rem; margin: 6px 0 0; }
+.md-list { list-style: none; padding: 0; margin: 8px 0 0; }
+.md-list li { display: flex; justify-content: space-between; align-items: center; gap: 10px; min-height: 52px; border-bottom: 1px solid var(--border); }
+.md-list label { display: flex; align-items: center; gap: 12px; flex: 1; cursor: pointer; }
+.md-list input[type=checkbox] { width: 24px; height: 24px; min-height: 0; }
+.md-list li.done span { text-decoration: line-through; opacity: .7; }
+.md-list li.due small { color: var(--primary); font-weight: 700; }
+.md-manage { margin-top: 12px; } .md-manage ul { list-style: none; padding: 0; } .md-manage li { display: flex; justify-content: space-between; gap: 8px; min-height: 40px; align-items: center; }
+.md-form { display: grid; gap: 10px; margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--border); }
+.md-form label { display: grid; gap: 4px; font-weight: 700; }
+.md-form fieldset { border: 0; padding: 0; margin: 0; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; } .md-form legend { font-weight: 700; margin-bottom: 4px; }
+.md-days { display: flex; gap: 6px; } .md-days button { width: 44px; border-radius: 999px; border: 1.5px solid var(--border); background: transparent; color: inherit; font-weight: 800; }
+.md-days button.on { background: var(--primary-solid, var(--primary)); color: #fff; border-color: transparent; }
+.md-actions { display: flex; gap: 10px; }

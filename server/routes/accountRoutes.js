@@ -21,7 +21,7 @@ router.use(requireAuth);
 
 const PERSONAL_MODELS = [
   'Profile', 'WeightLog', 'WaterLog', 'Task', 'Habit', 'HabitLog', 'FoodLog', 'ActivityLog', 'WorkoutTemplate',
-  'HealthLog', 'Fast', 'SavedMeal', 'MealPlan', 'Recipe', 'Goal', 'Collection', 'FoodPreference', 'PlanTemplate', 'FoodReport',
+  'HealthLog', 'Fast', 'SavedMeal', 'MealPlan', 'Recipe', 'Goal', 'Collection', 'FoodPreference', 'PlanTemplate', 'FoodReport', 'CoachState', 'Medicine', 'MedLog', 'ShareLink', 'TrainingProgram',
 ];
 
 const passwordLimiter = rateLimit({
@@ -60,16 +60,18 @@ router.post('/change-password', passwordLimiter, wrap(async (req, res) => {
 // ---------------------------------------------------------------- export
 async function collectExport(userId) {
   const load = (name, sort = { date: 1, createdAt: 1 }) => require(`../models/${name}`).find({ userId }).sort(sort).lean();
-  const [user, profile, foodLogs, activityLogs, waterLogs, weightLogs, tasks, habits, habitLogs, templates, customFoods, healthLogs, fasts, goals, foodPrefs, planTemplates] = await Promise.all([
+  const [user, profile, foodLogs, activityLogs, waterLogs, weightLogs, tasks, habits, habitLogs, templates, customFoods, healthLogs, fasts, goals, foodPrefs, planTemplates, coachState, medicines, medLogs, shareLinks, trainingPrograms] = await Promise.all([
     User.findById(userId).select('name email createdAt').lean(),
     load('Profile', {}),
     load('FoodLog'), load('ActivityLog'), load('WaterLog'), load('WeightLog'),
     load('Task'), load('Habit', { createdAt: 1 }), load('HabitLog'), load('WorkoutTemplate', { name: 1 }),
     Food.find({ userId }).sort({ name: 1 }).lean(),
     load('HealthLog'), load('Fast', { startedAt: 1 }), load('Goal', { createdAt: 1 }),
-    load('FoodPreference', {}), load('PlanTemplate', { name: 1 }),
+    load('FoodPreference', {}), load('PlanTemplate', { name: 1 }), load('CoachState', {}),
+    load('Medicine', { createdAt: 1 }), load('MedLog'), require('../models/ShareLink').find({ userId }).select('-tokenHash').lean(),
+    load('TrainingProgram', {}),
   ]);
-  return { user, profile: profile[0] || null, foodLogs, activityLogs, waterLogs, weightLogs, tasks, habits, habitLogs, templates, customFoods, healthLogs, fasts, goals, foodPreferences: foodPrefs[0] || null, planTemplates };
+  return { user, profile: profile[0] || null, foodLogs, activityLogs, waterLogs, weightLogs, tasks, habits, habitLogs, templates, customFoods, healthLogs, fasts, goals, foodPreferences: foodPrefs[0] || null, planTemplates, coachState: coachState[0] || null, medicines, medLogs, shareLink: shareLinks[0] || null, trainingProgram: trainingPrograms[0] || null };
 }
 
 const CSV_HEADERS = ['type', 'date', 'name', 'quantity', 'unit', 'calories', 'protein_g', 'carbs_g', 'fat_g', 'details', 'notes'];
@@ -89,6 +91,8 @@ function toCsvRows(d) {
     rows.push(r({ type: 'exercise', date: l.date, name: l.activityName, quantity: l.durationMinutes, unit: 'min', calories: -Math.round(l.caloriesBurned || 0), details: l.category, notes: l.notes }));
   }
   for (const l of d.healthLogs || []) rows.push(r({ type: l.type, date: l.date, name: l.type, quantity: l.value, unit: '', details: l.value2 != null ? `value2 ${l.value2}` : '', notes: l.notes }));
+  const medName = new Map((d.medicines || []).map((m) => [String(m._id), m]));
+  for (const l of d.medLogs || []) { const m = medName.get(String(l.medId)); rows.push(r({ type: 'medicine', date: l.date, name: m ? m.name : 'Medicine', details: `taken at ${l.time}`, notes: m && m.dose ? m.dose : '' })); }
   for (const l of d.waterLogs) rows.push(r({ type: 'water', date: l.date, name: 'Water', quantity: l.amountMl, unit: 'ml', notes: l.notes }));
   for (const l of d.weightLogs) rows.push(r({ type: 'weight', date: l.date, name: 'Weight', quantity: l.weightKg, unit: 'kg', notes: l.notes }));
   for (const t of d.tasks) {

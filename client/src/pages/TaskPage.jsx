@@ -1,4 +1,5 @@
 import { confirmAction } from "../utils/confirm";
+import { undoGate } from "../utils/undo";
 import Buddy, { BuddyEmpty } from "../motion/Buddy";
 import { AnimatedCheck } from "../motion/ActionKit";
 import { notify } from "../utils/notify";
@@ -122,13 +123,8 @@ function TaskPage({ onBack }) {
   };
 
   const deleteTask = async (id) => {
-    const confirmed = await confirmAction(
-      "Are you sure you want to delete this task?"
-    );
-
-    if (!confirmed) {
-      return;
-    }
+    const go = await undoGate({ what: "Task", hide: () => setTasks((cur) => cur.filter((x) => x._id !== id)), restore: () => fetchTasks() });
+    if (!go) return;
 
     try {
       const response = await apiFetch(

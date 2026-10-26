@@ -16,9 +16,9 @@ export const VOICE = {
   gojo: ["Relax — you're doing fine. I'm just stronger.", "Sweet stuff? Sure, but earn it~", "Throughout heaven and earth, you're consistent.", "Easy! Try the harder set."],
   tanjiro: ["Steady breathing, steady progress.", "Don't give up — I believe in you!", "Rest well, eat well, train well.", "Every small step counts. Truly."],
   killua: ["Tch… fine, I'll cheer you on.", "Speed matters. So does recovery.", "Don't overthink it — just go.", "Not bad. Not bad at all."],
-  vegeta: ["Pathetic? No. You'll get stronger!", "Train harder than yesterday!", "A prince doesn't skip leg day.", "Surpass your old self. Now."],
+  vegeta: ["You're stronger than you think!", "Train harder than yesterday!", "A prince doesn't skip leg day.", "Surpass your old self. Now."],
   zenitsu: ["Aaah! Don't skip your meal!!", "I can do it… I think… YES I can!", "Sleeping is my special move.", "You did it?! That's amazing!"],
-  bakugo: ["DON'T SLACK, DAMMIT!", "Win. Then win again.", "Log it. NOW. Move!", "Number one isn't built on excuses!"],
+  bakugo: ["KEEP GOING, YOU'VE GOT THIS!", "Win. Then win again.", "Log it. NOW. Move!", "Number one isn't built on excuses!"],
 };
 
 const MOOD = {
@@ -35,13 +35,22 @@ const MOOD = {
   cool: ["Easy.", "Cool, calm, consistent."],
   love: ["You're doing this for you — love that.", "Proud of you!"],
   shock: ["Whoa! That's a big number!", "Wait, really?!"],
-  angry: ["No excuses!", "Get back on track!"],
+  angry: ["Let's get back on track!", "One small step now!"],
   game: ["Gaming break? Stand up and stretch after!", "Level up in life too."],
 };
+
+// Tone (gentle / strict): the server sends the lines once; "funny" keeps the built-in character lines above.
+let TONE = null;
+export function setToneBundle(b) { TONE = b && b.mood ? b : null; }
 
 /** One line for a mood, mixing the character's voice in about every other time. */
 export function say(who, mood = "hype", seed) {
   const r = seed ?? Math.random();
+  if (TONE) {
+    const tv = TONE.voice?.[who];
+    if (tv && r > 0.5) return pick(tv, (r - 0.5) * 2);
+    return pick(TONE.mood[mood] || TONE.mood.hype, r * 2);
+  }
   const voice = VOICE[who];
   if (voice && r > 0.5) return pick(voice, (r - 0.5) * 2);
   return pick(MOOD[mood] || MOOD.hype, r * 2);

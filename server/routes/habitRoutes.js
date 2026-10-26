@@ -22,6 +22,12 @@ function parseHabit(body = {}, { partial = false } = {}) {
   if (!partial || has('target')) out.target = v.number(body.target, 'target', { min: 1, max: 100000, required: false, def: 1 });
   if (!partial || has('unit')) out.unit = v.string(body.unit, 'unit', { max: 30, def: 'times' }) || 'times';
   if (!partial || has('notes')) out.notes = v.string(body.notes, 'notes', { max: 500 });
+  if (has('anchor')) {
+    const a = body.anchor || {};
+    const time = a.time === undefined || a.time === '' ? '' : String(a.time);
+    if (time && !v.TIME_RE.test(time)) throw new HttpError(400, 'Anchor time must look like 07:30');
+    out.anchor = { text: v.string(a.text, 'anchor text', { max: 80 }), time };
+  }
   return out;
 }
 
@@ -87,7 +93,7 @@ router.get('/:id/stats', wrap(async (req, res) => {
   });
 }));
 
-router.patch('/:id', wrap(async (req, res) => {
+const updateHabit = wrap(async (req, res) => {
   const habit = await Habit.findOneAndUpdate(
     { _id: v.objectId(req.params.id), userId: req.user.id, isActive: true },
     { $set: parseHabit(req.body, { partial: true }) },
@@ -95,7 +101,10 @@ router.patch('/:id', wrap(async (req, res) => {
   );
   if (!habit) throw new HttpError(404, 'Habit not found');
   res.json({ success: true, habit });
-}));
+});
+// The phone app saves edits with PUT; the web app uses PATCH. Both do the same partial update.
+router.patch('/:id', updateHabit);
+router.put('/:id', updateHabit);
 
 router.delete('/:id', wrap(async (req, res) => {
   const id = v.objectId(req.params.id);

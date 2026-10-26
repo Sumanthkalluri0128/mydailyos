@@ -1,4 +1,5 @@
 import { confirmAction } from "../utils/confirm";
+import { undoGate } from "../utils/undo";
 import Buddy, { BuddyEmpty } from "../motion/Buddy";
 import { notify } from "../utils/notify";
 import { apiFetch } from "../config/api";
@@ -6,6 +7,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { API_URL } from "../config";
 import FoodFormModal from "../components/FoodFormModal";
 import CalorieBalance from "../components/CalorieBalance";
+import { useCoachTone } from "../utils/coachTone";
 import TextLogger from "../components/TextLogger";
 import SmartSuggestions from "../components/SmartSuggestions";
 import EatingOut from "../components/EatingOut";
@@ -44,6 +46,7 @@ const MEALS = [
 ];
 
 function FoodLogger({ date, onBack, goTo }) {
+  const tone = useCoachTone();
   const [dragId, setDragId] = useState(null);
   const [dropMeal, setDropMeal] = useState(null);
   const [foods, setFoods] = useState([]);
@@ -102,6 +105,7 @@ function FoodLogger({ date, onBack, goTo }) {
   const [recent, setRecent] = useState([]);
   const [showExtras, setShowExtras] = useState(false);
   const [searchFocus, setSearchFocus] = useState(false);
+  useEffect(() => { try { const q = sessionStorage.getItem("ff_palette_food"); if (q) { sessionStorage.removeItem("ff_palette_food"); setSearch(q); } } catch { /* ignore */ } }, []);
   const [showAll, setShowAll] = useState(false);
   const [openMeals, setOpenMeals] = useState({});
   const searchSeq = useRef(0);
@@ -341,13 +345,8 @@ function FoodLogger({ date, onBack, goTo }) {
   // ============================================================
 
   const handleDeleteLog = async (id) => {
-    const confirmed = await confirmAction(
-      "Remove this food from today's log?"
-    );
-
-    if (!confirmed) {
-      return;
-    }
+    const go = await undoGate({ what: "Food", hide: () => setFoodLogs((cur) => cur.filter((l) => l._id !== id)), restore: () => fetchFoodLogs() });
+    if (!go) return;
 
     try {
       const response = await apiFetch(
@@ -460,12 +459,12 @@ function FoodLogger({ date, onBack, goTo }) {
           <p>
             Add everything you ate today.
           </p>
-          <IntakeBanner onPlan={() => goTo?.("planner")} />
+          {!tone.gentle && <IntakeBanner onPlan={() => goTo?.("planner")} />}
         </div>
 
       </div>
 
-      <CalorieBalance compact refreshKey={`${foodLogs.length}|${foodLogs.reduce((t, l) => t + Number(l.nutritionTotal?.calories || 0), 0)}`} />
+      {!tone.gentle && <CalorieBalance compact refreshKey={`${foodLogs.length}|${foodLogs.reduce((t, l) => t + Number(l.nutritionTotal?.calories || 0), 0)}`} />}
 
       {/* Which meal? Chosen once — everything below logs to it. */}
       <div className="meal-selector">

@@ -1,0 +1,15 @@
+.pal-wrap { position: fixed; inset: 0; z-index: 100000; display: grid; place-items: start center; padding-top: 12vh; background: rgba(15, 18, 35, 0.45); backdrop-filter: blur(3px); }
+.pal { width: min(620px, calc(100vw - 24px)); background: var(--surface, #fff); color: var(--text, #222); border: 1px solid var(--border, #ddd); border-radius: 18px; box-shadow: 0 30px 80px rgba(0,0,0,.28); padding: 12px; }
+.pal-input { width: 100%; min-height: 48px; font-size: 1.05rem; padding: 0 14px; border-radius: 12px; border: 1.5px solid var(--border, #ddd); background: transparent; color: inherit; }
+.pal-input:focus-visible { outline: 3px solid var(--accent, #6c5ce7); outline-offset: 1px; }
+.pal-list { list-style: none; margin: 8px 0 0; padding: 0; max-height: 50vh; overflow: auto; }
+.pal-list li { display: flex; align-items: center; gap: 12px; min-height: 48px; padding: 6px 10px; border-radius: 12px; cursor: pointer; }
+.pal-list li.on { background: color-mix(in srgb, var(--accent, #6c5ce7) 14%, transparent); }
+.pal-list img { object-fit: contain; border-radius: 8px; }
+.pal-empty { color: var(--muted, #667); cursor: default !important; }
+.pal-hint { display: block; margin-top: 8px; color: var(--muted, #667); }
+.pal-help dl { display: grid; gap: 8px; margin: 0; }
+.pal-help dl div { display: grid; grid-template-columns: 11rem 1fr; gap: 12px; align-items: center; }
+.pal-help dt, .pal-help dd { margin: 0; }
+kbd { font: inherit; font-weight: 700; padding: 2px 8px; border-radius: 6px; border: 1px solid var(--border, #ccc); background: color-mix(in srgb, var(--text, #222) 6%, transparent); }
+@media (max-width: 640px) { .pal-wrap { padding-top: 6vh; } .pal-help dl div { grid-template-columns: 1fr; } }

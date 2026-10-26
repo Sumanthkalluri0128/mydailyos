@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useCoachTone } from "../utils/coachTone";
 import { apiFetch } from "../config/api";
 import { notify } from "../utils/notify";
 
@@ -13,6 +14,7 @@ export default function EatingOut({ date, defaultMeal = "dinner", onLogged }) {
   const [meal, setMeal] = useState(defaultMeal);
   const [busy, setBusy] = useState(false);
   const [dishes, setDishes] = useState([]);
+  const padPct = useCoachTone().eatingOutPadPct || 15; // raised during festival / trip mode
   const [pad, setPad] = useState(true); // restaurant food hides oil and big portions: add 15% by default
 
   const lo = Number(low), hi = Number(high);
@@ -35,11 +37,11 @@ export default function EatingOut({ date, defaultMeal = "dinner", onLogged }) {
     try {
       const res = await apiFetch("/api/food-logs/quick", {
         method: "POST",
-        body: JSON.stringify({ date, mealType: meal, name: name.trim(), calories: mid, caloriesLow: hi ? lo : 0, caloriesHigh: hi || 0, padPct: pad ? 15 : 0, clientId: `eo-${Date.now()}-${Math.random().toString(36).slice(2, 7)}` }),
+        body: JSON.stringify({ date, mealType: meal, name: name.trim(), calories: mid, caloriesLow: hi ? lo : 0, caloriesHigh: hi || 0, padPct: pad ? padPct : 0, clientId: `eo-${Date.now()}-${Math.random().toString(36).slice(2, 7)}` }),
       });
       const d = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(d.message || "Could not log that");
-      notify(`Logged ~${pad ? Math.round(mid * 1.15) : mid} kcal to ${meal}.`, "success");
+      notify(`Logged ~${pad ? Math.round(mid * (1 + padPct / 100)) : mid} kcal to ${meal}.`, "success");
       setName(""); setLow(""); setHigh(""); setOpen(false);
       onLogged?.();
     } catch (e) { notify(e.message, "error"); } finally { setBusy(false); }
@@ -71,7 +73,7 @@ export default function EatingOut({ date, defaultMeal = "dinner", onLogged }) {
           ))}
         </div>
       )}
-      <label className="eo-pad"><input type="checkbox" checked={pad} onChange={(e) => setPad(e.target.checked)} /> Add a 15% safety buffer for hidden oil and bigger portions (recommended)</label>
+      <label className="eo-pad"><input type="checkbox" checked={pad} onChange={(e) => setPad(e.target.checked)} /> Add a {padPct}% safety buffer for hidden oil and bigger portions (recommended)</label>
       <button className="primary-button" disabled={busy || !valid} onClick={save}>Log estimate</button>
     </div>
   );

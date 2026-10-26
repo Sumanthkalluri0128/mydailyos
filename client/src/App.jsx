@@ -1,4 +1,6 @@
 import { useEffect, useState, Suspense, lazy } from "react";
+import { loadTone } from "./utils/coachTone";
+import { loadFeatures } from "./utils/features";
 import "./App.css";
 
 const FoodPage = lazy(() => import("./pages/FoodPage"));
@@ -20,6 +22,10 @@ import { currentOwner } from "./utils/cacheOwner";
 import { PageSkeleton } from "./motion/PageTransition";
 import { withTransition } from "./motion/motion";
 import AppNav from "./components/AppNav";
+import CommandPalette from "./components/CommandPalette";
+import MedReminderHost from "./components/MedReminderHost";
+import "./components/wide.css";
+import "./utils/a11yPrefs";
 import AssistantPanel from "./components/AssistantPanel";
 import HomeDashboard from "./components/home/HomeDashboard";
 import TourHost from "./tour/TourHost";
@@ -81,6 +87,7 @@ function App() {
       .catch(() => {});
     return () => { alive = false; };
   }, [syncTick]);
+  useEffect(() => { const f = () => setSyncTick((n) => n + 1); window.addEventListener("ff:refresh", f); return () => window.removeEventListener("ff:refresh", f); }, []);
 
   useEffect(() => {
     const go = (e) => {
@@ -230,6 +237,9 @@ function App() {
         // request instead of the sum of all of them.
         // ======================================================
 
+        loadTone(); // coach tone and gentle mode (cached on this device; never blocks)
+        loadFeatures(); // simple / advanced mode: which screens are unlocked
+
         const [
           foodResponse,
           activityResponse,
@@ -364,6 +374,8 @@ function App() {
         onAsk={() => openAssistant()}
       />
       <AssistantPanel go={setCurrentPage} />
+      <CommandPalette go={setCurrentPage} />
+      <MedReminderHost />
       <TourHost page={currentPage} go={setCurrentPage} profile={profile} />
     </>
   );

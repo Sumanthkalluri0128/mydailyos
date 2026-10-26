@@ -1,4 +1,6 @@
 import { confirmAction } from "../utils/confirm";
+import { undoGate } from "../utils/undo";
+import { MeasureTrends, ProgressPhotos } from "../components/BodyProgress";
 import Buddy, { BuddyEmpty } from "../motion/Buddy";
 import { notify } from "../utils/notify";
 import { apiFetch } from "../config/api";
@@ -6,6 +8,7 @@ import { useEffect, useState } from "react";
 import { getLocalDate } from "../utils/date";
 import { API_URL } from "../config";
 import WeightReveal, { useWeightRevealed } from "../components/WeightReveal";
+import { WeightInsights } from "../components/CoachCards";
 
 function WeightPage({ onBack }) {
   const today = getLocalDate();
@@ -140,13 +143,8 @@ function WeightPage({ onBack }) {
   // ============================================================
 
   const deleteWeight = async (id) => {
-    const confirmed = await confirmAction(
-      "Delete this weight entry?"
-    );
-
-    if (!confirmed) {
-      return;
-    }
+    const go = await undoGate({ what: "Weight entry", hide: () => setLogs((cur) => cur.filter((l) => l._id !== id)), restore: () => fetchWeights() });
+    if (!go) return;
 
     try {
       const response = await apiFetch(
@@ -312,6 +310,8 @@ function WeightPage({ onBack }) {
         )}
       </section>
 
+      <WeightInsights refreshKey={logs.length} />
+
       <form className="wt-log" onSubmit={handleSubmit}>
         <div className="wt-log-head"><h2>Log today</h2><span className="wt-date">{today}</span></div>
         <div className="wt-stepper">
@@ -343,6 +343,8 @@ function WeightPage({ onBack }) {
         )}
         {logs.length > 6 && <button type="button" className="secondary-button wt-more" onClick={() => setShowAll((v) => !v)}>{showAll ? "Show less" : `Show all ${logs.length}`}</button>}
       </section>
+      <MeasureTrends />
+      <ProgressPhotos />
     </div>
   );
 }

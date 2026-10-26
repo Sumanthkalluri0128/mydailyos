@@ -4,6 +4,8 @@ import { apiFetch } from "../config/api";
 import Buddy from "../motion/Buddy";
 import WeightReveal from "./WeightReveal";
 import { useSimple } from "./simple/useSimple";
+import { TreatCard, DietBreak, coachLearn } from "./CoachCards";
+import { useCoachTone } from "../utils/coachTone";
 
 const NAMES = { zoro: "Zoro", naruto: "Naruto", luffy: "Luffy", jinwoo: "Jin-Woo", goku: "Goku", gojo: "Gojo" };
 
@@ -11,16 +13,19 @@ const NAMES = { zoro: "Zoro", naruto: "Naruto", luffy: "Luffy", jinwoo: "Jin-Woo
 export default function WeeklyCoach() {
   const [d, setD] = useState(null);
   const [sim] = useSimple();
+  const [tried, setTried] = useState({});
+  const tone = useCoachTone();
+  const [nonce, setNonce] = useState(0);
   useEffect(() => {
     let live = true;
     const t = new Date();
     const today = `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, "0")}-${String(t.getDate()).padStart(2, "0")}`;
     apiFetch(`${API_URL}/api/progress/coach?today=${today}`)
       .then((r) => r.json())
-      .then((j) => { if (live && j.success) setD(j); })
+      .then((j) => { if (live && j.success) { setD(j); (j.tips || []).forEach((t) => coachLearn(t.id, "shown")); } })
       .catch(() => {});
     return () => { live = false; };
-  }, []);
+  }, [nonce]);
   if (!d) return null;
   const { review, tips, challenge: ch, weekBudget: wb, maintenance: mt, microInsights: mi = [] } = d;
   const hpLeft = Math.max(0, ch.target - ch.progress);
@@ -42,7 +47,7 @@ export default function WeeklyCoach() {
         <div className="card wc-tips">
           <h3>What to change this week</h3>
           {tips.map((t) => (
-            <div key={t.id} className="wc-tip"><span aria-hidden="true">{t.icon}</span><div><strong>{t.title}</strong><p>{t.detail}</p></div></div>
+            <div key={t.id} className="wc-tip"><span aria-hidden="true">{t.icon}</span><div><strong>{t.title}</strong><p>{t.detail}</p>{tried[t.id] ? <small>Noted. Good luck!</small> : <button type="button" className="link-button" onClick={() => { coachLearn(t.id, "accepted"); setTried({ ...tried, [t.id]: true }); }}>I'll try this</button>}</div></div>
           ))}
         </div>
       )}
@@ -54,15 +59,18 @@ export default function WeeklyCoach() {
           ))}
         </div>
       )}
-      {wb && (
+      {wb && !tone.gentle && (
         <div className="card wc-budget">
           <h3>Weekly calorie budget</h3>
           <p>{wb.budget.toLocaleString()} kcal for the week · {wb.usedBeforeToday.toLocaleString()} counted so far (days you did not log count as on budget).</p>
           <strong className={wb.diffPerDay < 0 ? "wc-bad" : "wc-good"}>{wb.diffPerDay < 0 ? "▼ " : wb.diffPerDay > 0 ? "▲ " : "● "}{wb.perDayLeft.toLocaleString()} kcal/day</strong>
+          {wb.treatReserved > 0 && <p>This already sets aside {wb.treatReserved.toLocaleString()} kcal of treats you have planned.</p>}
           <p>{wb.diffPerDay === 0 ? "Right on your daily target" : wb.diffPerDay < 0 ? `${Math.abs(wb.diffPerDay)} below your usual ${wb.dailyTarget.toLocaleString()} target` : `${wb.diffPerDay} above your usual ${wb.dailyTarget.toLocaleString()} target`} for the next {wb.daysLeft} day{wb.daysLeft === 1 ? "" : "s"} to finish the week on budget.</p>
         </div>
       )}
-      {mt && (
+      {!tone.gentle && <TreatCard treat={d.treat} reload={() => setNonce((n) => n + 1)} />}
+      <DietBreak reload={() => setNonce((n) => n + 1)} />
+      {mt && !tone.gentle && (
         <div className="card wc-budget">
           <h3>What your body seems to burn</h3>
           <strong>≈ {mt.estimate.toLocaleString()} kcal/day</strong>

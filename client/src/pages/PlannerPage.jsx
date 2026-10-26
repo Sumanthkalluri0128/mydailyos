@@ -8,6 +8,7 @@ import PlannerMeal from "../components/PlannerMeal";
 import { chefDayLine, dayBarText, itemsToLog, overlayWebQueue } from "../utils/mealView";
 import { notify } from "../utils/notify";
 import { confirmAction } from "../utils/confirm";
+import { undoGate } from "../utils/undo";
 import { getLocalDate } from "../utils/date";
 import FoodPicker from "../components/FoodPicker";
 import AutoPlanPanel from "../components/AutoPlanPanel";
@@ -120,7 +121,7 @@ export default function PlannerPage({ onBack, goTo }) {
     if (!r.ok) { notify(d.message || "Could not load it.", "error"); return; }
     notify(`Loaded ${d.saved} foods${d.skipped?.length ? `. Skipped ${d.skipped.map((x) => `${x.name} (${x.reason})`).join(", ")}` : ""}.`, d.skipped?.length ? "info" : "success"); load();
   };
-  const deleteTemplate = async (t) => { if (!(await confirmAction(`Delete "${t.name}"?`, { title: "Delete template", confirmText: "Delete", danger: true }))) return; await apiFetch(`/api/meal-plans/templates/${t.id}`, { method: "DELETE" }); loadTemplates(); };
+  const deleteTemplate = async (t) => { if (!(await undoGate({ what: t.name, hide: () => setTpls((cur) => cur.filter((x) => x.id !== t.id)), restore: () => loadTemplates() }))) return; await apiFetch(`/api/meal-plans/templates/${t.id}`, { method: "DELETE" }); loadTemplates(); };
 
   // Grocery list: grouped by aisle, tick things off (kept on this device, works offline from the last loaded list), mark what you already have, share as text.
   const CK = "ff-shop-checked", CACHE = "ff-shop-cache";

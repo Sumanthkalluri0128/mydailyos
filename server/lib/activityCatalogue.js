@@ -87,9 +87,32 @@ const ACTIVITIES = [
   { name: 'Elliptical trainer', category: 'Cardio', met: 5.0, description: 'Moderate effort' },
   { name: 'Rowing machine', category: 'Cardio', met: 7.0, description: 'Moderate rowing' },
   { name: 'Treadmill - Incline walk', category: 'Walking', met: 5.5, description: 'Incline walking' },
-  { name: 'Bodyweight circuit', category: 'Strength', met: 5.5, description: 'Push-ups, squats, lunges and planks in a circuit' },
-  { name: 'Planks / core work', category: 'Strength', met: 3.8, description: 'Core strengthening' },
+  { name: 'Bodyweight circuit', category: 'Strength', met: 5.5, description: 'Push-ups, squats, lunges and planks in a circuit', muscles: ['chest', 'legs', 'core'] },
+  { name: 'Planks / core work', category: 'Strength', met: 3.8, description: 'Core strengthening', muscles: ['core'] },
   { name: 'Bhangra / Garba dance', category: 'Dance', met: 5.5, description: 'Indian folk dance' },
+  { name: 'Bodyweight Squat', category: 'Strength', met: 3.5, description: 'Squats with your own weight', muscles: ['legs', 'glutes'] },
+  { name: 'Reverse Lunge', category: 'Strength', met: 3.8, description: 'Step back into a lunge, alternate legs', muscles: ['legs', 'glutes'] },
+  { name: 'Push-ups', category: 'Strength', met: 3.8, description: 'Floor push-ups', muscles: ['chest', 'arms', 'shoulders'] },
+  { name: 'Incline Push-ups', category: 'Strength', met: 3.5, description: 'Push-ups with hands raised on a bench or wall', muscles: ['chest', 'arms', 'shoulders'] },
+  { name: 'Glute Bridge', category: 'Strength', met: 3.0, description: 'Lie down and lift the hips', muscles: ['glutes', 'legs'] },
+  { name: 'Plank', category: 'Strength', met: 3.8, description: 'Hold a plank (log seconds as reps)', muscles: ['core'] },
+  { name: 'Superman Hold', category: 'Strength', met: 3.0, description: 'Lie face down and lift arms and legs', muscles: ['back', 'glutes'] },
+  { name: 'Mountain Climbers', category: 'Strength', met: 6.0, description: 'Fast alternating knee drives from a plank', muscles: ['core', 'legs', 'shoulders'] },
+  { name: 'Goblet Squat', category: 'Strength', met: 5.0, description: 'Squat holding one dumbbell at the chest', muscles: ['legs', 'glutes', 'core'] },
+  { name: 'Barbell Squat', category: 'Strength', met: 6.0, description: 'Back squat with a barbell', muscles: ['legs', 'glutes', 'core'] },
+  { name: 'Dumbbell Bench Press', category: 'Strength', met: 5.0, description: 'Press dumbbells on a bench', muscles: ['chest', 'arms', 'shoulders'] },
+  { name: 'Barbell Bench Press', category: 'Strength', met: 5.0, description: 'Bench press with a barbell', muscles: ['chest', 'arms', 'shoulders'] },
+  { name: 'Seated Cable Row', category: 'Strength', met: 5.0, description: 'Row a cable handle to the belly', muscles: ['back', 'arms'] },
+  { name: 'Barbell Row', category: 'Strength', met: 5.5, description: 'Bent-over row with a barbell', muscles: ['back', 'arms'] },
+  { name: 'Lat Pulldown', category: 'Strength', met: 5.0, description: 'Pull the bar down to the upper chest', muscles: ['back', 'arms'] },
+  { name: 'Pull-ups', category: 'Strength', met: 6.0, description: 'Pull-ups or assisted pull-ups', muscles: ['back', 'arms'] },
+  { name: 'Dumbbell Shoulder Press', category: 'Strength', met: 5.0, description: 'Press dumbbells overhead', muscles: ['shoulders', 'arms'] },
+  { name: 'Overhead Press', category: 'Strength', met: 5.0, description: 'Standing barbell press', muscles: ['shoulders', 'arms'] },
+  { name: 'Leg Press', category: 'Strength', met: 5.0, description: 'Leg press machine', muscles: ['legs', 'glutes'] },
+  { name: 'Romanian Deadlift', category: 'Strength', met: 6.0, description: 'Hip hinge with dumbbells or a barbell', muscles: ['back', 'glutes', 'legs'] },
+  { name: 'Deadlift', category: 'Strength', met: 6.0, description: 'Deadlift from the floor', muscles: ['back', 'glutes', 'legs'] },
+  { name: 'Biceps Curl', category: 'Strength', met: 3.5, description: 'Dumbbell or barbell curls', muscles: ['arms'] },
+  { name: 'Triceps Pushdown', category: 'Strength', met: 3.5, description: 'Cable pushdown', muscles: ['arms'] },
   { name: 'Household work (vigorous)', category: 'Daily activity', met: 3.5, description: 'Sweeping, mopping, gardening' },
 ];
 
@@ -99,6 +122,8 @@ async function seedActivities(Activity = require('../models/Activity')) {
   for (const a of ACTIVITIES) {
     const r = await Activity.updateOne({ name: a.name }, { $setOnInsert: a }, { upsert: true });
     if (r.upsertedCount) added += 1;
+    // older entries get their muscle groups once; anything already set is left alone
+    else if (a.muscles) await Activity.updateOne({ name: a.name, $or: [{ muscles: { $exists: false } }, { muscles: { $size: 0 } }] }, { $set: { muscles: a.muscles } });
   }
   return { added, total: ACTIVITIES.length };
 }

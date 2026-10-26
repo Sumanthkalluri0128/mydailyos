@@ -15,7 +15,7 @@ const isWeekend = (d) => [0, 6].includes(weekday(d));
  * @param meals    [{date, mealType, calories}] food entries of the last 7 days
  * @param targets  {calories, protein, waterMl, exerciseMinutes, steps}
  */
-function buildCoach({ days, meals = [], foods = [], targets = {}, today, expectedTdee = null }) {
+function buildCoach({ days, meals = [], foods = [], targets = {}, today, expectedTdee = null, learn = {} }) {
   const week = days.filter((d) => d.date > addDays(today, -7) && d.date <= today);
   const logged = week.filter((d) => d.calories > 0);
   const tips = [];
@@ -51,7 +51,9 @@ function buildCoach({ days, meals = [], foods = [], targets = {}, today, expecte
     for (const [name, e] of counts) { const sw = swapFor(name); if (!sw) continue; const weekly = sw.saves * Math.min(e.n, 4); if (!best || weekly > best.weekly) best = { name, sw, weekly, n: e.n }; }
     if (best && best.weekly >= 150) add({ id: 'swap', icon: '🔁', title: `Swap ${best.name}`, detail: `You logged it ${best.n}× this week. Try ${best.sw.to}: ${best.sw.why}, saving roughly ${best.sw.saves} kcal each time.`, impact: Math.min(80, best.weekly / 10) });
   }
-  tips.sort((a, b) => b.impact - a.impact);
+  // What the person tends to act on (taps on earlier tips) nudges the order; with no history the order is unchanged.
+  const { learnWeight } = require('./coachG');
+  tips.sort((a, b) => b.impact * learnWeight(learn, b.id) - a.impact * learnWeight(learn, a.id));
 
   // ---- boss fight: aim at last week's weakest area
   const monday = mondayOf(today);
@@ -91,7 +93,7 @@ function buildCoach({ days, meals = [], foods = [], targets = {}, today, expecte
     weekBudget = { budget: r(budget), usedBeforeToday: r(used), daysLeft, perDayLeft: perDay, dailyTarget: r(targets.calories), diffPerDay: perDay - r(targets.calories) };
   }
   const maintenance = adaptiveMaintenance(days, expectedTdee);
-  return { tips: tips.slice(0, 2), challenge, review, weekBudget, maintenance };
+  return { tips: tips.slice(0, 2), tipIds: tips.map((t) => t.id), challenge, review, weekBudget, maintenance };
 }
 
 module.exports = { buildCoach };

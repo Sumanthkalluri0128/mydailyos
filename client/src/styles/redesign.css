@@ -7,7 +7,7 @@
   --md-muted: var(--text-muted);
   --r-card: 22px;
   --ring: 0 0 0 3px color-mix(in srgb, var(--primary) 35%, transparent);
-  --kcal: #e8823a; --protein: #20a46b; --water: #2587d9; --steps: #14a38b;
+  --kcal: #d9722b; --protein: #20a46b; --water: #2587d9; --steps: #14a38b;
 }
 :root[data-theme="dark"] { --text-muted: #a9aec0; --kcal: #f59a55; --protein: #3ecf8e; --water: #5ab0ff; --steps: #35d0b5; }
 @media (prefers-color-scheme: dark) {

@@ -1,4 +1,5 @@
 import { confirmAction } from "../utils/confirm";
+import { undoGate } from "../utils/undo";
 import Buddy, { BuddyEmpty } from "../motion/Buddy";
 import StreakFlame from "../motion/StreakFlame";
 import { notify } from "../utils/notify";
@@ -21,6 +22,8 @@ const [habitStats, setHabitStats] = useState({});
     target: 1,
     unit: "times",
     notes: "",
+    anchorText: "",
+    anchorTime: "",
   });
 
   const [loading, setLoading] = useState(false);
@@ -156,6 +159,7 @@ const [habitStats, setHabitStats] = useState({});
           body: JSON.stringify({
             ...form,
             target: Number(form.target),
+            anchor: { text: form.anchorText, time: form.anchorTime },
           }),
         }
       );
@@ -171,6 +175,8 @@ const [habitStats, setHabitStats] = useState({});
           target: 1,
           unit: "times",
           notes: "",
+          anchorText: "",
+          anchorTime: "",
         });
 
         await fetchHabits();
@@ -252,13 +258,8 @@ const [habitStats, setHabitStats] = useState({});
   // ============================================================
 
   const deleteHabit = async (id) => {
-    const confirmed = await confirmAction(
-      "Remove this habit?"
-    );
-
-    if (!confirmed) {
-      return;
-    }
+    const go = await undoGate({ what: "Habit", hide: () => setHabits((cur) => cur.filter((x) => x._id !== id)), restore: () => fetchHabits() });
+    if (!go) return;
 
     try {
       const response = await apiFetch(
@@ -344,6 +345,19 @@ const [habitStats, setHabitStats] = useState({});
               onChange={handleChange}
             />
 
+
+            <label>Anchor (optional)</label>
+
+            <input
+              type="text"
+              name="anchorText"
+              maxLength={80}
+              placeholder="After… e.g. brushing my teeth"
+              value={form.anchorText}
+              onChange={handleChange}
+            />
+            <label>Remind me at (optional, the phone app follows your quiet hours and daily limit)</label>
+            <input type="time" name="anchorTime" value={form.anchorTime} onChange={handleChange} />
 
             <label>Category</label>
 
@@ -544,6 +558,10 @@ const [habitStats, setHabitStats] = useState({});
 
                     </div>
 
+
+                    {habit.anchor?.text && (
+                      <p>⚓ After {habit.anchor.text.replace(/^after\s+/i, "")}{habit.anchor.time ? ` · ${habit.anchor.time}` : ""}</p>
+                    )}
 
                     {habit.description && (
                       <p>

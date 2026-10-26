@@ -1,3 +1,4 @@
+import { clearPhotos } from "../utils/photoStore";
 import { useState } from "react";
 import { apiFetch, signOutCompletely } from "../config/api";
 import { confirmAction } from "../utils/confirm";
@@ -54,6 +55,7 @@ export default function DataControls() {
       if (!ok) return;
       const res = await apiFetch("/api/account/me", { method: "DELETE" });
       if (!res.ok) throw new Error((await res.json().catch(() => ({}))).message || "Delete failed");
+      await clearPhotos(); // progress photos only ever lived in this browser
       await signOutCompletely();
       window.location.reload();
     });

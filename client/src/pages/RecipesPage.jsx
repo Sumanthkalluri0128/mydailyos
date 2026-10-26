@@ -3,6 +3,7 @@ import Buddy from "../motion/Buddy";
 import { apiFetch } from "../config/api";
 import { notify } from "../utils/notify";
 import { confirmAction } from "../utils/confirm";
+import { undoGate } from "../utils/undo";
 import FoodPicker from "../components/FoodPicker";
 import "../components/logging1.css";
 
@@ -96,7 +97,7 @@ export default function RecipesPage({ onBack }) {
     } catch { /* cancelled */ }
   };
   const remove = async (r) => {
-    if (!(await confirmAction("Meals you already logged keep their numbers.", { title: `Delete “${r.name}”?`, confirmText: "Delete" }))) return;
+    if (!(await undoGate({ what: r.name, hide: () => setRecipes((cur) => cur.filter((x) => x._id !== r._id)), restore: () => load() }))) return;
     await apiFetch(`/api/recipes/${r._id}`, { method: "DELETE" }); load();
   };
 

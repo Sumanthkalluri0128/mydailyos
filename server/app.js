@@ -14,6 +14,7 @@ const profileRoutes = require('./routes/profileRoutes');
 const foodRoutes = require('./routes/foodRoutes');
 const foodLogRoutes = require('./routes/foodLogRoutes');
 const activityRoutes = require('./routes/activityRoutes');
+const trainingRoutes = require('./routes/trainingRoutes');
 const templateRoutes = require('./routes/templateRoutes');
 const taskRoutes = require('./routes/taskRoutes');
 const habitRoutes = require('./routes/habitRoutes');
@@ -29,6 +30,10 @@ const planTemplateRoutes = require('./routes/planTemplateRoutes');
 const foodPrefRoutes = require('./routes/foodPrefRoutes');
 const recipeRoutes = require('./routes/recipeRoutes');
 const tiffinRoutes = require('./routes/tiffinRoutes');
+const coachRoutes = require('./routes/coachRoutes');
+const medRoutes = require('./routes/medRoutes');
+const wrappedRoutes = require('./routes/wrappedRoutes');
+const shareRoutes = require('./routes/shareRoutes');
 const importRoutes = require('./routes/importRoutes');
 const goalRoutes = require('./routes/goalRoutes');
 const tourRoutes = require('./routes/tourRoutes');
@@ -75,6 +80,7 @@ function createApp({ allowedOrigins = [] } = {}) {
   app.use('/api/food-logs', foodLogRoutes);
   app.use('/api/activities', activityRoutes);
   app.use('/api/templates', templateRoutes);
+  app.use('/api/training', trainingRoutes);
   app.use('/api/tasks', taskRoutes);
   app.use('/api/habits', habitRoutes);
   app.use('/api/water', waterRoutes);
@@ -89,6 +95,10 @@ function createApp({ allowedOrigins = [] } = {}) {
   app.use('/api/food-prefs', foodPrefRoutes);
   app.use('/api/recipes', recipeRoutes);
   app.use('/api/tiffin', tiffinRoutes);
+  app.use('/api/coach', coachRoutes);
+  app.use('/api/meds', medRoutes);
+  app.use('/api/wrapped', wrappedRoutes);
+  app.use('/api/share', shareRoutes);
   app.use('/api/import', importRoutes);
   app.use('/api/goals', goalRoutes);
   app.use('/api/tour', tourRoutes);
@@ -98,6 +108,9 @@ function createApp({ allowedOrigins = [] } = {}) {
   app.use('/api/album', albumRoutes);
   app.use('/api/progress', progressRoutes);
   app.use('/api/history', progressRoutes); // backward-compatible alias for older builds
+
+  // The one public page: a private weekly summary, opened with a secret link (see routes/shareRoutes.js).
+  app.get('/s/:token', shareRoutes.publicLimiter, shareRoutes.publicHandler);
 
   app.get('/', (req, res) => res.json({ message: 'FlexFit API is running 🚀' }));
 

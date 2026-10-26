@@ -1,3 +1,38 @@
+# v46 - Phase 3 Section K: strength and training
+- Routines can carry target sets, reps, kg and rest (old duration-only routines still work). Workout mode steps through exercises with sets prefilled from last time, a rest timer and a "power up" scene when a record is beaten. New web Routines screen.
+- Estimated 1RM (Epley and Brzycki, formulas shown), beat-last-time hint, best set and volume history, weekly sets per muscle, deload nudge, plate calculator (kg and lb). Muscle groups added to the activity catalogue plus 23 strength moves.
+- Beginner training arcs (4, 6 and 8 weeks) with weekly episodes, a rest arc and a +500 steps a week goal capped by your profile.
+- Daily workout suggestion with reasons; guided meditate and stretch (3 to 10 minutes, breathing circle, logged as an activity).
+- Server: `lib/strength`, `lib/muscles`, `lib/programs`, `lib/workoutSuggest`, `lib/guided`, `lib/workoutBuild`, `routes/trainingRoutes`, `TrainingProgram` model (in export and account deletion). Details: `docs/PHASE3_TRAINING.md`.
+
+# v45 - Phase 3 Section J: UI part 2
+- Accessibility: palette checker (`tools/a11y-check.js`) + fixes (status colours, button contrast, orange), large-text mode (web), label fix.
+- Measurement trends next to weight; web progress photos (private, IndexedDB) with before/after date slider.
+- Medicine and supplement checklist with quiet-hours reminders, in export and deletion.
+- Monthly season recap card (made on the device, health numbers opt-in).
+- Optional accountability link (one person, chosen fields, revocable, hashed secret).
+- Fix: measure-trends path is `/api/health-logs/...`.
+- Tests: `a11y` (4), `measurements` (4), `medicines` (5), `wrapped` (5), `shareLink` (4), web `photoCompare` (3), `wrappedCard` (4).
+
+# v44 - Phase 3 Section I: UI part 1
+- Simple/advanced mode (server `features.js`, `/api/coach/features`), Profile "Show all features", sensei unlock messages.
+- Adaptive Home step (`nextStep.js`, `/api/coach/next-step`) in the existing hero.
+- Undo toast replaces single-item delete confirms (food, weight, task, habit, water, exercise, foods, recipes, templates); real confirm kept for bulk/irreversible.
+- UI language: Hindi, Telugu, Tamil (first drafts, flagged for review), English fallback, `tools/i18n.js` CSV round trip.
+- Ctrl/Cmd+K quick add, `?` shortcuts, wide-screen and tablet CSS.
+- Tests: `uiOne.unit.test.js` (6), `undoCore.test.js` (5), `quickCommand.test.js` (4), `i18n.test.js` (4).
+
+# v43 - Phase 3 / Section H: coaching and insights, part 2 (web + server)
+- Coach tone (gentle / strict / funny), gentle mode with plate balance and support note, craving timer with swaps from your own foods, habit anchors, festival / wedding / trip mode, optional diet break on a plateau. Weekly per-day figure is never below the calorie floor.
+- Fix: the phone app's habit edit used PUT; the server now accepts PUT as well as PATCH.
+- Tests: server/test/coachH.unit.test.js (7). Docs: docs/PHASE3_COACHING2.md.
+- NOT built or run here (no npm registry): run `npm run build` in client and `npm test` in server.
+---
+# v42 - Phase 3 / Section G: coaching and insights, part 1 (web + server)
+- Rough-day "rest arc", 7-day side quests with sticker, scale-jump explainer, sleep-to-eating link, goal-date range cone, coach that learns (resettable in Profile), weekly treat allowance inside the weekly budget.
+- Tests: server/test/coachG.unit.test.js (9). Docs: docs/PHASE3_COACHING1.md.
+- NOT built or run here (no npm registry): run `npm run build` in client and `npm test` in server.
+---
 # v41 - Phase 3 / Section F: faster food logging, part 2 (web + server)
 - Fit preview protein line; "What can I cook?"; glycemic tags, pairing tips and diabetes-friendly view (published values only); CSV import with dry run; tomorrow's lunch planner with canteen favourites; grocery list by aisle with tick-off, "have it" and share.
 - Tests: server/test/logging2.unit.test.js (15). Docs: docs/PHASE3_LOGGING2.md.

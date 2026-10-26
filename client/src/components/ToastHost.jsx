@@ -16,6 +16,9 @@ export default function ToastHost() {
           id,
           message: detail.message,
           type: detail.type || "info",
+          kind: detail.kind,
+          sub: detail.sub,
+          action: detail.action,
         },
       ]);
 
@@ -40,12 +43,17 @@ export default function ToastHost() {
           className={`toast toast-${toast.type}`}
           role={toast.type === "error" ? "alert" : "status"}
         >
-          {toast.type === "success" || toast.type === "error" || toast.type === "warning" ? (
+          {toast.kind === "undo" || toast.kind === "undone" ? (
+            <Buddy scene={toast.kind === "undo" ? "health" : "cheer"} size={46} label="" who="kakashi" talk={false} />
+          ) : toast.type === "success" || toast.type === "error" || toast.type === "warning" ? (
             <Buddy scene={sceneForText(toast.message, toast.type)} size={46} label="" />
           ) : (
             <span className="toast-icon" aria-hidden="true">i</span>
           )}
-          <span className="toast-message">{toast.message}</span>
+          <span className="toast-message">{toast.message}{toast.sub && <small className="toast-sub">{toast.sub}</small>}</span>
+          {toast.action && (
+            <button type="button" className="toast-action" onClick={() => { toast.action.onClick?.(); close(toast.id); }}>{toast.action.label}</button>
+          )}
           <button
             type="button"
             className="toast-close"

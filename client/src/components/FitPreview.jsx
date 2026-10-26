@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { API_URL } from "../config";
 import { apiFetch } from "../config/api";
+import { isGentle } from "../utils/coachTone";
 
 // "Plan this meal": before you log it, what the choice does to the rest of today (kcal and protein left) and the week. Nothing is saved here.
 export default function FitPreview({ foodId, quantity, date }) {
@@ -14,7 +15,7 @@ export default function FitPreview({ foodId, quantity, date }) {
     }, 350);
     return () => { live = false; clearTimeout(t); };
   }, [foodId, quantity, date]);
-  if (!fit) return null;
+  if (!fit || isGentle()) return null;
   const head = fit.status === "fits" ? "✓ Fits today" : fit.status === "tight" ? "◐ Fits, just" : "↗ A bit over today";
   return (
     <div className={`fit-preview fit-${fit.status}`} role="status">

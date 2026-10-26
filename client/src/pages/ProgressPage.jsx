@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import WrappedCard from "../components/WrappedCard";
 import Buddy from "../motion/Buddy";
 import { API_URL } from "../config";
 import { apiFetch } from "../config/api";
@@ -380,6 +381,7 @@ function ProgressPage({ onBack }) {
           </section>
         </>
       )}
+      <WrappedCard />
     </div>
   );
 }

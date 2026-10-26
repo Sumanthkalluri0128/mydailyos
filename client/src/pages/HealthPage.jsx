@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import Medicines from "../components/Medicines";
 import Buddy from "../motion/Buddy";
 import { apiFetch } from "../config/api";
 import { API_URL } from "../config";
@@ -117,6 +118,7 @@ export default function HealthPage({ onBack }) {
           ))}
         </div>
       )}
+      <Medicines />
     </div>
   );
 }

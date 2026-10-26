@@ -17,5 +17,5 @@
 }
 .offline-banner button {
   border: 0; border-radius: 999px; padding: 5px 12px; font-weight: 700; cursor: pointer;
-  background: var(--primary); color: #fff; min-height: 28px;
+  background:var(--primary-solid,var(--primary)); color: #fff; min-height: 28px;
 }

@@ -7,18 +7,18 @@
 .fl-card p { margin: 4px 0; color: var(--text-muted); font-size: 14px; line-height: 1.5; }
 .fl-card p.ink { color: var(--text); }
 .fl-bar { height: 10px; border-radius: 5px; background: var(--primary-soft); overflow: hidden; margin-top: 8px; }
-.fl-bar > i { display: block; height: 100%; background: var(--primary); border-radius: 5px; }
+.fl-bar > i { display: block; height: 100%; background:var(--primary-solid,var(--primary)); border-radius: 5px; }
 .fl-bar.good > i { background: var(--success); }
 .fl-row { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
 .fl-big { font-size: 30px; font-weight: 800; color: var(--text); }
 .fl-big small { font-size: 14px; color: var(--text-muted); font-weight: 600; }
 .fl-comp { margin-top: 10px; font-size: 13px; color: var(--text); font-weight: 700; }
 .fl-comp .fl-bar { height: 6px; margin-top: 3px; }
-.fl-btn { background: var(--primary); color: #fff; border: 0; border-radius: 12px; padding: 11px 16px; font-weight: 800; cursor: pointer; margin-top: 10px; }
+.fl-btn { background:var(--primary-solid,var(--primary)); color: #fff; border: 0; border-radius: 12px; padding: 11px 16px; font-weight: 800; cursor: pointer; margin-top: 10px; }
 .fl-btn.ghost { background: transparent; color: var(--primary); border: 1.5px solid var(--primary); }
 .fl-btn:disabled { opacity: .55; cursor: default; }
 .fl-chip { border: 1px solid var(--border); background: var(--surface-soft); color: var(--text); border-radius: 999px; padding: 7px 12px; font-weight: 700; cursor: pointer; margin: 0 6px 6px 0; }
-.fl-chip.on { background: var(--primary); color: #fff; border-color: var(--primary); }
+.fl-chip.on { background:var(--primary-solid,var(--primary)); color: #fff; border-color: var(--primary); }
 .fl-find { display: flex; gap: 10px; margin: 10px 0; }
 .fl-find > span { font-size: 22px; }
 .fl-find strong { color: var(--text); display: block; }
