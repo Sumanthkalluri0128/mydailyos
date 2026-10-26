@@ -16,6 +16,13 @@ const schema = new mongoose.Schema(
     sets: { type: [{ _id: false, reps: { type: Number, min: 1, max: 1000 }, weightKg: { type: Number, min: 0, max: 1000, default: 0 } }], default: [] },
     // 'manual' = the person typed in the calories burned (e.g. from a watch); 'estimated' = MET formula.
     caloriesSource: { type: String, enum: ['estimated', 'manual'], default: 'estimated' },
+    // Where the entry came from: typed in ('manual') or imported from Health Connect (with the app that recorded it).
+    source: { type: String, enum: ['manual', 'healthconnect'], default: 'manual' },
+    sourceApp: { type: String, default: '', maxlength: 60 },
+    startMs: { type: Number },
+    endMs: { type: Number },
+    avgHeartRate: { type: Number, min: 30, max: 250 },
+    maxHeartRate: { type: Number, min: 30, max: 250 },
     notes: { type: String, default: '' },
   },
   { timestamps: true }

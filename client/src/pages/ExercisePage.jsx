@@ -592,6 +592,7 @@ function ExercisePage({ onBack }) {
                     MET {log.met}
                     {" • "}
                     {log.caloriesSource === "manual" ? "entered by you" : "estimated"}
+                    {log.source === "healthconnect" ? ` • from ${log.sourceApp || "Health Connect"}${log.avgHeartRate ? ` • avg ${log.avgHeartRate} bpm` : ""}` : ""}
                   </span>
 
                 </div>
@@ -669,7 +670,7 @@ function ExercisePage({ onBack }) {
                   </div>
                   {items.map((l) => (
                     <div className="history-item" key={l._id}>
-                      <span>{l.activityName} — {l.durationMinutes} min</span>
+                      <span>{l.activityName} — {l.durationMinutes} min{l.source === "healthconnect" ? ` · from ${l.sourceApp || "Health Connect"}${l.avgHeartRate ? ` · avg ${l.avgHeartRate} bpm` : ""}` : ""}</span>
                       <span>{Math.round(l.caloriesBurned)} kcal</span>
                     </div>
                   ))}

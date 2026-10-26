@@ -72,6 +72,11 @@ router.post('/', wrap(async (req, res) => {
   const clientId = v.clientId(req.body?.clientId);
 
   if (ONE_PER_DAY.has(type)) {
+    // A reading imported from a device never overwrites one the person typed in themselves.
+    if (source === 'device' && type === 'sleep') {
+      const mine = await HealthLog.findOne({ userId: req.user.id, type, date, source: 'manual' }).lean();
+      if (mine) return res.status(200).json({ success: true, log: mine, kept: 'manual' });
+    }
     const log = await HealthLog.findOneAndUpdate(
       { userId: req.user.id, type, date },
       { $set: base, $setOnInsert: { userId: req.user.id, ...(clientId ? { clientId } : {}) } },

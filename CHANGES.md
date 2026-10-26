@@ -1,3 +1,8 @@
+# v47 - Phase 3 Section L: platform part 1
+- Instant open: "Your last saved day, updated X min ago" strip with the day's character while the saved copy is on screen.
+- Hot-day water goal (opt-in, Open-Meteo, shown with the reason; silent offline). Server: device sleep readings never overwrite typed ones; workouts import route `POST /api/activities/import` with duplicate protection; activity logs remember their source and heart rate. Imported entries show "from Samsung Health".
+- Docs: `docs/PHASE3_PLATFORM1.md` (free / native-build answers per item, widget and Wear OS plan).
+
 # v46 - Phase 3 Section K: strength and training
 - Routines can carry target sets, reps, kg and rest (old duration-only routines still work). Workout mode steps through exercises with sets prefilled from last time, a rest timer and a "power up" scene when a record is beaten. New web Routines screen.
 - Estimated 1RM (Epley and Brzycki, formulas shown), beat-last-time hint, best set and volume history, weekly sets per muscle, deload nudge, plate calculator (kg and lb). Muscle groups added to the activity catalogue plus 23 strength moves.

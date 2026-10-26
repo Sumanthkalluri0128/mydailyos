@@ -113,6 +113,7 @@ const ACTIVITIES = [
   { name: 'Deadlift', category: 'Strength', met: 6.0, description: 'Deadlift from the floor', muscles: ['back', 'glutes', 'legs'] },
   { name: 'Biceps Curl', category: 'Strength', met: 3.5, description: 'Dumbbell or barbell curls', muscles: ['arms'] },
   { name: 'Triceps Pushdown', category: 'Strength', met: 3.5, description: 'Cable pushdown', muscles: ['arms'] },
+  { name: 'Other workout', category: 'General', met: 4.0, description: 'A workout recorded by another app that has no closer match (MET estimate)' },
   { name: 'Household work (vigorous)', category: 'Daily activity', met: 3.5, description: 'Sweeping, mopping, gardening' },
 ];
 

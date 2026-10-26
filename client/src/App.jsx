@@ -30,6 +30,9 @@ import AssistantPanel from "./components/AssistantPanel";
 import HomeDashboard from "./components/home/HomeDashboard";
 import TourHost from "./tour/TourHost";
 import { queueTour } from "./tour/tourStore";
+import InstantOpenStrip from "./components/InstantOpenStrip";
+import { usableCopy } from "./utils/freshness";
+import { currentBoost } from "./utils/weatherStore";
 
 import { getLocalDate } from "./utils/date";
 import { apiFetch } from "./config/api";
@@ -129,6 +132,7 @@ function App() {
   // DAILY NUTRITION
   // ============================================================
 
+  const [cachedAt, setCachedAt] = useState(null); // time of the saved copy on screen, while it is still being refreshed
   const [dailySummary, setDailySummary] = useState({
     calories: 0,
     protein: 0,
@@ -212,7 +216,8 @@ function App() {
     // the server can take seconds to answer; this makes the dashboard appear immediately instead of sitting empty.
     try {
       const saved = JSON.parse(localStorage.getItem("mydailyos_dash_v1") || "null");
-      if (saved && saved.date === today && saved.owner === currentOwner()) {
+      if (usableCopy(saved, { date: today, owner: currentOwner() })) {
+        setCachedAt(saved.at || null);
         if (saved.food) setDailySummary(saved.food);
         if (saved.activity) setActivitySummary(saved.activity);
         if (saved.tasks) setTasks(saved.tasks);
@@ -331,6 +336,7 @@ function App() {
         try {
           localStorage.setItem("mydailyos_dash_v1", JSON.stringify({
             date: today,
+            at: Date.now(),
             owner: currentOwner(),
             food: foodData.success ? foodData.summary : undefined,
             activity: activityData.success ? activityData.summary : undefined,
@@ -342,6 +348,7 @@ function App() {
             profile: profileData.success ? profileData.profile : undefined,
           }));
         } catch { /* storage full / private mode */ }
+        if (navigator.onLine) setCachedAt(null); // fresh data is on screen now
       } catch (error) {
         console.error(
           "Failed to fetch dashboard data:",
@@ -647,10 +654,10 @@ function App() {
   // Targets follow body weight when it is known; saved goals are the fallback.
   // The calorie budget, ring and plan all come from the one shared model (DashboardHero / CalorieBalance).
 
-  const waterTarget =
+  const waterTarget = currentBoost(
     waterTargetMl(profile?.currentWeightKg) ??
     profile?.goals?.waterTargetMl ??
-    3000;
+    3000).goalMl; // plus the optional hot-day boost
 
   // ============================================================
   // WEIGHT GOAL CALCULATIONS
@@ -686,6 +693,8 @@ function App() {
       {shell}
 
       <main key={currentPage} className="dashboard fx-page">
+
+        {cachedAt && <InstantOpenStrip at={cachedAt} refreshing={navigator.onLine} />}
 
         <HomeDashboard
           profile={profile}

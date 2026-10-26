@@ -19,3 +19,6 @@
   border: 0; border-radius: 999px; padding: 5px 12px; font-weight: 700; cursor: pointer;
   background:var(--primary-solid,var(--primary)); color: #fff; min-height: 28px;
 }
+
+.io-strip { display: flex; align-items: center; gap: 10px; margin: 8px 0; padding: 6px 12px; border-radius: 14px; background: var(--primary-soft); font-size: .9rem; }
+.io-strip.io-old { border-left: 4px solid var(--primary); }

@@ -7,6 +7,8 @@ import { useEffect, useState } from "react";
 import { getLocalDate } from "../utils/date";
 import { API_URL } from "../config";
 import { waterTargetMl } from "../utils/energy";
+import { useWaterBoost } from "../utils/weatherStore";
+import WeatherWaterCard from "../components/WeatherWaterCard";
 import GoalBar from "../components/GoalBar";
 
 const DEFAULT_WATER_GOAL = 3000;
@@ -24,6 +26,8 @@ function WaterPage({ onBack }) {
     DEFAULT_WATER_GOAL
   );
   const [weightKg, setWeightKg] = useState(null);
+  const boost = useWaterBoost(waterGoal);
+  const goal = boost.goalMl; // the goal after the optional hot-day rule
 
   // ============================================================
   // LOAD TODAY'S WATER
@@ -208,26 +212,28 @@ function WaterPage({ onBack }) {
           </strong>
 
           <span>
-            / {(waterGoal / 1000).toFixed(1)} L
+            / {(goal / 1000).toFixed(1)} L
           </span>
 
         </div>
 
-        <GoalBar value={totalMl} target={waterGoal} unit="ml" color="#2587d9" />
+        <GoalBar value={totalMl} target={goal} unit="ml" color="#2587d9" />
 
         <p>
           {totalMl.toLocaleString()} ml consumed
         </p>
 
         <p className="water-target-note">
-          <strong>Daily target: {waterGoal.toLocaleString()} ml</strong>
+          <strong>Daily target: {goal.toLocaleString()} ml</strong>
           {weightKg
             ? " — based on your weight (35 ml per kg). It updates when you log a new weight."
             : " — add your weight in your profile and this target will be worked out for you (35 ml per kg)."}
         </p>
+        {boost.reason && <p className="water-target-note" role="status">☀️ {boost.reason}</p>}
 
       </div>
 
+      <WeatherWaterCard boost={boost} />
 
       {/* ====================================================== */}
       {/* QUICK ADD */}

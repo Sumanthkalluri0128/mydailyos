@@ -8,6 +8,7 @@ const { createOnce } = require('../lib/idempotent');
 const v = require('../lib/validate');
 const { stepCalories, stepDistanceKm, stepsByDate, profileWeight } = require('../lib/steps');
 const { computeRecords } = require('../lib/records');
+const { planImport, FALLBACK } = require('../lib/hcImport');
 
 const router = express.Router();
 router.use(requireAuth);
@@ -96,6 +97,33 @@ router.post('/logs', wrap(async (req, res) => {
     notes: v.string(req.body?.notes, 'notes', { max: 300 }),
   });
   res.status(duplicate ? 200 : 201).json({ success: true, log: doc, duplicate });
+}));
+
+// Import exercise sessions read from Health Connect on the phone. Safe to repeat: the same session never imports twice.
+router.post('/import', wrap(async (req, res) => {
+  const raw = Array.isArray(req.body?.sessions) ? req.body.sessions : [];
+  if (!raw.length) return res.json({ success: true, imported: 0, skipped: [], logs: [] });
+  const dates = raw.map((r) => String(r?.date || '')).filter((d) => /^\d{4}-\d{2}-\d{2}$/.test(d)).sort();
+  const existing = dates.length
+    ? await ActivityLog.find({ userId: req.user.id, source: 'healthconnect', date: { $gte: dates[0], $lte: dates[dates.length - 1] } }).select('clientId startMs endMs').lean()
+    : [];
+  const { fresh, skipped } = planImport(raw, existing);
+  const weight = Number((await Profile.findOne({ userId: req.user.id }).lean())?.currentWeightKg || 70);
+  const acts = await Activity.find({ name: { $in: [...new Set(fresh.map((f) => f.activityName))] } }).lean();
+  const byName = new Map(acts.map((a) => [a.name, a]));
+  const logs = [];
+  for (const f of fresh) {
+    const a = byName.get(f.activityName) || byName.get(FALLBACK);
+    if (!a) { skipped.push({ clientId: f.clientId, reason: 'no-activity' }); continue; }
+    const { doc, duplicate } = await createOnce(ActivityLog, req.user.id, f.clientId, {
+      activityId: a._id, date: f.date, activityName: a.name, category: a.category, durationMinutes: f.durationMinutes, weightKg: weight, met: a.met,
+      caloriesBurned: (a.met * 3.5 * weight / 200) * f.durationMinutes, caloriesSource: 'estimated',
+      source: 'healthconnect', sourceApp: f.sourceApp, startMs: f.startMs, endMs: f.endMs, avgHeartRate: f.avgHeartRate ?? undefined, maxHeartRate: f.maxHeartRate ?? undefined,
+      notes: f.title ? `Imported: ${f.title}` : 'Imported from Health Connect',
+    });
+    if (duplicate) skipped.push({ clientId: f.clientId, reason: 'already-imported' }); else logs.push(doc);
+  }
+  res.status(201).json({ success: true, imported: logs.length, skipped, logs });
 }));
 
 router.delete('/logs/:id', wrap(async (req, res) => {
