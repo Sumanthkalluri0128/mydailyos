@@ -18,7 +18,13 @@ async function state(uid, today) {
   const earned = packsEarned(j.level.xp, j.chests);
   return { j, owned, opened, earned, available: Math.max(0, earned - opened), recent: col?.recent || [] };
 }
-const view = ({ owned, opened, earned, available, recent, j }) => ({ success: true, packs: { earned, opened, available, nextAtXp: (Math.floor(j.level.xp / 50) + 1) * 50, xp: j.level.xp, chests: j.chests }, owned, recent: recent.slice(-12), ...summary(owned) });
+// `summary()` returns { owned: <COUNT>, total, byWho }. It must never be spread over the response AFTER the `owned` array:
+// that silently turned `owned` (the list of sticker ids) into a number, and the apps crashed on `new Set(1)`.
+// So: `owned` is always the array of ids, and the count travels as `ownedCount` (clients may use owned.length too).
+const view = ({ owned, opened, earned, available, recent, j }) => {
+  const { owned: ownedCount, total, byWho } = summary(owned);
+  return { success: true, packs: { earned, opened, available, nextAtXp: (Math.floor(j.level.xp / 50) + 1) * 50, xp: j.level.xp, chests: j.chests }, owned, ownedCount, total, byWho, recent: recent.slice(-12) };
+};
 
 router.get('/', wrap(async (req, res) => {
   const today = req.query.today ? v.date(req.query.today, 'today') : todayUtc();
@@ -47,3 +53,4 @@ router.post('/open', wrap(async (req, res) => {
 }));
 
 module.exports = router;
+module.exports.view = view; // exported for the regression test

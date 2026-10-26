@@ -36,6 +36,14 @@ function Bar({ pct, tone = "mid" }) {
 const stickerListOf = (w) => Object.values(stickerList()[w] || {}).flat().map((x) => x[0]);
 const RARITY = { common: ["Common", "#8f94b8"], rare: ["Rare", "#3d8bff"], epic: ["Epic", "#ffb020"] };
 const rarityOf = (cat) => (cat === "power" ? "epic" : ["party", "love", "lift", "cool", "game", "sleep", "sport"].includes(cat) ? "rare" : "common");
+// The API sends `owned` as the list of sticker ids. Older servers sent a bare count by mistake (which crashed `new Set(1)`),
+// so accept both: ids when we have them, otherwise just the number.
+const normAlbum = (al) => {
+  if (!al) return null;
+  const ids = Array.isArray(al.owned) ? al.owned.filter((x) => typeof x === "string") : [];
+  const count = Array.isArray(al.owned) ? ids.length : Number.isFinite(Number(al.owned)) ? Number(al.owned) : Number(al.ownedCount) || 0;
+  return { ...al, owned: ids, ownedCount: count };
+};
 const idParts = (id) => { const [who, name] = id.split("/"); return { who, name, cat: name.replace(/-\d+$/, "") }; };
 
 export default function GoalsPage({ onBack }) {
@@ -54,7 +62,7 @@ export default function GoalsPage({ onBack }) {
       const [r, a] = await Promise.all([apiFetch(`/api/goals/journey?today=${today}`), apiFetch(`/api/album?today=${today}`)]);
       const [d, al] = await Promise.all([r.json(), a.json()]);
       if (!d.success) throw new Error(d.message || "Could not load your journey");
-      setData(d); setAlbum(al.success ? al : null); setErr("");
+      setData(d); setAlbum(al.success ? normAlbum(al) : null); setErr("");
     } catch (e) { setErr(e.message || "Could not load your journey"); }
   }, [today]);
   useEffect(() => { load(); }, [load]);
@@ -65,7 +73,7 @@ export default function GoalsPage({ onBack }) {
     try {
       const [r] = await Promise.all([apiFetch("/api/album/open", { method: "POST", body: JSON.stringify({ who: packFor === "any" ? undefined : packFor, today }) }), new Promise((res) => setTimeout(res, 1500))]);
       const d = await r.json(); if (!d.success) throw new Error(d.message || "Could not open the pack");
-      setPack({ stage: "reveal", sticker: d.sticker }); setAlbum(d);
+      setPack({ stage: "reveal", sticker: d.sticker }); setAlbum(normAlbum(d));
       if (d.sticker.rarity !== "common") fireConfetti({ count: d.sticker.rarity === "epic" ? 140 : 70 });
       notify(`New sticker: ${CHARS[d.sticker.who]} (${RARITY[d.sticker.rarity][0]})!`, "success"); refreshCtx(true);
     } catch (e) { setPack(null); notify(e.message, "error"); load(); }
@@ -110,8 +118,8 @@ export default function GoalsPage({ onBack }) {
       <div className="gp-hero2">
         <Buddy scene={packs?.available ? "cheer" : "wave"} size={104} who={mate} says={packs?.available ? `${packs.available} pack${packs.available === 1 ? "" : "s"} ready!` : say(mate || "naruto", "hype")} />
         <div className="gp-album-sum">
-          <b>{album ? `${album.owned.length}/${album.total}` : "—"}</b><span>stickers collected</span>
-          <div className="gp-bar"><i className="gp-fill gp-xp" style={{ width: `${album ? Math.max(2, (album.owned.length / album.total) * 100) : 0}%` }} /></div>
+          <b>{album ? `${album.ownedCount}/${album.total}` : "—"}</b><span>stickers collected</span>
+          <div className="gp-bar"><i className="gp-fill gp-xp" style={{ width: `${album ? Math.max(2, (album.ownedCount / Math.max(1, album.total)) * 100) : 0}%` }} /></div>
         </div>
       </div>
 
@@ -179,7 +187,7 @@ export default function GoalsPage({ onBack }) {
                 <div className="gp-rare" style={{ color: rc }}>{rl}</div>
                 <img className={`gp-reveal r-${st.rarity}`} src={stickerUrl(st.who, st.name)} alt={CHARS[st.who]} width="200" height="200" />
                 <h3>{CHARS[st.who]}</h3>
-                <p className="gp-muted">{album.owned.length}/{album.total} collected{album.packs.available ? ` · ${album.packs.available} more pack${album.packs.available === 1 ? "" : "s"} ready` : ""}</p>
+                <p className="gp-muted">{album.ownedCount}/{album.total} collected{album.packs.available ? ` · ${album.packs.available} more pack${album.packs.available === 1 ? "" : "s"} ready` : ""}</p>
                 <div className="gp-actions"><button type="button" onClick={() => setPack(null)}>Nice!</button>{album.packs.available > 0 && <button className="primary" type="button" onClick={() => { setPack(null); setTimeout(openPack, 50); }}>Open another</button>}</div>
               </>); })()}
           </div>

@@ -40,3 +40,17 @@ test('weekly chapter: Monday-first stones, chest at 5 logged days', () => {
   assert.equal(c.stones[4].today, true); assert.equal(c.stones[5].future, true); assert.equal(c.daysLeft, 2);
   assert.equal(J.weekChests(days, T), 1); assert.equal(J.weekChests(days.slice(0, 4), T), 0);
 });
+
+test('API view: `owned` stays the array of sticker ids (regression: summary().owned count used to overwrite it)', () => {
+  const { view } = require('../routes/albumRoutes');
+  const all = A.allStickers(); const ids = [all[0].id, all[1].id, all[2].id];
+  const out = view({ owned: ids, opened: 3, earned: 4, available: 1, recent: [], j: { level: { xp: 120 }, chests: 0 } });
+  assert.ok(Array.isArray(out.owned)); assert.deepEqual(out.owned, ids);
+  assert.equal(out.ownedCount, 3); assert.equal(out.total, all.length); assert.ok(out.byWho[all[0].who]);
+  assert.equal(out.packs.available, 1); assert.equal(out.packs.nextAtXp, 150);
+  // the shape the web/mobile clients feed straight into new Set(...)
+  assert.doesNotThrow(() => new Set(out.owned));
+  // an empty album still returns an array, never a number
+  const empty = view({ owned: [], opened: 0, earned: 1, available: 1, recent: [], j: { level: { xp: 0 }, chests: 0 } });
+  assert.deepEqual(empty.owned, []); assert.equal(empty.ownedCount, 0);
+});
