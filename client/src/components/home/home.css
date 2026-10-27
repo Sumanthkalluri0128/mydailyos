@@ -287,3 +287,62 @@ html.ff-calm .pk, html.ff-calm .hr-sun, html.ff-calm .pg-crown { animation: none
 .hr-shade { z-index: 1; background: linear-gradient(90deg, rgba(14, 10, 36, .9) 0%, rgba(14, 10, 36, .66) 48%, rgba(14, 10, 36, .2) 100%); }
 @media (max-width: 900px) { .hr-shade { background: linear-gradient(180deg, rgba(14, 10, 36, .82) 0%, rgba(14, 10, 36, .6) 100%); } }
 @media (prefers-reduced-motion: reduce) { .hr-bg img { transition: none; } }
+
+/* ============ v54 polish: visible hero artwork + compact, vivid stat grid ============ */
+
+/* ---- Hero: let the scene breathe. Shade only the text side, keep the bubble compact and glassy, keep all characters. ---- */
+.hr { min-height: 236px; }
+.hr-bg img { object-position: 62% 40%; filter: saturate(1.12) contrast(1.04); transform: scale(1.02); }
+.hr-shade { background:
+    linear-gradient(90deg, rgba(14, 10, 36, .66) 0%, rgba(14, 10, 36, .38) 34%, rgba(14, 10, 36, .06) 62%, rgba(14, 10, 36, 0) 100%),
+    linear-gradient(0deg, rgba(14, 10, 36, .28) 0%, rgba(14, 10, 36, 0) 38%); }
+.hr-panel { max-width: 540px; padding: 22px 26px 22px; }
+.hr-hello { text-shadow: 0 2px 14px rgba(0, 0, 0, .55), 0 0 2px rgba(0, 0, 0, .35); }
+.hr-date { text-shadow: 0 1px 8px rgba(0, 0, 0, .5); opacity: .92; }
+.hr-coach { align-items: flex-end; gap: 8px; }
+.hr-coach .bd { flex: none; filter: drop-shadow(0 6px 10px rgba(0, 0, 0, .35)); }
+.hr-bubble { flex: 0 1 auto; width: fit-content; max-width: min(100%, 400px); padding: 11px 14px 12px; border-radius: 18px;
+  background: rgba(255, 255, 255, .84); -webkit-backdrop-filter: blur(14px) saturate(1.3); backdrop-filter: blur(14px) saturate(1.3);
+  border: 1px solid rgba(255, 255, 255, .55); box-shadow: 0 10px 28px rgba(8, 4, 30, .32); }
+.hr-bubble::before { border-right-color: rgba(255, 255, 255, .84); }
+.hr-bubble-actions button { min-height: 40px; padding: 8px 16px; box-shadow: 0 6px 14px color-mix(in srgb, var(--primary, #6847e8) 40%, transparent); }
+@media (max-width: 900px) {
+  .hr-shade { background: linear-gradient(180deg, rgba(14, 10, 36, .6) 0%, rgba(14, 10, 36, .34) 55%, rgba(14, 10, 36, .2) 100%); }
+  .hr-panel { max-width: none; }
+  .hr-bubble { max-width: 100%; }
+}
+
+/* ---- Stat cards: one tidy row, shorter, with richer colour so the dashboard stops feeling dull and oversized ---- */
+.hd { gap: 14px; }
+.hd-stats { grid-template-columns: minmax(300px, 1.5fr) repeat(4, minmax(0, 1fr)); grid-auto-rows: auto; gap: 12px; margin-top: 2px; align-items: stretch; }
+.sc { min-height: 172px; padding: 15px 16px 16px; border-radius: 22px; border: 1px solid color-mix(in srgb, var(--text) 7%, transparent); }
+.sc-water { background: radial-gradient(120% 90% at 100% 0%, color-mix(in srgb, var(--tint-b) 30%, transparent), transparent 60%), linear-gradient(165deg, color-mix(in srgb, var(--tint-b) 14%, var(--card)), var(--card) 80%); }
+.sc-steps { background: radial-gradient(120% 90% at 100% 0%, color-mix(in srgb, var(--tint-o) 30%, transparent), transparent 60%), linear-gradient(165deg, color-mix(in srgb, var(--tint-o) 14%, var(--card)), var(--card) 80%); }
+.sc-ex { background: radial-gradient(120% 90% at 100% 0%, color-mix(in srgb, var(--tint-p) 28%, transparent), transparent 60%), linear-gradient(165deg, color-mix(in srgb, var(--tint-p) 13%, var(--card)), var(--card) 80%); }
+.sc-w { background: radial-gradient(120% 90% at 100% 0%, color-mix(in srgb, var(--tint-v) 30%, transparent), transparent 60%), linear-gradient(165deg, color-mix(in srgb, var(--tint-v) 14%, var(--card)), var(--card) 80%); }
+.sc:hover { transform: translateY(-3px); }
+.sc .pk { width: 84px; height: 84px; top: -10px; right: 4px; }
+.sc-val strong { font-size: clamp(24px, 2.1vw, 30px); }
+.sc-bar { height: 9px; }
+
+/* Calories: same row as the others (no more 2x2 block with empty space). Ring + figures side by side, button underneath. */
+.sc-cal { grid-column: auto; grid-row: auto; flex-direction: row; flex-wrap: wrap; align-items: center; align-content: center; justify-content: flex-start; gap: 14px 18px; padding: 18px;
+  background: radial-gradient(110% 90% at 0% 0%, color-mix(in srgb, #ff9b3d 26%, transparent), transparent 55%), radial-gradient(110% 90% at 100% 100%, color-mix(in srgb, var(--tint-v) 24%, transparent), transparent 60%), var(--card); }
+.sc-cal .rg { width: clamp(118px, 9.5vw, 140px); }
+.sc-cal .rg-in strong { font-size: clamp(26px, 2.4vw, 34px); }
+.sc-cal-list { gap: 10px; flex: 1 1 130px; } .sc-cal-list b { font-size: 15.5px; }
+.sc-cal-acts { justify-content: flex-start; }
+.sc-act { min-height: 40px; padding: 8px 18px; }
+
+@media (max-width: 1180px) {
+  .hd-stats { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .sc-cal { grid-column: 1 / -1; flex-wrap: nowrap; justify-content: center; gap: 22px; }
+  .sc-cal-acts { flex-basis: auto; }
+  .sc-cal .rg { width: 132px; }
+}
+@media (max-width: 900px) { .hd-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 560px) { .sc-cal { flex-wrap: wrap; justify-content: flex-start; } .sc-cal-acts { flex-basis: 100%; } .sc-cal .rg { width: 118px; } .sc { min-height: 158px; } }
+
+/* Panels: slightly tighter so the page is shorter and calmer on wide screens */
+.hd-mid, .hd-low, .hd-week { gap: 12px; }
+.pn { padding: 16px 18px; }
