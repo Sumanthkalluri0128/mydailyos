@@ -28,7 +28,10 @@ const app = createApp({ allowedOrigins });
 // database simply wait for the connection (up to 30 s) instead of failing.
 mongoose.set('bufferTimeoutMS', 30_000);
 
+const { stats } = require('./lib/serverStatsStore');
+const bootStart = Date.now() - Math.round(process.uptime() * 1000);
 app.listen(PORT, '0.0.0.0', () => {
+  stats.boot({ listenMs: Date.now() - bootStart, dbMs: null });
   console.log(`FlexFit server running on port ${PORT}`);
   console.log(`Allowed CORS origins: ${allowedOrigins.join(', ')}`);
   const mail = require('./lib/mailer').mailStatus();
@@ -41,6 +44,8 @@ mongoose
   .connect(process.env.MONGO_URI, { serverSelectionTimeoutMS: 20_000, maxPoolSize: 10 })
   .then(() => {
     console.log('MongoDB connected');
+    require('./lib/serverStatsStore').startPersisting();
+    stats.boot({ listenMs: null, dbMs: Date.now() - bootStart });
     // Everything below runs in the background; none of it blocks requests.
     // Unique indexes that make offline replays idempotent (additive; never drops anything).
     Promise.all(Object.values(mongoose.models).map((Model) => Model.createIndexes().catch((e) => console.warn(`Index warning (${Model.modelName}):`, e.message))));
@@ -57,6 +62,12 @@ mongoose
       const tick = () => { if (new Date().getUTCDay() === 1) require('./lib/weeklyDigest').sendWeeklyDigests().then((r) => r.sent && console.log(`Weekly emails sent: ${r.sent}`)).catch((e) => console.warn('Weekly email warning:', e.message)); };
       setInterval(tick, 60 * 60_000).unref();
       setTimeout(tick, 30_000).unref();
+    }
+    // Opt-in weekly backup email (data export attached): Sunday, UTC, once per person per week. Cron alternative: `npm run send-backups`.
+    if (process.env.BACKUP_EMAIL_SCHEDULER !== 'false') {
+      const tickBackup = () => { if (new Date().getUTCDay() === 0) require('./lib/backupEmail').sendWeeklyBackups({ exportFiles: require('./routes/accountRoutes').buildExportFiles }).then((r) => r.sent && console.log(`Backup emails sent: ${r.sent}`)).catch((e) => console.warn('Backup email warning:', e.message)); };
+      setInterval(tickBackup, 60 * 60_000).unref();
+      setTimeout(tickBackup, 45_000).unref();
     }
   })
   .catch((error) => {

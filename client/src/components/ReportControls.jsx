@@ -9,10 +9,11 @@ export default function ReportControls() {
   const [days, setDays] = useState(30);
   const [diary, setDiary] = useState(true);
   const [weekly, setWeekly] = useState(false);
+  const [backup, setBackup] = useState(false);
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
-    apiFetch("/api/profile").then((r) => r.json()).then((d) => d.success && setWeekly(!!d.profile?.notify?.weeklyEmail)).catch(() => {});
+    apiFetch("/api/profile").then((r) => r.json()).then((d) => { if (d.success) { setWeekly(!!d.profile?.notify?.weeklyEmail); setBackup(!!d.profile?.notify?.backupEmail); } }).catch(() => {});
   }, []);
 
   const run = async (fn) => { setBusy(true); try { await fn(); } catch (e) { notify(e.message || "Something went wrong", "error"); } finally { setBusy(false); } };
@@ -35,6 +36,13 @@ export default function ReportControls() {
     notify(on ? "You'll get a summary email every Monday." : "Weekly emails are off.", "success");
   });
 
+  const toggleBackup = (on) => run(async () => {
+    const res = await apiFetch("/api/profile", { method: "PATCH", body: JSON.stringify({ notify: { backupEmail: on } }) });
+    if (!res.ok) throw new Error("Could not save that setting");
+    setBackup(on);
+    notify(on ? "You'll get a backup of your data by email every Sunday." : "Backup emails are off.", "success");
+  });
+
   const sendNow = () => run(async () => {
     const res = await apiFetch("/api/progress/weekly/email", { method: "POST", body: JSON.stringify({ end: getLocalDate() }) });
     const d = await res.json().catch(() => ({}));
@@ -54,6 +62,8 @@ export default function ReportControls() {
         <button className="secondary-button" disabled={busy} onClick={downloadPdf}>⬇ Dietitian report (PDF)</button>
       </div>
       <label className="toggle-row"><input type="checkbox" checked={weekly} disabled={busy} onChange={(e) => toggleWeekly(e.target.checked)} /> Email me a weekly summary every Monday</label>
+      <label className="toggle-row"><input type="checkbox" checked={backup} disabled={busy} onChange={(e) => toggleBackup(e.target.checked)} /> Email me a backup of my data every Sunday (JSON and CSV attached)</label>
+      <p className="card-description">The backup holds your health and food data, so keep that email private. Every email has a one-tap stop link.</p>
       <button className="secondary-button" disabled={busy} onClick={sendNow}>✉️ Email me this week's summary now</button>
     </div>
   );

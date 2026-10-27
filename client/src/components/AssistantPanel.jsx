@@ -58,7 +58,7 @@ export default function AssistantPanel({ go }) {
     if (!booted.current && !load().length) {
       booted.current = true;
       apiFetch(`/api/assistant/chips?today=${getLocalDate()}&hour=${new Date().getHours()}`).then((r) => r.json()).then((d) => {
-        if (d.success) { setChips(d.chips); setMsgs((m) => (m.length ? m : [{ from: "bot", text: d.greeting, actions: [], mood: "wave", id: 1 }])); }
+        if (d.success && Array.isArray(d.chips)) { setChips(d.chips); setMsgs((m) => (m.length ? m : [{ from: "bot", text: d.greeting, actions: [], mood: "wave", id: 1 }])); }
       }).catch(() => setMsgs((m) => (m.length ? m : [{ from: "bot", text: "Hi! Ask me about your day, your week, or how any feature works.", mood: "wave", id: 1 }])));
     }
     if (detail.question) setTimeout(() => ask(detail.question), 60);

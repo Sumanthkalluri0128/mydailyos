@@ -16,6 +16,10 @@ import "./styles/polish.css"; // logging/profile layout tidy-up
 import FunBackdrop from "./motion/FunBackdrop";
 import Companions from "./motion/Companions";
 import { installTapMarker } from "./motion/tapMarker";
+import { setTelemetry } from "./offline/offlineApi";
+import { report } from "./utils/telemetryClient";
+
+setTelemetry(report); // lets the offline layer say when a sync failed or a change had to be dropped
 
 installTapMarker();
 try { if (localStorage.getItem("ff_calm_motion") === "1") document.documentElement.classList.add("ff-calm"); } catch { /* ignore */ }

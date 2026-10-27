@@ -35,6 +35,9 @@ const schema = new mongoose.Schema(
     notify: {
       weeklyEmail: { type: Boolean, default: false },
       lastWeeklyEmail: { type: String, default: '' },
+      // Weekly backup email with the data export attached. Off by default; `lastBackupEmail` = Monday of the last week sent.
+      backupEmail: { type: Boolean, default: false },
+      lastBackupEmail: { type: String, default: '' },
     },
     // The north-star plan ("lose 6 kg by March"): everything else (focus habits, rewards, events, maintenance breaks) hangs under it.
     plan: {

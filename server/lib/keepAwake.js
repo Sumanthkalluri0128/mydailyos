@@ -12,7 +12,7 @@ function startKeepAwake({ url = process.env.KEEP_AWAKE_URL || process.env.RENDER
   const target = `${String(url).replace(/\/+$/, '')}/api/health`;
   const lib = target.startsWith('https') ? https : http;
   const ping = () => {
-    const req = lib.get(target, { timeout: 20000 }, (res) => res.resume());
+    const req = lib.get(target, { timeout: 20000, headers: { 'x-keepalive': 'self' } }, (res) => res.resume());
     req.on('timeout', () => req.destroy());
     req.on('error', (e) => log.warn && log.warn('keep-awake ping failed:', e.message));
   };

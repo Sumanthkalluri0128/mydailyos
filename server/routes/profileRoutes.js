@@ -43,6 +43,7 @@ function parseUpdate(body = {}) {
   if (body.safety && typeof body.safety === 'object' && body.safety.hideNumbers !== undefined) set['safety.hideNumbers'] = v.bool(body.safety.hideNumbers, 'safety.hideNumbers');
   const nf = body.notify;
   if (nf && typeof nf === 'object' && nf.weeklyEmail !== undefined) set['notify.weeklyEmail'] = v.bool(nf.weeklyEmail, 'notify.weeklyEmail');
+  if (nf && typeof nf === 'object' && nf.backupEmail !== undefined) set['notify.backupEmail'] = v.bool(nf.backupEmail, 'notify.backupEmail');
   return set;
 }
 

@@ -1,4 +1,5 @@
 import { useEffect, useState, Suspense, lazy } from "react";
+import { refreshFlags } from "./utils/flagStore";
 import { loadTone } from "./utils/coachTone";
 import { loadFeatures } from "./utils/features";
 import "./App.css";
@@ -16,17 +17,17 @@ const ProgressPage = lazy(() => import("./pages/ProgressPage"));
 const GoalsPage = lazy(() => import("./pages/GoalsPage"));
 const PlannerPage = lazy(() => import("./pages/PlannerPage"));
 const RecipesPage = lazy(() => import("./pages/RecipesPage"));
-import OnboardingPage from "./pages/OnboardingPage";
+const OnboardingPage = lazy(() => import("./pages/OnboardingPage"));
+const AdminPage = lazy(() => import("./pages/AdminPage"));
 import { waterTargetMl } from "./utils/energy";
 import { currentOwner } from "./utils/cacheOwner";
 import { PageSkeleton } from "./motion/PageTransition";
 import { withTransition } from "./motion/motion";
 import AppNav from "./components/AppNav";
-import CommandPalette from "./components/CommandPalette";
+import LateMount from "./components/LateMount";
 import MedReminderHost from "./components/MedReminderHost";
 import "./components/wide.css";
 import "./utils/a11yPrefs";
-import AssistantPanel from "./components/AssistantPanel";
 import HomeDashboard from "./components/home/HomeDashboard";
 import TourHost from "./tour/TourHost";
 import { queueTour } from "./tour/tourStore";
@@ -73,9 +74,11 @@ function App() {
   }, []);
 
   const [currentPage, setCurrentPageRaw] =
-    useState("dashboard");
+    useState(() => (typeof location !== "undefined" && location.hash === "#admin" ? "admin" : "dashboard")); // #admin opens the plain admin page (the server still checks)
   // Cross-fade between pages with the View Transitions API (falls back to the .fx-page CSS entrance).
   const setCurrentPage = (page) => withTransition(() => setCurrentPageRaw(page));
+
+  useEffect(() => { refreshFlags(); }, []); // feature flags: from the saved copy now, from the server when it is older than 6 hours
 
   // Bumped when changes made offline finish syncing, so the dashboard reloads with the real numbers.
   const [syncTick, setSyncTick] = useState(0);
@@ -380,8 +383,9 @@ function App() {
         streak={streak}
         onAsk={() => openAssistant()}
       />
-      <AssistantPanel go={setCurrentPage} />
-      <CommandPalette go={setCurrentPage} />
+      {/* rarely needed overlays: loaded after the first screen, or the moment they are asked for */}
+      <LateMount load={() => import("./components/AssistantPanel")} events={["flexfit:ask"]} keys={(e) => e.key === "?"} go={setCurrentPage} />
+      <LateMount load={() => import("./components/CommandPalette")} events={["ff:palette"]} keys={(e) => (e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k"} go={setCurrentPage} />
       <MedReminderHost />
       <TourHost page={currentPage} go={setCurrentPage} profile={profile} />
     </>
@@ -389,6 +393,7 @@ function App() {
 
   if (profile && profile.onboarded === false) {
     return (
+      <Suspense fallback={<PageSkeleton variant="list" />}>
       <OnboardingPage
         profile={profile}
         onDone={(updated) => {
@@ -400,6 +405,7 @@ function App() {
           } catch { /* ignore */ }
         }}
       />
+      </Suspense>
     );
   }
 
@@ -589,6 +595,19 @@ function App() {
   // ============================================================
   // PROGRESS PAGE
   // ============================================================
+
+  if (currentPage === "admin") {
+    return (
+      <div className="app">
+        {shell}
+        <main key={currentPage} className="dashboard fx-page">
+          <Suspense fallback={<PageSkeleton variant="list" />}>
+            <AdminPage onBack={() => { try { history.replaceState(null, "", location.pathname + location.search); } catch { /* ignore */ } setCurrentPage("dashboard"); }} />
+          </Suspense>
+        </main>
+      </div>
+    );
+  }
 
   if (currentPage === "goals") {
     return (

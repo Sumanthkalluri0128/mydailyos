@@ -7,6 +7,10 @@ const pkg = require('./package.json');
 const { securityHeaders } = require('./middleware/security');
 const { rateLimit } = require('./middleware/rateLimit');
 const { captureError } = require('./lib/monitoring');
+const { stats } = require('./lib/serverStatsStore');
+const { pingSource } = require('./lib/serverStats');
+const flagRoutes = require('./routes/flagRoutes');
+const telemetryRoutes = require('./routes/telemetryRoutes');
 
 const authRoutes = require('./routes/authRoutes');
 const accountRoutes = require('./routes/accountRoutes');
@@ -64,9 +68,10 @@ function createApp({ allowedOrigins = [] } = {}) {
   app.use('/api/import', express.json({ limit: '4mb' })); // CSV files are bigger than normal requests
   app.use(express.json({ limit: '100kb' }));
 
-  app.get('/api/health', (req, res) =>
-    res.status(200).json({ success: true, status: 'healthy', service: 'FlexFit API', version: require('./package.json').version, db: require('mongoose').connection.readyState === 1 ? 'connected' : 'connecting', uptimeSec: Math.round(process.uptime()), timestamp: new Date().toISOString(), mail: require('./lib/mailer').mailStatus().provider || 'not-configured', google: require('./lib/googleClient').configured() ? 'configured' : 'not-configured' })
-  );
+  app.get('/api/health', (req, res) => {
+    stats.ping(pingSource(req.headers));
+    return res.status(200).json({ success: true, status: 'healthy', service: 'FlexFit API', version: require('./package.json').version, db: require('mongoose').connection.readyState === 1 ? 'connected' : 'connecting', uptimeSec: Math.round(process.uptime()), timestamp: new Date().toISOString(), mail: require('./lib/mailer').mailStatus().provider || 'not-configured', google: require('./lib/googleClient').configured() ? 'configured' : 'not-configured' });
+  });
   app.get('/api/version', (req, res) => res.status(200).json({ success: true, version: pkg.version, service: 'FlexFit API' }));
 
   // Generous global ceiling per IP; auth and export routes have their own, tighter limits.
@@ -103,6 +108,8 @@ function createApp({ allowedOrigins = [] } = {}) {
   app.use('/api/goals', goalRoutes);
   app.use('/api/tour', tourRoutes);
   app.use('/api/admin', adminRoutes);
+  app.use('/api/flags', flagRoutes);
+  app.use('/api/telemetry', telemetryRoutes);
   app.use('/api/plan', planRoutes);
   app.use('/api/assistant', assistantRoutes);
   app.use('/api/album', albumRoutes);
@@ -124,6 +131,7 @@ function createApp({ allowedOrigins = [] } = {}) {
     if (err && /^CORS blocked/.test(err.message || '')) return res.status(403).json({ success: false, message: 'Origin not allowed' });
     console.error('Server error:', err);
     captureError(err, { path: req.originalUrl, method: req.method });
+    stats.error({ path: req.originalUrl, method: req.method, message: err && err.message });
     if (res.headersSent) return next(err);
     // Never leak internals in production.
     const message = process.env.NODE_ENV === 'production' ? 'Internal server error' : err.message || 'Internal server error';

@@ -1,7 +1,9 @@
-import { useEffect, useState } from "react";
-import AuthPage from "../pages/AuthPage";
+import { Suspense, lazy, useEffect, useState } from "react";
+
 import { apiFetch, clearSession, startOfflineSync, syncNow } from "../config/api";
+const AuthPage = lazy(() => import("../pages/AuthPage")); // only needed while signed out: signed-in visits never download it
 import { purgeOthers } from "../offline/offlineApi";
+import { parseGoogleHash, loginNoticeFor, sessionDecision, gateView } from "./gateLogic";
 
 // Google sign-in redirects back to "/#google=ok&token=…" or "/#google=error&reason=…" (or "cancelled").
 // Read it once (cached, so React StrictMode's double render can't lose it), then clean the URL.
@@ -9,11 +11,10 @@ let googleRedirect;
 function readGoogleRedirect() {
   if (googleRedirect !== undefined) return googleRedirect;
   googleRedirect = null;
-  const h = window.location.hash.replace(/^#/, "");
-  if (!h.includes("google=")) return googleRedirect;
-  const p = new URLSearchParams(h);
+  const parsed = parseGoogleHash(window.location.hash);
+  if (!parsed) return googleRedirect;
   window.history.replaceState(null, "", window.location.pathname + window.location.search);
-  googleRedirect = { status: p.get("google"), token: p.get("token") || "", reason: p.get("reason") || "" };
+  googleRedirect = parsed;
   if (googleRedirect.status === "ok" && googleRedirect.token) {
     // Whoever was signed in before is replaced; their saved dashboard copy goes with them (the new account is loaded below).
     localStorage.removeItem("mydailyos_dash_v1");
@@ -28,9 +29,7 @@ export default function AuthGate({ children }) {
   const [user, setUser] = useState(null);
   const redirect = readGoogleRedirect();
   // Errors/cancellation are shown on the login page itself (toasts only exist inside the signed-in app).
-  const loginNotice = redirect && redirect.status !== "ok"
-    ? (redirect.status === "cancelled" ? "Google sign-in was cancelled." : redirect.reason || "Google sign-in failed. Please try again.")
-    : "";
+  const loginNotice = loginNoticeFor(redirect);
 
   useEffect(() => {
     let cancelled = false;
@@ -53,12 +52,9 @@ export default function AuthGate({ children }) {
           if (!response.ok) {
             // Only a real "this session is not valid" ends the session. Offline, or a sleeping/failing server, must not
             // sign anyone out: keep the person we already know and carry on with their saved data.
-            if (response.status !== 401 && response.status !== 404) {
-              try {
-                const stored = JSON.parse(localStorage.getItem("mydailyos_user") || "null");
-                if (stored && stored.email) return { user: stored };
-              } catch { /* fall through */ }
-            }
+            let stored = null;
+            try { stored = JSON.parse(localStorage.getItem("mydailyos_user") || "null"); } catch { /* none */ }
+            if (sessionDecision({ ok: false, status: response.status, stored }) === "keep-stored") return { user: stored };
             throw new Error(data.message || "Session validation failed");
           }
 
@@ -95,16 +91,19 @@ export default function AuthGate({ children }) {
     purgeOthers().then(() => { startOfflineSync(); syncNow(); });
   }, [user]);
 
-  if (!ready) {
+  const view = gateView({ ready, user });
+  if (view === "loading") {
     return <div className="auth-loading">Loading FlexFit…</div>;
   }
 
-  if (!user) {
+  if (view === "login") {
     return (
-      <AuthPage
-        notice={loginNotice}
-        onAuthenticated={(authenticatedUser) => setUser(authenticatedUser)}
-      />
+      <Suspense fallback={<div className="auth-loading">Loading FlexFit…</div>}>
+        <AuthPage
+          notice={loginNotice}
+          onAuthenticated={(authenticatedUser) => setUser(authenticatedUser)}
+        />
+      </Suspense>
     );
   }
 

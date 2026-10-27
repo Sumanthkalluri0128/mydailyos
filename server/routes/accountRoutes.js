@@ -170,5 +170,16 @@ router.get('/report.pdf', exportLimiter, wrap(async (req, res) => {
   res.set({ 'Content-Type': 'application/pdf', 'Content-Disposition': `attachment; filename="flexfit-report-${from}_${to}.pdf"`, 'Cache-Control': 'no-store' }).send(pdf);
 }));
 
+/** The export as ready-to-attach files (JSON is complete, CSV opens in a spreadsheet). Used by the weekly backup email. */
+async function buildExportFiles(userId) {
+  const data = await collectExport(userId);
+  const stamp = new Date().toISOString().slice(0, 10);
+  return [
+    { filename: `flexfit-export-${stamp}.json`, contentType: 'application/json', content: Buffer.from(JSON.stringify({ exportedAt: new Date().toISOString(), ...data }, null, 2), 'utf8') },
+    { filename: `flexfit-export-${stamp}.csv`, contentType: 'text/csv', content: Buffer.from('\uFEFF' + toCsv(CSV_HEADERS, toCsvRows(data)), 'utf8') },
+  ];
+}
+
 module.exports = router;
+module.exports.buildExportFiles = buildExportFiles;
 module.exports.toCsvRows = toCsvRows;

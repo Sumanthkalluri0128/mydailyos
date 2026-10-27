@@ -8,6 +8,10 @@
 import { kvGet, kvSet, kvDel, kvKeys } from "./kv";
 import { currentOwner } from "../utils/cacheOwner";
 
+// Optional hook for the health telemetry (set from main.jsx), kept out of this file so it stays free of config imports.
+let telemetry = () => {};
+export const setTelemetry = (fn) => { telemetry = typeof fn === "function" ? fn : () => {}; };
+
 const CACHE_PREFIX = "get:";
 const QUEUE_KEY = "queue";
 const MAX_QUEUE = 200;
@@ -80,12 +84,13 @@ export function flushQueue(sender) {
       for (const op of q) {
         if (stop || op.owner !== owner) { keep.push(op); continue; } // another person's changes wait for them to sign in
         let res;
-        try { res = await sender(op); } catch { stop = true; keep.push(op); continue; }
+        try { res = await sender(op); } catch { stop = true; keep.push(op); telemetry({ syncFailed: 1 }); continue; }
         if (res.ok) sent++;
-        else if (res.status === 401 || res.status === 429 || res.status >= 500) { stop = true; keep.push(op); }
+        else if (res.status === 401 || res.status === 429 || res.status >= 500) { stop = true; keep.push(op); if (res.status >= 500) telemetry({ syncFailed: 1 }); }
         else dropped++; // 400/404/409...: the server will never accept it, replaying would loop forever
       }
       await writeQueue(keep);
+      if (dropped) telemetry({ writesDropped: dropped });
       if (dropped) set({ lastError: `${dropped} offline change${dropped > 1 ? "s" : ""} could not be saved.` });
     } finally {
       set({ syncing: false });

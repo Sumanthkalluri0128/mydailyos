@@ -8,6 +8,7 @@
     "test": "node --test test/*.test.js",
     "claim-foods": "node scripts/claimFoods.js",
     "send-weekly": "node scripts/sendWeekly.js",
+    "send-backups": "node scripts/sendBackups.js",
     "audit-foods": "node scripts/auditFoods.js",
     "preview-email": "node scripts/previewEmail.js"
   },

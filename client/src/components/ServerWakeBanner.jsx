@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { API_URL } from "../config";
+import { report } from "../utils/telemetryClient";
 import "./offlineBanner.css";
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -34,6 +35,7 @@ export default function ServerWakeBanner() {
       }
       clearTimeout(show);
       clearInterval(tick);
+      if (Date.now() - t0 > 2500 && navigator.onLine) report({ wakeMs: Date.now() - t0 }); // a slow answer = the free server was waking up
       if (!cancelled) { setWaking(false); setSecs(0); }
     };
 

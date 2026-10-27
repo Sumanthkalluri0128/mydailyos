@@ -1,3 +1,11 @@
+# v49 - Phase 3 Section M: platform part 2
+- Weekly backup email (opt-in): your data export (JSON + CSV) attached, own one-tap stop link. Mailer now supports attachments on every provider.
+- Admin server health page (`#admin`, `ADMIN_EMAILS` only): cold starts, failed syncs, dropped offline writes, errors, keep-alive status.
+- Feature flags: per person, allow/deny lists or a percentage; cached on the apps for 6 hours.
+- Web tests: `npm test` (101) and a Playwright smoke test (`npm run e2e`). Auth gate decisions moved to `auth/gateLogic.js`.
+- Speed: first-load JavaScript 264,967 B to 248,669 B (sign-in pages, setup page, assistant and quick-add now load later).
+- Includes your v48 fixes (album `owned` list, GoalsPage). Docs: `docs/PHASE3_PLATFORM2.md`.
+
 # v47 - Phase 3 Section L: platform part 1
 - Instant open: "Your last saved day, updated X min ago" strip with the day's character while the saved copy is on screen.
 - Hot-day water goal (opt-in, Open-Meteo, shown with the reason; silent offline). Server: device sleep readings never overwrite typed ones; workouts import route `POST /api/activities/import` with duplicate protection; activity logs remember their source and heart rate. Imported entries show "from Samsung Health".
