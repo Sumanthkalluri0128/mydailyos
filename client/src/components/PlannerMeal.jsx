@@ -3,14 +3,18 @@
 import { useState } from "react";
 import Buddy from "../motion/Buddy";
 import { chefLine, STATUS_LABEL } from "../utils/mealView";
+import PortionEdit from "./PortionEdit";
 
 const LABEL = { breakfast: "🌅 Breakfast", lunch: "☀️ Lunch", dinner: "🌙 Dinner", snacks: "🍎 Snacks" };
 const cap = (s) => (s ? s.charAt(0).toUpperCase() + s.slice(1) : s);
 
 const FEEDBACK = [["loved", "😍 Loved it"], ["too_heavy", "😮‍💨 Too heavy"], ["too_long", "⏱️ Too long to cook"], ["not_available", "🛒 Not available"]];
 
-export default function PlannerMeal({ day, meal, who, adding, onToggleAdd, onLog, onRemove, onAddSuggestion, onLogSuggestion, onLock, onFeedback, extras, children, onDrop, dragging }) {
+export default function PlannerMeal({ day, meal, who, adding, onToggleAdd, onLog, onRemove, onAddSuggestion, onLogSuggestion, onLock, onFeedback, onEditQty, extras, children, onDrop, dragging }) {
   const [more, setMore] = useState(false);
+  const [editId, setEditId] = useState(null);
+  const [editBusy, setEditBusy] = useState(false);
+  const saveQty = async (i, q) => { setEditBusy(true); try { if (await onEditQty(i, q)) setEditId(null); } finally { setEditBusy(false); } };
   const [whyOpen, setWhyOpen] = useState(false);
   const [fbFor, setFbFor] = useState(null);
   const m = day.meals[meal];
@@ -43,11 +47,13 @@ export default function PlannerMeal({ day, meal, who, adding, onToggleAdd, onLog
           <div title={i.why || undefined} className={`planner-item ${i.status}`} draggable={!ro && i.status === "planned" && !i.pending} onDragStart={() => extras?.dragStart?.(i)} onDragEnd={() => extras?.dragEnd?.()}>
             {badge(i.status, i.pending)}
             <span><strong>{i.foodName}</strong><small>{line(i)}{i.fromPlan ? " · from your plan" : ""}{i.leftover ? " · leftover, no cooking" : ""}{i.cookMin ? ` · ${i.cookMin} min` : ""}</small>{i.cookNote && <small>👩‍🍳 {i.cookNote}</small>}</span>
+            {!ro && onEditQty && !i.pending && !String(i.id).startsWith("local:") && <button type="button" className="edit-log-button" aria-expanded={editId === i.id} aria-label={`Edit amount of ${i.foodName}`} onClick={() => setEditId(editId === i.id ? null : i.id)}>✏️ Edit</button>}
             {!ro && i.status === "planned" && day.kind === "today" && !i.pending && <button className="secondary-button" onClick={() => onLog(i)}>Log</button>}
             {!ro && i.status === "planned" && onFeedback && !i.pending && <button className="link-button" aria-expanded={fbFor === i.id} onClick={() => setFbFor(fbFor === i.id ? null : i.id)}>How was it?</button>}
             {!ro && i.status === "planned" && extras?.buttons?.(i)}
             {!ro && i.status === "planned" && !i.pending && <button className="delete-log-button" aria-label={`Remove ${i.foodName}`} onClick={() => onRemove(i)}>✕</button>}
           </div>
+          {editId === i.id && <PortionEdit name={i.foodName} quantity={i.quantity} unit={i.servingUnit} calories={i.calories} protein={i.protein} busy={editBusy} onCancel={() => setEditId(null)} onSave={(q) => saveQty(i, q)} />}
           {fbFor === i.id && <div className="pl-feedback" role="group" aria-label={`Feedback on ${i.foodName}`}>{FEEDBACK.map(([k, l]) => <button key={k} className="sn-chip" onClick={() => { setFbFor(null); onFeedback(i, k); }}>{l}</button>)}</div>}
           {!ro && i.status === "planned" && extras?.panel?.(i)}
         </div>

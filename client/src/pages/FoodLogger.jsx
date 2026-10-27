@@ -3,7 +3,8 @@ import { undoGate } from "../utils/undo";
 import Buddy, { BuddyEmpty } from "../motion/Buddy";
 import { notify } from "../utils/notify";
 import { apiFetch } from "../config/api";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { Fragment, useEffect, useMemo, useRef, useState } from "react";
+import PortionEdit from "../components/PortionEdit";
 import { API_URL } from "../config";
 import FoodFormModal from "../components/FoodFormModal";
 import CalorieBalance from "../components/CalorieBalance";
@@ -383,6 +384,22 @@ function FoodLogger({ date, onBack, goTo }) {
   // ============================================================
   // MOVE A LOGGED FOOD TO ANOTHER MEAL (breakfast -> lunch, etc.)
   // ============================================================
+
+  // ---- change the amount of a logged food (the server recalculates nutrition from the stored snapshot)
+  const [editId, setEditId] = useState(null);
+  const [editBusy, setEditBusy] = useState(false);
+  const handleEditQty = async (log, quantity) => {
+    setEditBusy(true);
+    try {
+      const response = await apiFetch(`${API_URL}/api/food-logs/${log._id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ quantity }) });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) { notify(data.message || "Could not change the amount.", "error"); return; }
+      setFoodLogs((cur) => cur.map((l) => (l._id === log._id ? { ...l, ...data.log } : l)));
+      setEditId(null);
+      notify(`Updated ${log.foodName} to ${quantity} ${log.servingUnit}.`, "success");
+      try { await fetchFoodLogs(); } catch { /* the list already shows the saved value */ }
+    } catch { notify("Could not connect to the backend.", "error"); } finally { setEditBusy(false); }
+  };
 
   const handleMoveLog = async (id, mealType) => {
     const before = foodLogs;
@@ -925,9 +942,9 @@ function FoodLogger({ date, onBack, goTo }) {
                 <BuddyEmpty scene="sad" size={96} title="No food logged">Add something you ate.</BuddyEmpty>
               ) : (
                 logs.map((log) => (
+                  <Fragment key={log._id}>
                   <div
                     className={`food-log-row ${dragId === log._id ? "dragging" : ""}`}
-                    key={log._id}
                     draggable
                     onDragStart={(e) => { setDragId(log._id); e.dataTransfer.setData("text/plain", log._id); e.dataTransfer.effectAllowed = "move"; }}
                     onDragEnd={() => { setDragId(null); setDropMeal(null); }}
@@ -971,6 +988,8 @@ function FoodLogger({ date, onBack, goTo }) {
                       </small>
                     </div>
 
+                    <button type="button" className="edit-log-button" aria-expanded={editId === log._id} aria-label={`Edit amount of ${log.foodName}`} onClick={() => setEditId(editId === log._id ? null : log._id)}>✏️ Edit</button>
+
                     <select
                       className="move-log-select"
                       aria-label={`Move ${log.foodName} to another meal`}
@@ -996,6 +1015,11 @@ function FoodLogger({ date, onBack, goTo }) {
                     </button>
 
                   </div>
+                  {editId === log._id && (
+                    <PortionEdit name={log.foodName} quantity={log.consumedQuantity} unit={log.servingUnit} calories={log.nutritionTotal?.calories || 0} protein={log.nutritionTotal?.protein || 0}
+                      busy={editBusy} onCancel={() => setEditId(null)} onSave={(q) => handleEditQty(log, q)} />
+                  )}
+                  </Fragment>
                 ))
               )}
 

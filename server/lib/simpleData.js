@@ -9,7 +9,7 @@ const { expectedEnergy, dailyTarget, macroRanges } = require('./energy');
 const { targetsFor } = require('./journeyData');
 const { buildAchievements } = require('./achievements');
 const { buildOutcomeBadges, weeklyFlags, cumulativeDeficit } = require('./outcomes');
-const { smoothTrend, trendRate } = require('./trendWeight');
+const { smoothTrend, trendRate, planTrendKg } = require('./trendWeight');
 const { safetyReport } = require('./safety');
 const { computeStreaks } = require('./streaks');
 const { addDays, diffDays } = require('./dates');
@@ -37,7 +37,9 @@ async function loadSimple(uid, today) {
   const rate = trendRate(series, today);
   const plan = p.plan || {};
 
-  const goal = S.goalCard({ plan, trendKg: last?.trendKg ?? null, rate, today });
+  // Progress counts from where THIS plan started (see planTrendKg), not from the first weigh-in ever.
+  const goalTrend = planTrendKg(plan, weightRows, last?.trendKg ?? null);
+  const goal = S.goalCard({ plan, trendKg: goalTrend, rate, today });
   const todayRow = days.find((d) => d.date === today) || null;
   const focus = S.dailyFocus(todayRow, targets);
 
@@ -56,7 +58,7 @@ async function loadSimple(uid, today) {
   const waist0 = tape[0]?.value ?? null, waistNow = tape[tape.length - 1]?.value ?? null;
   const sinceStart = plan.active && plan.startDate ? days.filter((d) => d.date >= plan.startDate) : days.slice(-90);
   const safety = safetyReport({ profile: p, trendRate: rate, avgIntake7: null, loggedDays7: 0 });
-  const oc = buildOutcomeBadges({ direction: safety.pauseWeightRewards ? 'maintain' : direction, startKg, trendKg: last?.trendKg ?? null, startWaistCm: waist0, waistCm: waistNow, deficitKcal: cumulativeDeficit(sinceStart, energy?.tdee || 0, floor), proteinWeeks: flags.proteinWeeks, muscleWeeks: flags.muscleWeeks, comebacks: streak.comebacks });
+  const oc = buildOutcomeBadges({ direction: safety.pauseWeightRewards ? 'maintain' : direction, startKg, trendKg: goalTrend, startWaistCm: waist0, waistCm: waistNow, deficitKcal: cumulativeDeficit(sinceStart, energy?.tdee || 0, floor), proteinWeeks: flags.proteinWeeks, muscleWeeks: flags.muscleWeeks, comebacks: streak.comebacks });
   const val = (id) => oc.badges.find((b) => b.id === id)?.value || 0;
   const inputs = {
     streaks: { logging: best('logging'), water: best('water'), habit: best('habit'), workout: best('workout') }, totals,

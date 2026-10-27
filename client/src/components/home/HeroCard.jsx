@@ -22,9 +22,13 @@ export default function HeroCard({ greeting, name, dateText, coach, streakNote, 
             </span>
           </div>
         </div>
-        <p className="hr-line">“{dailyLine()}” <b>— {CHARS[who]}</b></p>
         {streakNote}
       </div>
+      <aside className="hr-side" aria-label="Line of the day">
+        <span className="hr-qmark" aria-hidden="true">“</span>
+        <p className="hr-line">{dailyLine()}</p>
+        <b className="hr-by">— {CHARS[who]}</b>
+      </aside>
     </section>
   );
 }

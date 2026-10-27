@@ -13,7 +13,7 @@ const v = require('../lib/validate');
 const { addDays, diffDays, todayUtc } = require('../lib/dates');
 const { catalogueFoods } = require('../lib/foodCache');
 const { loadCore, corridorPlan } = require('../lib/planData');
-const { smoothTrend, buildTrend, trendRate, maxSafeWeeklyLossKg } = require('../lib/trendWeight');
+const { smoothTrend, buildTrend, trendRate, maxSafeWeeklyLossKg, planTrendKg } = require('../lib/trendWeight');
 const { weeklyScore } = require('../lib/fatLossScore');
 const { overStatus, spreadCorrection, rootCauses } = require('../lib/overDays');
 const { buildOutcomeBadges, weeklyFlags, cumulativeDeficit } = require('../lib/outcomes');
@@ -54,7 +54,7 @@ router.get('/', wrap(async (req, res) => {
   const plan = profile.plan || {};
   const { series } = trendInputs(core);
   const last = series[series.length - 1];
-  const lost = plan.active && plan.startKg && last ? Math.max(0, plan.startKg - last.trendKg) : 0;
+  const lost = plan.active && plan.startKg && last ? Math.max(0, plan.startKg - planTrendKg(plan, core.weights, last.trendKg)) : 0;
   const total = plan.active && plan.startKg && plan.targetKg ? Math.abs(plan.startKg - plan.targetKg) : 0;
   const rate = trendRate(series, today);
   const safety = safetyReport({ profile: core.profile, trendRate: rate, avgIntake7: avgIntake(core.days, today), loggedDays7: core.days.filter((d) => d.date > addDays(today, -7) && d.calories > 0).length });
@@ -279,7 +279,7 @@ router.get('/outcomes', wrap(async (req, res) => {
   const maintenance = core.energy?.tdee || 0;
   const flags = weeklyFlags(core.days, core.strengthDates, core.targets.protein, today);
   const out = buildOutcomeBadges({
-    direction: safety.pauseWeightRewards ? 'maintain' : core.direction, startKg, trendKg: last?.trendKg ?? null,
+    direction: safety.pauseWeightRewards ? 'maintain' : core.direction, startKg, trendKg: planTrendKg(plan, core.weights, last?.trendKg ?? null),
     startWaistCm: first('waist'), waistCm: latest('waist'), deficitKcal: cumulativeDeficit(sinceStart, maintenance, core.floor),
     proteinWeeks: flags.proteinWeeks, muscleWeeks: flags.muscleWeeks, comebacks: streaks.comebacks,
   });

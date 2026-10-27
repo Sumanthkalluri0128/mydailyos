@@ -100,4 +100,18 @@ function buildTrend({ weights, plan, today, windowDays = 84 }) {
 }
 const pick = (c) => ({ expected: c.expected, low: c.low, high: c.high });
 
-module.exports = { smoothTrend, corridorAt, corridorStatus, trendRate, buildTrend, maxSafeWeeklyLossKg };
+/**
+ * Where you are NOW, measured for the CURRENT plan. The all-time trend line starts at the very first weigh-in ever, so after an
+ * older, heavier weight it can sit above the plan's start weight and progress read "0 kg done" for ever. This line starts at the
+ * plan's own start weight (on its start date) and follows only the weigh-ins made since. Without an active plan: the all-time trend.
+ * @returns kg (smoothed) or null
+ */
+function planTrendKg(plan, weights, fallbackKg = null) {
+  const startKg = Number(plan && plan.startKg), startDate = plan && plan.startDate;
+  if (!(plan && plan.active && startKg > 0 && startDate)) return fallbackKg;
+  const since = (weights || []).filter((w) => w && w.date >= startDate).map((w) => ({ date: w.date, weightKg: Number(w.weightKg) }));
+  const line = smoothTrend([{ date: startDate, weightKg: startKg }, ...since]);
+  return line.length ? line[line.length - 1].trendKg : fallbackKg;
+}
+
+module.exports = { planTrendKg, smoothTrend, corridorAt, corridorStatus, trendRate, buildTrend, maxSafeWeeklyLossKg };

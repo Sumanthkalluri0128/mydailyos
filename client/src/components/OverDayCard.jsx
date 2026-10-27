@@ -51,7 +51,7 @@ export default function OverDayCard({ onPlan }) {
       <div id={bodyId} className={`od-body ${open ? "open" : ""}`} inert={open ? undefined : ""}>
         <div className="od-inner">
       <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
-        <Buddy scene="cheer" size={72} who={who} />
+        {/* the character already sits in the header bar above: showing it again here made two copies when opened */}
         <div style={{ flex: 1, minWidth: 0 }}>
           <p className="fl-eyebrow">{title}</p>
           <p className="ink">{d.advice?.headline || d.message}</p>

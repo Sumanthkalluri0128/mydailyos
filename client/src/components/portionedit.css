@@ -1,0 +1,18 @@
+.pe { grid-column: 1 / -1; display: grid; gap: 8px; margin: 6px 0 10px; padding: 12px 14px; border-radius: 16px; background: var(--primary-soft, color-mix(in srgb, var(--primary, #6847e8) 9%, transparent)); border: 1px solid color-mix(in srgb, var(--primary, #6847e8) 28%, transparent); }
+.pe-row { display: flex; flex-wrap: wrap; gap: 10px 14px; align-items: center; }
+.pe-field { display: inline-flex; align-items: center; gap: 8px; font-weight: 700; font-size: 13px; }
+.pe-field input { width: 96px; min-height: 44px; padding: 8px 10px; border-radius: 12px; border: 1px solid var(--border, #cfd2e6); background: var(--surface, #fff); color: inherit; font: inherit; font-size: 16px; font-weight: 800; }
+.pe-field em { font-style: normal; color: var(--text-muted, #667); font-weight: 600; }
+.pe-quick { display: inline-flex; gap: 6px; flex-wrap: wrap; }
+.pe-quick button { min-width: 44px; min-height: 44px; padding: 6px 10px; border-radius: 12px; border: 1px solid var(--border, #cfd2e6); background: var(--surface, #fff); color: inherit; font: inherit; font-weight: 800; cursor: pointer; }
+.pe-quick button:hover { border-color: var(--primary, #6847e8); }
+.pe-now { margin: 0; font-weight: 800; font-size: 14px; font-variant-numeric: tabular-nums; } .pe-now small { color: var(--text-muted, #667); font-weight: 600; }
+.pe-acts { display: flex; gap: 8px; }
+.pe-save, .pe-cancel { min-height: 44px; padding: 8px 18px; border-radius: 12px; font: inherit; font-weight: 800; cursor: pointer; }
+.pe-save { border: 0; background: var(--primary-solid, var(--primary, #6847e8)); color: #fff; } .pe-save:disabled { opacity: .45; cursor: default; }
+.pe-cancel { border: 1px solid var(--border, #cfd2e6); background: transparent; color: inherit; }
+.edit-log-button { min-height: 44px; min-width: 44px; border: 1px solid var(--border, #cfd2e6); border-radius: 12px; background: transparent; color: inherit; font: inherit; font-weight: 700; cursor: pointer; }
+.edit-log-button:hover, .edit-log-button[aria-expanded="true"] { border-color: var(--primary, #6847e8); color: var(--primary, #6847e8); }
+/* food log row now holds: name · kcal · Edit · Move · Delete */
+.food-log-row { grid-template-columns: minmax(0, 1fr) auto auto auto auto; }
+@media (max-width: 640px) { .food-log-row { grid-template-columns: minmax(0, 1fr) auto; } .food-log-row > .edit-log-button, .food-log-row > .move-log-select { grid-column: auto; } }

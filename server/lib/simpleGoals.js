@@ -14,7 +14,7 @@ const pct = (v, t) => (t > 0 ? Math.max(0, Math.min(100, Math.round((v / t) * 10
 
 // ------------------------------------------------------------------------------------------------ plain-language copy
 const COPY = {
-  goal: { title: 'Your goal', none: 'Set one goal to get started', done: (kg, total) => `${kg} kg done of ${total} kg`, eta: (range) => `Likely to arrive ${range}`, etaLearning: 'Add a few weigh-ins over two weeks and we will estimate your finish date.' },
+  goal: { title: 'Your goal', none: 'Set one goal to get started', done: (kg, total) => `${kg} kg done of ${total} kg`, started: (total) => `Just getting started: ${total} kg to go`, eta: (range) => `Likely to arrive ${range}`, etaLearning: 'Add a few weigh-ins over two weeks and we will estimate your finish date.' },
   status: { ahead: 'Ahead of plan', on: 'On track', behind: 'A little behind', start: 'Just getting started', maintain: 'Staying steady', reached: 'You reached your goal' },
   focus: { title: "Today's quests", reward: 'All three done. Lovely work today.', rewardXp: (n) => `+${n} XP`, bonus: 'Bonus: steps', empty: 'Set up your profile to see your daily quests.' },
   level: { next: (xp) => `Next level in ${xp} XP`, max: 'Top rank reached' },
@@ -80,7 +80,7 @@ function goalCard({ plan, trendKg, rate = null, today }) {
   return {
     active: true, title: COPY.goal.title, direction: dir, startKg: r1(plan.startKg), targetKg: r1(plan.targetKg), currentKg: r1(cur),
     doneKg: r1(doneKg), totalKg: r1(total), remainingKg: r1(remaining), pct: pct(doneKg, total),
-    progressLine: COPY.goal.done(r1(doneKg), r1(total)), status, statusLine: COPY.status[status],
+    progressLine: doneKg >= 0.05 ? COPY.goal.done(r1(doneKg), r1(total)) : COPY.goal.started(r1(total)), status, statusLine: COPY.status[status],
     eta: eta && !eta.reached ? { from: eta.from, to: eta.to, basis: eta.basis, line: COPY.goal.eta(prettyRange(eta.from, eta.to)) } : null,
     etaNote: eta && !eta.reached && eta.basis === 'plan' ? COPY.goal.etaLearning : '',
   };

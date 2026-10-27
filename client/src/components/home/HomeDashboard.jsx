@@ -230,11 +230,6 @@ export default function HomeDashboard({ profile, summary, activity, water, water
     <div className={`hd${tone.gentle ? " hd-gentle" : ""}`}>
       <HeroCard greeting={greet(hour)} name={name} dateText={new Date().toLocaleDateString(undefined, { weekday: "long", day: "numeric", month: "long" }).toUpperCase()} coach={coach} onAsk={onAsk} />
       <FirstWeekChecklist />
-      <RoughDay state={coachState} reload={reloadCoach} />
-      <EventMode event={coachState?.event} reload={reloadCoach} />
-      {tone.gentle && <PlateCard refreshKey={syncTick} />}
-      <div className="cc-strip"><span>Feeling a craving?</span><CravingTimer onLogged={onChanged} /></div>
-      <SideQuest state={coachState} setState={setCoachState} reload={reloadCoach} />
 
       {/* ---------- stat cards: each number appears once, in its own card ---------- */}
       <section className="hd-stats" aria-label="Today at a glance">
@@ -287,7 +282,19 @@ export default function HomeDashboard({ profile, summary, activity, water, water
         </article>
       </section>
 
-      {!tone.gentle && <OverDayCard onPlan={() => goTo("planner")} />}
+      {/* ---------- quick help: three equal tiles in one row (they open into full-width cards when used) ---------- */}
+      <section className="hd-help" aria-label="Quick help">
+        <RoughDay state={coachState} reload={reloadCoach} />
+        <EventMode event={coachState?.event} reload={reloadCoach} />
+        <div className="cc-strip"><span>Feeling a craving?</span><CravingTimer onLogged={onChanged} /></div>
+      </section>
+      {tone.gentle && <PlateCard refreshKey={syncTick} />}
+
+      {/* ---------- this week: side quest next to the weekly review ---------- */}
+      <section className="hd-week" aria-label="This week">
+        <SideQuest state={coachState} setState={setCoachState} reload={reloadCoach} />
+        {!tone.gentle && <OverDayCard onPlan={() => goTo("planner")} />}
+      </section>
 
       {/* ---------- nutrition · macros · habits ---------- */}
       <section className="hd-mid">

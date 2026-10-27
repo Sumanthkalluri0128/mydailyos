@@ -56,6 +56,16 @@ export default function PlannerPage({ onBack, goTo }) {
   }, [start, end, today]);
   useEffect(() => { load(); setShop(null); }, [load]);
   useEffect(() => { const on = () => load(); window.addEventListener("flexfit:synced", on); return () => window.removeEventListener("flexfit:synced", on); }, [load]);
+  // Foods logged (or planned) from anywhere else in the app, or from another tab, show up here without reopening the planner.
+  useEffect(() => {
+    let t = null;
+    const later = () => { clearTimeout(t); t = setTimeout(load, 250); };
+    const onWrite = (e) => { if (/\/api\/(food-logs|meal-plans)/.test(String(e.detail?.url || ""))) later(); };
+    const onVis = () => { if (document.visibilityState === "visible") later(); };
+    window.addEventListener("flexfit:api-write", onWrite);
+    document.addEventListener("visibilitychange", onVis);
+    return () => { clearTimeout(t); window.removeEventListener("flexfit:api-write", onWrite); document.removeEventListener("visibilitychange", onVis); };
+  }, [load]);
 
   const call = async (path, method, body, okMsg, meta) => {
     try {
@@ -69,7 +79,12 @@ export default function PlannerPage({ onBack, goTo }) {
   };
 
   const add = (date, mealType) => async (food, quantity) => {
-    if (await call("", "POST", { date, mealType, foodId: food._id, quantity, today })) setAdding(null);
+    // The same food already logged for this meal and day counts as eaten (never twice), so it is not listed again as planned.
+    const already = view?.days?.find((d) => d.date === date)?.meals?.[mealType]?.items?.some((i) => i.status === "logged" && String(i.foodId) === String(food._id));
+    if (await call("", "POST", { date, mealType, foodId: food._id, quantity, today }, already ? undefined : `Added ${food.name} to your plan.`)) {
+      setAdding(null);
+      if (already) notify(`You already logged ${food.name} for this meal, so it counts as eaten and is not listed again.`, "info");
+    }
   };
   const nut = (i) => ({ calories: i.calories, protein: i.protein, fiber: i.fiber, carbohydrates: i.carbohydrates || 0, fat: i.fat || 0 });
   const logPlanned = (date, i, quiet) => call(`/${i.id}/log`, "POST", { date, clientId: `pl-${i.id}` }, quiet ? undefined : `Logged ${i.foodName}.`, { foodName: i.foodName, servingUnit: i.servingUnit });
@@ -86,6 +101,19 @@ export default function PlannerPage({ onBack, goTo }) {
     } catch { notify("Could not log that.", "error"); }
   };
     const resize = (i, f) => call(`/${i.id}`, "PATCH", { quantity: Math.max(0.1, Math.round(i.quantity * f * 10) / 10) });
+  // Change the amount of an item: a logged food edits the food log, a planned one edits the plan. Returns true when saved.
+  const editQty = async (i, quantity) => {
+    try {
+      const r = i.status === "logged"
+        ? await apiFetch(`/api/food-logs/${i.id}`, { method: "PATCH", body: JSON.stringify({ quantity }) })
+        : await apiFetch(`/api/meal-plans/${i.id}`, { method: "PATCH", body: JSON.stringify({ quantity, today }) });
+      const d = await r.json().catch(() => ({}));
+      if (!r.ok) { notify(d.message || "Could not change the amount.", "error"); return false; }
+      notify(`Updated ${i.foodName} to ${quantity} ${i.servingUnit}.`, "success");
+      await load();
+      return true;
+    } catch { notify("Could not change the amount.", "error"); return false; }
+  };
   const planDay = async (date) => { const d = await call("/auto", "POST", { from: date, days: 1, today, mode: "balanced" }); if (d) notify(`Planned ${d.saved} foods for ${dayLabel(date)}.`, "success"); };
   const clearDay = async (date) => { if (!(await confirmAction("Removes what is planned and not yet eaten on this day.", { title: `Clear ${dayLabel(date)}?`, confirmText: "Clear", danger: true }))) return; call("/clear", "POST", { from: date }, "Day cleared."); };
   const clearWeek = async () => { if (!(await confirmAction("Removes everything planned and not yet eaten this week.", { title: "Clear this whole week?", confirmText: "Clear week", danger: true }))) return; call("/clear", "POST", { from: start, to: end }, "Week cleared."); };
@@ -266,7 +294,7 @@ export default function PlannerPage({ onBack, goTo }) {
               {MEALS.map(([id]) => {
                 const key = `${date}|${id}`;
                 return (
-                  <PlannerMeal key={id} day={vd} meal={id} who={who} adding={adding === key} onToggleAdd={() => setAdding(adding === key ? null : key)} onLock={lockMeal(date, id)} onFeedback={giveFeedback}
+                  <PlannerMeal key={id} day={vd} meal={id} who={who} adding={adding === key} onToggleAdd={() => setAdding(adding === key ? null : key)} onLock={lockMeal(date, id)} onFeedback={giveFeedback} onEditQty={editQty}
                     dragging={!!dragId} onDrop={() => { if (dragId) call(`/${dragId}`, "PATCH", { date, mealType: id, today }); setDragId(null); }}
                     onLog={(i) => logPlanned(date <= today ? date : today, i)} onRemove={(i) => call(`/${i.id}`, "DELETE")}
                     onAddSuggestion={(s) => planSuggestion(vd, { ...s, _meal: id })} onLogSuggestion={(s) => logSuggestion(vd, { ...s, _meal: id })}
