@@ -346,3 +346,23 @@ html.ff-calm .pk, html.ff-calm .hr-sun, html.ff-calm .pg-crown { animation: none
 /* Panels: slightly tighter so the page is shorter and calmer on wide screens */
 .hd-mid, .hd-low, .hd-week { gap: 12px; }
 .pn { padding: 16px 18px; }
+
+/* ============ v55: show the quote written in each scene ============
+   The scenes are 3:2 with the quote in the sky (top-right). A short wide banner with object-fit: cover cropped to the middle and cut it off.
+   Fix: a taller banner anchored to the top of the picture, the greeting + coach bottom-left, the right half left clear. */
+.hr { display: flex; align-items: flex-end; min-height: clamp(300px, 27vw, 380px); }
+.hr-bg img { object-position: 55% 0%; transform: none; }
+.hr-panel { align-self: flex-end; max-width: min(540px, 52%); }
+.hr-shade { background:
+    linear-gradient(90deg, rgba(14, 10, 36, .6) 0%, rgba(14, 10, 36, .3) 34%, rgba(14, 10, 36, 0) 56%),
+    linear-gradient(0deg, rgba(14, 10, 36, .5) 0%, rgba(14, 10, 36, 0) 45%); }
+
+/* Narrow screens: the scene sits on top at full width so the quote is readable, the greeting + coach sit below it on the card colour. */
+@media (max-width: 900px) {
+  .hr { display: flex; flex-direction: column; align-items: stretch; min-height: 0; }
+  .hr-bg { position: relative; inset: auto; width: 100%; aspect-ratio: 16 / 9; border-radius: 0; }
+  .hr-bg img { object-position: 60% 0%; }
+  .hr-bg::after { content: ""; position: absolute; inset: auto 0 0 0; height: 55%; background: linear-gradient(180deg, rgba(27, 22, 56, 0), #1b1638 96%); }
+  .hr-shade { display: none; }
+  .hr-panel { max-width: none; align-self: stretch; margin-top: -64px; padding: 0 18px 18px; }
+}
