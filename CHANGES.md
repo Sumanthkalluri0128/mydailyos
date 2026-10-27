@@ -1,3 +1,9 @@
+# v51 - goal reason, planner freshness, empty states
+- Goal card: `statusWhy` line explains "A little behind" (no weigh-in since start / N days quiet / only N weigh-ins / gap to plan line). Server `lib/simpleGoals.js`, test `server/test/goalWhy.unit.test.js` (5, passing).
+- Planner: "Last updated" time and a Refresh button.
+- Empty steps / exercise cards: "Nothing yet. A short walk counts".
+- NOT built here (no npm registry): run `npm run build` in client.
+
 # v49 - Phase 3 Section M: platform part 2
 - Weekly backup email (opt-in): your data export (JSON + CSV) attached, own one-tap stop link. Mailer now supports attachments on every provider.
 - Admin server health page (`#admin`, `ADMIN_EMAILS` only): cold starts, failed syncs, dropped offline writes, errors, keep-alive status.

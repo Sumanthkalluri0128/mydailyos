@@ -21,6 +21,7 @@ export function GoalCard({ d, onOpen }) {
     <div className="sp-card" data-tour="goal-card">
       <div className="sp-row"><h3>{g.title}</h3><span className={`sp-pill ${g.status}`}>{g.statusLine}</span></div>
       <div><WeightReveal compact reaction={false} text={g.progressLine} /></div>
+      {g.statusWhy && <p className="sp-muted sp-why">{g.statusWhy}</p>}
       <div className="sp-bar" role="progressbar" aria-valuenow={g.pct} aria-valuemin={0} aria-valuemax={100}><i style={{ width: `${Math.max(2, g.pct)}%` }} /></div>
       {g.eta && <p className="sp-muted">{g.eta.line}</p>}
       {g.etaNote && <p className="sp-muted">{g.etaNote}</p>}

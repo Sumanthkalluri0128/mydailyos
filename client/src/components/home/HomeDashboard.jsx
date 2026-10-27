@@ -261,7 +261,7 @@ export default function HomeDashboard({ profile, summary, activity, water, water
           <button type="button" className="sc-plus" aria-label="Add steps" onClick={(e) => { e.stopPropagation(); setCustom(""); setSheet("steps"); }}>＋</button>
           <div className="sc-val"><strong>{stepsN.toLocaleString()}</strong><small>steps</small></div>
           <i className="sc-bar"><b style={{ width: `${Math.min(100, ((activity?.steps || 0) / stepsT) * 100)}%` }} /></i>
-          <small className="sc-goal">Goal: {fmt(stepsT)}</small>
+          <small className="sc-goal">{stepsN > 0 ? `Goal: ${fmt(stepsT)}` : "Nothing yet. A short walk counts"}</small>
           <Peek src={cast(2, "walk")} />
         </article>
 
@@ -269,7 +269,7 @@ export default function HomeDashboard({ profile, summary, activity, water, water
           <span className="ic p big">🏋️</span>
           <div className="sc-val"><strong>{minsN} min</strong><small>Exercise</small></div>
           <i className="sc-bar"><b style={{ width: `${Math.min(100, ((activity?.totalMinutes || 0) / exT) * 100)}%` }} /></i>
-          <small className="sc-goal">Goal: {exT} min</small>
+          <small className="sc-goal">{minsN > 0 ? `Goal: ${exT} min` : "Nothing yet. A 10 minute walk counts"}</small>
           <Peek src={cast(3, "lift")} />
         </article>
 

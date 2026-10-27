@@ -25,6 +25,12 @@ const COPY = {
   recap: { title: 'Your week' },
   phase: { cut: 'Cut', maintain: 'Maintain', build: 'Build' },
   detailsLabel: 'Details',
+  why: {
+    noWeighIn: 'No weigh-in since your plan started, so we cannot see your trend yet. A quick weigh-in fixes that.',
+    stale: (n) => `No weigh-in for ${n} days, so this may be out of date. One weigh-in updates it.`,
+    few: (n) => `Only ${n} weigh-in${n === 1 ? '' : 's'} since you started, so the trend is still rough.`,
+    off: (kg, dir) => `Your trend is about ${kg} kg ${dir === 'lose' ? 'above' : 'below'} where your plan expected you to be today.`,
+  },
 };
 
 // ------------------------------------------------------------------------------------------------ 1. ONE GOAL
@@ -64,8 +70,24 @@ function goalStatus({ plan, trendKg, today, reached }) {
   return s === 'inside' ? 'on' : s;
 }
 
+/**
+ * One plain line saying WHY the status reads "behind", so the label is information and not a judgement.
+ * `weighIns` = weight rows ({ date }). Order of reasons: nothing logged, gone quiet, too few to trust, else the real gap to the plan line.
+ */
+function statusWhy({ plan, weighIns = [], today, trendKg }) {
+  const dates = weighIns.map((w) => String(w.date || '').slice(0, 10)).filter(Boolean).sort();
+  const since = dates.filter((d) => d >= plan.startDate);
+  if (!since.length) return COPY.why.noWeighIn;
+  const idle = diffDays(since[since.length - 1], today);
+  if (idle >= 7) return COPY.why.stale(idle);
+  if (since.length < 3) return COPY.why.few(since.length);
+  const c = corridorAt({ startKg: plan.startKg, targetKg: plan.targetKg, startDate: plan.startDate, paceKgPerWeek: plan.paceKg }, today);
+  const gap = Math.abs(trendKg - c.expected);
+  return gap >= 0.1 ? COPY.why.off(r1(gap), c.direction) : '';
+}
+
 /** The single goal card. `plan` = profile.plan; `trendKg` = latest smoothed weight; `rate` = kg/week trend (negative = losing). */
-function goalCard({ plan, trendKg, rate = null, today }) {
+function goalCard({ plan, trendKg, rate = null, today, weighIns = null }) {
   if (!plan || !plan.active || !(plan.startKg > 0) || !(plan.targetKg > 0)) return { active: false, title: COPY.goal.title, empty: COPY.goal.none };
   const dir = plan.targetKg < plan.startKg ? 'lose' : plan.targetKg > plan.startKg ? 'gain' : 'maintain';
   const total = Math.abs(plan.startKg - plan.targetKg);
@@ -81,6 +103,7 @@ function goalCard({ plan, trendKg, rate = null, today }) {
     active: true, title: COPY.goal.title, direction: dir, startKg: r1(plan.startKg), targetKg: r1(plan.targetKg), currentKg: r1(cur),
     doneKg: r1(doneKg), totalKg: r1(total), remainingKg: r1(remaining), pct: pct(doneKg, total),
     progressLine: doneKg >= 0.05 ? COPY.goal.done(r1(doneKg), r1(total)) : COPY.goal.started(r1(total)), status, statusLine: COPY.status[status],
+    statusWhy: status === 'behind' && Array.isArray(weighIns) ? statusWhy({ plan, weighIns, today, trendKg: cur }) : '',
     eta: eta && !eta.reached ? { from: eta.from, to: eta.to, basis: eta.basis, line: COPY.goal.eta(prettyRange(eta.from, eta.to)) } : null,
     etaNote: eta && !eta.reached && eta.basis === 'plan' ? COPY.goal.etaLearning : '',
   };
@@ -352,7 +375,7 @@ function weeklyRecap({ days, targets, today, streak, goal }) {
 }
 
 module.exports = {
-  COPY, etaRange, prettyRange, goalCard, goalStatus, dailyFocus, focusDone, CORE_QUESTS, FOCUS_XP, COMEBACK_XP,
+  COPY, etaRange, prettyRange, goalCard, statusWhy, goalStatus, dailyFocus, focusDone, CORE_QUESTS, FOCUS_XP, COMEBACK_XP,
   levelSummary, migrateLevel, weeklyScoreSimple, PARTS, SHELVES, FAMILIES, OLD_TO_NEW, OLD_TIER_MAP, buildShelves, oldUnlockedIds, missingAfterMigration,
   streakSummary, targetsView, checkTargetChange, diffTargets, updatedLine, phaseSuggestion, weeklyRecap,
 };

@@ -15,3 +15,13 @@ test("the weekly review card starts collapsed and remembers nothing between visi
 test("Home weight card goes through WeightReveal", () => {
   assert.match(read("./components/home/HomeDashboard.jsx"), /<WeightReveal[^>]*latestWeight/);
 });
+test("empty steps and exercise cards show a friendly line, not a bare goal", () => {
+  const s = read("./components/home/HomeDashboard.jsx");
+  assert.match(s, /Nothing yet\. A short walk counts/);
+  assert.match(s, /Nothing yet\. A 10 minute walk counts/);
+});
+test("planner shows when it last updated and has a Refresh button", () => {
+  const s = read("./pages/PlannerPage.jsx");
+  assert.match(s, /Last updated/);
+  assert.match(s, /↻ Refresh/);
+});

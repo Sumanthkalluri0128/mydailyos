@@ -39,7 +39,7 @@ async function loadSimple(uid, today) {
 
   // Progress counts from where THIS plan started (see planTrendKg), not from the first weigh-in ever.
   const goalTrend = planTrendKg(plan, weightRows, last?.trendKg ?? null);
-  const goal = S.goalCard({ plan, trendKg: goalTrend, rate, today });
+  const goal = S.goalCard({ plan, trendKg: goalTrend, rate, today, weighIns: weightRows });
   const todayRow = days.find((d) => d.date === today) || null;
   const focus = S.dailyFocus(todayRow, targets);
 

@@ -37,6 +37,8 @@ export default function PlannerPage({ onBack, goTo }) {
   const [more, setMore] = useState(null);   // { id, kind: "move" | "swap", alts }
   const [improve, setImprove] = useState(false);
   const [tpls, setTpls] = useState(null);     // week templates (null = closed)
+  const [updatedAt, setUpdatedAt] = useState(null); // when this week's data last arrived: makes any out-of-sync view obvious
+  const [refreshing, setRefreshing] = useState(false);
   const end = addDays(start, 6);
   const days = useMemo(() => Array.from({ length: 7 }, (_, i) => addDays(start, i)), [start]);
 
@@ -51,7 +53,7 @@ export default function PlannerPage({ onBack, goTo }) {
         if (day.complete && prevDone.current[day.date] === false) fireConfetti({ count: 90 });
         prevDone.current[day.date] = !!day.complete;
       }
-      setView(v);
+      setView(v); setUpdatedAt(Date.now());
     } catch { notify("Could not load your plan.", "error"); }
   }, [start, end, today]);
   useEffect(() => { load(); setShop(null); }, [load]);
@@ -205,6 +207,10 @@ export default function PlannerPage({ onBack, goTo }) {
           <button className="secondary-button" onClick={onBack}>← Back</button>
           <div className="bd-head"><h1>Meal planner</h1><Buddy scene="plan" size={76} says="Plan the week!" /></div>
           <p>Plan the week, log with one tap, and get a shopping list.</p>
+          <p className="planner-updated" aria-live="polite">
+            {updatedAt ? `Last updated ${new Date(updatedAt).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}` : "Loading…"}{" "}
+            <button type="button" className="secondary-button" disabled={refreshing} onClick={async () => { setRefreshing(true); try { await load(); } finally { setRefreshing(false); } }}>{refreshing ? "Refreshing…" : "↻ Refresh"}</button>
+          </p>
         </div>
       </div>
 
