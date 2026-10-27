@@ -8,7 +8,8 @@
     "build": "vite build",
     "preview": "vite preview",
     "test": "node --import ./test-setup/register.mjs --test \"src/**/*.test.js\"",
-    "e2e": "node e2e/smoke.mjs"
+    "e2e": "node e2e/smoke.mjs",
+    "e2e:home": "node e2e/home-layout.mjs"
   },
   "dependencies": {
     "react": "18.3.1",

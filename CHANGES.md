@@ -1,3 +1,13 @@
+# v52 - everything from the 11-point list
+- Home "Eaten" kcal opens today's meals (`components/home/EatenSheet.jsx`) with the portion editor; closes after a save so the Undo toast shows.
+- Undo toast (5 s) after editing a portion: food log, planner, Eaten sheet (`undoNotice` in utils/undo.js).
+- Planner: "✓ Log what I planned" per meal (today only).
+- Portion editor: "Usual" chip per food (after 2 uses, this device) and household count chips (`utils/portionPresets.js`, 4 tests).
+- Weekly review: went-well / what-to-change / one-thing card (`utils/weekSummary.js`, 4 tests).
+- Shared `components/home/StatCard.jsx`; per-card `.sc-water .pk` / `.sc-steps .pk` rules replaced by one `.sc-has-plus` rule.
+- Visual checks at 1280 / 1024 / 360 px: `npm run build && npm run e2e:home` (e2e/home-layout.mjs, screenshots in e2e-shots/). NOT run here (no Playwright/Chromium).
+- Server: 3 unit tests already failed in v50 (palettes, `owned` album view, features/v8). Not touched.
+
 # v51 - goal reason, planner freshness, empty states
 - Goal card: `statusWhy` line explains "A little behind" (no weigh-in since start / N days quiet / only N weigh-ins / gap to plan line). Server `lib/simpleGoals.js`, test `server/test/goalWhy.unit.test.js` (5, passing).
 - Planner: "Last updated" time and a Refresh button.

@@ -10,7 +10,7 @@ const cap = (s) => (s ? s.charAt(0).toUpperCase() + s.slice(1) : s);
 
 const FEEDBACK = [["loved", "😍 Loved it"], ["too_heavy", "😮‍💨 Too heavy"], ["too_long", "⏱️ Too long to cook"], ["not_available", "🛒 Not available"]];
 
-export default function PlannerMeal({ day, meal, who, adding, onToggleAdd, onLog, onRemove, onAddSuggestion, onLogSuggestion, onLock, onFeedback, onEditQty, extras, children, onDrop, dragging }) {
+export default function PlannerMeal({ day, meal, who, adding, onToggleAdd, onLog, onRemove, onAddSuggestion, onLogSuggestion, onLock, onFeedback, onEditQty, onLogMeal, extras, children, onDrop, dragging }) {
   const [more, setMore] = useState(false);
   const [editId, setEditId] = useState(null);
   const [editBusy, setEditBusy] = useState(false);
@@ -30,6 +30,7 @@ export default function PlannerMeal({ day, meal, who, adding, onToggleAdd, onLog
         <span>{LABEL[meal]}{m.total.calories > 0 && <small className="pl-sub"> {m.logged.calories} logged{m.planned.calories > 0 ? ` + ${m.planned.calories} planned` : ""} kcal · {m.total.protein} g protein</small>}</span>
         <span className="pl-slot-tools">
           {!ro && m.planned.calories > 0 && onLock && <button className="link-button" aria-pressed={!!m.locked} aria-label={m.locked ? `Unlock ${meal}` : `Lock ${meal} so it stays when you re-shuffle`} onClick={() => onLock(!m.locked)}>{m.locked ? "🔒 Locked" : "🔓 Lock"}</button>}
+          {!ro && onLogMeal && day.kind === "today" && m.items.some((i) => i.status === "planned" && !i.pending) && <button className="secondary-button pl-log-meal" onClick={onLogMeal}>✓ Log what I planned</button>}
           {!ro && <button className="link-button" onClick={onToggleAdd}>{adding ? "Close" : "+ Add"}</button>}
         </span>
       </div>
@@ -53,7 +54,7 @@ export default function PlannerMeal({ day, meal, who, adding, onToggleAdd, onLog
             {!ro && i.status === "planned" && extras?.buttons?.(i)}
             {!ro && i.status === "planned" && !i.pending && <button className="delete-log-button" aria-label={`Remove ${i.foodName}`} onClick={() => onRemove(i)}>✕</button>}
           </div>
-          {editId === i.id && <PortionEdit name={i.foodName} quantity={i.quantity} unit={i.servingUnit} calories={i.calories} protein={i.protein} busy={editBusy} onCancel={() => setEditId(null)} onSave={(q) => saveQty(i, q)} />}
+          {editId === i.id && <PortionEdit name={i.foodName} foodId={i.foodId} quantity={i.quantity} unit={i.servingUnit} calories={i.calories} protein={i.protein} busy={editBusy} onCancel={() => setEditId(null)} onSave={(q) => saveQty(i, q)} />}
           {fbFor === i.id && <div className="pl-feedback" role="group" aria-label={`Feedback on ${i.foodName}`}>{FEEDBACK.map(([k, l]) => <button key={k} className="sn-chip" onClick={() => { setFbFor(null); onFeedback(i, k); }}>{l}</button>)}</div>}
           {!ro && i.status === "planned" && extras?.panel?.(i)}
         </div>

@@ -2,14 +2,18 @@
 // Shows the new calories as you type, so nobody has to do the maths. The caller saves it (food log or planner).
 import { useEffect, useRef, useState } from "react";
 import "./portionedit.css";
+import { fracLabel, isHousehold, recordPortion, usualPortion } from "../utils/portionPresets";
 
 const FACTORS = [[0.5, "½"], [0.75, "¾"], [1.25, "1¼"], [1.5, "1½"], [2, "2×"]];
+const COUNTS = [0.5, 1, 1.5, 2, 3];               // household units (roti, katori, glass...) read better as real counts than as multipliers
 const round = (n) => Math.round(n * 100) / 100;
 
-export default function PortionEdit({ name, quantity, unit, calories = 0, protein = 0, onSave, onCancel, busy = false }) {
+export default function PortionEdit({ name, foodId, quantity, unit, calories = 0, protein = 0, onSave, onCancel, busy = false }) {
   const start = Number(quantity) > 0 ? Number(quantity) : 1;
   const [val, setVal] = useState(String(round(start)));
   const ref = useRef(null);
+  const household = isHousehold(unit);
+  const usual = usualPortion(foodId, name);        // what you most often have of this food (needs two uses)
   useEffect(() => { ref.current?.focus(); ref.current?.select(); }, []);
   const q = Number(val);
   const valid = q > 0 && q <= 100000;
@@ -17,7 +21,7 @@ export default function PortionEdit({ name, quantity, unit, calories = 0, protei
   const kcal = valid ? Math.round(Number(calories) * k) : 0;
   const prot = valid ? Math.round(Number(protein) * k * 10) / 10 : 0;
   const changed = valid && Math.abs(q - start) > 0.0001;
-  const submit = (e) => { e.preventDefault(); if (valid && changed && !busy) onSave(round(q)); };
+  const submit = (e) => { e.preventDefault(); if (valid && changed && !busy) { recordPortion(foodId, name, q); onSave(round(q)); } };
 
   return (
     <form className="pe" onSubmit={submit} onKeyDown={(e) => { if (e.key === "Escape") { e.stopPropagation(); onCancel(); } }} aria-label={`Change the amount of ${name}`}>
@@ -28,7 +32,10 @@ export default function PortionEdit({ name, quantity, unit, calories = 0, protei
           <em>{unit}</em>
         </label>
         <div className="pe-quick" role="group" aria-label="Quick amounts">
-          {FACTORS.map(([f, label]) => <button key={f} type="button" onClick={() => setVal(String(round(start * f)))} aria-label={`${label} of the original amount`}>{label}</button>)}
+          {usual != null && Math.abs(usual - start) > 0.0001 && <button type="button" className="pe-usual" onClick={() => setVal(String(usual))} aria-label={`Your usual amount: ${usual} ${unit}`}>Usual: {fracLabel(usual)} {unit}</button>}
+          {household
+            ? COUNTS.map((n) => <button key={n} type="button" onClick={() => setVal(String(n))} aria-label={`${fracLabel(n)} ${unit}`}>{fracLabel(n)}</button>)
+            : FACTORS.map(([f, label]) => <button key={f} type="button" onClick={() => setVal(String(round(start * f)))} aria-label={`${label} of the original amount`}>{label}</button>)}
         </div>
       </div>
       <p className="pe-now" aria-live="polite">{valid ? <>{kcal} kcal · {prot} g protein{changed ? <small> (was {Math.round(Number(calories))} kcal)</small> : null}</> : "Enter an amount above 0."}</p>

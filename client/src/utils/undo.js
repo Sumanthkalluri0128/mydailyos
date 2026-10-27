@@ -20,4 +20,12 @@ export async function undoGate({ what, hide, restore, delay = 5000 }) {
   window.dispatchEvent(new CustomEvent("mydailyos:toast", { detail: { message: t("undo.deleted", { what: what || "" }).trim(), type: "info", duration: delay, kind: "undo", sub: t("undo.sensei"), action: { label: t("common.undo"), onClick: onUndo } } }));
   return g.promise;
 }
+/**
+ * Undo for a change that is already saved (e.g. a portion edit): shows the same 5 s Undo toast, and Undo runs `onUndo` to put it back.
+ * Nothing waits for the toast, so leaving the page never loses or doubles the change.
+ */
+export function undoNotice({ message, onUndo, delay = 5000 }) {
+  const run = () => { Promise.resolve().then(() => onUndo?.()).catch(() => {}); window.dispatchEvent(new CustomEvent("mydailyos:toast", { detail: { message: t("undo.back"), type: "success", duration: 2200, kind: "undone" } })); };
+  window.dispatchEvent(new CustomEvent("mydailyos:toast", { detail: { message, type: "info", duration: delay, kind: "undo", sub: t("undo.sensei"), action: { label: t("common.undo"), onClick: run } } }));
+}
 export const flushUndo = () => queue.flushAll();

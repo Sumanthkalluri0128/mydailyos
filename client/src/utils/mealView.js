@@ -134,6 +134,12 @@ export function itemsToLog(day) {
         return [];
     return MEAL_IDS.flatMap((m) => day.meals[m].items.filter((i) => i.status === 'planned' && !i.pending));
 }
+/** Same as itemsToLog, for ONE meal: the one-tap "Log what I planned" button. */
+export function itemsToLogMeal(day, meal) {
+    if (!day || day.readOnly || !day.meals?.[meal])
+        return [];
+    return day.meals[meal].items.filter((i) => i.status === 'planned' && !i.pending);
+}
 // ------------------------------------------------------------------------------------------------ labels
 export const STATUS_LABEL = { logged: 'Logged', planned: 'Planned', suggested: 'Suggested' };
 /** "420 kcal left · 25 g protein" style helper for the day bar: eaten so far, planned, remaining. */

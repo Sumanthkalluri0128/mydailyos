@@ -221,7 +221,7 @@ html.ff-calm .pk, html.ff-calm .hr-sun, html.ff-calm .pg-crown { animation: none
 /* ---- corner stickers: reserved slot, hidden (never cropped, never on top of text) when the card is too narrow ---- */
 .sc, .pn-prog { container-type: inline-size; }
 .sc .pk { top: -6px; }
-@container (max-width: 195px) { .sc-water .pk, .sc-steps .pk { display: none; } }      /* ＋ button + sticker need ~190px */
+@container (max-width: 195px) { .sc-has-plus .pk { display: none; } }      /* ＋ button + sticker need ~190px */
 @container (max-width: 150px) { .sc .pk { display: none; } }
 .pg-main { padding-right: 112px; }
 .pn-prog .pk-corner { width: 100px; height: 100px; right: 6px; bottom: 4px; }
@@ -272,6 +272,15 @@ html.ff-calm .pk, html.ff-calm .hr-sun, html.ff-calm .pg-crown { animation: none
 @media (max-width: 720px) { .sc-w { grid-column: auto; } }
 
 /* Water + steps stickers used to vanish on cards narrower than ~195px. Keep them, just smaller, and only hide when truly tiny. */
-@container (max-width: 195px) { .sc-water .pk, .sc-steps .pk { display: block; } }
+@container (max-width: 195px) { .sc-has-plus .pk { display: block; } }
 @container (max-width: 230px) { .sc .pk { width: 56px; height: 56px; top: -4px; } }
 @container (max-width: 120px) { .sc .pk { display: none; } }
+
+/* Eaten sheet: today's meals with the portion editor */
+.eaten-sheet { display: grid; gap: 12px; max-height: 60vh; overflow-y: auto; }
+.eaten-sheet h4 { margin: 0 0 4px; font-size: 14px; display: flex; justify-content: space-between; gap: 8px; } .eaten-sheet h4 small { color: var(--text-muted); font-weight: 700; }
+.es-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; min-width: 0; padding: 6px 0; }
+.es-row span { min-width: 0; } .es-row strong { display: block; overflow-wrap: anywhere; } .es-row small { display: block; color: var(--text-muted); }
+.sc-cal-list .li-btn { all: unset; display: flex; align-items: center; gap: 10px; min-width: 0; cursor: pointer; border-radius: 10px; }
+.sc-cal-list .li-btn:focus-visible { outline: 2px solid var(--primary, #6847e8); outline-offset: 2px; }
+.sc-cal-list .li-btn b::after { content: " ✏️"; font-size: 11px; opacity: .7; }

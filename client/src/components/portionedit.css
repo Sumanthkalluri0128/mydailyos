@@ -16,3 +16,5 @@
 /* food log row now holds: name · kcal · Edit · Move · Delete */
 .food-log-row { grid-template-columns: minmax(0, 1fr) auto auto auto auto; }
 @media (max-width: 640px) { .food-log-row { grid-template-columns: minmax(0, 1fr) auto; } .food-log-row > .edit-log-button, .food-log-row > .move-log-select { grid-column: auto; } }
+
+.pe-usual { font-weight: 800; border-style: dashed; }

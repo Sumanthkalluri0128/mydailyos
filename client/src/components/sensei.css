@@ -33,3 +33,9 @@
 .pl-why { margin: 2px 0 6px; } .pl-why p { margin: 4px 0 0; padding: 8px 12px; border-radius: 12px; background: var(--primary-soft); font-size: 14px; }
 .pl-slot-tools { display: inline-flex; gap: 10px; } .pl-feedback { display: flex; flex-wrap: wrap; gap: 6px; margin: 6px 0 8px 8px; }
 .pl-alt-why { color: var(--primary); display: block; font-weight: 600; }
+
+/* Weekly review as a compact summary */
+.wc-summary { display: grid; gap: 12px; }
+.wc-sum-head { display: flex; align-items: center; gap: 12px; min-width: 0; } .wc-sum-head h3 { margin: 2px 0; }
+.wc-sec h4 { margin: 0 0 4px; font-size: 14px; } .wc-sec ul { margin: 0; padding-left: 18px; display: grid; gap: 3px; } .wc-sec p { margin: 0 0 6px; }
+.wc-next { padding: 10px 12px; border-radius: 14px; background: color-mix(in srgb, var(--primary, #6847e8) 10%, transparent); }

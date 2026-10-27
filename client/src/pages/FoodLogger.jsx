@@ -1,5 +1,5 @@
 import { confirmAction } from "../utils/confirm";
-import { undoGate } from "../utils/undo";
+import { undoGate, undoNotice } from "../utils/undo";
 import Buddy, { BuddyEmpty } from "../motion/Buddy";
 import { notify } from "../utils/notify";
 import { apiFetch } from "../config/api";
@@ -396,7 +396,11 @@ function FoodLogger({ date, onBack, goTo }) {
       if (!response.ok) { notify(data.message || "Could not change the amount.", "error"); return; }
       setFoodLogs((cur) => cur.map((l) => (l._id === log._id ? { ...l, ...data.log } : l)));
       setEditId(null);
-      notify(`Updated ${log.foodName} to ${quantity} ${log.servingUnit}.`, "success");
+      const before = Number(log.consumedQuantity);
+      undoNotice({ message: `${log.foodName} is now ${quantity} ${log.servingUnit}`, onUndo: async () => {
+        await apiFetch(`${API_URL}/api/food-logs/${log._id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ quantity: before }) });
+        try { await fetchFoodLogs(); } catch { /* ignore */ }
+      } });
       try { await fetchFoodLogs(); } catch { /* the list already shows the saved value */ }
     } catch { notify("Could not connect to the backend.", "error"); } finally { setEditBusy(false); }
   };
@@ -1016,7 +1020,7 @@ function FoodLogger({ date, onBack, goTo }) {
 
                   </div>
                   {editId === log._id && (
-                    <PortionEdit name={log.foodName} quantity={log.consumedQuantity} unit={log.servingUnit} calories={log.nutritionTotal?.calories || 0} protein={log.nutritionTotal?.protein || 0}
+                    <PortionEdit name={log.foodName} foodId={log.foodId?._id || log.foodId} quantity={log.consumedQuantity} unit={log.servingUnit} calories={log.nutritionTotal?.calories || 0} protein={log.nutritionTotal?.protein || 0}
                       busy={editBusy} onCancel={() => setEditId(null)} onSave={(q) => handleEditQty(log, q)} />
                   )}
                   </Fragment>

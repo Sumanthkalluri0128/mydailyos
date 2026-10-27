@@ -16,6 +16,8 @@ import { RoughDay, SideQuest, useCoachState, PlateCard, EventMode, CravingTimer 
 import { useCoachTone } from "../../utils/coachTone";
 import HealthyDay from "./HealthyDay";
 import HomeSection from "../HomeSection";
+import EatenSheet from "./EatenSheet";
+import StatCard, { StatBar } from "./StatCard";
 import { apiFetch } from "../../config/api";
 import { dayBalance, expectedEnergy, macroTargets, limitTargets } from "../../utils/energy";
 import { getLocalDate } from "../../utils/date";
@@ -127,7 +129,7 @@ export default function HomeDashboard({ profile, summary, activity, water, water
   const stepsN = useCountUp(n0(activity?.steps), 800);
   const minsN = useCountUp(n0(activity?.totalMinutes), 700);
 
-  const [sheet, setSheet] = useState(null);       // "water" | "steps" | "fix" | null
+  const [sheet, setSheet] = useState(null);       // "water" | "steps" | "eaten" | "fix" | null
   // companions / other pages can ask Home to open "Fix my day"
   useEffect(() => {
     const open = () => { try { sessionStorage.removeItem("ff_open_fix"); } catch { /* ignore */ } setSheet("fix"); };
@@ -238,7 +240,7 @@ export default function HomeDashboard({ profile, summary, activity, water, water
             <i aria-hidden="true">🔥</i><strong>{bal.budget ? left.toLocaleString() : "—"}</strong><span>{!bal.budget ? "Add body details" : over ? "kcal over" : "kcal left"}</span>
           </Ring>
           <ul className="sc-cal-list">
-            <li><span className="ic g">🍴</span><div><small>Eaten</small><b>{fmt(bal.eaten)} kcal</b></div></li>
+            <li><button type="button" className="li-btn" aria-label={`Eaten: ${fmt(bal.eaten)} kcal. See and edit today's meals`} onClick={(e) => { e.stopPropagation(); setSheet("eaten"); }}><span className="ic g">🍴</span><div><small>Eaten</small><b>{fmt(bal.eaten)} kcal</b></div></button></li>
             <li><span className="ic b">🎯</span><div><small>Budget</small><b>{bal.budget ? fmt(bal.budget) : "—"} kcal</b></div></li>
             <li><span className="ic o">⚡</span><div><small>Activity</small><b>{fmt(bal.burned)} kcal</b></div></li>
           </ul>
@@ -248,38 +250,28 @@ export default function HomeDashboard({ profile, summary, activity, water, water
           </span>
         </article>
 
-        <article className="sc sc-water" role="button" tabIndex={0} onClick={open("water")} onKeyDown={open("water")}>
-          <span className="ic b big">💧</span>
-          <button type="button" className="sc-plus" data-tour="add-water" aria-label="Add water" onClick={(e) => { e.stopPropagation(); setCustom(""); setSheet("water"); }}>＋</button>
+        <StatCard kind="water" icon="💧" tint="b" onOpen={open("water")} plus={{ label: "Add water", tour: "add-water", onClick: () => { setCustom(""); setSheet("water"); } }} sticker={<Peek src={cast(1, "drink")} />}>
           <div className="sc-val"><strong>{waterL.toFixed(2)} L</strong><small>of {(waterTarget / 1000).toFixed(1)} L</small></div>
-          <i className="sc-bar"><b style={{ width: `${Math.min(100, ((water?.totalMl || 0) / (waterTarget || 1)) * 100)}%` }} /></i>
-          <Peek src={cast(1, "drink")} />
-        </article>
+          <StatBar pct={((water?.totalMl || 0) / (waterTarget || 1)) * 100} />
+        </StatCard>
 
-        <article className="sc sc-steps" role="button" tabIndex={0} onClick={open("health")} onKeyDown={open("health")}>
-          <span className="ic o big">👟</span>
-          <button type="button" className="sc-plus" aria-label="Add steps" onClick={(e) => { e.stopPropagation(); setCustom(""); setSheet("steps"); }}>＋</button>
+        <StatCard kind="steps" icon="👟" tint="o" onOpen={open("health")} plus={{ label: "Add steps", onClick: () => { setCustom(""); setSheet("steps"); } }} sticker={<Peek src={cast(2, "walk")} />}>
           <div className="sc-val"><strong>{stepsN.toLocaleString()}</strong><small>steps</small></div>
-          <i className="sc-bar"><b style={{ width: `${Math.min(100, ((activity?.steps || 0) / stepsT) * 100)}%` }} /></i>
+          <StatBar pct={((activity?.steps || 0) / stepsT) * 100} />
           <small className="sc-goal">{stepsN > 0 ? `Goal: ${fmt(stepsT)}` : "Nothing yet. A short walk counts"}</small>
-          <Peek src={cast(2, "walk")} />
-        </article>
+        </StatCard>
 
-        <article className="sc sc-ex" role="button" tabIndex={0} onClick={open("exercise")} onKeyDown={open("exercise")}>
-          <span className="ic p big">🏋️</span>
+        <StatCard kind="ex" icon="🏋️" tint="p" onOpen={open("exercise")} sticker={<Peek src={cast(3, "lift")} />}>
           <div className="sc-val"><strong>{minsN} min</strong><small>Exercise</small></div>
-          <i className="sc-bar"><b style={{ width: `${Math.min(100, ((activity?.totalMinutes || 0) / exT) * 100)}%` }} /></i>
+          <StatBar pct={((activity?.totalMinutes || 0) / exT) * 100} />
           <small className="sc-goal">{minsN > 0 ? `Goal: ${exT} min` : "Nothing yet. A 10 minute walk counts"}</small>
-          <Peek src={cast(3, "lift")} />
-        </article>
+        </StatCard>
 
-        <article className="sc sc-w" role="button" tabIndex={0} onClick={open("weight")} onKeyDown={open("weight")}>
-          <span className="ic v big">⚖️</span>
+        <StatCard kind="w" icon="⚖️" tint="v" onOpen={open("weight")} sticker={<Peek src={cast(4, "scale")} />}>
           <div className="sc-val">{latestWeight != null ? <strong><WeightReveal text={`${Number(latestWeight).toFixed(1)} kg`} from={wpts.length > 1 ? wpts[wpts.length - 2] : undefined} /></strong> : <strong>Add</strong>}{tw ? <small><WeightReveal compact reaction={false} text={`Target: ${Number(tw).toFixed(1)} kg`} /></small> : <small>Set a target in Profile</small>}</div>
           <Spark points={wpts} />
           {wLeft != null && <small className="sc-goal"><WeightReveal compact reaction={false} text={`${wLeft.toFixed(1)} kg to go`} /></small>}
-          <Peek src={cast(4, "scale")} />
-        </article>
+        </StatCard>
       </section>
 
       {/* ---------- quick help: three equal tiles in one row (they open into full-width cards when used) ---------- */}
@@ -395,6 +387,11 @@ export default function HomeDashboard({ profile, summary, activity, water, water
       {sheet === "healthy" && (
         <Sheet title="Your healthy day" onClose={() => setSheet(null)}>
           <HealthyDay onClose={() => setSheet(null)} onPlan={() => goTo("planner")} />
+        </Sheet>
+      )}
+      {sheet === "eaten" && (
+        <Sheet title="What you ate today" onClose={() => setSheet(null)}>
+          <EatenSheet date={today} onChanged={onChanged} onClose={() => setSheet(null)} />
         </Sheet>
       )}
       {sheet === "water" && (

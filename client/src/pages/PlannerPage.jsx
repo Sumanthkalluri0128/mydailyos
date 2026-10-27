@@ -5,10 +5,10 @@ import { pendingOps } from "../offline/offlineApi";
 import { fireConfetti } from "../motion/motion";
 import { dayChar } from "../motion/chars";
 import PlannerMeal from "../components/PlannerMeal";
-import { chefDayLine, dayBarText, itemsToLog, overlayWebQueue } from "../utils/mealView";
+import { chefDayLine, dayBarText, itemsToLog, itemsToLogMeal, overlayWebQueue } from "../utils/mealView";
 import { notify } from "../utils/notify";
 import { confirmAction } from "../utils/confirm";
-import { undoGate } from "../utils/undo";
+import { undoGate, undoNotice } from "../utils/undo";
 import { getLocalDate } from "../utils/date";
 import FoodPicker from "../components/FoodPicker";
 import AutoPlanPanel from "../components/AutoPlanPanel";
@@ -92,6 +92,8 @@ export default function PlannerPage({ onBack, goTo }) {
   const logPlanned = (date, i, quiet) => call(`/${i.id}/log`, "POST", { date, clientId: `pl-${i.id}` }, quiet ? undefined : `Logged ${i.foodName}.`, { foodName: i.foodName, servingUnit: i.servingUnit });
   // Items already logged (or waiting to sync) are skipped, so nothing is counted twice. One request per item keeps an offline replay safe.
   const logDay = async (day) => { const todo = itemsToLog(day); if (!todo.length) { notify("Everything planned for this day is already logged.", "info"); return; } for (const i of todo) await logPlanned(day.date, i, true); notify(`Logged ${todo.length} planned food${todo.length === 1 ? "" : "s"}.`, "success"); };
+  // One tap: log every planned item of ONE meal at its planned portion. Each item keeps its Edit button afterwards, so a portion can still be fixed.
+  const logMeal = async (day, meal) => { const todo = itemsToLogMeal(day, meal); if (!todo.length) { notify("Everything planned for this meal is already logged.", "info"); return; } for (const i of todo) await logPlanned(day.date <= today ? day.date : today, i, true); notify(`Logged ${todo.length} planned food${todo.length === 1 ? "" : "s"}. Tap ✏️ Edit on any of them to change the amount.`, "success"); };
   const planSuggestion = (day, s) => call("", "POST", s.foodId ? { date: day.date, mealType: s.mealType || s._meal, foodId: s.foodId, quantity: s.quantity, today, why: s.why } : { date: day.date, mealType: s.mealType || s._meal, name: s.foodName, quantity: s.quantity, today, why: s.why }, `Added ${s.foodName} to the plan.`, { foodName: s.foodName, servingUnit: s.servingUnit, nutrition: nut(s) });
   const logSuggestion = async (day, s) => {
     try {
@@ -105,13 +107,15 @@ export default function PlannerPage({ onBack, goTo }) {
     const resize = (i, f) => call(`/${i.id}`, "PATCH", { quantity: Math.max(0.1, Math.round(i.quantity * f * 10) / 10) });
   // Change the amount of an item: a logged food edits the food log, a planned one edits the plan. Returns true when saved.
   const editQty = async (i, quantity) => {
+    const send = (q) => (i.status === "logged"
+      ? apiFetch(`/api/food-logs/${i.id}`, { method: "PATCH", body: JSON.stringify({ quantity: q }) })
+      : apiFetch(`/api/meal-plans/${i.id}`, { method: "PATCH", body: JSON.stringify({ quantity: q, today }) }));
     try {
-      const r = i.status === "logged"
-        ? await apiFetch(`/api/food-logs/${i.id}`, { method: "PATCH", body: JSON.stringify({ quantity }) })
-        : await apiFetch(`/api/meal-plans/${i.id}`, { method: "PATCH", body: JSON.stringify({ quantity, today }) });
+      const before = i.quantity;
+      const r = await send(quantity);
       const d = await r.json().catch(() => ({}));
       if (!r.ok) { notify(d.message || "Could not change the amount.", "error"); return false; }
-      notify(`Updated ${i.foodName} to ${quantity} ${i.servingUnit}.`, "success");
+      undoNotice({ message: `${i.foodName} is now ${quantity} ${i.servingUnit}`, onUndo: async () => { await send(before); await load(); } });
       await load();
       return true;
     } catch { notify("Could not change the amount.", "error"); return false; }
@@ -300,7 +304,7 @@ export default function PlannerPage({ onBack, goTo }) {
               {MEALS.map(([id]) => {
                 const key = `${date}|${id}`;
                 return (
-                  <PlannerMeal key={id} day={vd} meal={id} who={who} adding={adding === key} onToggleAdd={() => setAdding(adding === key ? null : key)} onLock={lockMeal(date, id)} onFeedback={giveFeedback} onEditQty={editQty}
+                  <PlannerMeal key={id} day={vd} meal={id} who={who} adding={adding === key} onToggleAdd={() => setAdding(adding === key ? null : key)} onLock={lockMeal(date, id)} onFeedback={giveFeedback} onEditQty={editQty} onLogMeal={() => logMeal(vd, id)}
                     dragging={!!dragId} onDrop={() => { if (dragId) call(`/${dragId}`, "PATCH", { date, mealType: id, today }); setDragId(null); }}
                     onLog={(i) => logPlanned(date <= today ? date : today, i)} onRemove={(i) => call(`/${i.id}`, "DELETE")}
                     onAddSuggestion={(s) => planSuggestion(vd, { ...s, _meal: id })} onLogSuggestion={(s) => logSuggestion(vd, { ...s, _meal: id })}

@@ -6,6 +6,7 @@ import WeightReveal from "./WeightReveal";
 import { useSimple } from "./simple/useSimple";
 import { TreatCard, DietBreak, coachLearn } from "./CoachCards";
 import { useCoachTone } from "../utils/coachTone";
+import { weekSummary } from "../utils/weekSummary";
 
 const NAMES = { zoro: "Zoro", naruto: "Naruto", luffy: "Luffy", jinwoo: "Jin-Woo", goku: "Goku", gojo: "Gojo" };
 
@@ -30,27 +31,29 @@ export default function WeeklyCoach() {
   const { review, tips, challenge: ch, weekBudget: wb, maintenance: mt, microInsights: mi = [] } = d;
   const hpLeft = Math.max(0, ch.target - ch.progress);
   const boss = NAMES[ch.who] || "The boss";
+  const sum = weekSummary({ review, tips, challenge: ch, bossName: boss, win: sim?.recap?.win });
   const fight = ch.defeated ? `${boss} is defeated! 🎉` : !ch.canStillWin ? `${boss} wins this round. Rematch next Monday.` : `${hpLeft} more ${ch.unit} to beat ${boss} · ${ch.daysLeft} day${ch.daysLeft === 1 ? "" : "s"} left`;
   return (
     <section className="weekly-coach">
-      <div className="card wc-review">
-        <Buddy scene={review.mood === "celebrate" ? "victory" : review.mood === "good" ? "cheer" : "wave"} size={96} />
-        <div>
-          <p className="eyebrow">Your week</p>
-          <h3>{review.headline}</h3>
-          <p>{review.text}</p>
-          <strong>{sim?.weeklyScore?.score != null ? `${sim.weeklyScore.title} ${sim.weeklyScore.score}/100 · ${sim.weeklyScore.parts.filter((p) => p.score !== null).map((p) => `${p.label} ${p.score}`).join(" · ")}` : `Score ${review.score}/100`} · {review.loggedDays}/7 days logged</strong>
-          {sim?.recap && <p>{sim.recap.win}</p>}
+      <div className="card wc-review wc-summary">
+        <div className="wc-sum-head">
+          <Buddy scene={review.mood === "celebrate" ? "victory" : review.mood === "good" ? "cheer" : "wave"} size={84} />
+          <div>
+            <p className="eyebrow">Your week</p>
+            <h3>{sum.headline}</h3>
+            <strong>{sim?.weeklyScore?.score != null ? `${sim.weeklyScore.title} ${sim.weeklyScore.score}/100` : `Score ${review.score}/100`} · {review.loggedDays}/7 days logged</strong>
+          </div>
         </div>
+        <section className="wc-sec" aria-label="What went well"><h4>✅ What went well</h4><ul>{sum.well.map((w) => <li key={w}>{w}</li>)}</ul></section>
+        {sum.change.length > 0 && <section className="wc-sec" aria-label="What to change"><h4>🔧 What to change</h4><ul>{sum.change.map((c) => <li key={c.id}><span aria-hidden="true">{c.icon}</span> {c.title}</li>)}</ul></section>}
+        {sum.next && (
+          <section className="wc-sec wc-next" aria-label="One thing for next week">
+            <h4>🎯 One thing for next week</h4>
+            <p><strong>{sum.next.title}.</strong> {sum.next.detail}</p>
+            {tried[sum.next.id] ? <small>Noted. Good luck!</small> : <button type="button" className="secondary-button" onClick={() => { coachLearn(sum.next.id, "accepted"); setTried({ ...tried, [sum.next.id]: true }); }}>I'll try this</button>}
+          </section>
+        )}
       </div>
-      {tips.length > 0 && (
-        <div className="card wc-tips">
-          <h3>What to change this week</h3>
-          {tips.map((t) => (
-            <div key={t.id} className="wc-tip"><span aria-hidden="true">{t.icon}</span><div><strong>{t.title}</strong><p>{t.detail}</p>{tried[t.id] ? <small>Noted. Good luck!</small> : <button type="button" className="link-button" onClick={() => { coachLearn(t.id, "accepted"); setTried({ ...tried, [t.id]: true }); }}>I'll try this</button>}</div></div>
-          ))}
-        </div>
-      )}
       {mi.length > 0 && (
         <div className="card wc-tips">
           <h3>Power-ups to look at</h3>

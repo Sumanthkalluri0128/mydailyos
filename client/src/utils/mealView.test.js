@@ -67,3 +67,12 @@ test("chef: exact facts for an open meal, a hungry day line, and the victory lin
   assert.equal(full.complete, true);
   assert.match(chefDayLine(full), /^Day complete/);
 });
+
+import { itemsToLogMeal } from "./mealView.js";
+test("itemsToLogMeal picks only the planned, settled items of one meal", () => {
+  const mk = (id, status, pending) => ({ id, status, pending });
+  const day = { readOnly: false, meals: { breakfast: { items: [mk("a", "planned"), mk("b", "logged"), mk("c", "planned", true)] }, lunch: { items: [mk("d", "planned")] } } };
+  assert.deepEqual(itemsToLogMeal(day, "breakfast").map((i) => i.id), ["a"]);
+  assert.deepEqual(itemsToLogMeal(day, "dinner"), []);
+  assert.deepEqual(itemsToLogMeal({ ...day, readOnly: true }, "lunch"), []);
+});
