@@ -1,14 +1,42 @@
-// Home hero: a calm, static card. Date + greeting, ONE character (the day's), the coach's next step and one line of the day.
-// No slideshow, no auto-advance and nothing swipes. The character keeps its existing hover-only reaction (Buddy).
+// Home hero: greeting + the coach's next step over a slow crossfading background of scenes.
+// The line of the day is part of the scene images, so there is no separate quote box.
+// The slideshow pauses while the tab is hidden and is off for reduced-motion / calm mode.
+import { useEffect, useState } from "react";
 import "./home.css";
 import Buddy from "../../motion/Buddy";
-import { accent, CHARS, dayChar } from "../../motion/chars";
-import { dailyLine } from "../../utils/dailyLine";
+import { accent, dayChar } from "../../motion/chars";
+import { HERO_SLIDES, HERO_INTERVAL_MS } from "./heroSlides";
+
+function useSlide(n) {
+  const [i, setI] = useState(() => (n ? new Date().getDate() % n : 0));
+  useEffect(() => {
+    if (n < 2) return undefined;
+    const still = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches || document.documentElement.classList.contains("ff-calm");
+    if (still) return undefined;
+    let t;
+    const stop = () => { clearInterval(t); t = undefined; };
+    const start = () => { stop(); t = setInterval(() => setI((x) => (x + 1) % n), HERO_INTERVAL_MS); };
+    const onVis = () => (document.hidden ? stop() : start());
+    start();
+    document.addEventListener("visibilitychange", onVis);
+    return () => { stop(); document.removeEventListener("visibilitychange", onVis); };
+  }, [n]);
+  return i;
+}
 
 export default function HeroCard({ greeting, name, dateText, coach, streakNote, onAsk }) {
   const who = dayChar();
+  const cur = useSlide(HERO_SLIDES.length);
   return (
     <section className="hr" aria-label="Today" style={{ "--hr-accent": accent[who] }}>
+      {HERO_SLIDES.length > 0 && (
+        <>
+          <div className="hr-bg" aria-hidden="true">
+            {HERO_SLIDES.map((src, k) => <img key={src} className={k === cur ? "on" : ""} src={src} alt="" draggable="false" loading={k === cur ? "eager" : "lazy"} decoding="async" />)}
+          </div>
+          <div className="hr-shade" aria-hidden="true" />
+        </>
+      )}
       <div className="hr-panel">
         <small className="hr-date">{dateText}</small>
         <h1 className="hr-hello">{greeting}{name ? <>, <span className="hr-name">{name}</span></> : null} <span className="hr-sun" aria-hidden="true">☀️</span></h1>
@@ -24,11 +52,6 @@ export default function HeroCard({ greeting, name, dateText, coach, streakNote, 
         </div>
         {streakNote}
       </div>
-      <aside className="hr-side" aria-label="Line of the day">
-        <span className="hr-qmark" aria-hidden="true">“</span>
-        <p className="hr-line">{dailyLine()}</p>
-        <b className="hr-by">— {CHARS[who]}</b>
-      </aside>
     </section>
   );
 }

@@ -1,5 +1,5 @@
 // Home. One screen, each number shown exactly once:
-//   hero (greeting + scene carousel + coach) → five stat cards (with ＋ shortcuts) → nutrition · macros · habits → tasks · progress · scene.
+//   hero (greeting + sliding background + coach) → five stat cards (with ＋ shortcuts) → nutrition · macros · habits → side quest · weekly review → tasks · progress · scene.
 // Everything on it is tappable: cards open their page, water/steps have quick-add sheets, habits and tasks tick off with a cheer.
 import { useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
@@ -282,12 +282,6 @@ export default function HomeDashboard({ profile, summary, activity, water, water
       </section>
       {tone.gentle && <PlateCard refreshKey={syncTick} />}
 
-      {/* ---------- this week: side quest next to the weekly review ---------- */}
-      <section className="hd-week" aria-label="This week">
-        <SideQuest state={coachState} setState={setCoachState} reload={reloadCoach} />
-        {!tone.gentle && <OverDayCard onPlan={() => goTo("planner")} />}
-      </section>
-
       {/* ---------- nutrition · macros · habits ---------- */}
       <section className="hd-mid">
         <div className="pn pn-nut">
@@ -339,6 +333,12 @@ export default function HomeDashboard({ profile, summary, activity, water, water
             </ul>
           )}
         </div>
+      </section>
+
+      {/* ---------- this week: side quest next to the weekly review (sits under nutrition · macros · habits) ---------- */}
+      <section className="hd-week" aria-label="This week">
+        <SideQuest state={coachState} setState={setCoachState} reload={reloadCoach} />
+        {!tone.gentle && <OverDayCard onPlan={() => goTo("planner")} />}
       </section>
 
       {/* ---------- tasks · progress · scene ---------- */}

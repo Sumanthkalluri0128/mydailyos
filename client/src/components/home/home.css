@@ -231,12 +231,8 @@ html.ff-calm .pk, html.ff-calm .hr-sun, html.ff-calm .pg-crown { animation: none
 
 /* ============ v50 layout: a calmer, better-organised Home ============ */
 /* Hero: greeting + coach on the left, the line of the day on the right (no more empty half-screen). */
-.hr { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr); align-items: stretch; }
-.hr-panel { max-width: none; }
-.hr-side { position: relative; z-index: 3; display: flex; flex-direction: column; justify-content: center; gap: 8px; margin: 18px 22px 18px 0; padding: 22px 26px; border-radius: 22px; background: color-mix(in srgb, var(--hr-accent, #6847e8) 14%, rgba(255, 255, 255, .04)); border: 1px solid color-mix(in srgb, var(--hr-accent, #6847e8) 35%, transparent); }
-.hr-qmark { font-size: 54px; line-height: .6; font-weight: 900; color: var(--hr-accent, #c9a6ff); opacity: .9; }
-.hr-side .hr-line { margin: 0; font-size: clamp(16px, 1.5vw, 20px); line-height: 1.45; font-weight: 700; color: #fff; }
-.hr-by { font-size: 13px; font-weight: 800; letter-spacing: .04em; color: var(--hr-accent, #c9a6ff); }
+.hr { display: block; min-height: 250px; overflow: hidden; }
+.hr-panel { max-width: 760px; }
 
 /* Stat cards: calories is the big card (2 x 2); the four small cards are wide enough for their sticker. */
 .hd-stats { grid-template-columns: repeat(4, minmax(0, 1fr)); grid-auto-rows: minmax(176px, auto); }
@@ -264,8 +260,6 @@ html.ff-calm .pk, html.ff-calm .hr-sun, html.ff-calm .pg-crown { animation: none
   .sc-cal { grid-column: 1 / -1; grid-row: auto; }
 }
 @media (max-width: 900px) {
-  .hr { grid-template-columns: 1fr; }
-  .hr-side { margin: 0 18px 18px; padding: 16px 18px; } .hr-qmark { font-size: 40px; }
   .hd-help { grid-template-columns: 1fr; }
   .hd-week { grid-template-columns: 1fr; }
 }
@@ -284,3 +278,12 @@ html.ff-calm .pk, html.ff-calm .hr-sun, html.ff-calm .pg-crown { animation: none
 .sc-cal-list .li-btn { all: unset; display: flex; align-items: center; gap: 10px; min-width: 0; cursor: pointer; border-radius: 10px; }
 .sc-cal-list .li-btn:focus-visible { outline: 2px solid var(--primary, #6847e8); outline-offset: 2px; }
 .sc-cal-list .li-btn b::after { content: " ✏️"; font-size: 11px; opacity: .7; }
+
+/* Hero slideshow background: crossfade, dark shade on the text side so the greeting and bubble stay readable. */
+.hr-bg, .hr-shade { position: absolute; inset: 0; border-radius: inherit; overflow: hidden; pointer-events: none; }
+.hr-bg { z-index: 0; }
+.hr-bg img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: 70% center; opacity: 0; transition: opacity 1.4s ease; }
+.hr-bg img.on { opacity: 1; }
+.hr-shade { z-index: 1; background: linear-gradient(90deg, rgba(14, 10, 36, .9) 0%, rgba(14, 10, 36, .66) 48%, rgba(14, 10, 36, .2) 100%); }
+@media (max-width: 900px) { .hr-shade { background: linear-gradient(180deg, rgba(14, 10, 36, .82) 0%, rgba(14, 10, 36, .6) 100%); } }
+@media (prefers-reduced-motion: reduce) { .hr-bg img { transition: none; } }

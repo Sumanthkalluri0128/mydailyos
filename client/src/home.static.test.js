@@ -3,8 +3,13 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 const read = (p) => fs.readFileSync(new URL(p, import.meta.url), "utf8");
 
-test("Home has no auto-advance timer, slideshow or blurred scene banner", () => {
-  for (const f of ["./components/home/HomeDashboard.jsx", "./components/home/HeroCard.jsx", "./utils/dailyLine.js"]) assert.doesNotMatch(read(f), /setInterval|hr-slide|hr-stage|pn-scene|SCENES|autoplay/i, f);
+test("Home hero is a crossfading background (paused when hidden / calm) with no separate quote box", () => {
+  const h = read("./components/home/HeroCard.jsx");
+  assert.match(h, /HERO_SLIDES/);
+  assert.match(h, /visibilitychange/);
+  assert.match(h, /prefers-reduced-motion/);
+  assert.doesNotMatch(h, /hr-side|dailyLine/);
+  assert.doesNotMatch(read("./components/home/HomeDashboard.jsx"), /setInterval|pn-scene|autoplay/i);
   for (const f of ["./components/home/HeroCarousel.jsx", "./components/MotivationCarousel.jsx", "./components/home/scenes.js"]) assert.equal(fs.existsSync(new URL(f, import.meta.url)), false, f);
 });
 test("the weekly review card starts collapsed and remembers nothing between visits", () => {
@@ -54,4 +59,9 @@ test("the portion editor remembers a usual amount and shows household counts", (
   const s = read("./components/PortionEdit.jsx");
   assert.match(s, /usualPortion/);
   assert.match(s, /isHousehold/);
+});
+test("the side quest / weekly review row sits below nutrition, macros and habits", () => {
+  const s = read("./components/home/HomeDashboard.jsx");
+  assert.ok(s.indexOf('className="hd-mid"') < s.indexOf('className="hd-week"'));
+  assert.ok(s.indexOf('className="hd-week"') < s.indexOf('className="hd-low"'));
 });
