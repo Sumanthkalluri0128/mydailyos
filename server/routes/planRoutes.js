@@ -15,7 +15,8 @@ const { catalogueFoods } = require('../lib/foodCache');
 const { loadCore, corridorPlan } = require('../lib/planData');
 const { smoothTrend, buildTrend, trendRate, maxSafeWeeklyLossKg, planTrendKg } = require('../lib/trendWeight');
 const { weeklyScore } = require('../lib/fatLossScore');
-const { overStatus, spreadCorrection, rootCauses } = require('../lib/overDays');
+const { overStatus, rootCauses, localHour } = require('../lib/overDays');
+const { walkKcal } = require('../lib/overEngine');
 const { buildOutcomeBadges, weeklyFlags, cumulativeDeficit } = require('../lib/outcomes');
 const { derivePlan, rewardLadder, breakAdvice, eventAdvice, focusProgress, adherenceOf } = require('../lib/northStar');
 const { safetyReport } = require('../lib/safety');
@@ -194,19 +195,23 @@ router.get('/over-days', wrap(async (req, res) => {
   const core = await loadCore(uid, today, { historyDays: 35 });
   const { series } = trendInputs(core);
   const rate = trendRate(series, today);
-  const days = core.days.map((d) => ({ date: d.date, calories: d.calories }));
-  const status = overStatus({ days, target: core.target, today, direction: core.direction, paceKg: core.profile.goals?.weeklyPaceKg || 0.5, weightTrendPerWeek: rate });
-  const correction = status.tier === 'streak' || (status.tier === 'single' && status.overKcal >= 400) ? spreadCorrection({ overKcal: status.overKcal, target: core.target, floor: core.floor, avgIntake7: avgIntake(core.days, today) }) : null;
+  const days = core.days.map((d) => ({ date: d.date, calories: d.calories, caloriesBurned: d.caloriesBurned }));
+  const paceKg = core.profile.goals?.weeklyPaceKg || 0.5;
+  // ONE engine decides (weekly ledger: capped credit, unlogged = unknown, partial spread, floor held). The planner uses the same numbers.
+  const adv = intakeAdvice({ days, target: core.target, floor: core.floor, today, direction: core.direction, weightTrendPerWeek: rate, profile: core.profile, hour: localHour(Date.now(), tz), paceKg });
+  const status = overStatus({ days, target: core.target, today, direction: core.direction, paceKg, weightTrendPerWeek: rate });
+  const tier = adv.tier;
   let causes = null;
-  if (status.tier === 'week' || status.tier === 'streak') {
+  if (tier === 'week' || tier === 'streak') {
     const rows = await FoodLog.find({ userId: uid, date: { $gt: addDays(today, -28), $lte: today } }).select('date mealType foodName createdAt trigger nutritionTotal').lean();
     causes = rootCauses({ rows: rows.map((r) => ({ date: r.date, mealType: r.mealType, foodName: r.foodName, createdAt: r.createdAt, trigger: r.trigger, calories: Number(r.nutritionTotal?.calories || 0) })), days: core.days.map((d) => ({ date: d.date, calories: d.calories })).filter((d) => d.date > addDays(today, -28)), target: core.target, tzOffsetMin: tz });
   }
-  const easierTarget = status.easierPace && core.energy ? Math.max(core.floor, Math.round((core.energy.tdee - (status.easierPace * 7700) / 7) / 10) * 10) : null;
-  // "Go a little lighter" advice: also fires after a single over day, with the exact lighter target for the next days (the planner uses the same numbers)
-  const adv = intakeAdvice({ days, target: core.target, floor: core.floor, today, direction: core.direction, weightTrendPerWeek: rate });
-  const advice = adv.level === 'none' ? null : { level: adv.level, headline: adv.headline, detail: adv.detail, perDay: adv.perDay, days: adv.days, startDate: adv.startDate, skipCut: adv.skipCut, todayTarget: adv.todayTarget, tomorrowTarget: adv.tomorrowTarget, runDays: adv.runDays, weekExcess: adv.weekExcess, lastExcess: adv.lastExcess };
-  res.json({ success: true, ...status, target: core.target, correction, causes, easierTarget, trendPerWeek: rate, advice });
+  const easierPace = adv.needsEasierPace && paceKg > 0.25 ? (paceKg > 0.5 ? 0.5 : Math.max(0.25, Math.round((paceKg - 0.25) * 100) / 100)) : (status.easierPace || null);
+  const easierTarget = easierPace && core.energy ? Math.max(core.floor, Math.round((core.energy.tdee - (easierPace * 7700) / 7) / 10) * 10) : null;
+  const advice = adv.level === 'none' ? null : { level: adv.level, headline: adv.headline, detail: adv.detail, perDay: adv.perDay, days: adv.days, startDate: adv.startDate, skipCut: adv.skipCut, todayTarget: adv.todayTarget, tomorrowTarget: adv.tomorrowTarget, runDays: adv.runDays, weekExcess: adv.weekExcess, lastExcess: adv.lastExcess, ledger: adv.ledger };
+  // `correction` kept for older app builds: derived from the same advice, so nothing contradicts.
+  const correction = advice ? { perDay: adv.perDay, days: adv.days, newTarget: core.target - adv.perDay, recovers: adv.ledger.recovered, safe: !adv.skipCut, note: adv.skipCut ? adv.headline : adv.detail } : null;
+  res.json({ success: true, engine: 'ledger-v1', walkKcal: walkKcal(core.profile.currentWeightKg), ...status, tier, runDays: adv.runDays, overDays7: adv.overDays7, message: adv.message || status.message, cause: adv.cause || (tier === 'week' || tier === 'streak' ? status.cause : null), easierPace, target: core.target, correction, causes, easierTarget, trendPerWeek: rate, advice });
 }));
 
 // ---- gentle one-day plan from the planner
@@ -226,7 +231,10 @@ router.post('/rescue-day', wrap(async (req, res) => {
   const fixedMeals = [...new Set(logged.map((l) => l.mealType))];
   const pc = await loadPlanContext(uid, { today, profile: core.profile });
   const safeFoods = pc.excluder.empty ? [...mine, ...shared] : pc.excluder.keep(pc.decorate([...mine, ...shared]), (f) => f.name, (f) => ({ ingredients: f.ingredients }));
-  const day = rescueDay({ foods: safeFoods, target: core.target, floor: core.floor, ranges: core.ranges, recentIds: new Set(recent.map((r) => String(r.foodId))), eaten, fixedMeals });
+  // The card's trimmed number (engine advice) wins when sent, but only inside the safe band: never below the floor, never above the normal target.
+  const asked = Number(req.body?.goal);
+  const dayTarget = Number.isFinite(asked) && asked > 0 ? Math.min(core.target, Math.max(core.floor, Math.round(asked))) : core.target;
+  const day = rescueDay({ foods: safeFoods, target: dayTarget, floor: core.floor, ranges: core.ranges, recentIds: new Set(recent.map((r) => String(r.foodId))), eaten, fixedMeals });
   if (!day.plan.length) throw new HttpError(422, fixedMeals.length >= 4 ? 'Every meal of that day is already logged, so there is nothing left to plan.' : 'Not enough foods to build a plan yet. Log a few meals first');
   await MealPlan.deleteMany({ userId: uid, date, rescue: true, logged: false });
   const items = await MealPlan.insertMany(day.plan.map((p) => ({ userId: uid, date, rescue: true, mealType: p.mealType, foodId: p.foodId, foodName: p.foodName, quantity: p.quantity, servingUnit: p.servingUnit, calories: p.calories, protein: p.protein, fiber: p.fiber })));

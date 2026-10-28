@@ -29,7 +29,7 @@ export default function OverDayCard({ onPlan }) {
   const rescue = async () => {
     setBusy(true);
     try {
-      const r = await apiFetch("/api/plan/rescue-day", { method: "POST", body: JSON.stringify({ date: addDays(getLocalDate(), 1), today: getLocalDate() }) });
+      const r = await apiFetch("/api/plan/rescue-day", { method: "POST", body: JSON.stringify({ date: addDays(getLocalDate(), 1), today: getLocalDate(), ...(d.advice && !d.advice.skipCut ? { goal: d.advice.tomorrowTarget } : {}) }) });
       const j = await r.json();
       if (!r.ok) throw new Error(j.message);
       notify(`Gentle day planned for tomorrow (about ${j.goal} kcal). Edit it in the planner.`, "success");
@@ -69,7 +69,7 @@ export default function OverDayCard({ onPlan }) {
           {d.causes.findings.map((f) => <div key={f.id} className="fl-find"><span aria-hidden="true">{f.icon}</span><div><strong>{f.title}</strong><p>{f.detail}</p></div></div>)}
         </div>
       )}
-      {d.tier !== "single" && <div><button className="fl-btn ghost" disabled={busy} onClick={rescue}>🌿 Plan a gentle day for tomorrow</button></div>}
+      {d.tier !== "single" && d.advice && !d.advice.skipCut && <div><button className="fl-btn ghost" disabled={busy} onClick={rescue}>🌿 Plan a gentle day for tomorrow</button></div>}
         </div>
       </div>
     </div>

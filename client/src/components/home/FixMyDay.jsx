@@ -35,7 +35,7 @@ export default function FixMyDay({ over, hour, onChanged, onPlan, onClose }) {
   const rescue = async () => {
     setBusy("plan");
     try {
-      const r = await apiFetch("/api/plan/rescue-day", { method: "POST", body: JSON.stringify({ date: addDays(today, 1), today }) });
+      const r = await apiFetch("/api/plan/rescue-day", { method: "POST", body: JSON.stringify({ date: addDays(today, 1), today, ...(adv?.advice && !adv.advice.skipCut ? { goal: adv.advice.tomorrowTarget } : {}) }) });
       const j = await r.json();
       if (!r.ok) throw new Error(j.message);
       notify(`Gentle day planned for tomorrow (about ${j.goal} kcal${j.fixedMeals?.length ? `, around what you already logged` : ""}).`, "success");
@@ -53,14 +53,20 @@ export default function FixMyDay({ over, hour, onChanged, onPlan, onClose }) {
   }
 
   const c = adv?.correction;
+  const a = adv?.advice || null;
+  const cycle = adv?.cause === "undereating_cycle";
   const late = hour >= 21 || hour < 5;
   return (
     <div className="fx">
       <p className="fx-lead"><b>{over.toLocaleString()} kcal over.</b> One day barely moves your weight, so no punishing. Here is a calm way to handle it.</p>
       <ol className="fx-steps">
-        <li><span>1</span><div><b>{late ? "It's late: keep it simple" : "Rest of today: keep it light"}</b><p>{late ? "Skip extra snacks, sip water and sleep well. A good night helps hunger tomorrow." : "Clear soup, salad, curd or buttermilk. If you are not hungry, skip the extra snack."}</p></div></li>
-        <li><span>2</span><div><b>Walk for 15 minutes</b><p>Burns roughly 60 to 80 kcal and helps digestion. Log the steps after.</p></div></li>
-        <li><span>3</span><div><b>{c?.safe ? `Tomorrow: about ${c.perDay} kcal lighter, for ${c.days} days` : "No cutting needed"}</b><p>{c ? c.note : "Eat your normal plan tomorrow. A small overshoot does not need paying back."}</p></div></li>
+        {cycle
+          ? <li><span>1</span><div><b>Do not skip meals to make up for it</b><p>This heavy day came after a very light one. Eat regular meals, with protein in each, so hunger stays steady. Restricting again is what sets up the next big day.</p></div></li>
+          : <li><span>1</span><div><b>{late ? "It's late: keep it simple" : "Rest of today: keep it light"}</b><p>{late ? "Skip extra snacks, sip water and sleep well. A good night helps hunger tomorrow." : "Clear soup, salad, curd or buttermilk. If you are not hungry, skip the extra snack."}</p></div></li>}
+        <li><span>2</span><div><b>Walk for 15 minutes</b><p>Burns about {adv?.walkKcal || 70} kcal at your weight and helps digestion. It does not cancel the food, so treat it as a bonus. Log the steps after.</p></div></li>
+        {a
+          ? <li><span>3</span><div><b>{a.skipCut ? "No cutting needed" : `Tomorrow: about ${a.perDay} kcal lighter, for ${a.days} day${a.days > 1 ? "s" : ""}`}</b><p>{a.headline} {a.detail}</p></div></li>
+          : <li><span>3</span><div><b>{c?.safe ? `Tomorrow: about ${c.perDay} kcal lighter, for ${c.days} days` : "No cutting needed"}</b><p>{c ? c.note : "Eat your normal plan tomorrow. A small overshoot does not need paying back."}</p></div></li>}
       </ol>
       {heavy.length > 0 && (
         <div className="fx-log">
@@ -75,7 +81,7 @@ export default function FixMyDay({ over, hour, onChanged, onPlan, onClose }) {
         </div>
       )}
       <div className="fx-actions">
-        <button type="button" className="fx-btn" disabled={!!busy} onClick={rescue}>🌿 Plan a gentle day for tomorrow</button>
+        {!(a && a.skipCut) && <button type="button" className="fx-btn" disabled={!!busy} onClick={rescue}>🌿 Plan a gentle day for tomorrow</button>}
         <button type="button" className="fx-btn ghost" onClick={onClose}>Close</button>
       </div>
     </div>

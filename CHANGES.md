@@ -1,3 +1,12 @@
+# v53 - smarter "ate heavy for a few days" advice (weekly ledger engine)
+- New `server/lib/overEngine.js`; `lib/intakeAdvice.js` now delegates to it (same output shape, so the banners AND the meal planner use the same numbers). Rules: each day is judged against its own budget (target + earned activity); days with almost nothing logged are UNKNOWN, not zero; lighter days earn capped credit (30 % of target); a weekly surplus under 5 % of the weekly target gets NO cut; otherwise only a share (50 % one day, 60 % a streak, 40 % a heavy week) is recovered, over 3 / 4 / 5 days at most, max 12 % of target or 250 kcal a day, never below the 1200 / 1500 floor; a heavy day right after a very light day = restrict-overeat cycle, so no cut ("eat regular meals"); weight NOT rising after a heavy week = the target or log is probably off, so no cut; target already at the floor = no cut, easier pace suggested; gain goals never get a cut. "Over" is the same 8 % line as the rest of the app.
+- `GET /api/plan/over-days` now returns the engine's tier, cause, easier pace, `advice.ledger` (surplus, recovered, honest leftover, days it delays the goal, confidence), `walkKcal` and `engine: 'ledger-v1'`; `correction` is still sent for older apps, derived from the same advice.
+- `POST /api/plan/rescue-day` honours an optional `goal` (tomorrow's trimmed kcal), clamped between the safe floor and the normal target, so the planner matches the card.
+- Planner: no longer restricts treats when the advice is "no cut needed" (e.g. after a very light day).
+- Web: Over-day card and Fix my day show the engine's advice, hide "Plan a gentle day" when no cut is needed, the walk line is weight-based, and the see-saw case says not to skip meals.
+- Tests: `server/test/overEngine.unit.test.js` (16, passing). Server unit suite: 297 pass, 3 fail (the same 3 as in v52: album `owned`, features, v8_features; not touched). Existing smartPlan / fatloss / autoPlan / planSensei tests still pass unchanged.
+- NOT run here (no npm registry): the web build (`npm run build`), web tests, API integration tests (need MongoDB), and the app in a browser. The two edited JSX files were only syntax-checked.
+
 # v52 - everything from the 11-point list
 - Home "Eaten" kcal opens today's meals (`components/home/EatenSheet.jsx`) with the portion editor; closes after a save so the Undo toast shows.
 - Undo toast (5 s) after editing a portion: food log, planner, Eaten sheet (`undoNotice` in utils/undo.js).

@@ -369,7 +369,7 @@ router.post('/auto', wrap(async (req, res) => {
   const common = { habits, foods, catalogue: shared.filter((f) => !f.hidden), dates: planDates, target: core.target, targets, floor: core.floor, ranges: core.ranges, limits: limitTargets(core.target), occupied, dayBase, weekCounts, meals };
   const plan = mode === 'mine'
     ? buildAutoPlan(common)
-    : buildSmartPlan({ ...common, userFoods: pc.decorate(mine), diet, mode, needs: adv.needs, seed: `${uid}|${planDates[0]}|${variant}`, avoidIndulgent: !!adv.advice && adv.advice.level !== 'none', settings: pc.settings, excluder: pc.excluder, now: pc.now });
+    : buildSmartPlan({ ...common, userFoods: pc.decorate(mine), diet, mode, needs: adv.needs, seed: `${uid}|${planDates[0]}|${variant}`, avoidIndulgent: !!adv.advice && adv.advice.level !== 'none' && !adv.advice.skipCut, settings: pc.settings, excluder: pc.excluder, now: pc.now });
   // last gate: whatever the engine did, an excluded allergen is never shown or saved
   const leaked = findViolations(plan.items, pc.excluder);
   if (leaked.length) { plan.items = plan.items.filter((i) => !leaked.some((l) => l.item === i)); plan.notes = [...(plan.notes || []), 'A food that you keep out of your plan was removed.']; }

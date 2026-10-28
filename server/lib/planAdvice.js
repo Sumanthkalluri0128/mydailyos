@@ -11,8 +11,8 @@ async function loadAdvice(uid, today, { dates = [] } = {}) {
   const core = await loadCore(uid, today, { historyDays: 35 });
   const weights = core.weights.length ? core.weights : (core.profile.currentWeightKg ? [{ date: today, weightKg: core.profile.currentWeightKg }] : []);
   const rate = weights.length >= 2 ? trendRate(smoothTrend(weights), today) : null;
-  const days = core.days.map((d) => ({ date: d.date, calories: d.calories, protein: d.protein, fiber: d.fiber, sugar: d.sugar, sodium: d.sodium }));
-  const advice = core.target > 0 ? intakeAdvice({ days, target: core.target, floor: core.floor, today, direction: core.direction, weightTrendPerWeek: rate }) : null;
+  const days = core.days.map((d) => ({ date: d.date, calories: d.calories, caloriesBurned: d.caloriesBurned, protein: d.protein, fiber: d.fiber, sugar: d.sugar, sodium: d.sodium }));
+  const advice = core.target > 0 ? intakeAdvice({ days, target: core.target, floor: core.floor, today, direction: core.direction, weightTrendPerWeek: rate, profile: core.profile, paceKg: core.profile.goals?.weeklyPaceKg || 0.5 }) : null;
   const limits = core.target > 0 ? limitTargets(core.target) : {};
   const needs = recentNeeds({ days, today, ranges: core.ranges, limits });
   const targets = {};
