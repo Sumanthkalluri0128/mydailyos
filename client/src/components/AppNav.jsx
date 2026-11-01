@@ -15,6 +15,7 @@ export const NAV_GROUPS = [
   ] },
   { title: "Move & body", items: [
     ["water", "💧", "Water", "Hydration"],
+    ["bodyPlan", "💪", "Body plan", "Your goal, calories and gym program"],
     ["exercise", "🔥", "Exercise", "Workouts and steps"],
     ["weight", "⚖️", "Weight", "Weigh-ins and trend"],
     ["health", "❤️", "Health", "Sleep and measurements"],
@@ -26,9 +27,9 @@ export const NAV_GROUPS = [
     ["progress", "📈", "Progress", "History, charts, reports"],
   ] },
 ];
-const TABS = [["dashboard", "🏠", "Home"], ["foodLogger", "🍽️", "Food"], ["planner", "📅", "Plan"], ["progress", "📈", "Progress"]];
+const TABS = [["dashboard", "🏠", "Home"], ["foodLogger", "🍽️", "Food"], ["planner", "📅", "Plan"], ["bodyPlan", "💪", "Body"], ["progress", "📈", "Progress"]];
 const FOOD_PAGES = ["foodLogger", "food"];
-const PILL = [["dashboard", "🏠", "Home"], ["foodLogger", "🍽️", "Log Food"], ["planner", "📅", "Meal Planner"], ["recipes", "🍲", "Recipes"], ["food", "🥗", "My Foods"]];
+const PILL = [["dashboard", "🏠", "Home"], ["foodLogger", "🍽️", "Log Food"], ["planner", "📅", "Meal Planner"], ["recipes", "🍲", "Recipes"], ["food", "🥗", "My Foods"], ["bodyPlan", "💪", "Body Plan"]];
 const PILL_IDS = PILL.map((p) => p[0]);
 const KEYS = { dashboard: "home", foodLogger: "log", planner: "planner", recipes: "recipes", food: "food", water: "water", exercise: "exercise", weight: "weight", health: "health", goals: "goals", habit: "habit", task: "task", progress: "progress" };
 const GROUP_KEYS = { "Today": "group.today", "Eat": "group.eat", "Move & body": "group.move", "Stay on track": "group.track" };

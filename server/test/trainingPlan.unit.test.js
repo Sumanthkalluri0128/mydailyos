@@ -222,3 +222,9 @@ test('no shaming words anywhere in the training copy, and the output is plain JS
     assert.ok(text.length < 400000, 'response stays a sensible size');
   }
 });
+
+test('every exercise (main, home backup and quick circuit) names its movement slot so the app can draw its picture', () => {
+  const p = plan(man, 'muscular', null, {}).training.program;
+  const slots = ['squat', 'hinge', 'lunge', 'glute', 'quad', 'ham', 'calf', 'hpress', 'ipress', 'fly', 'vpress', 'lateral', 'rear', 'tri', 'vpull', 'hrow', 'bicep', 'core'];
+  p.sessions.forEach((s) => [...s.exercises, ...s.quick.exercises].forEach((e) => assert.ok(slots.includes(e.slot), `${e.name} has slot ${e.slot}`)));
+});

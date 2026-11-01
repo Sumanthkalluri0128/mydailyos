@@ -1,68 +1,119 @@
+/* ==========================================================================
+   Body plan page.  Every class starts with "bp-" so it can never clash with other pages.
+   Sections:  1 Look & colours   2 Page layout   3 Cards & buttons   4 Setup chips
+              5 Weekly program   6 Exercise cards + pictures   7 Small helpers
+   To re-colour the whole page, change the four variables in section 1.
+   ========================================================================== */
+
+/* 1. Look & colours --------------------------------------------------------- */
+.bp {
+  --bp-accent: var(--primary, #7a55ff);                                   /* main colour: buttons, selected items */
+  --bp-soft:   color-mix(in srgb, var(--bp-accent) 10%, transparent);     /* light tint of the accent */
+  --bp-line:   rgba(127, 127, 160, .3);                                   /* thin borders */
+  --bp-green:  #2aa876;                                                   /* "easy cardio" and "good" */
+}
+
+/* 2. Page layout ------------------------------------------------------------ */
 .bp { display: grid; gap: 12px; max-width: 760px; margin: 0 auto; padding-bottom: 32px; }
-.bp-back, .bp-link { background: none; border: 0; color: inherit; font-weight: 700; cursor: pointer; padding: 6px 2px; opacity: .85; justify-self: start; }
-.bp-link { text-decoration: underline; padding: 0 4px; }
 .bp-title { margin: 0; font-size: 28px; }
 .bp-muted { margin: 4px 0 0; font-size: 13px; line-height: 1.5; opacity: .75; }
 .bp-err { color: #d33; font-weight: 600; }
+.bp-back, .bp-link { background: none; border: 0; color: inherit; font-weight: 700; cursor: pointer; padding: 6px 2px; opacity: .85; justify-self: start; }
+.bp-link { text-decoration: underline; padding: 0 4px; }
+
+/* the four body-goal choices */
 .bp-types { display: grid; gap: 10px; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); }
 .bp-type { display: flex; gap: 12px; align-items: center; text-align: left; padding: 14px; border-radius: 16px; cursor: pointer; color: inherit; font: inherit;
-  background: var(--card-bg, rgba(127, 127, 160, .12)); border: 2px solid rgba(127, 127, 160, .25); transition: border-color .15s, transform .15s; }
+  background: var(--card-bg, rgba(127, 127, 160, .12)); border: 2px solid var(--bp-line); transition: border-color .15s, transform .15s; }
 .bp-type:hover { transform: translateY(-1px); }
-.bp-type.on { border-color: var(--primary, #7a55ff); background: color-mix(in srgb, var(--primary, #7a55ff) 10%, transparent); }
+.bp-type.on { border-color: var(--bp-accent); background: var(--bp-soft); }
 .bp-ic { font-size: 30px; }
-.bp-tt { display: grid; gap: 2px; } .bp-tt small { opacity: .75; font-size: 12.5px; }
+.bp-tt { display: grid; gap: 2px; }
+.bp-tt small { opacity: .75; font-size: 12.5px; }
+
+/* 3. Cards & buttons -------------------------------------------------------- */
 .bp-card { padding: 14px 16px; border-radius: 16px; background: var(--card-bg, rgba(127, 127, 160, .12)); border: 1px solid rgba(127, 127, 160, .2); }
-.bp-safe.alert { border: 1.5px solid #d33; } .bp-safe.alert b { color: #d33; }
-.bp-fold { all: unset; box-sizing: border-box; width: 100%; display: flex; justify-content: space-between; align-items: center; font-weight: 800; font-size: 15px; cursor: pointer; }
-.bp-fold:focus-visible { outline: 2px solid var(--primary, #7a55ff); outline-offset: 3px; border-radius: 6px; }
+.bp-safe.alert { border: 1.5px solid #d33; }
+.bp-safe.alert b { color: #d33; }
+.bp-fold { all: unset; box-sizing: border-box; width: 100%; display: flex; justify-content: space-between; align-items: center; font-weight: 800; font-size: 15px; cursor: pointer; }   /* a card's clickable title */
 .bp-body { margin-top: 10px; }
 .bp-stats { display: grid; gap: 8px; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); margin-bottom: 6px; }
-.bp-stat { display: grid; gap: 2px; padding: 10px 12px; border-radius: 14px; background: color-mix(in srgb, var(--primary, #7a55ff) 10%, transparent); }
-.bp-stat small { opacity: .75; font-size: 12px; } .bp-stat b { font-size: 16px; }
+.bp-stat { display: grid; gap: 2px; padding: 10px 12px; border-radius: 14px; background: var(--bp-soft); }
+.bp-stat small { opacity: .75; font-size: 12px; }
+.bp-stat b { font-size: 16px; }
+.bp-note { margin: 8px 0 0; padding: 10px 12px; border-radius: 12px; font-size: 13px; line-height: 1.5; background: var(--bp-soft); }
+.bp-lead { margin: 0 0 10px; font-size: 15px; line-height: 1.55; font-weight: 600; }
+.bp-h  { margin: 16px 0 4px; font-size: 14px; }
+.bp-h5 { margin: 10px 0 2px; font-size: 12.5px; opacity: .85; }
 .bp-lines { margin: 0 0 6px; padding-left: 18px; font-size: 13.5px; line-height: 1.55; }
 .bp-micro { margin: 8px 0 0; font-size: 13.5px; }
-.bp-tape { display: grid; gap: 8px; margin-top: 10px; }
-.bp-field { display: grid; gap: 4px; font-size: 13px; font-weight: 600; }
-.bp-field input { padding: 10px 12px; border-radius: 12px; border: 1px solid rgba(127, 127, 160, .35); background: transparent; color: inherit; font: inherit; }
+.bp-notice b { color: #b26a00; }
+
 .bp-btn { min-height: 44px; padding: 10px 20px; border-radius: 12px; border: 0; font-weight: 800; font-size: 14px; cursor: pointer; color: #fff;
   background: linear-gradient(135deg, #7a55ff, #9b6bff); box-shadow: 0 6px 16px rgba(104, 71, 232, .28); }
-.bp-btn.ghost { background: color-mix(in srgb, var(--primary, #7a55ff) 10%, transparent); color: var(--primary, #7a55ff); box-shadow: none; border: 1px solid color-mix(in srgb, var(--primary, #7a55ff) 30%, transparent); justify-self: start; }
+.bp-btn.ghost { background: var(--bp-soft); color: var(--bp-accent); box-shadow: none; border: 1px solid color-mix(in srgb, var(--bp-accent) 30%, transparent); justify-self: start; }
 .bp-btn:disabled { opacity: .55; cursor: default; }
 .bp-save { display: grid; gap: 8px; justify-items: center; text-align: center; margin-top: 4px; }
 
-/* training: setup chips, body analysis, weekly program */
+/* tape-measure form */
+.bp-tape { display: grid; gap: 8px; margin-top: 10px; }
+.bp-field { display: grid; gap: 4px; font-size: 13px; font-weight: 600; }
+.bp-field input { padding: 10px 12px; border-radius: 12px; border: 1px solid var(--bp-line); background: transparent; color: inherit; font: inherit; }
+
+/* 4. Setup chips (where / level / days / equipment ...) --------------------- */
 .bp-q { display: grid; gap: 6px; margin: 0 0 14px; font-size: 14px; }
 .bp-chips { display: flex; flex-wrap: wrap; gap: 8px; }
-.bp-chip { min-height: 40px; padding: 8px 14px; border-radius: 999px; cursor: pointer; font: inherit; font-size: 13.5px; font-weight: 700; color: inherit;
-  background: transparent; border: 1.5px solid rgba(127, 127, 160, .4); }
-.bp-chip.on { background: var(--primary, #7a55ff); border-color: var(--primary, #7a55ff); color: #fff; }
-.bp-chip:focus-visible, .bp-tab:focus-visible, .bp-wk:focus-visible { outline: 2px solid var(--primary, #7a55ff); outline-offset: 2px; }
-.bp-note { margin: 8px 0 0; padding: 10px 12px; border-radius: 12px; font-size: 13px; line-height: 1.5; background: color-mix(in srgb, var(--primary, #7a55ff) 10%, transparent); }
-.bp-lead { margin: 0 0 10px; font-size: 15px; line-height: 1.55; font-weight: 600; }
-.bp-h { margin: 16px 0 4px; font-size: 14px; } .bp-h5 { margin: 10px 0 2px; font-size: 12.5px; opacity: .85; }
-.bp-notice b { color: #b26a00; }
+.bp-chip { min-height: 40px; padding: 8px 14px; border-radius: 999px; cursor: pointer; font: inherit; font-size: 13.5px; font-weight: 700; color: inherit; background: transparent; border: 1.5px solid var(--bp-line); }
+.bp-chip.on { background: var(--bp-accent); border-color: var(--bp-accent); color: #fff; }
+
+/* 5. Weekly program: the 7 day boxes and the session tabs ------------------- */
 .bp-week { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; margin: 10px 0 4px; }
-.bp-wk { display: grid; gap: 2px; justify-items: center; padding: 8px 0; border-radius: 12px; font: inherit; color: inherit; cursor: pointer; border: 1.5px solid rgba(127, 127, 160, .3); background: transparent; }
+.bp-wk { display: grid; gap: 2px; justify-items: center; padding: 8px 0; border-radius: 12px; font: inherit; color: inherit; cursor: pointer; border: 1.5px solid var(--bp-line); background: transparent; }
 .bp-wk:disabled { cursor: default; opacity: .75; }
-.bp-wk small { font-size: 11px; opacity: .75; } .bp-wk b { font-size: 16px; }
-.bp-wk.train { background: color-mix(in srgb, var(--primary, #7a55ff) 16%, transparent); border-color: var(--primary, #7a55ff); }
-.bp-wk.active { background: color-mix(in srgb, #2aa876 16%, transparent); border-color: #2aa876; }
-.bp-wk.sel { box-shadow: 0 0 0 2px var(--primary, #7a55ff); }
+.bp-wk small { font-size: 11px; opacity: .75; }
+.bp-wk b { font-size: 16px; }
+.bp-wk.train  { background: color-mix(in srgb, var(--bp-accent) 16%, transparent); border-color: var(--bp-accent); }
+.bp-wk.active { background: color-mix(in srgb, var(--bp-green) 16%, transparent); border-color: var(--bp-green); }
+.bp-wk.sel { box-shadow: 0 0 0 2px var(--bp-accent); }
 .bp-legend { margin: 2px 0 10px; font-size: 12px; opacity: .8; }
 .bp-dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin: 0 4px 0 8px; background: rgba(127, 127, 160, .5); }
-.bp-dot.train { background: var(--primary, #7a55ff); } .bp-dot.active { background: #2aa876; }
+.bp-dot.train { background: var(--bp-accent); }
+.bp-dot.active { background: var(--bp-green); }
 .bp-tabs { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 6px; margin-bottom: 8px; }
-.bp-tab { flex: none; min-height: 38px; padding: 6px 12px; border-radius: 10px; cursor: pointer; font: inherit; font-size: 13px; font-weight: 700; color: inherit; border: 1.5px solid rgba(127, 127, 160, .35); background: transparent; }
-.bp-tab.on { background: var(--primary, #7a55ff); color: #fff; border-color: var(--primary, #7a55ff); }
+.bp-tab { flex: none; min-height: 38px; padding: 6px 12px; border-radius: 10px; cursor: pointer; font: inherit; font-size: 13px; font-weight: 700; color: inherit; border: 1.5px solid var(--bp-line); background: transparent; }
+.bp-tab.on { background: var(--bp-accent); color: #fff; border-color: var(--bp-accent); }
+
+/* keyboard focus ring for everything clickable */
+.bp-fold:focus-visible, .bp-chip:focus-visible, .bp-tab:focus-visible, .bp-wk:focus-visible { outline: 2px solid var(--bp-accent); outline-offset: 3px; border-radius: 8px; }
+
+/* 6. Exercise cards + pictures ---------------------------------------------- */
 .bp-exlist { list-style: none; margin: 8px 0; padding: 0; display: grid; gap: 10px; }
-.bp-ex { padding: 12px; border-radius: 14px; background: color-mix(in srgb, var(--primary, #7a55ff) 6%, transparent); border: 1px solid rgba(127, 127, 160, .2); }
+.bp-ex { padding: 12px; border-radius: 14px; background: color-mix(in srgb, var(--bp-accent) 6%, transparent); border: 1px solid rgba(127, 127, 160, .2); }
 .bp-ex-top { display: flex; gap: 10px; align-items: flex-start; }
-.bp-n { flex: none; width: 24px; height: 24px; border-radius: 50%; display: grid; place-items: center; font-size: 12px; font-weight: 800; background: var(--primary, #7a55ff); color: #fff; }
+.bp-n { flex: none; width: 24px; height: 24px; border-radius: 50%; display: grid; place-items: center; font-size: 12px; font-weight: 800; background: var(--bp-accent); color: #fff; }
 .bp-meta { font-size: 12.5px; opacity: .8; margin-top: 2px; }
 .bp-cue { margin: 8px 0 4px; font-size: 13px; line-height: 1.5; }
-.bp-ex details { margin-top: 4px; } .bp-ex summary, .bp-det summary { cursor: pointer; font-size: 13px; font-weight: 700; padding: 6px 0; }
+.bp-ex details { margin-top: 4px; }
+.bp-ex summary, .bp-det summary { cursor: pointer; font-size: 13px; font-weight: 700; padding: 6px 0; }
 .bp-det { margin: 6px 0; }
 .bp-pill { display: inline-block; padding: 1px 8px; border-radius: 999px; font-size: 11px; font-weight: 700; background: rgba(127, 127, 160, .2); }
+
+/* the "Start -> Finish" drawing (components/ExercisePic.jsx) */
+.bp-pic { display: flex; align-items: center; justify-content: center; gap: 6px; margin: 10px 0 2px; padding: 8px; border-radius: 12px; background: var(--bp-soft); }
+.bp-pic-frame { margin: 0; flex: 1 1 0; max-width: 150px; text-align: center; }
+.bp-pic-frame svg { width: 100%; height: auto; display: block; }
+.bp-pic-frame figcaption { font-size: 11px; font-weight: 700; opacity: .7; }
+.bp-pic-arrow { font-size: 20px; font-weight: 800; color: var(--bp-accent); }
+.bp-pic-bone { stroke: currentColor; stroke-width: 5; stroke-linecap: round; }      /* the body lines */
+.bp-pic-bone.back { opacity: .4; }                                                  /* the far leg */
+.bp-pic-head { fill: currentColor; }
+.bp-pic-weight { fill: var(--bp-accent); }                                          /* dumbbell / bar in the hands */
+.bp-pic-floor, .bp-pic-seat { stroke: var(--bp-line); stroke-width: 2.5; stroke-linecap: round; }
+.bp-pic-photo { display: block; width: 100%; max-height: 220px; object-fit: cover; border-radius: 12px; margin-top: 10px; }   /* real photo, if the server sends one */
+
+/* 7. Small helpers: weekly-sets bars ---------------------------------------- */
 .bp-vol { display: grid; grid-template-columns: 82px 1fr auto; gap: 8px; align-items: center; margin: 6px 0; font-size: 13px; }
 .bp-bar { height: 8px; border-radius: 6px; background: rgba(127, 127, 160, .2); overflow: hidden; }
-.bp-bar i { display: block; height: 100%; border-radius: 6px; background: #2aa876; } .bp-bar i.low { background: #d9a21b; } .bp-bar i.high { background: #d9701b; }
+.bp-bar i { display: block; height: 100%; border-radius: 6px; background: var(--bp-green); }
+.bp-bar i.low  { background: #d9a21b; }
+.bp-bar i.high { background: #d9701b; }

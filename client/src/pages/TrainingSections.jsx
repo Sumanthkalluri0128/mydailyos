@@ -2,6 +2,7 @@
 // weekly program with an alternative for every situation (machine busy, no gym today, no time, rest day). All numbers come from the
 // server (lib/trainingPlan.js); this file only shows them. Used by BodyPlanPage.
 import { useState } from "react";
+import ExercisePic from "../components/ExercisePic";
 
 export function Fold({ title, open, onToggle, children }) {
   return (
@@ -99,6 +100,7 @@ function Exercise({ e, n, showSwaps }) {
   return (
     <li className="bp-ex">
       <div className="bp-ex-top"><span className="bp-n">{n}</span><div><b>{e.name}</b><div className="bp-meta">{e.sets} × {e.reps} · rest {rest(e.restSec)} · {e.effort.toLowerCase()}</div></div></div>
+      <ExercisePic slot={e.slot} image={e.image} name={e.name} />
       <p className="bp-cue">{e.cue}</p>
       <details>
         <summary>Weight, progress{showSwaps && sw ? " and alternatives" : ""}</summary>
@@ -159,7 +161,7 @@ export function Backups({ program }) {
       )}
       <h4 className="bp-h">Short on time: {s.quick.title} ({s.quick.minutes} min)</h4>
       <p className="bp-muted">{s.quick.format}</p>
-      <ol className="bp-exlist">{s.quick.exercises.map((e, i) => <li key={e.id} className="bp-ex"><div className="bp-ex-top"><span className="bp-n">{i + 1}</span><div><b>{e.name}</b><div className="bp-meta">{e.reps}</div></div></div><p className="bp-cue">{e.cue}</p></li>)}</ol>
+      <ol className="bp-exlist">{s.quick.exercises.map((e, i) => <li key={e.id} className="bp-ex"><div className="bp-ex-top"><span className="bp-n">{i + 1}</span><div><b>{e.name}</b><div className="bp-meta">{e.reps}</div></div></div><ExercisePic slot={e.slot} image={e.image} name={e.name} /><p className="bp-cue">{e.cue}</p></li>)}</ol>
       <h4 className="bp-h">Busy gym</h4>
       <Lines items={program.busyGym} />
       <h4 className="bp-h">Best things to buy for home training</h4>

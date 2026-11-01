@@ -55,7 +55,7 @@ export default function BodyPlanPage({ onBack, onSaved }) {
   if (!d) {
     return (
       <section className="bp">
-        <button type="button" className="bp-back" onClick={onBack}>← Back</button>
+        {onBack && <button type="button" className="bp-back" onClick={onBack}>← Back</button>}
         {err ? <p className="bp-err" role="alert">{err} <button type="button" className="bp-link" onClick={() => load()}>Try again</button></p> : <p className="bp-muted">Loading your body plan…</p>}
       </section>
     );
@@ -86,7 +86,7 @@ export default function BodyPlanPage({ onBack, onSaved }) {
 
   return (
     <section className="bp">
-      <button type="button" className="bp-back" onClick={onBack}>← Back</button>
+      {onBack && <button type="button" className="bp-back" onClick={onBack}>← Back</button>}
       <h1 className="bp-title">Body plan</h1>
       <p className="bp-muted">Choose the body you are aiming for. Your calories, protein, fat and carbs are worked out from this and your measurements.</p>
       {err && <p className="bp-err" role="alert">{err}</p>}

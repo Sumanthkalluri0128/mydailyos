@@ -1,3 +1,8 @@
+## Body plan is now its own tab (with exercise pictures)
+- Body plan sits in the main navigation instead of being hidden behind Profile / Home. It is always visible (not locked by simple mode).
+- Every exercise shows a Start -> Finish stick-figure picture (ExercisePic). Poses are a few angles per movement, so there are no image files to download. An exercise can carry an `image` URL to show a real photo instead.
+- bodyplan.css rewritten in 7 labelled sections with four colour variables at the top. Class names unchanged.
+
 # v54 - Body plan: full training program + body analysis (server and web)
 - The Body plan's training advice was 3 fixed lines per goal. It is now a body analysis and a complete weekly program that adapts to the person's size, shape, age, sex, goal, experience, where they train and what hurts. Full write-up, with the findings and what was NOT changed: `docs/BODYPLAN_TRAINING.md`.
 - New `server/lib/exerciseLibrary.js` (130 exercises with swap logic) and `server/lib/trainingPlan.js`. `lib/bodyPlan.js` returns `plan.analysis` and `plan.training.program` (the old `plan.training.sessions` lines are kept for older apps).

@@ -616,7 +616,7 @@ function App() {
         {shell}
         <main key={currentPage} className="dashboard fx-page">
           <Suspense fallback={<PageSkeleton variant="list" />}>
-          <BodyPlanPage onBack={() => setCurrentPage("dashboard")} onSaved={() => setCurrentPage("dashboard")} />
+          <BodyPlanPage />
         </Suspense>
         </main>
       </div>

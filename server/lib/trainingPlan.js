@@ -273,7 +273,7 @@ function quickSession(slots, ctxHome, level) {
   const rounds = level === 'beginner' ? 2 : 3;
   const list = picks.slice(0, 4).map(({ slot, ex }) => {
     const s = scheme(ex, slot, ctxHome, false);
-    return { id: ex.id, name: ex.name, reps: repsText(s), cue: ex.cue };
+    return { id: ex.id, name: ex.name, slot, reps: repsText(s), cue: ex.cue };
   });
   return {
     title: 'Quick session: no gym needed', rounds, exercises: list, minutes: Math.round(3 + rounds * (list.length * 1.2 + 1)),
