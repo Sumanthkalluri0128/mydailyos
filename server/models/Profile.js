@@ -26,6 +26,8 @@ const schema = new mongoose.Schema(
       // How fast to move toward the target weight, in kg per week (drives the calorie target).
       // The body the person is aiming for (chosen in the app). Drives protein/fat targets and the Body plan. '' = not chosen yet.
       bodyType: { type: String, enum: ['', 'lean', 'athletic', 'muscular', 'balanced'], default: '' },
+      // The day the person first saved a Body plan (YYYY-MM-DD). The adaptive plan counts weeks from here, so days before it are never "not done".
+      bodyPlanStartedOn: { type: String, default: '' },
       weeklyPaceKg: { type: Number, min: 0.1, max: 1, default: 0.5 },
     },
     // How the person trains (asked on the Body plan screen). Drives the weekly program: where, level, days, time, home equipment,

@@ -6,7 +6,7 @@
 //   - you cannot train today but want to stay active         -> active menu (walks, cycling, swimming, yoga, sport) with calories
 // Pure (no database), so it is unit-tested. Honest limits: this is a sound starting program from established strength-training
 // practice (progressive overload, 10 to 20 hard sets per muscle a week, reps in reserve), not a diagnosis or a medical plan.
-const { LIB, BY_ID, SLOTS, LEVELS, PLACES, LIMITS, HOME_EQUIP, FOCUS, rank, swapsFor, kindOf } = require('./exerciseLibrary');
+const { FORM, LIB, BY_ID, SLOTS, LEVELS, PLACES, LIMITS, HOME_EQUIP, FOCUS, rank, swapsFor, kindOf } = require('./exerciseLibrary');
 
 const r1 = (x) => Math.round(x * 10) / 10;
 const num = (x) => { const v = Number(x); return Number.isFinite(v) ? v : 0; };
@@ -204,7 +204,7 @@ function toExercise(ex, slotId, ctx, first, withSwaps) {
   const out = {
     id: ex.id, name: ex.name, slot: slotId, slotLabel: SLOTS[slotId].label, targets: SLOTS[slotId].main, kind: kindOf(ex),
     sets: s.sets, reps: repsText(s), repsLo: s.repsLo, repsHi: s.repsHi, unit: s.unit, perSide: s.perSide, rir: s.rir, effort: effortText(s.rir), restSec: s.restSec,
-    cue: ex.cue,
+    cue: ex.cue, form: FORM[slotId] || null, helpers: SLOTS[slotId].aux,
     progress: unloaded
       ? `When every set reaches ${s.repsHi}${s.unit === 'seconds' ? ' seconds' : ' reps'} with the same effort: slow the tempo (3 seconds down), then move to a harder version${ctx.where === 'home' ? ' or add a loaded backpack' : ''}.`
       : s.unit === 'seconds'
@@ -591,4 +591,5 @@ function trainingPlan({ profile = {}, type, mode, body, goal, steps, protein, ca
   return { prefs, program, analysis, summary: lines };
 }
 
-module.exports = { trainingPlan, sanitizePrefs, resolvePrefs, bodyFlags, TRAINING_OPTIONS, SPLITS, WEEK_DAYS, scheme, sessionMinutes, ACTIVE_ALL, designDays };
+const maxDaysFor = (level, age) => maxDays(level || 'beginner', { age: num(age) });
+module.exports = { maxDaysFor, trainingPlan, sanitizePrefs, resolvePrefs, bodyFlags, TRAINING_OPTIONS, SPLITS, WEEK_DAYS, scheme, sessionMinutes, ACTIVE_ALL, designDays };

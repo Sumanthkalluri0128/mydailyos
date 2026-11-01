@@ -96,80 +96,195 @@ function Swap({ s }) {
   return <li><b>{s.name}</b> <span className="bp-pill">{s.kind}</span><br /><span className="bp-muted">{s.hint}</span></li>;
 }
 
-/** One exercise: picture first, then the three numbers a beginner needs (sets, reps, rest), one cue, and the extras tucked away. */
-function Exercise({ e, n, showSwaps }) {
+const FEEL = [["easy", "😌 Easy"], ["good", "🙂 Good"], ["hard", "😮‍💨 Hard"]];
+const PAIN = [["knee", "Knee"], ["back", "Back"], ["shoulder", "Shoulder"], ["wrist", "Wrist"], ["elbow", "Elbow"], ["dizzy", "Dizzy or chest pressure"]];
+const REASONS = [["tired", "Tired"], ["busy", "No time"], ["sick", "Unwell"], ["pain", "Sore or hurt"], ["travel", "Travelling"]];
+const ACTION_TEXT = { start: "Find your weight", addRep: "+1 rep", addWeight: "Heavier", harder: "Harder version", recover: "Recover", ease: "Lighter", };
+const ymd = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+
+function FormGuide({ f }) {
+  if (!f) return null;
+  return (
+    <div className="bp-form">
+      <p><b>Set up</b> {f.setup}</p>
+      <p><b>Move</b> {f.move}</p>
+      <p><b>Breathe</b> {f.breathe}</p>
+      <p className="avoid"><b>Avoid</b> {f.avoid}</p>
+    </div>
+  );
+}
+
+/** One exercise: the picture, today's target (from what you did last time), the set logger, how to do it, and the swaps. */
+function Exercise({ e, n, showSwaps, log, setLog, canLog }) {
   const sw = e.swaps;
+  const t = e.next;
+  const sets = e.setsToday || e.sets;
+  const rows = log || [];
+  const setRow = (i, k, v) => setLog(e.id, rows.map((r, j) => (j === i ? { ...r, [k]: v } : r)));
+  const unit = e.unit === "seconds" ? "sec" : "reps";
   return (
     <li className="bp-ex">
       <div className="bp-ex-top"><span className="bp-n">{n}</span><b>{e.name}</b></div>
-      <ExercisePic slot={e.slot} image={e.image} name={e.name} />
-      {e.sets ? <div className="bp-badges"><span>{e.sets} sets</span><span>{e.reps} reps</span><span>rest {rest(e.restSec)}</span></div> : <div className="bp-badges"><span>{e.reps}</span></div>}
+      <ExercisePic ex={e} />
+      {e.sets ? <div className="bp-badges"><span>{sets} sets</span><span>{e.reps}</span><span>rest {rest(e.restSec)}</span></div> : <div className="bp-badges"><span>{e.reps}</span></div>}
+      {t && (
+        <div className={`bp-target bp-t-${t.action}`}>
+          <b>{ACTION_TEXT[t.action] || "Today"}{t.weightKg ? ` · ${t.weightKg} kg` : ""}{t.action !== "start" ? ` · ${t.reps} ${unit}` : ""}</b>
+          <span>{t.note}</span>
+          {t.last && <small>Last time: {t.last.reps} {unit}{t.last.weightKg ? ` at ${t.last.weightKg} kg` : ""}</small>}
+        </div>
+      )}
+      {e.effortToday && <p className="bp-muted">{e.effortToday}</p>}
       <p className="bp-cue">{e.cue}</p>
-      {e.weightHint && (
-        <details>
-          <summary>How heavy, and what if the machine is busy</summary>
-          <p className="bp-muted">{e.weightHint}</p>
-          <p className="bp-muted">{e.progress}</p>
-          {showSwaps && sw && (
-            <>
-              {sw.busy.length > 0 && <><h5 className="bp-h5">Machine busy or missing</h5><ul className="bp-lines">{sw.busy.map((x) => <Swap key={x.id} s={x} />)}</ul></>}
-              {sw.dumbbellOnly && <><h5 className="bp-h5">Only dumbbells and a bench</h5><ul className="bp-lines"><Swap s={sw.dumbbellOnly} /></ul></>}
-              {sw.home && <><h5 className="bp-h5">No equipment (home)</h5><ul className="bp-lines"><Swap s={sw.home} /></ul></>}
-              {(sw.easier || sw.harder) && <p className="bp-muted">{sw.easier ? `Too hard? Try: ${sw.easier.name}. ` : ""}{sw.harder ? `Too easy? Try: ${sw.harder.name}.` : ""}</p>}
-            </>
-          )}
+      <FormGuide f={e.form} />
+      {canLog && rows.length > 0 && (
+        <div className="bp-log" role="group" aria-label={`Log ${e.name}`}>
+          {rows.map((r, i) => (
+            <div key={i} className="bp-log-row">
+              <span>Set {i + 1}</span>
+              {e.unit !== "seconds" && <label><input type="number" inputMode="decimal" min="0" step="0.5" value={r.weightKg} onChange={(ev) => setRow(i, "weightKg", ev.target.value)} aria-label={`Set ${i + 1} weight in kg`} /> kg</label>}
+              <label><input type="number" inputMode="numeric" min="0" step="1" value={r.reps} onChange={(ev) => setRow(i, "reps", ev.target.value)} aria-label={`Set ${i + 1} ${unit}`} /> {unit}</label>
+            </div>
+          ))}
+          <button type="button" className="bp-link" onClick={() => setLog(e.id, [...rows, { ...(rows[rows.length - 1] || { weightKg: "", reps: "" }) }].slice(0, 8))}>+ Add a set</button>
+        </div>
+      )}
+      <details>
+        <summary>How heavy, and what if the machine is busy</summary>
+        <p className="bp-muted">{e.weightHint}</p>
+        <p className="bp-muted">{e.progress}</p>
+        {showSwaps && sw && (
+          <>
+            {sw.busy.length > 0 && <><h5 className="bp-h5">Machine busy or missing</h5><ul className="bp-lines">{sw.busy.map((x) => <Swap key={x.id} s={x} />)}</ul></>}
+            {sw.dumbbellOnly && <><h5 className="bp-h5">Only dumbbells and a bench</h5><ul className="bp-lines"><Swap s={sw.dumbbellOnly} /></ul></>}
+            {sw.home && <><h5 className="bp-h5">No equipment (home)</h5><ul className="bp-lines"><Swap s={sw.home} /></ul></>}
+            {(sw.easier || sw.harder) && <p className="bp-muted">{sw.easier ? `Too hard? Try: ${sw.easier.name}. ` : ""}{sw.harder ? `Too easy? Try: ${sw.harder.name}.` : ""}</p>}
+          </>
+        )}
+      </details>
+    </li>
+  );
+}
+
+const STATUS_ICON = { done: "✅", partial: "◐", extra: "✅", today: "💪", planned: "💪", spare: "·", skipped: "—", notdone: "○" };
+
+/** "This week": how you are doing, what changed and why, and what you can accept with one tap. */
+export function AdaptCard({ adapt, onApply, busy }) {
+  if (!adapt) return null;
+  const b = adapt.body;
+  return (
+    <div className="bp-card bp-adapt">
+      <h3 className="bp-h0">{adapt.status.headline}</h3>
+      <p className="bp-lead">{adapt.status.detail}</p>
+      <p className="bp-note"><b>{adapt.phase.name}.</b> {adapt.phase.why}</p>
+      <p className="bp-muted">{adapt.todayPlan.text}</p>
+      {adapt.changes.length > 0 && (
+        <details open>
+          <summary>What changed this week, and why</summary>
+          <ul className="bp-lines">{adapt.changes.map((c) => <li key={c.id}><b>{c.title}.</b> <span className="bp-muted">{c.detail}</span></li>)}</ul>
         </details>
       )}
-    </li>
+      {adapt.suggestions.map((sg) => (
+        <div key={sg.id} className={`bp-sugg${sg.level === "alert" ? " alert" : ""}`}>
+          <b>{sg.title}</b><p className="bp-muted">{sg.detail} <i>{sg.why}</i></p>
+          {sg.apply && <button type="button" className="bp-btn ghost" disabled={busy} onClick={() => onApply(sg.apply)}>Yes, update my plan</button>}
+        </div>
+      ))}
+      <details>
+        <summary>Is it working?</summary>
+        <p className="bp-muted">{b.detail}</p>
+        {b.ratePerWeekKg !== null && <p className="bp-muted">Weight trend: {b.ratePerWeekKg > 0 ? "+" : ""}{b.ratePerWeekKg} kg a week{b.waistChangeCm !== null ? ` · waist ${b.waistChangeCm > 0 ? "+" : ""}${b.waistChangeCm} cm over 5 weeks` : ""}{b.liftsTracked ? ` · ${b.liftsProgressing} of ${b.liftsTracked} lifts moving up` : ""}</p>}
+        <p className="bp-muted">Cardio this week: {adapt.cardio.doneMin} of {adapt.cardio.targetMin} minutes (builds toward {adapt.cardio.fullTargetMin}).</p>
+      </details>
+    </div>
   );
 }
 
 const WAYS = [["gym", "🏋️ Gym"], ["home", "🏠 Home"], ["quick", "⏱️ Quick"]];
 
-/** The Workout tab. Pick a day (today is already chosen), pick where you are, and follow the list top to bottom. */
-export function Workout({ program }) {
+/** The Workout tab. Pick a day (today is already chosen), pick where you are, follow the list, log your sets, finish. */
+export function Workout({ program, adapt, onLog, onApplySuggestion, busy }) {
   const today = (new Date().getDay() + 6) % 7;               // Monday = 0
-  const [day, setDay] = useState(today);
+  const [day, setDay] = useState(() => { const i = program.week.findIndex((x) => x.status === "today" || x.status === "planned"); return i >= 0 && program.week[today].status !== "today" ? i : today; });
   const [way, setWay] = useState("gym");
+  const [logs, setLogs] = useState({});
+  const [feel, setFeel] = useState("good");
+  const [pain, setPain] = useState([]);
+  const [skip, setSkip] = useState(false);
   const d = program.week[day] || program.week[0];
   const s = program.sessions.find((x) => x.id === d.sessionId);
   const ways = WAYS.filter(([id]) => id !== "home" || (s && s.homeBackup));
   const list = !s ? [] : way === "home" && s.homeBackup ? s.homeBackup.exercises : way === "quick" ? s.quick.exercises : s.exercises;
+  const todayStr = ymd(new Date());
+  const isFuture = d.date && d.date > todayStr;
+  const finished = d.status === "done" || d.status === "extra" || d.status === "partial";
+  const canLog = !!s && !finished && !isFuture;
+  const setLog = (id, rows) => setLogs((x) => ({ ...x, [id]: rows }));
+  const rowsFor = (e) => logs[e.id] || Array.from({ length: e.setsToday || e.sets || 1 }, () => ({ weightKg: e.next && e.next.weightKg ? e.next.weightKg : "", reps: e.next && e.next.action !== "start" ? e.next.reps : "" }));
+  const submit = async (status) => {
+    const exercises = list.map((e) => ({ id: e.id, name: e.name, slot: e.slot, sets: rowsFor(e).map((r) => ({ reps: e.unit === "seconds" ? 0 : Number(r.reps) || 0, seconds: e.unit === "seconds" ? Number(r.reps) || 0 : 0, weightKg: Number(r.weightKg) || 0 })).filter((r) => r.reps > 0 || r.seconds > 0) })).filter((e) => e.sets.length);
+    const done = exercises.length;
+    const st = status === "skipped" ? "skipped" : done >= Math.ceil(list.length * 0.6) ? "done" : "partial";
+    const ok = await onLog({ date: d.date && d.date <= todayStr ? d.date : todayStr, today: todayStr, sessionId: d.sessionId, title: s ? s.title : "", way, status: st, feel: st === "skipped" ? "" : feel, pain: st === "skipped" ? [] : pain, phase: adapt ? adapt.phase.key : "", minutes: s ? (way === "quick" ? s.quick.minutes : s.minutes) : 0, exercises: st === "skipped" ? [] : exercises });
+    if (ok) { setLogs({}); setPain([]); setSkip(false); }
+  };
+  const skipWith = async (reason) => {
+    const ok = await onLog({ date: todayStr, today: todayStr, sessionId: d.sessionId, title: s ? s.title : "", way, status: "skipped", reason, phase: adapt ? adapt.phase.key : "", exercises: [] });
+    if (ok) setSkip(false);
+  };
   return (
-    <div className="bp-card">
-      <div className="bp-week" role="list" aria-label="Your week">
-        {program.week.map((x, i) => (
-          <button key={x.day} type="button" role="listitem" className={`bp-wk ${DAY_CLASS[x.kind]}${i === day ? " sel" : ""}`} onClick={() => setDay(i)} aria-label={`${x.day}: ${x.label}`}>
-            <small>{i === today ? "Today" : x.day}</small><b>{x.kind === "train" ? "💪" : x.kind === "active" ? "🚶" : "😴"}</b>
-          </button>
-        ))}
-      </div>
-      <p className="bp-legend">💪 lift &nbsp; 🚶 easy cardio &nbsp; 😴 rest</p>
-
-      {!s && (
-        <div>
-          <h3 className="bp-h0">{d.kind === "active" ? "Easy cardio day" : "Rest day"}</h3>
-          <p className="bp-lead">{program.active.restDay}</p>
-          <p className="bp-note"><b>{program.active.minimumDay.title}.</b> {program.active.minimumDay.detail}</p>
-          <h4 className="bp-h">Ideas for today</h4>
-          <ul className="bp-lines">{program.active.menu.slice(0, 4).map((m) => <li key={m.id}><b>{m.name}</b> · about {m.kcal30} kcal in 30 min<br /><span className="bp-muted">{m.tip}</span></li>)}</ul>
+    <>
+      <AdaptCard adapt={adapt} onApply={onApplySuggestion} busy={busy} />
+      <div className="bp-card">
+        <div className="bp-week" role="list" aria-label="Your week">
+          {program.week.map((x, i) => (
+            <button key={x.day} type="button" role="listitem" className={`bp-wk ${DAY_CLASS[x.kind]}${i === day ? " sel" : ""}${x.status ? ` st-${x.status}` : ""}`} onClick={() => setDay(i)} aria-label={`${x.day}: ${x.label}${x.status ? `, ${x.status}` : ""}`}>
+              <small>{i === today ? "Today" : x.day}</small><b>{STATUS_ICON[x.status] && x.kind === "train" ? STATUS_ICON[x.status] : x.kind === "train" ? "💪" : x.kind === "active" ? "🚶" : "😴"}</b>
+            </button>
+          ))}
         </div>
-      )}
+        <p className="bp-legend">✅ done &nbsp; 💪 planned &nbsp; ○ not done (it slides along) &nbsp; 🚶 easy cardio &nbsp; 😴 rest</p>
+        {d.statusNote && <p className="bp-note">{d.statusNote}</p>}
 
-      {s && (
-        <>
-          <h3 className="bp-h0">{s.title}</h3>
-          <p className="bp-muted">{way === "quick" ? `${s.quick.minutes} minutes. ${s.quick.format}` : way === "home" ? `${s.homeBackup.minutes} minutes. ${s.homeBackup.note}` : `About ${s.minutes} minutes. Do them in this order.`}</p>
-          <div className="bp-tabs" role="tablist" aria-label="Where are you today?">
-            {ways.map(([id, label]) => <button key={id} type="button" role="tab" aria-selected={way === id} className={`bp-tab${way === id ? " on" : ""}`} onClick={() => setWay(id)}>{label}</button>)}
+        {!s && (
+          <div>
+            <h3 className="bp-h0">{d.kind === "active" ? "Easy cardio day" : "Rest day"}</h3>
+            <p className="bp-lead">{program.active.restDay}</p>
+            <p className="bp-note"><b>{program.active.minimumDay.title}.</b> {program.active.minimumDay.detail}</p>
+            <h4 className="bp-h">Ideas for today</h4>
+            <ul className="bp-lines">{program.active.menu.slice(0, 4).map((m) => <li key={m.id}><b>{m.name}</b> · about {m.kcal30} kcal in 30 min<br /><span className="bp-muted">{m.tip}</span></li>)}</ul>
           </div>
-          {way === "gym" && <details className="bp-det"><summary>Warm-up (about 8 minutes)</summary><Lines items={s.warmup} /></details>}
-          <ol className="bp-exlist">{list.map((e, i) => <Exercise key={e.id} e={e} n={i + 1} showSwaps={way === "gym"} />)}</ol>
-          {way === "gym" && <details className="bp-det"><summary>Cool-down</summary><Lines items={s.cooldown} /></details>}
-          {way === "gym" && <details className="bp-det"><summary>Gym is busy?</summary><Lines items={program.busyGym} /></details>}
-        </>
-      )}
-    </div>
+        )}
+
+        {s && (
+          <>
+            <h3 className="bp-h0">{s.title}{finished ? " ✅" : ""}</h3>
+            <p className="bp-muted">{way === "quick" ? `${s.quick.minutes} minutes. ${s.quick.format}` : way === "home" ? `${s.homeBackup.minutes} minutes. ${s.homeBackup.note}` : `About ${s.minutes} minutes. Do them in this order.`}</p>
+            <div className="bp-tabs" role="tablist" aria-label="Where are you today?">
+              {ways.map(([id, label]) => <button key={id} type="button" role="tab" aria-selected={way === id} className={`bp-tab${way === id ? " on" : ""}`} onClick={() => setWay(id)}>{label}</button>)}
+            </div>
+            {way === "gym" && <details className="bp-det"><summary>Warm-up (about 8 minutes)</summary><Lines items={s.warmup} /></details>}
+            <ol className="bp-exlist">{list.map((e, i) => <Exercise key={e.id} e={e} n={i + 1} showSwaps={way === "gym"} log={canLog ? rowsFor(e) : null} setLog={setLog} canLog={canLog} />)}</ol>
+            {way === "gym" && <details className="bp-det"><summary>Cool-down</summary><Lines items={s.cooldown} /></details>}
+            {way === "gym" && <details className="bp-det"><summary>Gym is busy?</summary><Lines items={program.busyGym} /></details>}
+
+            {canLog && (
+              <div className="bp-finish">
+                <h4 className="bp-h">How did it feel?</h4>
+                <div className="bp-chips" role="radiogroup" aria-label="How did it feel">{FEEL.map(([id, l]) => <button key={id} type="button" role="radio" aria-checked={feel === id} className={`bp-chip${feel === id ? " on" : ""}`} onClick={() => setFeel(id)}>{l}</button>)}</div>
+                <h4 className="bp-h">Anything sore or odd? <small className="bp-muted">(optional)</small></h4>
+                <div className="bp-chips" role="group" aria-label="Pain or discomfort">{PAIN.map(([id, l]) => <button key={id} type="button" role="checkbox" aria-checked={pain.includes(id)} className={`bp-chip${pain.includes(id) ? " on" : ""}`} onClick={() => setPain((x) => (x.includes(id) ? x.filter((y) => y !== id) : [...x, id]))}>{l}</button>)}</div>
+                <button type="button" className="bp-btn" disabled={busy} onClick={() => submit("done")}>{busy ? "Saving…" : "✔ Finish and log this session"}</button>
+                {!skip ? <button type="button" className="bp-link" onClick={() => setSkip(true)}>Not today</button> : (
+                  <div><p className="bp-muted">That is fine. Pick a reason so the plan adjusts the week:</p><div className="bp-chips">{REASONS.map(([id, l]) => <button key={id} type="button" className="bp-chip" disabled={busy} onClick={() => skipWith(id)}>{l}</button>)}</div></div>
+                )}
+              </div>
+            )}
+            {isFuture && <p className="bp-muted">This session is planned for {d.day}. You can log it on the day.</p>}
+          </>
+        )}
+      </div>
+    </>
   );
 }
 

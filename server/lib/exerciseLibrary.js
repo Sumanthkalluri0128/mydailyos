@@ -44,6 +44,29 @@ const SLOTS = {
   core: { label: 'Core', role: 'isolation', main: ['core'], aux: [] },
 };
 
+
+// Plain form guidance per movement: how to set up, how to move, when to breathe, and the mistake to avoid. Shown under every picture.
+const FORM = {
+  squat: { setup: 'Feet about shoulder-width, toes turned out a little. Chest tall, eyes forward.', move: 'Sit down and back between your heels until your thighs are about parallel, then push the floor away.', breathe: 'In on the way down, out as you stand.', avoid: 'Knees caving in, heels lifting, or your chest dropping forward.' },
+  hinge: { setup: 'Feet hip-width, soft knees, weight on the middle of your feet.', move: 'Push your hips back like closing a car door with them. Keep the weight close to your legs, then squeeze your glutes to stand.', breathe: 'In as you lower, out as you stand.', avoid: 'Rounding your lower back or turning it into a squat.' },
+  lunge: { setup: 'Take a long step. Torso upright, front foot flat.', move: 'Lower straight down until the front thigh is about level, then push through the front heel to stand.', breathe: 'In down, out up.', avoid: 'Front knee drifting inside your toes or leaning far forward.' },
+  glute: { setup: 'Feet flat, knees bent, ribs down.', move: 'Drive your hips up until your body is a straight line from knee to shoulder. Squeeze, pause one second, lower slowly.', breathe: 'Out as you lift, in as you lower.', avoid: 'Arching your lower back instead of squeezing your glutes.' },
+  quad: { setup: 'Adjust the seat so your knees line up with the machine pivot.', move: 'Straighten the legs smoothly, pause, then lower for 2 to 3 seconds.', breathe: 'Out as you straighten.', avoid: 'Swinging or locking your knees hard at the top.' },
+  ham: { setup: 'Pad just above your heels, hips pressed into the seat or bench.', move: 'Curl your heels toward your glutes, pause, then return slowly.', breathe: 'Out as you curl.', avoid: 'Lifting your hips or using a jerk to start.' },
+  calf: { setup: 'Balls of your feet on the edge, heels free to drop.', move: 'Rise as high as you can, pause one second, then lower until you feel a stretch.', breathe: 'Out as you rise.', avoid: 'Bouncing at the bottom or cutting the range short.' },
+  hpress: { setup: 'Shoulder blades pulled back and down, feet planted, hands just wider than your shoulders.', move: 'Lower to mid-chest under control, then press up and slightly back toward your face.', breathe: 'In as you lower, out as you press.', avoid: 'Flaring elbows straight out, bouncing off your chest, or lifting your hips.' },
+  ipress: { setup: 'Back flat on the incline, shoulder blades pulled back, feet planted.', move: 'Lower toward your upper chest, then press up over your shoulders.', breathe: 'In down, out up.', avoid: 'Shrugging your shoulders toward your ears.' },
+  fly: { setup: 'Chest tall, shoulders down, a soft bend in the elbows that stays the same.', move: 'Open your arms wide until you feel a stretch across your chest, then hug the air back together.', breathe: 'In as you open, out as you close.', avoid: 'Going so wide that your shoulders ache, or bending and straightening the elbows.' },
+  vpress: { setup: 'Ribs down, glutes tight, hands just outside your shoulders, forearms vertical.', move: 'Press straight up until your arms are almost straight, then lower to shoulder height.', breathe: 'Out as you press.', avoid: 'Leaning back or shrugging at the top.' },
+  lateral: { setup: 'Slight forward lean, a soft bend in the elbows, weights at your sides.', move: 'Raise your arms out to the sides to shoulder height, lead with your elbows, lower slowly.', breathe: 'Out as you raise.', avoid: 'Swinging your body or lifting above shoulder height.' },
+  rear: { setup: 'Hinge forward with a flat back, arms hanging, neck long.', move: 'Pull your elbows out and back, squeezing between your shoulder blades, then lower slowly.', breathe: 'Out as you lift.', avoid: 'Using momentum or shrugging.' },
+  tri: { setup: 'Elbows tucked in beside your ribs and still.', move: 'Straighten your elbows fully, squeeze, then let your hands rise slowly.', breathe: 'Out as you straighten.', avoid: 'Letting your elbows drift forward or swinging your shoulders.' },
+  vpull: { setup: 'Chest tall, a small lean back, grip a little wider than your shoulders.', move: 'Pull your elbows down toward your ribs until the bar reaches your upper chest. Let your arms rise back up slowly.', breathe: 'Out as you pull.', avoid: 'Pulling behind your neck or swinging your whole body.' },
+  hrow: { setup: 'Chest tall, shoulders down, a flat back, arms reaching forward.', move: 'Pull your elbows back past your ribs, squeeze your shoulder blades, then return with control.', breathe: 'Out as you pull.', avoid: 'Rounding your back or shrugging toward your ears.' },
+  bicep: { setup: 'Elbows pinned beside your ribs, shoulders relaxed.', move: 'Curl up, squeeze for a moment, and lower for 2 to 3 seconds.', breathe: 'Out as you curl.', avoid: 'Swinging your back or letting your elbows move forward.' },
+  core: { setup: 'Ribs down, lower back gently flat, neck long.', move: 'Move slowly and keep your belly tight the whole time. Quality beats speed.', breathe: 'Out on the effort. Never hold your breath.', avoid: 'Pulling on your neck or arching your lower back.' },
+};
+
 // x(id, name, slot(s), venue, equipment needed, difficulty 1-3, limits that rule it out, tags, how to do it)
 const x = (id, name, slot, venue, eq, diff, avoid, tags, cue) => ({ id, name, slots: [].concat(slot), venue, eq, diff, avoid, tags: eq.includes('bands') ? [...tags, 'band'] : tags, cue });
 
@@ -276,4 +299,4 @@ function swapsFor(ex, slot, ctx) {
   };
 }
 
-module.exports = { LIB, BY_ID, SLOTS, LEVELS, PLACES, LIMITS, HOME_EQUIP, GYM_TOKENS, FOCUS, usable, score, rank, kindOf, swapsFor, KIND_TEXT };
+module.exports = { FORM, LIB, BY_ID, SLOTS, LEVELS, PLACES, LIMITS, HOME_EQUIP, GYM_TOKENS, FOCUS, usable, score, rank, kindOf, swapsFor, KIND_TEXT };

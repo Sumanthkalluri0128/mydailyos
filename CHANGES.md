@@ -1,3 +1,20 @@
+# v55 - Body plan adapts to what you do + clear exercise pictures (server, web, phone)
+- ADAPTIVE PLAN. The plan now reads the sessions you log (and other workouts, weigh-ins, waist tape) and re-works the week. New `server/lib/bodyPlanAdapt.js`; `GET /api/body-plan` returns `plan.adapt` and every exercise carries `next` (today's target) and `setsToday`.
+  * Top of the rep range on every set -> heavier by a small step (+2 kg upper, +5 kg lower, max 10 %); otherwise +1 rep; reps down 2+ two sessions in a row -> same weight, one set fewer.
+  * Skipped a session -> it slides to the next open day (never Sunday, never 3 lifting days in a row, sessions follow rotation order); if no day fits it is let go, never doubled up.
+  * Easy week from evidence (hard sessions, dipping reps, pain) or every 5-6 trained weeks, never twice in a row, and it stays easy until Sunday.
+  * Back after a break: 8-14 days x0.95, 15-28 days x0.9, over 28 days x0.8 with one set fewer.
+  * Consistent and fresh -> +1 set on muscles under their weekly range (never above it). Doing more than planned for weeks with good recovery -> offers one more day (capped at the plan's maximum). More lifting on top of full volume is called out honestly.
+  * Pain noted twice -> offers to remove the moves that load that joint (one tap). Dizziness / chest pressure -> stop and see a doctor.
+  * Cardio ramps +10 min from what you did last week. Weight trend, waist and lift trend give a plain "is it working" verdict (too fast / on track / stalled -> steps first, not less food).
+- New: `models/BodyPlanSession` (in export and account deletion), `Profile.goals.bodyPlanStartedOn`, `POST /api/body-plan/session`, `GET /api/body-plan/sessions`, `DELETE /api/body-plan/session/:id`. A logged session also counts as exercise in the day's totals (Strength Training). Calories are NOT changed by this feature.
+- Web + phone Workout tab: "This week" card (what changed and why, one-tap suggestions), week strip with done / planned / not done, today's target on each exercise, a set logger prefilled from the target, feel + soreness, "Not today" with a reason.
+- PICTURES. Stick figures replaced by illustrated figures (`utils/exerciseFigure.js` / `.ts`, shared by web and phone): body with clothes, the equipment you hold (barbell, dumbbell, kettlebell, bag, handle), benches / machines / cables / bars drawn in, the working muscles lit up, the whole range of motion in one picture (faint finish behind the start + dashed arrow), 3 tappable key frames, and a Play loop. 49 poses; each of the 130 exercises gets the right one (push-up, pull-up, leg press, hip thrust, lateral raise... no longer share a standing squat picture). `ExercisePic` now takes the whole exercise (`ex`); an `image` URL still wins.
+- Every exercise now has a short "Set up / Move / Breathe / Avoid" guide (`form`) and the helper muscles (`helpers`).
+- More tab: "Where this plan comes from".
+- Tests: server `bodyPlanAdapt.unit.test.js` (21), route tests extended (6 new, stub the new models), client `exerciseFigure.test.js` (5). NOT run here: web build, the app on a device, real MongoDB. The route tests were run against tiny stand-ins for express and mongoose because npm is not available here; run `npm test` in server and client before deploying.
+- Both `exerciseFigure` files must stay identical (web `.js`, phone `.ts` with a ts-nocheck first line).
+
 ## Body plan page simplified: 4 tabs, today's workout first
 - Goal = four buttons. Headline numbers + one save button in a top card. Then tabs: Workout (default, today picked), Eating, Me (setup + tape), More (analysis, progress, cardio, safety).
 - Workout tab: week strip with today marked, then Gym / Home / Quick switch, exercises with picture + "3 sets, 8-12 reps, rest 90 s" badges. Replaces 12 folded cards.

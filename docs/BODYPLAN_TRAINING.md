@@ -103,3 +103,27 @@ Wording avoids "failure": effort is "stop with N reps left" (the app's tone chec
 `server/test/trainingPlan.unit.test.js` (18) and `server/test/bodyPlanRoutes.unit.test.js` (6, real router over HTTP with the database stubbed).
 They cover every goal x level x place x days combination, every injury limit across all outputs, equipment honesty at home, swaps,
 body-size behaviour, volume, time fitting, honest pace, input cleaning, schema validation and the tone check.
+
+## 9. Adapting to what you actually do (v55)
+
+The program above is the starting point. `lib/bodyPlanAdapt.js` re-works it every time the screen loads, from:
+sessions logged on the Body plan (BodyPlanSession), other workouts in the activity log (lifting counts, cardio adds minutes), weigh-ins,
+waist readings. Nothing is guessed: with no history the plan says "find your weight" and waits for the first session.
+
+| You... | The plan does | Why |
+|---|---|---|
+| Hit the top of the rep range on every set | Weight up a small step, reps restart at the bottom | Double progression |
+| Are mid-range | Aim for +1 rep at the same weight | Same |
+| Drop 2+ reps two sessions in a row | Same weight, one set fewer | Tired, not weak |
+| Skip a session | Slides it to the next open day (keeps a rest day, no 3 lifting days in a row), else lets it go | Never double up |
+| Feel "hard" in half your recent sessions, or report soreness twice | Easy week: weights x0.9, one set fewer | Recovery |
+| Train 5-6 weeks without an easy week | Easy week | Planned deload |
+| Come back after 8+ days away | Weights x0.95 / x0.9 / x0.8 | Detraining is quick, regaining is quicker |
+| Are consistent, fresh, and a muscle is under its weekly range | +1 set there | Volume only where it is missing |
+| Do more than planned for 3+ weeks and recover well | Offers one more day (max for your level and age) | More only helps if recovery keeps up |
+| Report pain in the same area twice | Offers to remove moves that load it | Train around it |
+| Lose weight faster than the safe pace | Says so; eat a little more, keep lifting | Protect muscle |
+| Stall while cutting | Steps first, then the app's own calorie engine | Steps do not cost recovery |
+
+Not changed: calories and macros (the app's weight-trend engine owns those), and the exercise library. Limits: advice comes from general
+strength-training practice and your own logged numbers; it is not medical advice, and logging is only as good as what is entered.
