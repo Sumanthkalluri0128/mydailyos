@@ -2,6 +2,7 @@
 // day, what the recent days were short on, and the diet to plan for. Used by the warning banners and by the meal planner, so the
 // number you are warned about is the number the plan uses.
 const { loadCore } = require('./planData');
+const { eventExtraMap } = require('./eventExtra');
 const { smoothTrend, trendRate } = require('./trendWeight');
 const { intakeAdvice, targetForDate, recentNeeds } = require('./intakeAdvice');
 const { limitTargets } = require('./energy');
@@ -11,8 +12,9 @@ async function loadAdvice(uid, today, { dates = [] } = {}) {
   const core = await loadCore(uid, today, { historyDays: 35 });
   const weights = core.weights.length ? core.weights : (core.profile.currentWeightKg ? [{ date: today, weightKg: core.profile.currentWeightKg }] : []);
   const rate = weights.length >= 2 ? trendRate(smoothTrend(weights), today) : null;
-  const days = core.days.map((d) => ({ date: d.date, calories: d.calories, protein: d.protein, fiber: d.fiber, sugar: d.sugar, sodium: d.sodium }));
-  const advice = core.target > 0 ? intakeAdvice({ days, target: core.target, floor: core.floor, today, direction: core.direction, weightTrendPerWeek: rate }) : null;
+  const room = await eventExtraMap(uid, core.days.map((d) => d.date), core.profile); // festival / trip / diet-break room: the planner and the banners must agree
+  const days = core.days.map((d) => ({ eventExtra: room[d.date] || 0, date: d.date, calories: d.calories, caloriesBurned: d.caloriesBurned, protein: d.protein, fiber: d.fiber, sugar: d.sugar, sodium: d.sodium }));
+  const advice = core.target > 0 ? intakeAdvice({ days, target: core.target, floor: core.floor, today, direction: core.direction, weightTrendPerWeek: rate, profile: core.profile, paceKg: core.profile.goals?.weeklyPaceKg || 0.5 }) : null;
   const limits = core.target > 0 ? limitTargets(core.target) : {};
   const needs = recentNeeds({ days, today, ranges: core.ranges, limits });
   const targets = {};

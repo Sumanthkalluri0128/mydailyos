@@ -59,7 +59,7 @@ export default function DashboardHero({ profile, today, summary, activity, water
   const exerciseMin = Number(activity.totalMinutes || 0);
   const stepKcal = Number(activity.stepCalories || 0);
   const workoutKcal = Number(activity.workoutCalories ?? Math.max(0, Number(activity.caloriesBurned || 0) - stepKcal));
-  const bal = dayBalance(profile, { eaten: summary.calories, workout: workoutKcal, steps: stepKcal });
+  const bal = dayBalance(profile, { eaten: summary.calories, workout: workoutKcal, steps: stepKcal, extra: Number(summary?.eventExtra || 0) });
   const over = bal.remaining < 0;
   const hour = new Date().getHours();
   const coach = coachLine({

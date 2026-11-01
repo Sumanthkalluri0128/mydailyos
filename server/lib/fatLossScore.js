@@ -1,5 +1,6 @@
 // A graded 0–100 "fat-loss score" instead of pass/fail days. It weights calories, protein, steps, water and sleep, and is judged on
 // the WEEKLY average against a weekly calorie budget (7 × target), so one heavy day is absorbed rather than counted as a failure.
+const { calorieTargetFor } = require('./eventExtraPure');
 const { addDays, weekday } = require('./dates');
 
 const WEIGHTS = { calories: 35, protein: 25, steps: 15, water: 15, sleep: 10 };
@@ -32,7 +33,7 @@ function gradeSleep(h) {
 function dayComponents(day, t = {}, sleepH = null) {
   const d = day || {};
   return {
-    calories: gradeCalories(d.calories, t.calories, t.direction),
+    calories: gradeCalories(d.calories, calorieTargetFor(t, d.date), t.direction),
     protein: d.calories > 0 ? gradeProtein(d.protein, t.protein) : null,
     steps: t.steps > 0 && (d.steps > 0 || d.calories > 0) ? gradeRatio(d.steps, t.steps) : null,
     water: t.waterMl > 0 && (d.waterMl > 0 || d.calories > 0) ? gradeRatio(d.waterMl, t.waterMl) : null,
@@ -82,11 +83,13 @@ function weekBudgetAbsorb(days, t, today) {
   let used = 0; let heavy = 0; let daysCounted = 0;
   for (let d = monday; d <= today; d = addDays(d, 1)) {
     const row = days.find((x) => x.date === d);
-    const cal = row && row.calories > 0 ? row.calories : (d < today ? t.calories : 0);
+    const dayCap = calorieTargetFor(t, d);
+    const cal = row && row.calories > 0 ? row.calories : (d < today ? dayCap : 0);
     used += cal; daysCounted += 1;
-    if (row && row.calories > t.calories * 1.08) heavy += 1;
+    if (row && row.calories > dayCap * 1.08) heavy += 1;
   }
-  const budget = Math.round(t.calories * 7);
+  let budget = 0; for (let k = 0; k < 7; k += 1) budget += calorieTargetFor(t, addDays(monday, k));
+  budget = Math.round(budget);
   const daysLeft = 7 - daysCounted;
   const left = Math.round(budget - used);
   return { budget, used: Math.round(used), left, heavyDays: heavy, absorbed: heavy > 0 && left >= 0, perDayLeft: daysLeft > 0 ? Math.round(left / daysLeft) : null, daysLeft };

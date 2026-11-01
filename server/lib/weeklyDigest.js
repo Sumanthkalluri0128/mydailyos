@@ -6,6 +6,7 @@ const { buildHistory } = require('./progress');
 const { buildWeeklySummary, weekContaining } = require('./weekly');
 const { weeklyNutrients } = require('./nutrients');
 const { detectPlateau } = require('./plateau');
+const { estimateWeight } = require('./weightEstimate');
 const { dailyTarget, expectedEnergy, macroTargets, limitTargets, waterTargetMl } = require('./energy');
 const { addDays, weekday, todayUtc } = require('./dates');
 const { sendMail } = require('./mailer');
@@ -18,7 +19,7 @@ async function weeklyBundle(userId, end, profile) {
   const { days } = await buildHistory(userId, addDays(start, -7), end);
   const target = dailyTarget(profile);
   const e = expectedEnergy(profile);
-  const macros = macroTargets(target, profile?.currentWeightKg, e?.direction, profile?.goals?.proteinTarget);
+  const macros = macroTargets(target, profile?.currentWeightKg, e?.direction, profile?.goals?.proteinTarget, profile?.goals?.bodyType);
   const g = profile?.goals || {};
   const goals = {
     ...g, calorieTarget: target,
@@ -34,7 +35,13 @@ async function weeklyBundle(userId, end, profile) {
 
 async function plateauFor(userId, today, profile, target) {
   const weights = await WeightLog.find({ userId, date: { $gte: addDays(today, -30), $lte: today } }).select('date weightKg').lean();
-  return detectPlateau({ weights, profile: profile || {}, today, target });
+  // What the food log implies since the last weigh-in (analysis only; the slope and the charts still use real weigh-ins).
+  let estimate = null;
+  try {
+    const { days } = await buildHistory(userId, addDays(today, -34), today);
+    estimate = estimateWeight({ days, weights: weights.map((w) => ({ date: w.date, weightKg: Number(w.weightKg) })), profile, today });
+  } catch (e) { estimate = null; }
+  return detectPlateau({ weights, profile: profile || {}, today, target, estimate });
 }
 
 async function digestFor(userId, end) {

@@ -277,7 +277,7 @@ export function EventMode({ event, reload }) {
   if (event?.on) {
     return (
       <section className="large-card cc-event"><div className="cc-row"><Buddy scene={event.scene === "party" ? "victory" : "walk"} size={72} talk={false} /><div><p className="eyebrow">{event.kind === "diet-break" ? "Diet break" : "Festival arc"}</p><h3>{event.label} mode is on</h3><p>{event.message}</p></div></div>
-        <small>{event.daysLeft} day{event.daysLeft === 1 ? "" : "s"} left.</small>{event.kind !== "diet-break" && <button className="link-button" onClick={end}>End it early</button>}</section>
+        <small>{event.daysLeft} day{event.daysLeft === 1 ? "" : "s"} left.{event.extraToday > 0 ? ` Today you have +${Math.round(event.extraToday)} kcal of room (about ${Math.round(event.todayTarget).toLocaleString()} kcal), and your quests and level count against that.` : ""}</small>{event.kind !== "diet-break" && <button className="link-button" onClick={end}>End it early</button>}</section>
     );
   }
   if (!form) return <div className="cc-strip"><span>Festival, wedding or trip coming up?</span><button type="button" className="chip" onClick={() => setForm({ kind: "festival", from: today, to: add(today, 2), label: "" })}>Plan for it</button></div>;

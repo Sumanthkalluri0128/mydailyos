@@ -5,7 +5,7 @@ import "./todayactions.css";
 const n = (v) => Math.round(Number(v) || 0);
 
 export default function TodayActions({ profile, summary, activity, water, waterTarget, latestWeight, goTo, onAsk }) {
-  const bal = dayBalance(profile, { eaten: summary?.calories, workout: Number(activity?.workoutCalories ?? 0), steps: Number(activity?.stepCalories || 0) });
+  const bal = dayBalance(profile, { eaten: summary?.calories, workout: Number(activity?.workoutCalories ?? 0), steps: Number(activity?.stepCalories || 0), extra: Number(summary?.eventExtra || 0) });
   const kcalPct = bal.budget ? Math.min(100, (bal.eaten / bal.budget) * 100) : 0;
   const waterPct = waterTarget ? Math.min(100, ((water?.totalMl || 0) / waterTarget) * 100) : 0;
   const stepsT = profile?.goals?.stepsTarget ?? 10000;

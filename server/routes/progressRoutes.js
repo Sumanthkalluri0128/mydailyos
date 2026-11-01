@@ -8,6 +8,7 @@ const { computeStreaks } = require('../lib/streaks');
 const { requireAuth } = require('../middleware/auth');
 const { wrap, HttpError } = require('../lib/http');
 const { buildHistory, getDayDetails, lifetimeTotals } = require('../lib/progress');
+const { eventExtraMap } = require('../lib/eventExtra');
 const { buildAchievements } = require('../lib/achievements');
 const { buildWeeklySummary } = require('../lib/weekly');
 const { dailyTarget, expectedEnergy, macroTargets, waterTargetMl } = require('../lib/energy');
@@ -34,7 +35,11 @@ router.get('/history', wrap(async (req, res) => {
   if (from > to) throw new HttpError(400, 'from must not be after to');
   if (diffDays(from, to) > MAX_RANGE_DAYS) throw new HttpError(400, `Range is limited to ${MAX_RANGE_DAYS} days`);
   const history = await buildHistory(req.user.id, from, to);
-  res.json({ success: true, ...history, generatedAt: new Date().toISOString() });
+  // Festival / trip / diet-break room per day, so the phone judges each day against the SAME widened budget the server uses.
+  const prof = await Profile.findOne({ userId: req.user.id }).lean();
+  const room = await eventExtraMap(req.user.id, (history.days || []).map((d) => d.date), prof);
+  const days = (history.days || []).map((d) => (room[d.date] ? { ...d, eventExtra: room[d.date] } : d));
+  res.json({ success: true, ...history, days, generatedAt: new Date().toISOString() });
 }));
 
 /**
@@ -57,9 +62,12 @@ const dayHandler = (dateOf) => wrap(async (req, res) => {
     include.has('habits') ? Habit.find({ userId: uid, isActive: true }).sort({ createdAt: 1 }).lean() : null,
     include.has('weights') ? WeightLog.find({ userId: uid }).sort({ date: -1, createdAt: -1 }).limit(400).lean() : null,
   ]);
+  const profForRoom = include.has('profile') ? profile : await Profile.findOne({ userId: uid }).lean();
+  const eventExtra = (await eventExtraMap(uid, [date], profForRoom))[date] || 0;
   res.json({
     success: true,
     ...details,
+    eventExtra,
     ...(include.has('profile') ? { profile: profile || (await Profile.create({ userId: uid })).toObject() } : {}),
     ...(habitDefs ? { habitDefs } : {}),
     ...(weightLogs ? { weightLogs } : {}),
@@ -89,7 +97,7 @@ router.get('/coach', wrap(async (req, res) => {
   ]);
   const target = dailyTarget(profile);
   const e = expectedEnergy(profile);
-  const macros = macroTargets(target, profile?.currentWeightKg, e?.direction, profile?.goals?.proteinTarget);
+  const macros = macroTargets(target, profile?.currentWeightKg, e?.direction, profile?.goals?.proteinTarget, profile?.goals?.bodyType);
   const goals = profile?.goals || {};
   const targets = {
     calories: target || null, protein: macros?.protein || null,

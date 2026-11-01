@@ -162,7 +162,7 @@ router.get('/report.pdf', exportLimiter, wrap(async (req, res) => {
     req.query.diary === 'false' ? [] : FoodLog.find({ userId: uid, date: { $gte: from, $lte: to } }).sort({ date: 1, createdAt: 1 }).select('date mealType foodName consumedQuantity servingUnit nutritionTotal').lean(),
   ]);
   const calories = dailyTarget(profile), e = expectedEnergy(profile);
-  const targets = { calories, ...macroTargets(calories, profile?.currentWeightKg, e?.direction, profile?.goals?.proteinTarget) };
+  const targets = { calories, ...macroTargets(calories, profile?.currentWeightKg, e?.direction, profile?.goals?.proteinTarget, profile?.goals?.bodyType) };
   targets.carbs = targets.carbs;
   const weighIns = days.filter((d) => d.weighIn);
   const weight = weighIns.length > 1 ? { start: weighIns[0].weightKg, end: weighIns[weighIns.length - 1].weightKg, change: Math.round((weighIns[weighIns.length - 1].weightKg - weighIns[0].weightKg) * 10) / 10 } : null;

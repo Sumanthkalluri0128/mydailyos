@@ -9,6 +9,8 @@ const { pickRepeat, applyEdits } = require('../lib/repeatMeal');
 const { chaiNutrition, weeklyChai } = require('../lib/chaiCounter');
 const { catalogueFoods } = require('../lib/foodCache');
 const { addDays } = require('../lib/dates');
+const Profile = require('../models/Profile');
+const { eventExtraMap } = require('../lib/eventExtra');
 
 const router = express.Router();
 router.use(requireAuth);
@@ -34,6 +36,9 @@ router.get('/summary', wrap(async (req, res) => {
     for (const k of KEYS) summary[k] += Number(n[k] || 0);
     if (summary.meals[l.mealType] !== undefined) summary.meals[l.mealType] += Number(n.calories || 0);
   }
+  // today's festival / trip / diet-break room, so every screen that reads this summary can widen the budget the same way
+  const prof = await Profile.findOne({ userId: req.user.id }).lean();
+  summary.eventExtra = (await eventExtraMap(req.user.id, [date], prof))[date] || 0;
   res.json({ success: true, summary });
 }));
 

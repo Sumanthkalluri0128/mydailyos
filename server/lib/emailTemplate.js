@@ -137,7 +137,7 @@ function renderWeeklyEmail(d) {
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>
       <td class="ink" style="font-size:22px;font-weight:800;color:${C.ink};font-family:${FONT};">${s.weight.start} → ${s.weight.end} <span style="font-size:13px;color:${C.muted};font-weight:600;">kg</span></td>
       <td align="right" style="font-size:15px;font-weight:800;font-family:${FONT};color:${s.weight.change === 0 ? C.muted : C.brand};">${s.weight.change > 0 ? '+' : ''}${s.weight.change} kg</td></tr></table>` : '';
-  const plateauNote = d.plateau && ['plateau', 'wrong_direction', 'drifting'].includes(d.plateau.status)
+  const plateauNote = d.plateau && ['plateau', 'wrong_direction', 'drifting', 'estimated_up', 'estimated'].includes(d.plateau.status)
     ? `<div style="margin-top:10px;padding:12px 14px;border-radius:12px;background:#fff7e6;border-left:4px solid ${C.warn};font-size:13px;line-height:19px;color:#6b4a00;font-family:${FONT};">${esc(d.plateau.message)}</div>` : '';
 
   const best = s.bestDay ? `<div style="font-size:14px;color:${C.ink};line-height:21px;font-family:${FONT};" class="ink">🌟 <strong>${shortDate(s.bestDay.date)}</strong> — ${esc(s.bestDay.highlights.join(' · '))}</div>` : '';
@@ -216,7 +216,7 @@ function renderWeeklyEmail(d) {
   ];
   if (n.loggedDays) { lines.push('', 'Nutrients (daily average vs target):'); n.rows.forEach((r) => lines.push(`  - ${r.label}: ${r.average} / ${r.target} g (${r.percentOfTarget}%)`)); (n.limits || []).forEach((r) => lines.push(`  - ${r.label} (keep under): ${r.average} / ${r.limit} ${r.unit} (${r.percentOfLimit}%)`)); }
   if (s.weight) lines.push('', `Weight: ${s.weight.start} -> ${s.weight.end} kg (${s.weight.change > 0 ? '+' : ''}${s.weight.change})`);
-  if (d.plateau && ['plateau', 'wrong_direction', 'drifting'].includes(d.plateau.status)) lines.push(`  ${d.plateau.message}`);
+  if (d.plateau && ['plateau', 'wrong_direction', 'drifting', 'estimated_up', 'estimated'].includes(d.plateau.status)) lines.push(`  ${d.plateau.message}`);
   if (s.bestDay) lines.push('', `Best day: ${shortDate(s.bestDay.date)} - ${s.bestDay.highlights.join(', ')}`);
   if (n.tip) lines.push('', `Tip: ${n.tip}`);
   if (d.appUrl) lines.push('', `Open FlexFit: ${d.appUrl}`);

@@ -7,6 +7,7 @@ const ActivityLog = require('../models/ActivityLog');
 const { buildHistory, lifetimeTotals } = require('./progress');
 const { expectedEnergy, dailyTarget, macroRanges } = require('./energy');
 const { targetsFor } = require('./journeyData');
+const { eventExtraMap } = require('./eventExtra');
 const { buildAchievements } = require('./achievements');
 const { buildOutcomeBadges, weeklyFlags, cumulativeDeficit } = require('./outcomes');
 const { smoothTrend, trendRate, planTrendKg } = require('./trendWeight');
@@ -28,6 +29,7 @@ async function loadSimple(uid, today) {
   const p = profile || {};
   const { days } = await buildHistory(uid, addDays(today, -799), today);
   const targets = targetsFor(p);
+  targets.extraByDate = await eventExtraMap(uid, days.map((d) => d.date), p);
   const energy = expectedEnergy(p);
   const target = dailyTarget(p);
   const direction = energy?.direction || 'maintain';

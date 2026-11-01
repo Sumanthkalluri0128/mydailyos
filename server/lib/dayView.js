@@ -106,7 +106,8 @@ function mergeDay({ date, today, logs = [], plans = [] }) {
   for (const m of MEALS) {
     const mm = meals[m];
     mm.total = addTotals(mm.logged, mm.planned);
-    // eaten first, then planned, then the order they were created
+    // eaten first, then planned; inside each group the NEWEST item is on top (items arrive oldest-first, so flip them, then group; the sort is stable)
+    mm.items.reverse();
     mm.items.sort((a, b) => (a.status === b.status ? 0 : a.status === 'logged' ? -1 : 1));
     logged = addTotals(logged, mm.logged); planned = addTotals(planned, mm.planned);
     mm.logged = roundTotals(mm.logged); mm.planned = roundTotals(mm.planned); mm.total = roundTotals(mm.total);

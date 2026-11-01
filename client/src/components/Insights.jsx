@@ -78,9 +78,14 @@ export default function Insights() {
 
       {plateau && plateau.status !== "insufficient_data" && plateau.status !== "on_track" && (
         <div className={`large-card plateau-card ${plateau.status}`}>
-          <h2>{plateau.status === "plateau" ? "⏸️ Weight plateau" : plateau.status === "wrong_direction" ? "↗️ Trend check" : "⚖️ Weight trend"}</h2>
+          <h2>{plateau.status === "plateau" ? "⏸️ Weight plateau" : plateau.status === "wrong_direction" ? "↗️ Trend check" : plateau.status === "estimated_up" || plateau.status === "estimated" ? "📝 Estimated from your food log" : "⚖️ Weight trend"}</h2>
           <p>{plateau.message}</p>
-          <small><WeightReveal compact reaction={false} prefix="Trend: " text={`${plateau.slopeKgPerWeek > 0 ? "+" : ""}${plateau.slopeKgPerWeek} kg/week from ${plateau.weighIns} weigh-ins`} /></small>
+          {plateau.slopeKgPerWeek != null && (
+            <small><WeightReveal compact reaction={false} prefix="Trend: " text={`${plateau.slopeKgPerWeek > 0 ? "+" : ""}${plateau.slopeKgPerWeek} kg/week from ${plateau.weighIns} weigh-ins`} /></small>
+          )}
+          {plateau.estimate && Math.abs(plateau.estimate.deltaKg) >= 0.2 && (
+            <small>{`Estimate from food log: ${plateau.estimate.deltaKg > 0 ? "+" : ""}${plateau.estimate.deltaKg} kg (not a measurement, not on your graph)`}</small>
+          )}
         </div>
       )}
 

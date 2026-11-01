@@ -280,9 +280,9 @@ function streakSummary(loggedDates, today) {
 function targetsView({ profile, target, direction, energy, floor }) {
   const p = profile || {}; const g = p.goals || {}; const kg = Number(p.currentWeightKg) || 0;
   const recCal = energy?.autoTarget || null;
-  const recProtein = target > 0 && kg > 0 ? macroTargets(target, kg, direction, null).protein : null;
+  const recProtein = target > 0 && kg > 0 ? macroTargets(target, kg, direction, null, g.bodyType).protein : null;
   const recWater = waterTargetMl(kg);
-  const ranges = target > 0 ? macroRanges(target, kg, direction, g.proteinTarget) : null;
+  const ranges = target > 0 ? macroRanges(target, kg, direction, g.proteinTarget, g.bodyType) : null;
   const limits = target > 0 ? limitTargets(target) : null;
   const row = (id, label, value, unit, recommended, why, extra = {}) => ({ id, label, value, unit, recommended, why, atRecommended: recommended != null && Number(value) === Number(recommended), ...extra });
   const basic = [

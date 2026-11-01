@@ -26,6 +26,7 @@ const waterRoutes = require('./routes/waterRoutes');
 const weightRoutes = require('./routes/weightRoutes');
 const progressRoutes = require('./routes/progressRoutes');
 const healthRoutes = require('./routes/healthRoutes');
+const bodyPlanRoutes = require('./routes/bodyPlanRoutes');
 const fastingRoutes = require('./routes/fastingRoutes');
 const savedMealRoutes = require('./routes/savedMealRoutes');
 const emailRoutes = require('./routes/emailRoutes');
@@ -92,6 +93,7 @@ function createApp({ allowedOrigins = [] } = {}) {
   app.use('/api/weight', weightRoutes);
   // NOTE: '/api/health' is the uptime check above (used by Render) — measurements live under /api/health-logs.
   app.use('/api/health-logs', healthRoutes);
+  app.use('/api/body-plan', bodyPlanRoutes);
   app.use('/api/fasting', fastingRoutes);
   app.use('/api/saved-meals', savedMealRoutes);
   app.use('/api/email', emailRoutes);

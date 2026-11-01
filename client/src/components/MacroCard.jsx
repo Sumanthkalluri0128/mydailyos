@@ -5,10 +5,10 @@ import GoalBar from "./GoalBar";
 export default function MacroCard({ profile, summary }) {
   const e = expectedEnergy(profile);
   const m = e
-    ? macroTargets(e.calorieTarget, e.weightKg, e.direction, profile?.goals?.proteinTarget)
+    ? macroTargets(e.calorieTarget, e.weightKg, e.direction, profile?.goals?.proteinTarget, profile?.goals?.bodyType)
     : { protein: profile?.goals?.proteinTarget ?? 140, carbs: 250, fat: 70, fiber: 30 };
   const cal = e ? e.calorieTarget : 2000;
-  const rg = e ? macroRanges(e.calorieTarget, e.weightKg, e.direction, profile?.goals?.proteinTarget) : null;
+  const rg = e ? macroRanges(e.calorieTarget, e.weightKg, e.direction, profile?.goals?.proteinTarget, profile?.goals?.bodyType) : null;
   const STATUS = { low: "▼ below the minimum", ok: "✓ in range", high: "▲ above the maximum" };
   // One line under each bar: the healthy minimum–maximum, the goal, and where you are (words and symbols, not colour alone).
   const range = (key, value, unit = "g") => rg && (

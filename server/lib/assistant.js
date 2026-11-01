@@ -239,6 +239,7 @@ const A = {
     if (Number.isFinite(w.ratePerWeek)) parts.push(`You're moving ${w.ratePerWeek > 0 ? '+' : ''}${r1(w.ratePerWeek)} kg/week over the last two weeks${w.paceKg ? ` against a plan of ${r1(w.paceKg)}` : ''}.`);
     if (w.etaWeeks) parts.push(`At that pace you'd arrive in about ${plural(w.etaWeeks, 'week')}.`);
     if (w.plateau) parts.push(`${w.plateau} Check the weekly review for what to adjust.`);
+    else if (Number.isFinite(w.estimatedChangeKg) && Math.abs(w.estimatedChangeKg) >= 0.2) parts.push(`Going by your food log since the last weigh-in, you are probably ${w.estimatedChangeKg > 0 ? 'up' : 'down'} about ${r1(Math.abs(w.estimatedChangeKg))} kg. That is an estimate, not a measurement; a weigh-in will confirm it.`);
     return { text: parts.join(' '), mood: 'thumbs', actions: [{ label: 'Open Weight', page: 'weight' }, { label: 'Why am I stuck?', ask: 'What should I change?' }] };
   },
   goals(snap) {

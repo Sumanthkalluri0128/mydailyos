@@ -13,6 +13,7 @@ const { addDays, todayUtc } = require('../lib/dates');
 const { loadCore } = require('../lib/planData');
 const { loadJourney } = require('../lib/journeyData');
 const { smoothTrend, trendRate } = require('../lib/trendWeight');
+const { estimateWeight, analysisRate } = require('../lib/weightEstimate');
 const { detectPlateau } = require('../lib/plateau');
 const { weeksToGoal, limitTargets, dayBalance } = require('../lib/energy');
 const { suggestFoods } = require('../lib/suggest');
@@ -65,13 +66,16 @@ async function buildSnapshot(uid, today, hour) {
   const series = core.weights.length ? smoothTrend(core.weights) : [];
   const latest = core.weights.length ? core.weights[core.weights.length - 1].weightKg : p.currentWeightKg || null;
   const g = p.goals || {};
-  const rate = series.length >= 3 ? trendRate(series, today) : null;
-  const pl = core.weights.length >= 3 ? detectPlateau({ weights: core.weights, profile: p, today, target }) : null;
+  const estimate = estimateWeight({ days: core.days, weights: core.weights, profile: p, today });
+  const measuredRate = series.length >= 3 ? trendRate(series, today) : null;
+  const { ratePerWeek: rate, source: rateSource } = analysisRate({ measuredRate, lastWeighIn: core.weights.length ? core.weights[core.weights.length - 1].date : null, today, estimate });
+  const pl = (core.weights.length >= 3 || (estimate && estimate.meaningful)) ? detectPlateau({ weights: core.weights, profile: p, today, target, estimate }) : null;
   const weight = {
     latestKg: latest, trendKg: series.length ? series[series.length - 1].trendKg : null, targetKg: g.targetWeightKg || null, paceKg: g.weeklyPaceKg || null,
-    ratePerWeek: Number.isFinite(rate) ? Math.round(rate * 100) / 100 : null,
-    etaWeeks: latest && g.targetWeightKg ? weeksToGoal(latest, g.targetWeightKg, Math.abs(rate) > 0.1 ? Math.abs(rate) : g.weeklyPaceKg || 0.5) : null,
-    plateau: pl && ['plateau', 'wrong_direction', 'drifting'].includes(pl.status) ? pl.message : '',
+    ratePerWeek: rateSource === 'scale' && Number.isFinite(rate) ? Math.round(rate * 100) / 100 : null,
+    etaWeeks: latest && g.targetWeightKg ? weeksToGoal(latest, g.targetWeightKg, rateSource === 'scale' && Math.abs(rate) > 0.1 ? Math.abs(rate) : g.weeklyPaceKg || 0.5) : null,
+    plateau: pl && ['plateau', 'wrong_direction', 'drifting', 'estimated_up', 'estimated'].includes(pl.status) ? pl.message : '',
+    rateSource, estimatedChangeKg: estimate && estimate.meaningful ? estimate.deltaKg : null,
   };
 
   // "what should I eat next": foods from the person's own history that fit what is left

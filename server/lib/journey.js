@@ -15,11 +15,12 @@ function caloriesOnTrack(calories, target, direction) {
 }
 
 /** Which of the day's targets were met. `t` = { calories, direction, protein, waterMl, steps, exerciseMinutes }. */
+const { calorieTargetFor } = require('./eventExtraPure');
 function dayHits(day, t = {}) {
   const d = day || {};
   return {
     log: (d.calories > 0) || (d.waterMl > 0) || (d.exerciseMinutes > 0) || (d.tasksCompleted > 0) || (d.habitsCompleted > 0) || !!d.weighIn,
-    calories: caloriesOnTrack(d.calories, t.calories, t.direction),
+    calories: caloriesOnTrack(d.calories, calorieTargetFor(t, d.date), t.direction), // a festival / trip / diet-break day is judged against its widened budget
     protein: t.protein > 0 && d.protein >= t.protein * 0.9,
     water: t.waterMl > 0 && d.waterMl >= t.waterMl,
     move: t.exerciseMinutes > 0 && d.exerciseMinutes >= t.exerciseMinutes,
@@ -69,10 +70,11 @@ function dailyQuests(day, t, steps) {
   const h = dayHits(d, t);
   const q = [];
   const add = (id, icon, title, value, target, unit, done, hint) => q.push({ id, icon, title, value: Math.round(value), target: Math.round(target), unit, pct: pct(value, target), done: !!done, xp: XP_PER[id] || 0, hint });
-  if (t.calories > 0) {
+  const cal = calorieTargetFor(t, d.date); // includes festival / trip / diet-break room for this date
+  if (cal > 0) {
     const eaten = d.calories || 0;
-    add('calories', '🍽️', t.direction === 'gain' ? 'Fuel up to your target' : 'Stay inside your calorie budget', eaten, t.calories, 'kcal', h.calories,
-      eaten === 0 ? 'Log your first meal to start this quest.' : t.direction === 'gain' ? `${Math.max(0, Math.round(t.calories * 0.92 - eaten))} kcal to go.` : eaten > t.calories * 1.08 ? 'Over budget today — a lighter next meal and a walk bring it back.' : `${Math.max(0, Math.round(t.calories - eaten))} kcal left.`);
+    add('calories', '🍽️', t.direction === 'gain' ? 'Fuel up to your target' : 'Stay inside your calorie budget', eaten, cal, 'kcal', h.calories,
+      eaten === 0 ? 'Log your first meal to start this quest.' : t.direction === 'gain' ? `${Math.max(0, Math.round(cal * 0.92 - eaten))} kcal to go.` : eaten > cal * 1.08 ? 'Over budget today — a lighter next meal and a walk bring it back.' : `${Math.max(0, Math.round(cal - eaten))} kcal left.`);
   }
   if (t.protein > 0) add('protein', '🥚', 'Hit your protein', d.protein || 0, t.protein, 'g', h.protein, `${Math.max(0, Math.round(t.protein * 0.9 - (d.protein || 0)))} g to go.`);
   if (t.waterMl > 0) add('water', '💧', 'Drink your water', d.waterMl || 0, t.waterMl, 'ml', h.water, `${Math.max(0, Math.round(t.waterMl - (d.waterMl || 0)))} ml to go.`);

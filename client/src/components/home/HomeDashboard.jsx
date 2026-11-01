@@ -2,6 +2,7 @@
 //   hero (greeting + sliding background + coach) → five stat cards (with ＋ shortcuts) → nutrition · macros · habits → side quest · weekly review → tasks · progress · scene.
 // Everything on it is tappable: cards open their page, water/steps have quick-add sheets, habits and tasks tick off with a cheer.
 import { useEffect, useMemo, useState } from "react";
+import { MicroToggle } from "../MicroCard";
 import { createPortal } from "react-dom";
 import "./home.css";
 import "../homefocus.css";
@@ -117,8 +118,8 @@ export default function HomeDashboard({ profile, summary, activity, water, water
 
   // ---- one shared energy model (same numbers as mobile + server)
   const e = expectedEnergy(profile);
-  const bal = dayBalance(profile, { eaten: summary?.calories, workout: Number(activity?.workoutCalories ?? 0), steps: Number(activity?.stepCalories || 0) });
-  const macros = e ? macroTargets(e.calorieTarget, e.weightKg, e.direction, profile?.goals?.proteinTarget) : { protein: profile?.goals?.proteinTarget ?? 140, carbs: 250, fat: 70, fiber: 30 };
+  const bal = dayBalance(profile, { eaten: summary?.calories, workout: Number(activity?.workoutCalories ?? 0), steps: Number(activity?.stepCalories || 0), extra: Number(summary?.eventExtra || 0) });
+  const macros = e ? macroTargets(e.calorieTarget, e.weightKg, e.direction, profile?.goals?.proteinTarget, profile?.goals?.bodyType) : { protein: profile?.goals?.proteinTarget ?? 140, carbs: 250, fat: 70, fiber: 30 };
   const lim = limitTargets(bal.target || 2000);
   const over = bal.budget > 0 && bal.remaining < 0;
   const stepsT = profile?.goals?.stepsTarget ?? 10000;
@@ -314,6 +315,7 @@ export default function HomeDashboard({ profile, summary, activity, water, water
             <Bar label="Sugar" icon="🍬" tone="sugar" value={summary?.sugar || 0} target={lim.sugar} limit />
             {n0(summary?.sodium) > 0 && <Bar label="Sodium" icon="🧂" tone="sodium" value={summary.sodium} target={lim.sodiumMg} unit="mg" limit />}
           </div>
+          <MicroToggle losing={e?.direction === "lose"} />
         </div>
 
         <div className="pn pn-hab">

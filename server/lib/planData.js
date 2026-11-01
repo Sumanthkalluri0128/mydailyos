@@ -5,6 +5,7 @@ const HealthLog = require('../models/HealthLog');
 const ActivityLog = require('../models/ActivityLog');
 const { buildHistory } = require('./progress');
 const { targetsFor } = require('./journeyData');
+const { eventExtraMap } = require('./eventExtra');
 const { dailyTarget, expectedEnergy, macroRanges } = require('./energy');
 const { addDays } = require('./dates');
 
@@ -19,13 +20,14 @@ async function loadCore(uid, today, { historyDays = 60 } = {}) {
   ]);
   const p = profile || {};
   const targets = targetsFor(p);
+  targets.extraByDate = await eventExtraMap(uid, history.days.map((d) => d.date), p);
   const e = expectedEnergy(p);
   return {
     profile: p, days: history.days, weights: weightRows.map((w) => ({ date: w.date, weightKg: Number(w.weightKg) })),
     sleep: Object.fromEntries(sleepRows.map((r) => [r.date, Number(r.value)])),
     strengthDates: new Set(strengthRows.map((r) => r.date)),
     targets, energy: e, target: dailyTarget(p), direction: e?.direction || 'maintain',
-    ranges: e ? macroRanges(dailyTarget(p), p.currentWeightKg, e.direction, p.goals?.proteinTarget) : null,
+    ranges: e ? macroRanges(dailyTarget(p), p.currentWeightKg, e.direction, p.goals?.proteinTarget, p.goals?.bodyType) : null,
     floor: p.sex === 'male' ? 1500 : 1200,
   };
 }

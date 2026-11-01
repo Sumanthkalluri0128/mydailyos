@@ -40,8 +40,8 @@ function Meter({ label, value, target, unit, tone, onClick }) {
 export default function HomeFocus({ profile, summary, activity, water, waterTarget, latestWeight, streak, goTo, onAsk, syncTick, onChanged }) {
   const hour = new Date().getHours();
   const e = expectedEnergy(profile);
-  const bal = dayBalance(profile, { eaten: summary?.calories, workout: Number(activity?.workoutCalories ?? 0), steps: Number(activity?.stepCalories || 0) });
-  const macros = bal.target ? macroTargets(bal.target, profile?.currentWeightKg, e?.direction, profile?.goals?.proteinTarget) : null;
+  const bal = dayBalance(profile, { eaten: summary?.calories, workout: Number(activity?.workoutCalories ?? 0), steps: Number(activity?.stepCalories || 0), extra: Number(summary?.eventExtra || 0) });
+  const macros = bal.target ? macroTargets(bal.target, profile?.currentWeightKg, e?.direction, profile?.goals?.proteinTarget, profile?.goals?.bodyType) : null;
   const stepsT = profile?.goals?.stepsTarget ?? 10000;
   const over = bal.budget > 0 && bal.remaining < 0;
   const name = (profile?.name || "").split(" ")[0];

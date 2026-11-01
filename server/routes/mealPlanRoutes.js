@@ -18,6 +18,7 @@ const { catalogueFoods } = require('../lib/foodCache');
 const { limitTargets } = require('../lib/energy');
 const { todayUtc } = require('../lib/dates');
 const { buildHistory } = require('../lib/progress');
+const { eventExtraMap } = require('../lib/eventExtra');
 const { dayBalance, dailyTarget } = require('../lib/energy');
 const { reconcile, buildDayViews, fixedSummary } = require('../lib/dayView');
 const Recipe = require('../models/Recipe');
@@ -254,10 +255,11 @@ async function homeBudgets(uid, core, dates, today) {
     for (const d of h.days) rows.set(d.date, d);
   }
   const budgets = {};
+  const room = await eventExtraMap(uid, dates, core.profile); // festival / trip / diet-break room, same numbers Home shows
   for (const d of dates) {
     const row = rows.get(d);
-    // Exactly Home's maths: target + the extra food earned by activity so far. Future days have no activity yet.
-    budgets[d] = d <= today && row ? dayBalance(core.profile, { eaten: row.calories, workout: row.caloriesBurned, steps: 0 }).budget : core.target;
+    // Exactly Home's maths: target + the extra food earned by activity so far (+ the event room). Future days have no activity yet.
+    budgets[d] = d <= today && row ? dayBalance(core.profile, { eaten: row.calories, workout: row.caloriesBurned, steps: 0, extra: room[d] || 0 }).budget : core.target + (room[d] || 0);
   }
   return budgets;
 }
@@ -369,7 +371,7 @@ router.post('/auto', wrap(async (req, res) => {
   const common = { habits, foods, catalogue: shared.filter((f) => !f.hidden), dates: planDates, target: core.target, targets, floor: core.floor, ranges: core.ranges, limits: limitTargets(core.target), occupied, dayBase, weekCounts, meals };
   const plan = mode === 'mine'
     ? buildAutoPlan(common)
-    : buildSmartPlan({ ...common, userFoods: pc.decorate(mine), diet, mode, needs: adv.needs, seed: `${uid}|${planDates[0]}|${variant}`, avoidIndulgent: !!adv.advice && adv.advice.level !== 'none', settings: pc.settings, excluder: pc.excluder, now: pc.now });
+    : buildSmartPlan({ ...common, userFoods: pc.decorate(mine), diet, mode, needs: adv.needs, seed: `${uid}|${planDates[0]}|${variant}`, avoidIndulgent: !!adv.advice && adv.advice.level !== 'none' && !adv.advice.skipCut, settings: pc.settings, excluder: pc.excluder, now: pc.now });
   // last gate: whatever the engine did, an excluded allergen is never shown or saved
   const leaked = findViolations(plan.items, pc.excluder);
   if (leaked.length) { plan.items = plan.items.filter((i) => !leaked.some((l) => l.item === i)); plan.notes = [...(plan.notes || []), 'A food that you keep out of your plan was removed.']; }

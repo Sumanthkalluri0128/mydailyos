@@ -19,6 +19,7 @@ const H = require('../lib/coachH');
 const T = require('../lib/toneLines');
 const { loadPlanContext } = require('../lib/planContext');
 const { detectPlateau } = require('../lib/plateau');
+const { estimateWeight } = require('../lib/weightEstimate');
 const MealPlan = require('../models/MealPlan');
 const { featureView, ALL } = require('../lib/features');
 const { nextStep } = require('../lib/nextStep');
@@ -39,7 +40,7 @@ async function context(uid, today) {
     WeightLog.find({ userId: uid, date: { $gte: addDays(today, -60), $lte: today } }).select('date weightKg').lean(),
   ]);
   const target = dailyTarget(profile); const e = expectedEnergy(profile);
-  const macros = macroTargets(target, profile?.currentWeightKg, e?.direction, profile?.goals?.proteinTarget);
+  const macros = macroTargets(target, profile?.currentWeightKg, e?.direction, profile?.goals?.proteinTarget, profile?.goals?.bodyType);
   const waterMl = profile?.goals?.waterTargetMl || waterTargetMl(profile?.currentWeightKg) || null;
   const sleepByDate = {}; for (const s of sleepRows) sleepByDate[s.date] = Math.max(sleepByDate[s.date] || 0, Number(s.value) || 0);
   const breakfastProtein = {}, snackKcal = {};
@@ -247,7 +248,7 @@ router.delete('/diet-break', wrap(async (req, res) => {
 }));
 router.get('/diet-break/advice', wrap(async (req, res) => {
   const today = todayOf(req); const c = await context(req.user.id, today);
-  const plateau = detectPlateau({ weights: c.weights, profile: c.profile || {}, today, target: c.target });
+  const plateau = detectPlateau({ weights: c.weights, profile: c.profile || {}, today, target: c.target, estimate: estimateWeight({ days: c.days, weights: c.weights, profile: c.profile, today }) });
   const e = expectedEnergy(c.profile);
   res.json({ success: true, advice: H.dietBreakAdvice({ plateau, tdee: c.tdee, target: c.target, direction: e?.direction }) });
 }));

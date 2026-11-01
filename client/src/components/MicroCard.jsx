@@ -14,7 +14,11 @@ const HEAD = {
 };
 
 // Vitamins and minerals for a day: power-up bars with the same arrows as macros. Unknown data is shown as "not enough data", never as 0.
-export default function MicroCard({ date }) {
+// Nutrients that most often run short while eating less: listed first, with a star, when the person is losing weight.
+const DEFICIT_FIRST = ["iron", "calcium", "vitaminD", "vitaminB12", "magnesium", "potassium", "zinc"];
+
+/** `embedded` = only the nutrient rows (no mascot header or card), for use inside another card. */
+export default function MicroCard({ date, embedded = false, losing = false }) {
   const day = date || getLocalDate();
   const [d, setD] = useState(null);
   const [open, setOpen] = useState(null);
@@ -26,12 +30,15 @@ export default function MicroCard({ date }) {
       .catch(() => {});
     return () => { live = false; };
   }, [day]);
-  if (!d) return null;
+  if (!d) return embedded ? <p className="micro-note">Loading…</p> : null;
+  if (!d.ok && embedded) return <p className="micro-note">{d.note}</p>;
   if (!d.ok) return <section className="card micro-card"><h3>Vitamins and minerals</h3><p className="micro-note">{d.note}</p></section>;
   const lowOf = (id) => (d.low || []).find((x) => x.id === id);
+  const rows = losing ? [...d.rows].sort((a, b) => (DEFICIT_FIRST.includes(a.id) ? 0 : 1) - (DEFICIT_FIRST.includes(b.id) ? 0 : 1)) : d.rows;
+  const Wrap = embedded ? "div" : "section";
   return (
-    <section className="card micro-card" aria-label="Vitamins and minerals">
-      <div className="micro-head">
+    <Wrap className={embedded ? "micro-embedded" : "card micro-card"} aria-label="Vitamins and minerals">
+      {!embedded && <div className="micro-head">
         <Buddy scene={SCENE[d.mood] || "wave"} size={72} />
         <div>
           <p className="eyebrow">Power-ups</p>
@@ -39,14 +46,15 @@ export default function MicroCard({ date }) {
           {d.knownCount > 0 && <p>{d.inRange} of {d.knownCount} tracked nutrients in range today.</p>}
           {d.emptyNote && <p>{d.emptyNote}</p>}
         </div>
-      </div>
+      </div>}
+      {losing && <p className="micro-note">★ = often runs short when eating less.</p>}
       <ul className="micro-rows">
-        {d.rows.map((r) => {
+        {rows.map((r) => {
           const low = r.status === "low" ? lowOf(r.id) : null;
           return (
             <li key={r.id} className={`micro-row ${r.status}`}>
               <button type="button" className="micro-line" onClick={() => low && setOpen(open === r.id ? null : r.id)} aria-expanded={low ? open === r.id : undefined} disabled={!low}>
-                <span className="micro-label">{r.label}</span>
+                <span className="micro-label">{losing && DEFICIT_FIRST.includes(r.id) ? "★ " : ""}{r.label}</span>
                 {r.status === "nodata" ? (
                   <span className="micro-val">Not enough data</span>
                 ) : (
@@ -70,6 +78,19 @@ export default function MicroCard({ date }) {
         })}
       </ul>
       <p className="micro-note">{d.note} Source: {d.source}.{d.rdaVerified === false ? " Reference ranges still being verified." : ""}</p>
-    </section>
+    </Wrap>
+  );
+}
+
+/** Closed by default: one quiet row under the macros. Click to open the vitamins and minerals. */
+export function MicroToggle({ date, losing = false }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="micro-toggle">
+      <button type="button" className="micro-toggle-btn" aria-expanded={open} onClick={() => setOpen((o) => !o)}>
+        <span>Vitamins &amp; minerals</span><span aria-hidden="true">{open ? "▾" : "▸"}</span>
+      </button>
+      {open && <MicroCard embedded date={date} losing={losing} />}
+    </div>
   );
 }

@@ -87,17 +87,18 @@ function dailyTarget(p) {
  *   remaining  = budget - eaten (negative = over)
  *   net        = (maintenance + bonus) - eaten (positive = deficit, negative = surplus)
  */
-function dayBalance(p, { eaten = 0, workout = 0, steps = 0 } = {}) {
+function dayBalance(p, { eaten = 0, workout = 0, steps = 0, extra = 0 } = {}) {
   const e = expectedEnergy(p);
   const target = e ? e.calorieTarget : dailyTarget(p);
   const burned = Math.max(0, n(workout)) + Math.max(0, n(steps));
   const eat = Math.max(0, n(eaten));
   const baseline = e ? e.baselineActivityKcal : burned; // unknown body -> don't award anything we can't justify
   const bonus = e ? Math.max(0, Math.round(burned - baseline)) : 0;
-  const budget = target + bonus;
+  const room = Math.max(0, Math.round(n(extra))); // festival / trip / diet-break room for this day (lib/eventExtra.js). It widens the budget but burns nothing, so `net` ignores it.
+  const budget = target + bonus + room;
   const net = e ? e.tdee + bonus - eat : null;
   return {
-    target, burned, bonus, budget, eaten: eat,
+    target, burned, bonus, extra: room, budget, eaten: eat,
     remaining: budget - eat,
     net,
     isDeficit: net === null ? null : net >= 0,
@@ -117,12 +118,27 @@ function waterTargetMl(weightKg) {
   return Math.min(5000, Math.max(1500, Math.round((w * 35) / 50) * 50));
 }
 
-/** Macro targets that add up to the calorie target: protein by body weight (or the saved goal), fat ~27%, carbs the rest. */
-function macroTargets(calorieTarget, weightKg, direction, proteinOverride) {
-  // Protein: the person's own number if set, otherwise 1.6 g/kg (2.0 when gaining) — capped at 35 % of calories,
+/**
+ * What each body goal asks of the macros (protein g per kg of body weight, fat share of calories). Chosen in the app (Profile > Body goal).
+ *   lean      lean and toned          athletic  athletic, V-shape          muscular  strong and muscular          balanced  healthy, soft-fit
+ * No body goal chosen = the old defaults (1.6 g/kg protein, 27 % fat).
+ */
+const BODY_TYPES = {
+  lean: { protein: 1.8, fat: 0.27 },
+  athletic: { protein: 2.0, fat: 0.25 },
+  muscular: { protein: 2.2, fat: 0.25 },
+  balanced: { protein: 1.6, fat: 0.30 },
+};
+const bodyRule = (bodyType) => BODY_TYPES[bodyType] || null;
+
+/** Macro targets that add up to the calorie target: protein by body weight (or the saved goal), fat ~27 % (by body goal), carbs the rest. */
+function macroTargets(calorieTarget, weightKg, direction, proteinOverride, bodyType) {
+  // Protein: the person's own number if set, otherwise by body goal (default 1.6 g/kg, 2.0 when gaining) — capped at 35 % of calories,
   // the top of the accepted macronutrient range, so a large body on a modest budget doesn't get an extreme target.
-  const protein = Math.round(n(proteinOverride) || Math.min(n(weightKg) * (direction === 'gain' ? 2 : 1.6), (calorieTarget * 0.35) / 4));
-  const fat = Math.round((calorieTarget * 0.27) / 9);
+  const rule = bodyRule(bodyType);
+  const perKg = direction === 'gain' ? Math.max(2, rule ? rule.protein : 0) : (rule ? rule.protein : 1.6);
+  const protein = Math.round(n(proteinOverride) || Math.min(n(weightKg) * perKg, (calorieTarget * 0.35) / 4));
+  const fat = Math.round((calorieTarget * (rule ? rule.fat : 0.27)) / 9);
   const carbs = Math.max(0, Math.round((calorieTarget - protein * 4 - fat * 9) / 4));
   return { protein, fat, carbs, fiber: Math.round((calorieTarget / 1000) * 14) };
 }
@@ -137,11 +153,11 @@ function macroTargets(calorieTarget, weightKg, direction, proteinOverride) {
  *            floor leaves room for the higher protein used when cutting).
  *   fibre    14 g per 1,000 kcal (goal = minimum) up to about 50 g, beyond which gut discomfort becomes common.
  */
-function macroRanges(calorieTarget, weightKg, direction, proteinOverride) {
+function macroRanges(calorieTarget, weightKg, direction, proteinOverride, bodyType) {
   const kcal = n(calorieTarget), w = n(weightKg);
-  const goal = macroTargets(kcal, w, direction, proteinOverride);
+  const goal = macroTargets(kcal, w, direction, proteinOverride, bodyType);
   const pMin = Math.max(Math.round(w * (direction === 'maintain' ? 1.0 : 1.2)), Math.round((kcal * 0.10) / 4));
-  const pMax = Math.max(pMin, Math.min(Math.round(w * (direction === 'gain' ? 2.2 : 2.0)), Math.round((kcal * 0.35) / 4)));
+  const pMax = Math.max(pMin, Math.min(Math.round(w * (direction === 'gain' ? 2.2 : Math.max(2.0, bodyRule(bodyType)?.protein || 0))), Math.round((kcal * 0.35) / 4)));
   const span = (min, max, g) => ({ min: Math.min(min, g), max: Math.max(max, g), goal: g });
   return {
     protein: span(pMin, pMax, goal.protein),
@@ -176,5 +192,5 @@ function weeksToGoal(currentKg, targetKg, pace = 0.5) {
 module.exports = {
   ACTIVITY_MULTIPLIER, KCAL_PER_KG, KCAL_PER_STEP_PER_KG, DEFAULT_TARGET,
   bmr, goalDirection, expectedEnergy, dailyTarget, dayBalance,
-  stepCalories, stepDistanceKm, waterTargetMl, macroTargets, macroRanges, rangeStatus, limitTargets, weeksToGoal,
+  stepCalories, stepDistanceKm, waterTargetMl, macroTargets, BODY_TYPES, macroRanges, rangeStatus, limitTargets, weeksToGoal,
 };

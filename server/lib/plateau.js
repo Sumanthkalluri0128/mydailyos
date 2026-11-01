@@ -1,6 +1,7 @@
 // Weight-trend check: is the scale actually moving the way the goal says it should?
 const { goalDirection } = require('./energy');
 const { diffDays } = require('./dates');
+const { estimateNote } = require('./weightEstimate');
 
 const r2 = (x) => Math.round(x * 100) / 100;
 
@@ -19,8 +20,35 @@ function slopePerWeek(points) {
  * @param profile  profile-like object (goals.targetWeightKg, goals.weeklyPaceKg, sex, currentWeightKg)
  * @param today    YYYY-MM-DD
  * @param target   today's calorie target (kcal)
+ * @param estimate optional result of estimateWeight(): what the food log implies since the last weigh-in. Analysis only: it never
+ *                 changes the slope, the weigh-in count or any chart; it adds a note, and it stops a stale scale from saying "on track".
  */
-function detectPlateau({ weights, profile = {}, today, target = null, windowDays = 21 }) {
+function detectPlateau({ weights, profile = {}, today, target = null, windowDays = 21, estimate = null }) {
+  const out = detectFromScale({ weights, profile, today, target, windowDays });
+  return withEstimate(out, estimate, profile);
+}
+
+/** Adds the food-log estimate to a scale-based verdict. Real weigh-ins keep the final say. */
+function withEstimate(out, est, profile = {}) {
+  if (!est || !est.meaningful || est.loggedDays < 3) return out;
+  const direction = goalDirection(est.anchorKg || Number(profile.currentWeightKg) || 0, (profile.goals || {}).targetWeightKg);
+  const note = estimateNote(est, { direction });
+  if (!note) return out;
+  const againstGoal = (direction === 'lose' && est.deltaKg > 0) || (direction === 'gain' && est.deltaKg < 0) || (direction === 'maintain' && Math.abs(est.deltaKg) >= 0.5);
+  const merged = { ...out, estimate: { deltaKg: est.deltaKg, estimatedKg: est.estimatedKg, ratePerWeek: est.ratePerWeek, loggedDays: est.loggedDays, anchorAgeDays: est.anchorAgeDays, confidence: est.confidence, basis: 'estimate' } };
+  // The scale is too old to describe the days since: do not let it say "on track" or "plateau" about them.
+  if (est.stale || out.status === 'insufficient_data') {
+    if (againstGoal) { merged.status = 'estimated_up'; merged.message = note; }
+    else if (out.status === 'insufficient_data') { merged.status = 'estimated'; merged.message = note; }
+    else merged.message = `${out.message} ${note}`;
+    return merged;
+  }
+  // The scale is fresh: keep its verdict and just add the context when the log points the other way.
+  if (againstGoal && out.status !== 'wrong_direction') merged.message = `${out.message} ${note}`;
+  return merged;
+}
+
+function detectFromScale({ weights, profile = {}, today, target = null, windowDays = 21 }) {
   const recent = weights
     .filter((w) => w.date <= today && diffDays(w.date, today) < windowDays)
     .sort((a, b) => (a.date < b.date ? -1 : 1));
@@ -62,4 +90,4 @@ function detectPlateau({ weights, profile = {}, today, target = null, windowDays
   return out;
 }
 
-module.exports = { detectPlateau, slopePerWeek };
+module.exports = { detectPlateau, slopePerWeek, withEstimate };

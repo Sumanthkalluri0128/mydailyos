@@ -15,3 +15,7 @@
 .trust-badge.verified{border-color:#3aa76d}
 .trust-report{background:none;border:0;text-decoration:underline;color:inherit;cursor:pointer;padding:0;font:inherit}
 .trust-form{display:grid;gap:6px;margin-top:6px}
+
+.micro-toggle{margin-top:12px;border-top:1px solid var(--border,#e6e6e6)}
+.micro-toggle-btn{display:flex;width:100%;justify-content:space-between;align-items:center;min-height:44px;background:none;border:0;font:inherit;font-weight:700;color:inherit;cursor:pointer;padding:0}
+.micro-embedded{padding-top:4px}
