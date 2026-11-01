@@ -4,16 +4,17 @@
 import { useState } from "react";
 import ExercisePic from "../components/ExercisePic";
 
-export function Fold({ title, open, onToggle, children }) {
+export function Section({ title, children }) {
   return (
-    <section className="bp-card">
-      <button type="button" className="bp-fold" aria-expanded={!!open} onClick={onToggle}><span>{title}</span><i aria-hidden="true">{open ? "▾" : "▸"}</i></button>
-      {open && <div className="bp-body">{children}</div>}
-    </section>
+    <details className="bp-card bp-section">
+      <summary>{title}</summary>
+      <div className="bp-body">{children}</div>
+    </details>
   );
 }
 export const Lines = ({ items }) => <ul className="bp-lines">{items.map((t, i) => <li key={i}>{t}</li>)}</ul>;
 
+const DAY_CLASS = { train: "train", active: "active", rest: "rest" };
 const GROUP = { chest: "Chest", back: "Back", shoulders: "Shoulders", arms: "Arms", core: "Core", legs: "Legs", glutes: "Glutes" };
 const cap = (s) => (s ? s[0].toUpperCase() + s.slice(1) : s);
 const rest = (sec) => (sec >= 90 ? `${Math.round((sec / 60) * 10) / 10} min` : `${sec} s`);
@@ -95,77 +96,79 @@ function Swap({ s }) {
   return <li><b>{s.name}</b> <span className="bp-pill">{s.kind}</span><br /><span className="bp-muted">{s.hint}</span></li>;
 }
 
+/** One exercise: picture first, then the three numbers a beginner needs (sets, reps, rest), one cue, and the extras tucked away. */
 function Exercise({ e, n, showSwaps }) {
   const sw = e.swaps;
   return (
     <li className="bp-ex">
-      <div className="bp-ex-top"><span className="bp-n">{n}</span><div><b>{e.name}</b><div className="bp-meta">{e.sets} × {e.reps} · rest {rest(e.restSec)} · {e.effort.toLowerCase()}</div></div></div>
+      <div className="bp-ex-top"><span className="bp-n">{n}</span><b>{e.name}</b></div>
       <ExercisePic slot={e.slot} image={e.image} name={e.name} />
+      {e.sets ? <div className="bp-badges"><span>{e.sets} sets</span><span>{e.reps} reps</span><span>rest {rest(e.restSec)}</span></div> : <div className="bp-badges"><span>{e.reps}</span></div>}
       <p className="bp-cue">{e.cue}</p>
-      <details>
-        <summary>Weight, progress{showSwaps && sw ? " and alternatives" : ""}</summary>
-        <p className="bp-muted">{e.weightHint}</p>
-        <p className="bp-muted">{e.progress}</p>
-        {showSwaps && sw && (
-          <>
-            {sw.busy.length > 0 && <><h5 className="bp-h5">Machine busy or your gym does not have it</h5><ul className="bp-lines">{sw.busy.map((s) => <Swap key={s.id} s={s} />)}</ul></>}
-            {sw.dumbbellOnly && <><h5 className="bp-h5">Only dumbbells and a bench</h5><ul className="bp-lines"><Swap s={sw.dumbbellOnly} /></ul></>}
-            {sw.home && <><h5 className="bp-h5">No equipment at all (home)</h5><ul className="bp-lines"><Swap s={sw.home} /></ul></>}
-            {(sw.easier || sw.harder) && <p className="bp-muted">{sw.easier ? `Too hard? Try: ${sw.easier.name}. ` : ""}{sw.harder ? `Too easy? Try: ${sw.harder.name}.` : ""}</p>}
-          </>
-        )}
-      </details>
+      {e.weightHint && (
+        <details>
+          <summary>How heavy, and what if the machine is busy</summary>
+          <p className="bp-muted">{e.weightHint}</p>
+          <p className="bp-muted">{e.progress}</p>
+          {showSwaps && sw && (
+            <>
+              {sw.busy.length > 0 && <><h5 className="bp-h5">Machine busy or missing</h5><ul className="bp-lines">{sw.busy.map((x) => <Swap key={x.id} s={x} />)}</ul></>}
+              {sw.dumbbellOnly && <><h5 className="bp-h5">Only dumbbells and a bench</h5><ul className="bp-lines"><Swap s={sw.dumbbellOnly} /></ul></>}
+              {sw.home && <><h5 className="bp-h5">No equipment (home)</h5><ul className="bp-lines"><Swap s={sw.home} /></ul></>}
+              {(sw.easier || sw.harder) && <p className="bp-muted">{sw.easier ? `Too hard? Try: ${sw.easier.name}. ` : ""}{sw.harder ? `Too easy? Try: ${sw.harder.name}.` : ""}</p>}
+            </>
+          )}
+        </details>
+      )}
     </li>
   );
 }
 
-const DAY_CLASS = { train: "train", active: "active", rest: "rest" };
+const WAYS = [["gym", "🏋️ Gym"], ["home", "🏠 Home"], ["quick", "⏱️ Quick"]];
 
-export function Program({ program }) {
-  const [id, setId] = useState(program.sessions[0].id);
-  const s = program.sessions.find((x) => x.id === id) || program.sessions[0];
+/** The Workout tab. Pick a day (today is already chosen), pick where you are, and follow the list top to bottom. */
+export function Workout({ program }) {
+  const today = (new Date().getDay() + 6) % 7;               // Monday = 0
+  const [day, setDay] = useState(today);
+  const [way, setWay] = useState("gym");
+  const d = program.week[day] || program.week[0];
+  const s = program.sessions.find((x) => x.id === d.sessionId);
+  const ways = WAYS.filter(([id]) => id !== "home" || (s && s.homeBackup));
+  const list = !s ? [] : way === "home" && s.homeBackup ? s.homeBackup.exercises : way === "quick" ? s.quick.exercises : s.exercises;
   return (
-    <div>
-      <p className="bp-muted"><b>{program.split}</b>. About {s.minutes} minutes a session. Pick a day to see the exercises.</p>
-      <div className="bp-week" role="list">
-        {program.week.map((d) => (
-          <button key={d.day} type="button" role="listitem" disabled={d.kind !== "train"} className={`bp-wk ${DAY_CLASS[d.kind]}${d.sessionId === s.id ? " sel" : ""}`} onClick={() => d.sessionId && setId(d.sessionId)} aria-label={`${d.day}: ${d.label}`}>
-            <small>{d.day}</small><b>{d.kind === "train" ? d.sessionId : d.kind === "active" ? "♥" : "–"}</b>
+    <div className="bp-card">
+      <div className="bp-week" role="list" aria-label="Your week">
+        {program.week.map((x, i) => (
+          <button key={x.day} type="button" role="listitem" className={`bp-wk ${DAY_CLASS[x.kind]}${i === day ? " sel" : ""}`} onClick={() => setDay(i)} aria-label={`${x.day}: ${x.label}`}>
+            <small>{i === today ? "Today" : x.day}</small><b>{x.kind === "train" ? "💪" : x.kind === "active" ? "🚶" : "😴"}</b>
           </button>
         ))}
       </div>
-      <p className="bp-legend"><span className="bp-dot train" /> train <span className="bp-dot active" /> easy cardio <span className="bp-dot rest" /> rest</p>
-      <div className="bp-tabs" role="tablist">
-        {program.sessions.map((x) => <button key={x.id} type="button" role="tab" aria-selected={x.id === s.id} className={`bp-tab${x.id === s.id ? " on" : ""}`} onClick={() => setId(x.id)}>{x.id} · {x.title}</button>)}
-      </div>
-      <details className="bp-det"><summary>Warm-up (about 8 minutes)</summary><Lines items={s.warmup} /></details>
-      <ol className="bp-exlist">{s.exercises.map((e, i) => <Exercise key={e.id} e={e} n={i + 1} showSwaps />)}</ol>
-      <details className="bp-det"><summary>Cool-down</summary><Lines items={s.cooldown} /></details>
-    </div>
-  );
-}
+      <p className="bp-legend">💪 lift &nbsp; 🚶 easy cardio &nbsp; 😴 rest</p>
 
-export function Backups({ program }) {
-  const [id, setId] = useState(program.sessions[0].id);
-  const s = program.sessions.find((x) => x.id === id) || program.sessions[0];
-  return (
-    <div>
-      <p className="bp-muted">Life happens. Pick the version that fits today and you still move forward.</p>
-      <div className="bp-tabs">{program.sessions.map((x) => <button key={x.id} type="button" className={`bp-tab${x.id === s.id ? " on" : ""}`} onClick={() => setId(x.id)}>{x.id}</button>)}</div>
-      {s.homeBackup && (
+      {!s && (
+        <div>
+          <h3 className="bp-h0">{d.kind === "active" ? "Easy cardio day" : "Rest day"}</h3>
+          <p className="bp-lead">{program.active.restDay}</p>
+          <p className="bp-note"><b>{program.active.minimumDay.title}.</b> {program.active.minimumDay.detail}</p>
+          <h4 className="bp-h">Ideas for today</h4>
+          <ul className="bp-lines">{program.active.menu.slice(0, 4).map((m) => <li key={m.id}><b>{m.name}</b> · about {m.kcal30} kcal in 30 min<br /><span className="bp-muted">{m.tip}</span></li>)}</ul>
+        </div>
+      )}
+
+      {s && (
         <>
-          <h4 className="bp-h">Can not get to the gym: {s.homeBackup.title} ({s.homeBackup.minutes} min)</h4>
-          <p className="bp-muted">{s.homeBackup.note}</p>
-          <ol className="bp-exlist">{s.homeBackup.exercises.map((e, i) => <Exercise key={e.id} e={e} n={i + 1} />)}</ol>
+          <h3 className="bp-h0">{s.title}</h3>
+          <p className="bp-muted">{way === "quick" ? `${s.quick.minutes} minutes. ${s.quick.format}` : way === "home" ? `${s.homeBackup.minutes} minutes. ${s.homeBackup.note}` : `About ${s.minutes} minutes. Do them in this order.`}</p>
+          <div className="bp-tabs" role="tablist" aria-label="Where are you today?">
+            {ways.map(([id, label]) => <button key={id} type="button" role="tab" aria-selected={way === id} className={`bp-tab${way === id ? " on" : ""}`} onClick={() => setWay(id)}>{label}</button>)}
+          </div>
+          {way === "gym" && <details className="bp-det"><summary>Warm-up (about 8 minutes)</summary><Lines items={s.warmup} /></details>}
+          <ol className="bp-exlist">{list.map((e, i) => <Exercise key={e.id} e={e} n={i + 1} showSwaps={way === "gym"} />)}</ol>
+          {way === "gym" && <details className="bp-det"><summary>Cool-down</summary><Lines items={s.cooldown} /></details>}
+          {way === "gym" && <details className="bp-det"><summary>Gym is busy?</summary><Lines items={program.busyGym} /></details>}
         </>
       )}
-      <h4 className="bp-h">Short on time: {s.quick.title} ({s.quick.minutes} min)</h4>
-      <p className="bp-muted">{s.quick.format}</p>
-      <ol className="bp-exlist">{s.quick.exercises.map((e, i) => <li key={e.id} className="bp-ex"><div className="bp-ex-top"><span className="bp-n">{i + 1}</span><div><b>{e.name}</b><div className="bp-meta">{e.reps}</div></div></div><ExercisePic slot={e.slot} image={e.image} name={e.name} /><p className="bp-cue">{e.cue}</p></li>)}</ol>
-      <h4 className="bp-h">Busy gym</h4>
-      <Lines items={program.busyGym} />
-      <h4 className="bp-h">Best things to buy for home training</h4>
-      <Lines items={program.equipmentUpgrades} />
     </div>
   );
 }

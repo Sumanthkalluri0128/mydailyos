@@ -1,13 +1,13 @@
-// Body plan: pick the body you are aiming for, add a few tape measurements, and get a plan (target weight and waist, safe pace,
-// calories, macros, a full weekly training program with a body analysis, the vitamins and minerals that matter while eating less).
-// "Use this plan" saves it so Home, Food and the Planner follow it. Same server API as the phone app: GET /api/body-plan, POST /api/body-plan/apply (server/lib/bodyPlan.js).
+// Body plan, in four tabs so nothing is buried:
+//   Workout = what to do today (default)   Eating = calories, macros, vitamins   Me = goal setup + tape measurements   More = the "why" and extras
+// The top card always shows the headline numbers and the one button that matters: "Use this plan" (saves it so Home, Food and the Planner follow it). Same server API as the phone app: GET /api/body-plan, POST /api/body-plan/apply (server/lib/bodyPlan.js).
 // The plan is worked out on the server, so this page needs a connection.
 import { useCallback, useEffect, useState } from "react";
 import "./bodyplan.css";
 import { apiFetch } from "../config/api";
 import { getLocalDate } from "../utils/date";
 import { notify } from "../utils/notify";
-import { Fold, Lines, TrainingSetup, Analysis, Program, Backups, ActiveDays, Progress, Safety } from "./TrainingSections";
+import { Section, Lines, TrainingSetup, Analysis, Workout, ActiveDays, Progress, Safety } from "./TrainingSections";
 
 const ICON = { lean: "🌿", athletic: "🏃", muscular: "🏋️", balanced: "🧘" };
 const TAPE_LABEL = { waist: "Waist", neck: "Neck", hips: "Hips", chest: "Chest", arm: "Upper arm", thigh: "Thigh" };
@@ -33,7 +33,7 @@ export default function BodyPlanPage({ onBack, onSaved }) {
   const [pick, setPick] = useState("");
   const [vals, setVals] = useState({});
   const [busy, setBusy] = useState(false);
-  const [open, setOpen] = useState({ plan: true, macros: true, setup: true, analysis: true, program: true });
+  const [tab, setTab] = useState("workout");
   const [prefs, setPrefs] = useState(null); // the training setup being edited; previewed on the server, saved with "Use this plan"
 
   const load = useCallback(async (type, tp) => {
@@ -63,8 +63,8 @@ export default function BodyPlanPage({ onBack, onSaved }) {
 
   const plan = d.plan;
   const ready = !!(plan && plan.ready);
-  const toggle = (k) => setOpen((o) => ({ ...o, [k]: !o[k] }));
   const choose = (id) => { setPick(id); load(id, prefs); };
+  const isCurrent = d.chosen === pick;
 
   const saveTape = async () => {
     const entries = Object.entries(vals).filter(([, v]) => Number(v) > 0);
@@ -80,27 +80,30 @@ export default function BodyPlanPage({ onBack, onSaved }) {
     try {
       await call("/api/body-plan/apply", { method: "POST", body: JSON.stringify({ type: pick, training: prefs }) });
       notify("Plan saved. Your calories, macros, quests and training now follow this body goal.", "success");
+      await load(pick, prefs);
       onSaved?.();
     } catch (e) { notify(`Could not save the plan: ${e.message}`, "error"); } finally { setBusy(false); }
   };
+
+  const TABS = [["workout", "💪", "Workout"], ["eating", "🍽️", "Eating"], ["me", "📏", "Me"], ["more", "📘", "More"]];
 
   return (
     <section className="bp">
       {onBack && <button type="button" className="bp-back" onClick={onBack}>← Back</button>}
       <h1 className="bp-title">Body plan</h1>
-      <p className="bp-muted">Choose the body you are aiming for. Your calories, protein, fat and carbs are worked out from this and your measurements.</p>
-      {err && <p className="bp-err" role="alert">{err}</p>}
 
+      {/* Step 1: the goal. Four big buttons, one line of explanation for the chosen one. */}
       <div className="bp-types" role="radiogroup" aria-label="Body goal">
         {d.types.map((t) => (
           <button key={t.id} type="button" role="radio" aria-checked={pick === t.id} className={`bp-type${pick === t.id ? " on" : ""}`} onClick={() => choose(t.id)}>
             <span className="bp-ic" aria-hidden="true">{ICON[t.id] || "🎯"}</span>
-            <span className="bp-tt"><b>{t.label}{d.chosen === t.id ? "  ✓ current" : ""}</b><small>{t.blurb}</small></span>
+            <b>{t.label}{d.chosen === t.id ? " ✓" : ""}</b>
           </button>
         ))}
       </div>
-
-      {!pick && <p className="bp-muted">Pick one to see your plan.</p>}
+      {pick && <p className="bp-muted">{(d.types.find((t) => t.id === pick) || {}).blurb}</p>}
+      {err && <p className="bp-err" role="alert">{err}</p>}
+      {!pick && <p className="bp-muted">Pick the body you are aiming for to see your plan.</p>}
 
       {pick && plan && !ready && (
         <div className="bp-card">
@@ -116,89 +119,90 @@ export default function BodyPlanPage({ onBack, onSaved }) {
             <div key={s.id} className={`bp-card bp-safe${s.level === "alert" ? " alert" : ""}`}><b>{s.title}</b><p className="bp-muted">{s.detail}</p></div>
           ))}
 
-          <Fold title={`Your plan: ${plan.label}`} open={open.plan} onToggle={() => toggle("plan")}>
+          {/* Step 2: the headline numbers and the one button that saves everything. */}
+          <div className="bp-card bp-hero">
             <div className="bp-stats">
-              <Stat l="Calories a day" v={plan.calories ? `${plan.calories.toLocaleString()} kcal` : "—"} />
-              <Stat l="Target weight" v={plan.mode === "lose" ? `${plan.goal.targetWeightKg} kg` : "Hold steady"} />
-              {plan.mode === "lose" && <Stat l="Pace" v={`${plan.goal.weeklyPaceKg} kg / week`} />}
-              {plan.mode === "lose" && <Stat l="About" v={`${plan.goal.weeks} weeks`} />}
-              <Stat l="Waist goal" v={`${plan.goal.waistCm} cm`} />
-              <Stat l="Body fat now" v={`${plan.body.bodyFatPct}% (${plan.body.bodyFatSource === "tape" ? "from tape" : "estimate"})`} />
-              <Stat l="Healthy range for this goal" v={`${plan.goal.bodyFatBand[0]} to ${plan.goal.bodyFatBand[1]}%`} />
+              <Stat l="Calories a day" v={plan.calories ? `${plan.calories.toLocaleString()}` : "—"} />
+              <Stat l={plan.mode === "lose" ? "Target weight" : "Weight"} v={plan.mode === "lose" ? `${plan.goal.targetWeightKg} kg` : "Hold steady"} />
+              <Stat l={plan.mode === "lose" ? "Time needed" : "Waist goal"} v={plan.mode === "lose" ? `~${plan.goal.weeks} weeks` : `${plan.goal.waistCm} cm`} />
               <Stat l="Steps a day" v={plan.steps.toLocaleString()} />
             </div>
-            {plan.notes.map((n, i) => <p key={i} className="bp-muted">{n}</p>)}
-          </Fold>
+            <button type="button" className="bp-btn" onClick={apply} disabled={busy}>{busy ? "Saving…" : isCurrent ? "Save my changes" : "Use this plan"}</button>
+          </div>
 
-          <Fold title="Macros every day" open={open.macros} onToggle={() => toggle("macros")}>
-            <div className="bp-stats">
-              <Stat l={`Protein (${plan.protein.gPerKg} g per kg)`} v={`${plan.macros.protein} g`} />
-              <Stat l="Carbs" v={`${plan.macros.carbs} g`} />
-              <Stat l={`Fat (${Math.round(plan.fatShare * 100)}% of calories)`} v={`${plan.macros.fat} g`} />
-              <Stat l="Fibre" v={`${plan.fiberG} g`} />
-            </div>
-            <p className="bp-muted">Water about {(plan.waterMl / 1000).toFixed(1)} L a day. Protein is spread over 3 or 4 meals so it keeps your muscle.</p>
-          </Fold>
+          {/* Step 3: four tabs. */}
+          <div className="bp-maintabs" role="tablist" aria-label="Body plan sections">
+            {TABS.map(([id, icon, label]) => (
+              <button key={id} type="button" role="tab" aria-selected={tab === id} className={`bp-mt${tab === id ? " on" : ""}`} onClick={() => setTab(id)}><span aria-hidden="true">{icon}</span>{label}</button>
+            ))}
+          </div>
 
-          <Fold title="Shape and measurements" open={open.shape} onToggle={() => toggle("shape")}>
-            <Lines items={plan.shape} />
-            {plan.tape.length > 0 && (
-              <div className="bp-tape">
-                <p className="bp-muted">Add measurements (cm). More readings make the plan more exact.</p>
-                {plan.tape.map((m) => (
-                  <label key={m.type} className="bp-field">
-                    <span>{TAPE_LABEL[m.type] || m.type} (cm)</span>
-                    <input type="number" inputMode="decimal" min="1" step="0.1" value={vals[m.type] || ""} placeholder={m.how} onChange={(e) => setVals((x) => ({ ...x, [m.type]: e.target.value }))} />
-                  </label>
-                ))}
-                <button type="button" className="bp-btn ghost" onClick={saveTape} disabled={busy || !Object.values(vals).some((v) => Number(v) > 0)}>{busy ? "Saving…" : "Save measurements"}</button>
+          {tab === "workout" && <Workout program={plan.training.program} />}
+
+          {tab === "eating" && (
+            <>
+              <div className="bp-card">
+                <h3 className="bp-h0">Eat this every day</h3>
+                <div className="bp-stats">
+                  <Stat l={`Protein (${plan.protein.gPerKg} g per kg)`} v={`${plan.macros.protein} g`} />
+                  <Stat l="Carbs" v={`${plan.macros.carbs} g`} />
+                  <Stat l={`Fat (${Math.round(plan.fatShare * 100)}% of calories)`} v={`${plan.macros.fat} g`} />
+                  <Stat l="Fibre" v={`${plan.fiberG} g`} />
+                </div>
+                <p className="bp-muted">Drink about {(plan.waterMl / 1000).toFixed(1)} L of water. Spread protein over 3 or 4 meals so it protects your muscle.</p>
               </div>
-            )}
-          </Fold>
-
-          <Fold title="Your training setup" open={open.setup} onToggle={() => toggle("setup")}>
-            <TrainingSetup options={d.trainingOptions} prefs={prefs} serverPrefs={plan.training.prefs} onChange={changePrefs} />
-          </Fold>
-
-          <Fold title="Your body analysis" open={open.analysis} onToggle={() => toggle("analysis")}>
-            <Analysis a={plan.analysis} />
-          </Fold>
-
-          <Fold title={`Your weekly program: ${plan.training.program.split}`} open={open.program} onToggle={() => toggle("program")}>
-            <Program program={plan.training.program} />
-          </Fold>
-
-          <Fold title="Gym busy, or can not go today?" open={open.backup} onToggle={() => toggle("backup")}>
-            <Backups program={plan.training.program} />
-          </Fold>
-
-          <Fold title="Active days and cardio" open={open.active} onToggle={() => toggle("active")}>
-            <ActiveDays program={plan.training.program} />
-          </Fold>
-
-          <Fold title="Getting stronger every week" open={open.prog} onToggle={() => toggle("prog")}>
-            <Progress program={plan.training.program} />
-          </Fold>
-
-          <Fold title="Training safety" open={open.safe} onToggle={() => toggle("safe")}>
-            <Safety items={plan.training.program.safety} />
-          </Fold>
-
-          <Fold title="Vitamins and minerals to watch" open={open.micro} onToggle={() => toggle("micro")}>
-            <p className="bp-muted">Your needs do not drop when you eat less, so these are the ones that most often run short.</p>
-            {plan.microPriority.map((m) => <p key={m.id} className="bp-micro"><b>{m.label}</b><br /><span className="bp-muted">{m.why}. Try: {m.foods}.</span></p>)}
-          </Fold>
-
-          {plan.checkpoints.length > 0 && (
-            <Fold title="Checkpoints" open={open.check} onToggle={() => toggle("check")}>
-              <Lines items={plan.checkpoints.map((c) => `Week ${c.week}: about ${c.weightKg} kg. ${c.check}`)} />
-            </Fold>
+              <div className="bp-card">
+                <h3 className="bp-h0">Vitamins and minerals to watch</h3>
+                <p className="bp-muted">Your needs do not drop when you eat less, so these most often run short.</p>
+                {plan.microPriority.map((m) => <p key={m.id} className="bp-micro"><b>{m.label}</b><br /><span className="bp-muted">{m.why}. Try: {m.foods}.</span></p>)}
+              </div>
+            </>
           )}
 
-          <div className="bp-save">
-            <button type="button" className="bp-btn" onClick={apply} disabled={busy}>{busy ? "Saving…" : d.chosen === pick ? "Refresh my plan" : "Use this plan"}</button>
-            <p className="bp-muted">Targets are estimates to start from, not medical advice. If you have a health condition, are pregnant or breastfeeding, check with your doctor.</p>
-          </div>
+          {tab === "me" && (
+            <>
+              <div className="bp-card">
+                <h3 className="bp-h0">How do you train?</h3>
+                <TrainingSetup options={d.trainingOptions} prefs={prefs} serverPrefs={plan.training.prefs} onChange={changePrefs} />
+                <p className="bp-muted">Your workout updates as you tap. Press “Use this plan” above to keep it.</p>
+              </div>
+              <div className="bp-card">
+                <h3 className="bp-h0">Measurements</h3>
+                <Lines items={plan.shape} />
+                {plan.tape.length > 0 && (
+                  <div className="bp-tape">
+                    <p className="bp-muted">Add tape measurements (cm). More readings make the plan more exact.</p>
+                    {plan.tape.map((m) => (
+                      <label key={m.type} className="bp-field">
+                        <span>{TAPE_LABEL[m.type] || m.type} (cm)</span>
+                        <input type="number" inputMode="decimal" min="1" step="0.1" value={vals[m.type] || ""} placeholder={m.how} onChange={(e) => setVals((x) => ({ ...x, [m.type]: e.target.value }))} />
+                      </label>
+                    ))}
+                    <button type="button" className="bp-btn ghost" onClick={saveTape} disabled={busy || !Object.values(vals).some((v) => Number(v) > 0)}>{busy ? "Saving…" : "Save measurements"}</button>
+                  </div>
+                )}
+              </div>
+            </>
+          )}
+
+          {tab === "more" && (
+            <>
+              <Section title="Your body analysis"><Analysis a={plan.analysis} /></Section>
+              <Section title="Getting stronger every week"><Progress program={plan.training.program} /></Section>
+              <Section title="Cardio and active days"><ActiveDays program={plan.training.program} /></Section>
+              <Section title="Training safety"><Safety items={plan.training.program.safety} /></Section>
+              <Section title="About this plan">
+                <div className="bp-stats">
+                  <Stat l="Body fat now" v={`${plan.body.bodyFatPct}% (${plan.body.bodyFatSource === "tape" ? "from tape" : "estimate"})`} />
+                  <Stat l="Healthy range" v={`${plan.goal.bodyFatBand[0]} to ${plan.goal.bodyFatBand[1]}%`} />
+                  {plan.mode === "lose" && <Stat l="Pace" v={`${plan.goal.weeklyPaceKg} kg / week`} />}
+                </div>
+                {plan.notes.map((n, i) => <p key={i} className="bp-muted">{n}</p>)}
+              </Section>
+              {plan.checkpoints.length > 0 && <Section title="Checkpoints"><Lines items={plan.checkpoints.map((c) => `Week ${c.week}: about ${c.weightKg} kg. ${c.check}`)} /></Section>}
+              <p className="bp-muted">Targets are estimates to start from, not medical advice. If you have a health condition, are pregnant or breastfeeding, check with your doctor.</p>
+            </>
+          )}
         </>
       )}
     </section>

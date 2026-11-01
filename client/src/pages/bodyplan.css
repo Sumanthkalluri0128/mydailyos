@@ -1,7 +1,7 @@
 /* ==========================================================================
    Body plan page.  Every class starts with "bp-" so it can never clash with other pages.
    Sections:  1 Look & colours   2 Page layout   3 Cards & buttons   4 Setup chips
-              5 Weekly program   6 Exercise cards + pictures   7 Small helpers
+              5 Workout tab   6 Exercise cards + pictures   7 Small helpers
    To re-colour the whole page, change the four variables in section 1.
    ========================================================================== */
 
@@ -21,21 +21,29 @@
 .bp-back, .bp-link { background: none; border: 0; color: inherit; font-weight: 700; cursor: pointer; padding: 6px 2px; opacity: .85; justify-self: start; }
 .bp-link { text-decoration: underline; padding: 0 4px; }
 
-/* the four body-goal choices */
-.bp-types { display: grid; gap: 10px; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); }
-.bp-type { display: flex; gap: 12px; align-items: center; text-align: left; padding: 14px; border-radius: 16px; cursor: pointer; color: inherit; font: inherit;
+/* the four body-goal buttons: icon on top, name below */
+.bp-types { display: grid; gap: 8px; grid-template-columns: repeat(4, 1fr); }
+.bp-type { display: grid; gap: 4px; justify-items: center; padding: 12px 4px; border-radius: 16px; cursor: pointer; color: inherit; font: inherit; font-size: 13px;
   background: var(--card-bg, rgba(127, 127, 160, .12)); border: 2px solid var(--bp-line); transition: border-color .15s, transform .15s; }
 .bp-type:hover { transform: translateY(-1px); }
 .bp-type.on { border-color: var(--bp-accent); background: var(--bp-soft); }
-.bp-ic { font-size: 30px; }
-.bp-tt { display: grid; gap: 2px; }
-.bp-tt small { opacity: .75; font-size: 12.5px; }
+.bp-ic { font-size: 26px; }
+@media (max-width: 380px) { .bp-types { grid-template-columns: repeat(2, 1fr); } }
+
+/* the top card (headline numbers + save button) and the four section tabs */
+.bp-hero { display: grid; gap: 10px; border-color: var(--bp-accent); }
+.bp-hero .bp-stats { grid-template-columns: repeat(2, 1fr); margin: 0; }
+.bp-hero .bp-btn { width: 100%; }
+.bp-maintabs { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+.bp-mt { display: grid; gap: 2px; justify-items: center; min-height: 54px; padding: 6px 2px; border-radius: 14px; cursor: pointer; font: inherit; font-size: 13px; font-weight: 800; color: inherit; background: transparent; border: 1.5px solid var(--bp-line); }
+.bp-mt span { font-size: 20px; line-height: 1; }
+.bp-mt.on { background: var(--bp-accent); border-color: var(--bp-accent); color: #fff; }
+.bp-mt:focus-visible { outline: 2px solid var(--bp-accent); outline-offset: 2px; }
 
 /* 3. Cards & buttons -------------------------------------------------------- */
 .bp-card { padding: 14px 16px; border-radius: 16px; background: var(--card-bg, rgba(127, 127, 160, .12)); border: 1px solid rgba(127, 127, 160, .2); }
 .bp-safe.alert { border: 1.5px solid #d33; }
 .bp-safe.alert b { color: #d33; }
-.bp-fold { all: unset; box-sizing: border-box; width: 100%; display: flex; justify-content: space-between; align-items: center; font-weight: 800; font-size: 15px; cursor: pointer; }   /* a card's clickable title */
 .bp-body { margin-top: 10px; }
 .bp-stats { display: grid; gap: 8px; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); margin-bottom: 6px; }
 .bp-stat { display: grid; gap: 2px; padding: 10px 12px; border-radius: 14px; background: var(--bp-soft); }
@@ -43,6 +51,7 @@
 .bp-stat b { font-size: 16px; }
 .bp-note { margin: 8px 0 0; padding: 10px 12px; border-radius: 12px; font-size: 13px; line-height: 1.5; background: var(--bp-soft); }
 .bp-lead { margin: 0 0 10px; font-size: 15px; line-height: 1.55; font-weight: 600; }
+.bp-h0 { margin: 0 0 6px; font-size: 17px; }
 .bp-h  { margin: 16px 0 4px; font-size: 14px; }
 .bp-h5 { margin: 10px 0 2px; font-size: 12.5px; opacity: .85; }
 .bp-lines { margin: 0 0 6px; padding-left: 18px; font-size: 13.5px; line-height: 1.55; }
@@ -54,6 +63,11 @@
 .bp-btn.ghost { background: var(--bp-soft); color: var(--bp-accent); box-shadow: none; border: 1px solid color-mix(in srgb, var(--bp-accent) 30%, transparent); justify-self: start; }
 .bp-btn:disabled { opacity: .55; cursor: default; }
 .bp-save { display: grid; gap: 8px; justify-items: center; text-align: center; margin-top: 4px; }
+
+/* a collapsible block (More tab): the title is the clickable line */
+.bp-section > summary { cursor: pointer; font-weight: 800; font-size: 15px; list-style: none; display: flex; justify-content: space-between; }
+.bp-section > summary::after { content: "▸"; } .bp-section[open] > summary::after { content: "▾"; }
+.bp-section > summary::-webkit-details-marker { display: none; }
 
 /* tape-measure form */
 .bp-tape { display: grid; gap: 8px; margin-top: 10px; }
@@ -71,7 +85,7 @@
 .bp-wk { display: grid; gap: 2px; justify-items: center; padding: 8px 0; border-radius: 12px; font: inherit; color: inherit; cursor: pointer; border: 1.5px solid var(--bp-line); background: transparent; }
 .bp-wk:disabled { cursor: default; opacity: .75; }
 .bp-wk small { font-size: 11px; opacity: .75; }
-.bp-wk b { font-size: 16px; }
+.bp-wk b { font-size: 20px; line-height: 1.2; }
 .bp-wk.train  { background: color-mix(in srgb, var(--bp-accent) 16%, transparent); border-color: var(--bp-accent); }
 .bp-wk.active { background: color-mix(in srgb, var(--bp-green) 16%, transparent); border-color: var(--bp-green); }
 .bp-wk.sel { box-shadow: 0 0 0 2px var(--bp-accent); }
@@ -84,14 +98,15 @@
 .bp-tab.on { background: var(--bp-accent); color: #fff; border-color: var(--bp-accent); }
 
 /* keyboard focus ring for everything clickable */
-.bp-fold:focus-visible, .bp-chip:focus-visible, .bp-tab:focus-visible, .bp-wk:focus-visible { outline: 2px solid var(--bp-accent); outline-offset: 3px; border-radius: 8px; }
+.bp-chip:focus-visible, .bp-tab:focus-visible, .bp-wk:focus-visible { outline: 2px solid var(--bp-accent); outline-offset: 3px; border-radius: 8px; }
 
 /* 6. Exercise cards + pictures ---------------------------------------------- */
 .bp-exlist { list-style: none; margin: 8px 0; padding: 0; display: grid; gap: 10px; }
 .bp-ex { padding: 12px; border-radius: 14px; background: color-mix(in srgb, var(--bp-accent) 6%, transparent); border: 1px solid rgba(127, 127, 160, .2); }
 .bp-ex-top { display: flex; gap: 10px; align-items: flex-start; }
 .bp-n { flex: none; width: 24px; height: 24px; border-radius: 50%; display: grid; place-items: center; font-size: 12px; font-weight: 800; background: var(--bp-accent); color: #fff; }
-.bp-meta { font-size: 12.5px; opacity: .8; margin-top: 2px; }
+.bp-badges { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }                /* "3 sets" "8-12 reps" "rest 90 s" */
+.bp-badges span { padding: 3px 10px; border-radius: 999px; font-size: 12.5px; font-weight: 800; background: var(--bp-soft); color: var(--bp-accent); }
 .bp-cue { margin: 8px 0 4px; font-size: 13px; line-height: 1.5; }
 .bp-ex details { margin-top: 4px; }
 .bp-ex summary, .bp-det summary { cursor: pointer; font-size: 13px; font-weight: 700; padding: 6px 0; }

@@ -1,3 +1,7 @@
+## Body plan page simplified: 4 tabs, today's workout first
+- Goal = four buttons. Headline numbers + one save button in a top card. Then tabs: Workout (default, today picked), Eating, Me (setup + tape), More (analysis, progress, cardio, safety).
+- Workout tab: week strip with today marked, then Gym / Home / Quick switch, exercises with picture + "3 sets, 8-12 reps, rest 90 s" badges. Replaces 12 folded cards.
+
 ## Body plan is now its own tab (with exercise pictures)
 - Body plan sits in the main navigation instead of being hidden behind Profile / Home. It is always visible (not locked by simple mode).
 - Every exercise shows a Start -> Finish stick-figure picture (ExercisePic). Poses are a few angles per movement, so there are no image files to download. An exercise can carry an `image` URL to show a real photo instead.
