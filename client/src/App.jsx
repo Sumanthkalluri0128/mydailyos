@@ -15,6 +15,7 @@ const WeightPage = lazy(() => import("./pages/WeightPage"));
 const ProfilePage = lazy(() => import("./pages/ProfilePage"));
 const ProgressPage = lazy(() => import("./pages/ProgressPage"));
 const GoalsPage = lazy(() => import("./pages/GoalsPage"));
+const BodyPlanPage = lazy(() => import("./pages/BodyPlanPage"));
 const PlannerPage = lazy(() => import("./pages/PlannerPage"));
 const RecipesPage = lazy(() => import("./pages/RecipesPage"));
 const OnboardingPage = lazy(() => import("./pages/OnboardingPage"));
@@ -604,6 +605,19 @@ function App() {
           <Suspense fallback={<PageSkeleton variant="list" />}>
             <AdminPage onBack={() => { try { history.replaceState(null, "", location.pathname + location.search); } catch { /* ignore */ } setCurrentPage("dashboard"); }} />
           </Suspense>
+        </main>
+      </div>
+    );
+  }
+
+  if (currentPage === "bodyPlan") {
+    return (
+      <div className="app">
+        {shell}
+        <main key={currentPage} className="dashboard fx-page">
+          <Suspense fallback={<PageSkeleton variant="list" />}>
+          <BodyPlanPage onBack={() => setCurrentPage("dashboard")} onSaved={() => setCurrentPage("dashboard")} />
+        </Suspense>
         </main>
       </div>
     );

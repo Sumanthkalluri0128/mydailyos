@@ -150,6 +150,9 @@ function ProfilePage({ onBack }) {
             profile.goals?.targetWeightKg !== undefined
               ? profile.goals.targetWeightKg
               : "",
+
+          // Read-only here (chosen on the Body plan page); only used for the link's wording. The save below never sends it.
+          bodyType: profile.goals?.bodyType || "",
         });
       }
     } catch (error) {
@@ -633,6 +636,19 @@ function ProfilePage({ onBack }) {
         <div className="card">
 
           <h2>Weight Goal</h2>
+
+          <button
+            type="button"
+            className="bp-cta"
+            style={{ marginBottom: 12 }}
+            onClick={() => window.dispatchEvent(new CustomEvent("ff:goto", { detail: { page: "bodyPlan" } }))}
+          >
+            <span aria-hidden="true">🎯</span>
+            <span>
+              <b>{form.bodyType ? "Body plan (change my body goal)" : "Body plan: choose the body you want"}</b>
+              <small>Lean, athletic, strong or balanced: calories, macros and training worked out for it.</small>
+            </span>
+          </button>
 
           <label>
             Target Weight (kg)

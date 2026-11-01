@@ -282,6 +282,12 @@ export default function HomeDashboard({ profile, summary, activity, water, water
         <div className="cc-strip"><span>Feeling a craving?</span><CravingTimer onLogged={onChanged} /></div>
       </section>
       {tone.gentle && <PlateCard refreshKey={syncTick} />}
+      {/* ---------- body goal: shown until one is chosen (same as the phone app) ---------- */}
+      {!!e && !profile?.goals?.bodyType && e.direction !== "gain" && (
+        <button type="button" className="bp-cta" onClick={() => goTo("bodyPlan")}>
+          <span aria-hidden="true">🎯</span><span><b>Choose your body goal and get a plan</b><small>Lean, athletic, strong or balanced: get calories, macros and training for it.</small></span>
+        </button>
+      )}
 
       {/* ---------- nutrition · macros · habits ---------- */}
       <section className="hd-mid">
