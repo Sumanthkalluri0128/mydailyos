@@ -1,12 +1,13 @@
 // Body plan: pick the body you are aiming for, add a few tape measurements, and get a plan (target weight and waist, safe pace,
-// calories, macros, training, the vitamins and minerals that matter while eating less). "Use this plan" saves it so Home, Food and
-// the Planner follow it. Same server API as the phone app: GET /api/body-plan, POST /api/body-plan/apply (server/lib/bodyPlan.js).
+// calories, macros, a full weekly training program with a body analysis, the vitamins and minerals that matter while eating less).
+// "Use this plan" saves it so Home, Food and the Planner follow it. Same server API as the phone app: GET /api/body-plan, POST /api/body-plan/apply (server/lib/bodyPlan.js).
 // The plan is worked out on the server, so this page needs a connection.
 import { useCallback, useEffect, useState } from "react";
 import "./bodyplan.css";
 import { apiFetch } from "../config/api";
 import { getLocalDate } from "../utils/date";
 import { notify } from "../utils/notify";
+import { Fold, Lines, TrainingSetup, Analysis, Program, Backups, ActiveDays, Progress, Safety } from "./TrainingSections";
 
 const ICON = { lean: "🌿", athletic: "🏃", muscular: "🏋️", balanced: "🧘" };
 const TAPE_LABEL = { waist: "Waist", neck: "Neck", hips: "Hips", chest: "Chest", arm: "Upper arm", thigh: "Thigh" };
@@ -26,31 +27,29 @@ async function call(path, options) {
 function Stat({ l, v }) {
   return <div className="bp-stat"><small>{l}</small><b>{v}</b></div>;
 }
-function Fold({ title, open, onToggle, children }) {
-  return (
-    <section className="bp-card">
-      <button type="button" className="bp-fold" aria-expanded={!!open} onClick={onToggle}><span>{title}</span><i aria-hidden="true">{open ? "▾" : "▸"}</i></button>
-      {open && <div className="bp-body">{children}</div>}
-    </section>
-  );
-}
-const Lines = ({ items }) => <ul className="bp-lines">{items.map((t, i) => <li key={i}>{t}</li>)}</ul>;
-
 export default function BodyPlanPage({ onBack, onSaved }) {
   const [d, setD] = useState(null);
   const [err, setErr] = useState("");
   const [pick, setPick] = useState("");
   const [vals, setVals] = useState({});
   const [busy, setBusy] = useState(false);
-  const [open, setOpen] = useState({ plan: true, macros: true });
+  const [open, setOpen] = useState({ plan: true, macros: true, setup: true, analysis: true, program: true });
+  const [prefs, setPrefs] = useState(null); // the training setup being edited; previewed on the server, saved with "Use this plan"
 
-  const load = useCallback(async (type) => {
+  const load = useCallback(async (type, tp) => {
     try {
-      const j = await call(`/api/body-plan${type ? `?type=${encodeURIComponent(type)}` : ""}`);
+      const q = new URLSearchParams();
+      if (type) q.set("type", type);
+      if (tp) for (const k of ["place", "level", "days", "minutes"]) q.set(k, tp[k] ?? "");
+      if (tp) for (const k of ["equipment", "limits", "focus"]) q.set(k, (tp[k] || []).join(","));
+      const j = await call(`/api/body-plan${q.toString() ? `?${q}` : ""}`);
       setD(j); setErr("");
       setPick((p) => type || p || j.chosen || "");
+      const sp = j.plan && j.plan.training && j.plan.training.prefs;
+      if (sp && !tp) setPrefs({ place: sp.place, level: sp.level, days: sp.days, minutes: sp.minutes, equipment: sp.equipment, limits: sp.limits, focus: sp.focus });
     } catch (e) { setErr(e.message); }
   }, []);
+  const changePrefs = (next) => { setPrefs(next); load(pick, next); };
   useEffect(() => { load(); }, [load]);
 
   if (!d) {
@@ -65,7 +64,7 @@ export default function BodyPlanPage({ onBack, onSaved }) {
   const plan = d.plan;
   const ready = !!(plan && plan.ready);
   const toggle = (k) => setOpen((o) => ({ ...o, [k]: !o[k] }));
-  const choose = (id) => { setPick(id); load(id); };
+  const choose = (id) => { setPick(id); load(id, prefs); };
 
   const saveTape = async () => {
     const entries = Object.entries(vals).filter(([, v]) => Number(v) > 0);
@@ -73,14 +72,14 @@ export default function BodyPlanPage({ onBack, onSaved }) {
     setBusy(true);
     try {
       for (const [type, v] of entries) await call("/api/health-logs", { method: "POST", body: JSON.stringify({ type, date: getLocalDate(), value: Number(v), source: "manual" }) });
-      setVals({}); notify("Saved. Your plan is updated with these measurements.", "success"); await load(pick);
+      setVals({}); notify("Saved. Your plan is updated with these measurements.", "success"); await load(pick, prefs);
     } catch (e) { notify(`Could not save: ${e.message}`, "error"); } finally { setBusy(false); }
   };
   const apply = async () => {
     setBusy(true);
     try {
-      await call("/api/body-plan/apply", { method: "POST", body: JSON.stringify({ type: pick }) });
-      notify("Plan saved. Your calories, macros and quests now follow this body goal.", "success");
+      await call("/api/body-plan/apply", { method: "POST", body: JSON.stringify({ type: pick, training: prefs }) });
+      notify("Plan saved. Your calories, macros, quests and training now follow this body goal.", "success");
       onSaved?.();
     } catch (e) { notify(`Could not save the plan: ${e.message}`, "error"); } finally { setBusy(false); }
   };
@@ -157,8 +156,32 @@ export default function BodyPlanPage({ onBack, onSaved }) {
             )}
           </Fold>
 
-          <Fold title="Training that fits this body" open={open.train} onToggle={() => toggle("train")}>
-            <Lines items={plan.training.sessions} />
+          <Fold title="Your training setup" open={open.setup} onToggle={() => toggle("setup")}>
+            <TrainingSetup options={d.trainingOptions} prefs={prefs} serverPrefs={plan.training.prefs} onChange={changePrefs} />
+          </Fold>
+
+          <Fold title="Your body analysis" open={open.analysis} onToggle={() => toggle("analysis")}>
+            <Analysis a={plan.analysis} />
+          </Fold>
+
+          <Fold title={`Your weekly program: ${plan.training.program.split}`} open={open.program} onToggle={() => toggle("program")}>
+            <Program program={plan.training.program} />
+          </Fold>
+
+          <Fold title="Gym busy, or can not go today?" open={open.backup} onToggle={() => toggle("backup")}>
+            <Backups program={plan.training.program} />
+          </Fold>
+
+          <Fold title="Active days and cardio" open={open.active} onToggle={() => toggle("active")}>
+            <ActiveDays program={plan.training.program} />
+          </Fold>
+
+          <Fold title="Getting stronger every week" open={open.prog} onToggle={() => toggle("prog")}>
+            <Progress program={plan.training.program} />
+          </Fold>
+
+          <Fold title="Training safety" open={open.safe} onToggle={() => toggle("safe")}>
+            <Safety items={plan.training.program.safety} />
           </Fold>
 
           <Fold title="Vitamins and minerals to watch" open={open.micro} onToggle={() => toggle("micro")}>

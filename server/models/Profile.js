@@ -28,6 +28,17 @@ const schema = new mongoose.Schema(
       bodyType: { type: String, enum: ['', 'lean', 'athletic', 'muscular', 'balanced'], default: '' },
       weeklyPaceKg: { type: Number, min: 0.1, max: 1, default: 0.5 },
     },
+    // How the person trains (asked on the Body plan screen). Drives the weekly program: where, level, days, time, home equipment,
+    // anything that hurts, and muscles to bring up. Empty = not chosen yet, the plan uses sensible defaults and says so.
+    training: {
+      place: { type: String, enum: ['gym', 'home', 'both', ''], default: '' },
+      level: { type: String, enum: ['beginner', 'intermediate', 'advanced', ''], default: '' },
+      days: { type: Number, min: 2, max: 6, default: null },
+      minutes: { type: Number, min: 20, max: 120, default: null },
+      equipment: { type: [{ type: String, enum: ['dumbbells', 'bands', 'bench', 'pullupbar', 'kettlebell'] }], default: [] },
+      limits: { type: [{ type: String, enum: ['knee', 'back', 'shoulder', 'wrist', 'elbow', 'heart'] }], default: [] },
+      focus: { type: [{ type: String, enum: ['glutes', 'shoulders', 'arms', 'chest', 'back', 'legs', 'core'] }], default: [] },
+    },
     // Display preferences only — every value is stored metric.
     units: {
       weight: { type: String, enum: ['kg', 'lb'], default: 'kg' },

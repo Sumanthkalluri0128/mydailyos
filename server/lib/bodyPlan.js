@@ -4,7 +4,8 @@
 //
 // Honest limits: body fat from a tape or from height/weight/age is an ESTIMATE (a few points either way), and every target here is a
 // starting point to adjust from the real trend, not a promise. Adults only.
-const { expectedEnergy, macroTargets, BODY_TYPES, waterTargetMl } = require('./energy');
+const { expectedEnergy, macroTargets, BODY_TYPES, waterTargetMl, KCAL_PER_KG } = require('./energy');
+const { trainingPlan } = require('./trainingPlan');
 const { navyBodyFat } = require('./bodyFat');
 const { maxSafeWeeklyLossKg } = require('./trendWeight');
 
@@ -32,13 +33,6 @@ const TYPES = {
   },
 };
 const TYPE_IDS = Object.keys(TYPES);
-
-const TRAINING = {
-  lean: ['3 full-body strength sessions (squat or leg press, push, pull, hinge), 40 to 50 minutes', '2 easy cardio sessions of 30 minutes, or a brisk walk after meals', 'Aim to add a little weight or one more rep each week'],
-  athletic: ['4 strength sessions: 2 upper, 2 lower, with shoulders and back in both upper days', '1 to 2 interval sessions of 15 to 20 minutes, kept hard but short', 'One full rest day, and sleep 7 to 9 hours: this is where the shape is built'],
-  muscular: ['4 to 5 strength sessions, heavy compound lifts first (squat, press, row, deadlift variations)', 'Keep cardio light: walking and 1 easy session, so recovery goes to muscle', 'Do not drop the weights you lift while cutting. Holding strength means you are keeping muscle'],
-  balanced: ['2 to 3 strength sessions of 30 to 40 minutes, whole body', 'A daily walk and one fun activity you enjoy (swimming, cycling, dance, sport)', 'Consistency beats intensity: pick what you can still do in 6 months'],
-};
 
 // Vitamins and minerals that run short when calories go down. Reference intakes do not drop on a diet; the risk is eating too little of them.
 const DEFICIT_MICROS = [
@@ -72,8 +66,9 @@ const bandFor = (type, sex) => {
  * @param o.profile   Profile-like: sex, age, heightCm, currentWeightKg, activityLevel, goals
  * @param o.type      'lean' | 'athletic' | 'muscular' | 'balanced'
  * @param o.measures  latest tape readings in cm: { waist, neck, hips, chest, arm, thigh } (any may be missing)
+ * @param o.prefs     training setup (place, level, days, minutes, equipment, limits, focus): see lib/trainingPlan sanitizePrefs
  */
-function bodyPlan({ profile = {}, type, measures = {} } = {}) {
+function bodyPlan({ profile = {}, type, measures = {}, prefs } = {}) {
   if (!TYPES[type]) return { ready: false, reason: 'pick-type', message: 'Choose the body you are aiming for to get a plan.' };
   const w = num(profile.currentWeightKg), h = num(profile.heightCm), age = num(profile.age);
   const sex = profile.sex === 'male' || profile.sex === 'female' ? profile.sex : 'other';
@@ -113,14 +108,26 @@ function bodyPlan({ profile = {}, type, measures = {} } = {}) {
   const safeCap = maxSafeWeeklyLossKg(w);
   let pace = mode === 'lose' ? Math.min(safeCap, w * t.maxLossPctPerWeek) : 0;
   pace = mode === 'lose' ? Math.max(0.2, Math.round(pace * 20) / 20) : 0;
-  const weeks = mode === 'lose' && pace > 0 ? Math.ceil(lossKg / pace) : 0;
 
   // Calories and macros through the same engine the rest of the app uses, so Home shows exactly this.
   const planProfile = { ...profile, goals: { ...(profile.goals || {}), targetWeightKg: mode === 'lose' ? targetKg : null, weeklyPaceKg: pace || 0.5, calorieMode: 'auto', bodyType: type, proteinTarget: null } };
-  const e = expectedEnergy(planProfile);
+  let e = expectedEnergy(planProfile);
+  // When the safety floor limits the calories, the pace we promised cannot be reached. Slow it to what the food allows, so the weeks
+  // and checkpoints are honest, and recompute through the same engine so Home still shows exactly these numbers.
+  let paceSlowed = false, noRoom = false;
+  if (mode === 'lose' && e && e.atFloor) {
+    const room = Math.max(0, e.tdee - e.calorieTarget);
+    const reachable = (room * 7) / KCAL_PER_KG;
+    if (reachable < 0.1) noRoom = true;
+    const slower = Math.max(0.1, Math.floor(reachable * 20) / 20);
+    if (slower < pace) { pace = slower; paceSlowed = true; planProfile.goals.weeklyPaceKg = pace; e = expectedEnergy(planProfile); }
+  }
+  const weeks = mode === 'lose' && pace > 0 ? Math.ceil(lossKg / pace) : 0;
   const calories = e ? e.calorieTarget : null;
   const macros = calories ? macroTargets(calories, w, e.direction, null, type) : null;
   if (e && e.atFloor) safety.push({ id: 'at-floor', level: 'notice', title: 'Calories held at a safe minimum', detail: 'Your numbers would need fewer calories than is safe, so the plan stops at the floor and the pace is slower. More walking helps more than eating less.' });
+  if (paceSlowed) safety.push({ id: 'pace-slowed', level: 'notice', title: 'Pace slowed to fit a safe calorie floor', detail: `At your size, a faster pace would need fewer calories than is safe. The plan uses ${pace} kg a week, so the time to your target is honest. Walking more and lifting weights move the number without eating less.` });
+  if (noRoom) safety.push({ id: 'no-deficit-room', level: 'notice', title: 'Little safe room to cut food', detail: 'Your maintenance calories are already close to the safe minimum. Focus on strength training and walking; weight will move slowly and that is fine.' });
 
   // Waist: the single most useful tape number. Waist under about half your height is the common health marker.
   const waistGoal = Math.round(h * t.waistToHeight);
@@ -157,14 +164,18 @@ function bodyPlan({ profile = {}, type, measures = {} } = {}) {
   const priority = DEFICIT_MICROS.filter((x) => !x.sexes || x.sexes.includes(sex)).map(({ sexes, ...rest }) => rest);
 
   const steps = t.steps;
+  const body = { weightKg: w, heightCm: h, bmi: r1(bmi), bodyFatPct: bf.pct, bodyFatSource: bf.source, leanMassKg: r1(lean) };
+  const goalOut = { bodyFatBand: [bfLo, bfHi], bodyFatMid: bfGoal, targetWeightKg: targetKg, lossKg, weeklyPaceKg: pace, weeks, waistCm: waistGoal };
+  const tp = trainingPlan({ profile, type, mode, body, goal: goalOut, steps, protein: macros ? macros.protein : null, calories, measures: m, prefs });
   const plan = {
     ready: true, type, label: t.label, blurb: t.blurb, mode,
-    body: { weightKg: w, heightCm: h, bmi: r1(bmi), bodyFatPct: bf.pct, bodyFatSource: bf.source, leanMassKg: r1(lean) },
-    goal: { bodyFatBand: [bfLo, bfHi], bodyFatMid: bfGoal, targetWeightKg: targetKg, lossKg, weeklyPaceKg: pace, weeks, waistCm: waistGoal },
+    body, goal: goalOut,
     calories, macros, protein: macros ? { gPerKg: r1(macros.protein / w), grams: macros.protein } : null,
     fiberG: macros ? macros.fiber : null,
     waterMl: waterTargetMl(w), steps,
-    training: { strengthDays: t.strengthDays, steps, sessions: TRAINING[type] },
+    // `sessions` (plain lines) is kept so older apps still show something useful; `program` is the full plan.
+    training: { strengthDays: tp.program.daysPerWeek, steps, sessions: tp.summary, program: tp.program, prefs: tp.prefs },
+    analysis: tp.analysis,
     shape, tape, checkpoints, microPriority: priority,
     fatShare: BODY_TYPES[type].fat,
     safety,

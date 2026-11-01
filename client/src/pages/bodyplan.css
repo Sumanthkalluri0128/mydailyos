@@ -29,3 +29,40 @@
 .bp-btn.ghost { background: color-mix(in srgb, var(--primary, #7a55ff) 10%, transparent); color: var(--primary, #7a55ff); box-shadow: none; border: 1px solid color-mix(in srgb, var(--primary, #7a55ff) 30%, transparent); justify-self: start; }
 .bp-btn:disabled { opacity: .55; cursor: default; }
 .bp-save { display: grid; gap: 8px; justify-items: center; text-align: center; margin-top: 4px; }
+
+/* training: setup chips, body analysis, weekly program */
+.bp-q { display: grid; gap: 6px; margin: 0 0 14px; font-size: 14px; }
+.bp-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.bp-chip { min-height: 40px; padding: 8px 14px; border-radius: 999px; cursor: pointer; font: inherit; font-size: 13.5px; font-weight: 700; color: inherit;
+  background: transparent; border: 1.5px solid rgba(127, 127, 160, .4); }
+.bp-chip.on { background: var(--primary, #7a55ff); border-color: var(--primary, #7a55ff); color: #fff; }
+.bp-chip:focus-visible, .bp-tab:focus-visible, .bp-wk:focus-visible { outline: 2px solid var(--primary, #7a55ff); outline-offset: 2px; }
+.bp-note { margin: 8px 0 0; padding: 10px 12px; border-radius: 12px; font-size: 13px; line-height: 1.5; background: color-mix(in srgb, var(--primary, #7a55ff) 10%, transparent); }
+.bp-lead { margin: 0 0 10px; font-size: 15px; line-height: 1.55; font-weight: 600; }
+.bp-h { margin: 16px 0 4px; font-size: 14px; } .bp-h5 { margin: 10px 0 2px; font-size: 12.5px; opacity: .85; }
+.bp-notice b { color: #b26a00; }
+.bp-week { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; margin: 10px 0 4px; }
+.bp-wk { display: grid; gap: 2px; justify-items: center; padding: 8px 0; border-radius: 12px; font: inherit; color: inherit; cursor: pointer; border: 1.5px solid rgba(127, 127, 160, .3); background: transparent; }
+.bp-wk:disabled { cursor: default; opacity: .75; }
+.bp-wk small { font-size: 11px; opacity: .75; } .bp-wk b { font-size: 16px; }
+.bp-wk.train { background: color-mix(in srgb, var(--primary, #7a55ff) 16%, transparent); border-color: var(--primary, #7a55ff); }
+.bp-wk.active { background: color-mix(in srgb, #2aa876 16%, transparent); border-color: #2aa876; }
+.bp-wk.sel { box-shadow: 0 0 0 2px var(--primary, #7a55ff); }
+.bp-legend { margin: 2px 0 10px; font-size: 12px; opacity: .8; }
+.bp-dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin: 0 4px 0 8px; background: rgba(127, 127, 160, .5); }
+.bp-dot.train { background: var(--primary, #7a55ff); } .bp-dot.active { background: #2aa876; }
+.bp-tabs { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 6px; margin-bottom: 8px; }
+.bp-tab { flex: none; min-height: 38px; padding: 6px 12px; border-radius: 10px; cursor: pointer; font: inherit; font-size: 13px; font-weight: 700; color: inherit; border: 1.5px solid rgba(127, 127, 160, .35); background: transparent; }
+.bp-tab.on { background: var(--primary, #7a55ff); color: #fff; border-color: var(--primary, #7a55ff); }
+.bp-exlist { list-style: none; margin: 8px 0; padding: 0; display: grid; gap: 10px; }
+.bp-ex { padding: 12px; border-radius: 14px; background: color-mix(in srgb, var(--primary, #7a55ff) 6%, transparent); border: 1px solid rgba(127, 127, 160, .2); }
+.bp-ex-top { display: flex; gap: 10px; align-items: flex-start; }
+.bp-n { flex: none; width: 24px; height: 24px; border-radius: 50%; display: grid; place-items: center; font-size: 12px; font-weight: 800; background: var(--primary, #7a55ff); color: #fff; }
+.bp-meta { font-size: 12.5px; opacity: .8; margin-top: 2px; }
+.bp-cue { margin: 8px 0 4px; font-size: 13px; line-height: 1.5; }
+.bp-ex details { margin-top: 4px; } .bp-ex summary, .bp-det summary { cursor: pointer; font-size: 13px; font-weight: 700; padding: 6px 0; }
+.bp-det { margin: 6px 0; }
+.bp-pill { display: inline-block; padding: 1px 8px; border-radius: 999px; font-size: 11px; font-weight: 700; background: rgba(127, 127, 160, .2); }
+.bp-vol { display: grid; grid-template-columns: 82px 1fr auto; gap: 8px; align-items: center; margin: 6px 0; font-size: 13px; }
+.bp-bar { height: 8px; border-radius: 6px; background: rgba(127, 127, 160, .2); overflow: hidden; }
+.bp-bar i { display: block; height: 100%; border-radius: 6px; background: #2aa876; } .bp-bar i.low { background: #d9a21b; } .bp-bar i.high { background: #d9701b; }
