@@ -1,7 +1,7 @@
 // Simple vs Advanced mode: which screens a user sees. Nothing is ever deleted; `showAll` shows everything.
 // New users start with CORE; the rest unlock from simple usage counts (or via the "Show all features" switch).
 // Pure: counts in, lists out. Ids match the web nav pages and the mobile Profile rows.
-const CORE = ['dashboard', 'foodLogger', 'progress', 'task', 'water', 'weight', 'exercise', 'planner', 'food', 'bodyPlan'];
+const CORE = ['dashboard', 'foodLogger', 'progress', 'task', 'water', 'weight', 'exercise', 'planner', 'food', 'bodyPlan', 'workouts'];
 
 // id -> { when(counts) -> bool, hint } ; hint is the one-line "how to unlock" (shown in Profile).
 const UNLOCKS = {

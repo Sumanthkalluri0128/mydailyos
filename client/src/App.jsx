@@ -16,6 +16,7 @@ const ProfilePage = lazy(() => import("./pages/ProfilePage"));
 const ProgressPage = lazy(() => import("./pages/ProgressPage"));
 const GoalsPage = lazy(() => import("./pages/GoalsPage"));
 const BodyPlanPage = lazy(() => import("./pages/BodyPlanPage"));
+const WorkoutPlanPage = lazy(() => import("./pages/WorkoutPlanPage"));
 const PlannerPage = lazy(() => import("./pages/PlannerPage"));
 const RecipesPage = lazy(() => import("./pages/RecipesPage"));
 const OnboardingPage = lazy(() => import("./pages/OnboardingPage"));
@@ -618,6 +619,19 @@ function App() {
           <Suspense fallback={<PageSkeleton variant="list" />}>
           <BodyPlanPage />
         </Suspense>
+        </main>
+      </div>
+    );
+  }
+
+  if (currentPage === "workouts") {
+    return (
+      <div className="app">
+        {shell}
+        <main key={currentPage} className="dashboard fx-page">
+          <Suspense fallback={<PageSkeleton variant="list" />}>
+            <WorkoutPlanPage />
+          </Suspense>
         </main>
       </div>
     );
