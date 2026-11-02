@@ -41,13 +41,14 @@ export default function BodyPlanPage({ onBack, onSaved }) {
       const q = new URLSearchParams();
       if (type) q.set("type", type);
       if (tp) for (const k of ["place", "level", "days", "minutes"]) q.set(k, tp[k] ?? "");
+      if (tp) q.set("weekdays", (tp.weekdays || []).join(","));
       if (tp) for (const k of ["equipment", "limits", "focus"]) q.set(k, (tp[k] || []).join(","));
       q.set("date", getLocalDate());
       const j = await call(`/api/body-plan?${q}`);
       setD(j); setErr("");
       setPick((p) => type || p || j.chosen || "");
       const sp = j.plan && j.plan.training && j.plan.training.prefs;
-      if (sp && !tp) setPrefs({ place: sp.place, level: sp.level, days: sp.days, minutes: sp.minutes, equipment: sp.equipment, limits: sp.limits, focus: sp.focus });
+      if (sp && !tp) setPrefs({ place: sp.place, level: sp.level, days: sp.days, minutes: sp.minutes, equipment: sp.equipment, limits: sp.limits, focus: sp.focus, weekdays: sp.weekdays || [] });
     } catch (e) { setErr(e.message); }
   }, []);
   const changePrefs = (next) => { setPrefs(next); load(pick, next); };

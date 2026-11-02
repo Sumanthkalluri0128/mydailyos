@@ -236,3 +236,27 @@ test('works for every body goal, place and day count (no crashes, a target for e
     for (const id of ids) assert.ok(a.targets[id], `${type}/${place}/${days} missing target ${id}`);
   }
 });
+
+test('a 5, 6 or 7 day plan keeps every scheduled day on the week (nothing quietly drops to 4)', () => {
+  for (const days of [4, 5, 6, 7]) {
+    const p = make(man, 'athletic', { place: 'gym', level: 'intermediate', days, minutes: 60 });
+    const program = p.training.program;
+    const a = adapt({ program, prefs: { level: 'intermediate', days, limits: [] }, mode: p.mode, today: '2026-10-26', startedOn: '2026-10-26', sessions: [], maxDays: 7 });
+    const planned = a.week.days.filter((d) => ['today', 'planned'].includes(d.status));
+    assert.equal(planned.length, days, `${days}-day plan shows ${planned.length} days on Monday`);
+    assert.equal(a.week.days.filter((d) => d.status === 'spare').length, 0);
+    assert.equal(new Set(planned.map((d) => d.sessionId)).size, days);
+  }
+});
+
+test('HRX classes and gym sessions count as strength training, not cardio', () => {
+  const rows = [
+    { date: '2026-10-26', category: 'Cult.fit', activityName: 'Cult – HRX Workout', durationMinutes: 45, clientId: 'a' },
+    { date: '2026-10-27', category: 'Cult.fit', activityName: 'Cult – Adidas Strength+', durationMinutes: 40, clientId: 'b' },
+    { date: '2026-10-28', category: 'Other', activityName: 'Gym session', durationMinutes: 60, clientId: 'c' },
+    { date: '2026-10-28', category: 'Cult.fit', activityName: 'Cult – Dance Fitness', durationMinutes: 45, clientId: 'd' },
+  ];
+  const a = run([], { activity: rows });
+  assert.equal(a.cardio.doneMin, 45, 'only the dance class is cardio');
+  assert.ok(a.week.doneSoFar >= 3, `three strength sessions counted, got ${a.week.doneSoFar}`);
+});

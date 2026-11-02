@@ -6,7 +6,7 @@
 //   - you cannot train today but want to stay active         -> active menu (walks, cycling, swimming, yoga, sport) with calories
 // Pure (no database), so it is unit-tested. Honest limits: this is a sound starting program from established strength-training
 // practice (progressive overload, 10 to 20 hard sets per muscle a week, reps in reserve), not a diagnosis or a medical plan.
-const { FORM, LIB, BY_ID, SLOTS, LEVELS, PLACES, LIMITS, HOME_EQUIP, FOCUS, rank, swapsFor, kindOf } = require('./exerciseLibrary');
+const { FORM, LIB, BY_ID, SLOTS, LEVELS, PLACES, LIMITS, HOME_EQUIP, FOCUS, rank, swapsFor, kindOf, homeTwin } = require('./exerciseLibrary');
 
 const r1 = (x) => Math.round(x * 10) / 10;
 const num = (x) => { const v = Number(x); return Number.isFinite(v) ? v : 0; };
@@ -16,9 +16,9 @@ const MINUTES = [30, 45, 60, 75, 90];
 
 const TRAINING_OPTIONS = {
   places: [
-    { id: 'gym', label: 'At the gym', blurb: 'Machines, cables, dumbbells. Every day also gets a home version.' },
+    { id: 'gym', label: 'At the gym', blurb: 'Machines, cables, dumbbells. Every gym exercise also has a matching home exercise.' },
     { id: 'home', label: 'At home', blurb: 'Bodyweight, a backpack, bands or dumbbells if you have them.' },
-    { id: 'both', label: 'Both', blurb: 'Gym when you can, home when you cannot. Same plan, two versions.' },
+    { id: 'both', label: 'Both', blurb: 'Gym when you can, home when you cannot. Same days, same muscles, a matching exercise for each.' },
   ],
   levels: [
     { id: 'beginner', label: 'New to lifting', blurb: 'Under 6 months of regular training.' },
@@ -26,7 +26,7 @@ const TRAINING_OPTIONS = {
     { id: 'advanced', label: 'Experienced', blurb: 'Over 2 years of steady, progressing training.' },
   ],
   minutes: MINUTES,
-  days: [2, 3, 4, 5, 6],
+  days: [2, 3, 4, 5, 6, 7],
   equipment: [
     { id: 'dumbbells', label: 'Dumbbells' }, { id: 'bands', label: 'Resistance bands' }, { id: 'bench', label: 'Bench' },
     { id: 'pullupbar', label: 'Pull-up bar' }, { id: 'kettlebell', label: 'Kettlebell' },
@@ -50,11 +50,13 @@ function sanitizePrefs(raw) {
   return {
     place: PLACES.includes(p.place) ? p.place : '',
     level: LEVELS.includes(p.level) ? p.level : '',
-    days: days >= 2 && days <= 6 ? days : null,
+    days: days >= 2 && days <= 7 ? days : null,
     minutes: minutes >= 20 && minutes <= 120 ? minutes : null,
     equipment: list(p.equipment, HOME_EQUIP),
     limits: list(p.limits, LIMITS),
     focus: list(p.focus, FOCUS).slice(0, 3),
+    // The weekdays the person goes to the gym (0 = Monday ... 6 = Sunday). When given, they decide the number of days too.
+    weekdays: [...new Set((Array.isArray(p.weekdays) ? p.weekdays : typeof p.weekdays === 'string' ? p.weekdays.split(',') : []).map((v) => (String(v).trim() === '' ? NaN : Number(v))).filter((v) => Number.isInteger(v) && v >= 0 && v <= 6))].sort((a, b) => a - b),
   };
 }
 
@@ -76,7 +78,10 @@ function recommendedDays(type, level, f) {
   if (f.age >= 55) d = Math.min(d, 3);
   return d;
 }
-const maxDays = (level, f) => Math.min(level === 'beginner' ? 4 : level === 'intermediate' ? 5 : 6, f.age >= 55 ? 4 : 6);
+// The number of days is the person's call: they know their week. Only lifters over 55 are held to 5, and a long week gets lighter sessions (see trimFor).
+const maxDays = (level, f) => (f.age >= 55 ? 5 : 7);
+// Sets taken off every exercise when many days are chosen, so the week's total work stays sensible and each day still has a full list.
+const trimFor = (days, level) => (days === 7 || (level === 'beginner' && days >= 5) ? 1 : 0);
 const defaultMinutes = (type) => (type === 'balanced' ? 40 : type === 'lean' ? 50 : 60);
 
 function resolvePrefs(raw, f, type) {
@@ -84,15 +89,19 @@ function resolvePrefs(raw, f, type) {
   const level = c.level || 'beginner';
   const rec = recommendedDays(type, level, f), max = maxDays(level, f);
   const notes = [];
+  let weekdays = c.weekdays.length >= 2 ? c.weekdays.slice() : [];
+  if (weekdays.length > max) { notes.push(`You picked ${weekdays.length} days, but after 55 the plan uses ${max}: the first ${max} are kept.`); weekdays = weekdays.slice(0, max); }
+  if (weekdays.length) c.days = weekdays.length; // the days picked on the calendar are the days the plan builds
   let days = c.days || rec;
-  if (days > max) { notes.push(`${days} days is more than is useful at your level and age, so the plan uses ${max}. Extra sessions only add tiredness until your body adapts.`); days = max; }
-  if (c.days && c.days > rec + 1 && days > rec) notes.push(`${rec} days is the sweet spot for your goal. More is possible, but recovery gets harder${f.cut ? ' while eating less' : ''}.`);
+  if (days > max) { notes.push(`${days} days is more than is wise after 55, so the plan uses ${max}. Recovery is slower, and extra sessions only add tiredness.`); days = max; }
+  if (c.days && days > rec + 1) notes.push(`You chose ${days} gym days, so every one of them has its own exercises. ${rec} days is the best fit for your goal, so each session carries a little less work to keep the whole week recoverable${f.cut ? ' while eating less' : ''}. Sleep 7 to 9 hours and keep 2 or 3 days lighter.`);
+  if (days === 7) notes.push('Seven days leaves no full rest day. Day 7 is a light session; swap it for a rest day any week you feel run down.');
   if (c.days && c.days < rec) notes.push(`${days} days works. ${rec} days would give faster results if your week allows it.`);
   return {
     place: c.place || 'gym', level, days, minutes: c.minutes || defaultMinutes(type),
     equipment: c.equipment, limits: c.limits, focus: c.focus,
     recommendedDays: rec, maxDays: max,
-    chosen: { place: !!c.place, level: !!c.level, days: !!c.days, minutes: !!c.minutes },
+    weekdays, chosen: { place: !!c.place, level: !!c.level, days: !!c.days, minutes: !!c.minutes },
     setupDone: !!(c.place && c.level), notes,
   };
 }
@@ -104,8 +113,9 @@ const SPLITS = {
   4: { name: 'Upper / lower, 4 days', titles: ['Upper 1', 'Lower 1', 'Upper 2', 'Lower 2'], days: [['hpress', 'hrow', 'vpress', 'vpull', 'tri', 'bicep'], ['squat', 'hinge', 'ham', 'calf', 'core'], ['ipress', 'vpull', 'hrow', 'lateral', 'rear', 'tri'], ['squat', 'glute', 'lunge', 'quad', 'core']] },
   5: { name: 'Upper / lower / push / pull / legs, 5 days', titles: ['Upper', 'Lower', 'Push', 'Pull', 'Legs and glutes'], days: [['hpress', 'hrow', 'vpress', 'vpull', 'bicep', 'tri'], ['squat', 'hinge', 'ham', 'calf', 'core'], ['ipress', 'vpress', 'fly', 'lateral', 'tri'], ['vpull', 'hrow', 'rear', 'bicep', 'core'], ['squat', 'glute', 'lunge', 'quad', 'calf']] },
   6: { name: 'Push / pull / legs twice, 6 days', titles: ['Push 1', 'Pull 1', 'Legs 1', 'Push 2', 'Pull 2', 'Legs 2'], days: [['hpress', 'vpress', 'fly', 'lateral', 'tri'], ['vpull', 'hrow', 'rear', 'bicep', 'core'], ['squat', 'hinge', 'ham', 'calf', 'core'], ['ipress', 'vpress', 'lateral', 'fly', 'tri'], ['hrow', 'vpull', 'rear', 'bicep', 'core'], ['squat', 'glute', 'lunge', 'quad', 'calf']] },
+  7: { name: 'Push / pull / legs twice and a light shape day, 7 days', titles: ['Push 1', 'Pull 1', 'Legs 1', 'Push 2', 'Pull 2', 'Legs 2', 'Shape and core (light)'], days: [['hpress', 'vpress', 'fly', 'lateral', 'tri'], ['vpull', 'hrow', 'rear', 'bicep', 'core'], ['squat', 'hinge', 'ham', 'calf', 'core'], ['ipress', 'vpress', 'lateral', 'fly', 'tri'], ['hrow', 'vpull', 'rear', 'bicep', 'core'], ['squat', 'glute', 'lunge', 'quad', 'calf'], ['glute', 'lateral', 'rear', 'bicep', 'tri', 'core']] },
 };
-const WEEK_DAYS = { 2: [1, 4], 3: [0, 2, 4], 4: [0, 1, 3, 4], 5: [0, 1, 3, 4, 5], 6: [0, 1, 2, 3, 4, 5] };
+const WEEK_DAYS = { 2: [1, 4], 3: [0, 2, 4], 4: [0, 1, 3, 4], 5: [0, 1, 3, 4, 5], 6: [0, 1, 2, 3, 4, 5], 7: [0, 1, 2, 3, 4, 5, 6] };
 const UPPER = ['hpress', 'ipress', 'vpress', 'vpull', 'hrow'], LOWER = ['squat', 'hinge', 'lunge'];
 const DROP_ORDER = ['calf', 'fly', 'bicep', 'tri', 'quad', 'ham', 'core', 'rear', 'lateral', 'glute'];
 const FOCUS_SLOTS = { glutes: ['glute'], shoulders: ['lateral', 'rear'], arms: ['bicep', 'tri'], chest: ['fly', 'ipress'], back: ['vpull', 'hrow', 'rear'], legs: ['quad', 'ham', 'calf'], core: ['core'] };
@@ -185,6 +195,7 @@ function scheme(ex, slotId, ctx, firstCompound) {
     rest = 60;
     if (unloaded) [lo, hi] = [12, 20];
   }
+  if (!hold && ctx.setTrim) sets = Math.max(2, sets - ctx.setTrim);
   if (!hold && !unloaded && compound) {
     if (f.senior) { lo = Math.max(lo, 10); hi = Math.max(hi, 15); } else if (f.older) { lo = Math.max(lo, 8); hi = Math.max(hi, lo + 4); }
   }
@@ -247,6 +258,28 @@ function buildExercises(slots, ctx, withSwaps, limitMinutes, weekUsed = new Set(
   return exs;
 }
 
+/**
+ * The home version of a gym session, exercise by exercise: each gym move gets its natural twin (same slot, same muscle, same pattern),
+ * with the same number of sets, in the same order. If an injury limit rules every home option out, that move is dropped, never replaced
+ * by a risky one. `replaces` says which gym exercise each home exercise stands in for.
+ */
+function buildHomeTwins(gymExercises, ctxHome) {
+  const taken = new Set();
+  const out = [];
+  gymExercises.forEach((g, i) => {
+    const t = homeTwin(BY_ID[g.id], g.slot, ctxHome, taken);
+    if (!t) return;
+    taken.add(t.ex.id);
+    const e = toExercise(t.ex, g.slot, ctxHome, false, false);
+    e.sets = g.sets; // same work, different tools
+    e.replaces = { id: g.id, name: g.name, position: i + 1 };
+    e.match = t.how === 'same' ? 'same' : 'twin';
+    e.matchNote = t.how === 'same' ? `Same exercise as the gym. ${t.tip}` : `Takes the place of ${g.name}: same muscles, same movement. ${t.tip}`;
+    out.push(e);
+  });
+  return out;
+}
+
 const WARMUP = {
   lower: ['5 minutes of easy walking, cycling or rowing, just enough to feel warm', 'Hip circles and leg swings, 10 each side', '10 slow bodyweight squats and 10 glute bridges', 'Before your first lift: one light set of 10, then one of 5 at about 70 percent of your working weight'],
   upper: ['5 minutes of easy walking, cycling or rowing, just enough to feel warm', 'Arm circles and shoulder rolls, 10 each way', '10 band pull-aparts or wall slides, and 10 slow push-ups on a wall or bench', 'Before your first lift: one light set of 10, then one of 5 at about 70 percent of your working weight'],
@@ -282,10 +315,9 @@ function quickSession(slots, ctxHome, level) {
 }
 
 // ------------------------------------------------------------------------------------------------------------------ cardio and active days
+// Walking is NOT in this menu: the app tracks walks and steps as their own activity, so the plan never offers a walk as a substitute for a workout.
 // MET values follow the Compendium of Physical Activities and the app's own exercise catalogue. kcal = MET x kg x hours: a guide, not a promise.
 const ACTIVE_ALL = [
-  { id: 'walk-brisk', name: 'Brisk walk', met: 4.3, impact: 'low', where: 'outdoor', intensity: 'moderate', use: ['rest-day', 'fat-loss', 'recovery', 'busy-day'], tip: 'A pace where you can talk but not sing. Walk after meals for easier digestion and steadier energy.' },
-  { id: 'walk-incline', name: 'Incline treadmill walk', met: 5.0, impact: 'low', where: 'gym', intensity: 'moderate', use: ['fat-loss', 'busy-day'], tip: 'Incline 6 to 10 percent, speed where you can still talk. Do not hold the rails.' },
   { id: 'cycle-easy', name: 'Easy cycling', met: 5.8, impact: 'low', where: 'both', intensity: 'moderate', use: ['fat-loss', 'rest-day', 'recovery'], tip: 'Light resistance, 70 to 90 turns a minute. Easy on the knees and back.' },
   { id: 'swim', name: 'Swimming', met: 6.0, impact: 'low', where: 'outdoor', intensity: 'moderate', use: ['fat-loss', 'recovery'], tip: 'Any stroke at a steady pace. Best choice for sore joints or a higher body weight.' },
   { id: 'row-machine', name: 'Rowing machine', met: 7.0, impact: 'low', where: 'gym', intensity: 'hard', use: ['fat-loss'], tip: 'Push with your legs first, then lean back, then pull with your arms. Keep it steady.' },
@@ -326,14 +358,14 @@ function cardioPlan(f, type, prefs, active) {
   const notes = [];
   if (f.heavy) notes.push(`Start at ${start} minutes a week and add about 10 minutes every week until you reach ${weekly}. Choose low-impact options so your knees, hips and back get time to adapt.`);
   if (f.cut) notes.push('Do cardio on your non-lifting days, or after lifting. Never before heavy leg work. If your weight stalls for 3 weeks, add 1,000 steps a day before cutting food.');
-  if (f.build || f.light) notes.push('Keep cardio light so your food goes to building muscle. Steps and short easy walks are enough.');
+  if (f.build || f.light) notes.push('Keep cardio light so your food goes to building muscle. Keep your daily steps going (tracked separately) and add easy cycling or a yoga flow if you want more.');
   if (limits.has('heart')) notes.push('Keep every session at a pace where you can talk comfortably, and agree your upper heart-rate limit with your doctor first.');
   return {
     weeklyEasyMinutes: weekly, startMinutes: start, rampMinutesPerWeek: start < weekly ? 10 : 0,
     easy: { minutes: perSession, perWeek: sessions, zoneBpm: zone2, talkTest: 'You can speak in full sentences but not sing. About 60 to 70 percent of your maximum heart rate.' },
     maxHeartRateBpm: hrMax,
     intervals: intervalsOk
-      ? { perWeek: type === 'athletic' && prefs.level !== 'beginner' ? 2 : 1, format: 'Bike, rower or incline walk: 6 rounds of 30 seconds hard and 90 seconds easy, after a 5-minute warm-up. Hard means about 8 out of 10 effort.', hardBpm: [Math.round(hrMax * 0.8), Math.round(hrMax * 0.9)] }
+      ? { perWeek: type === 'athletic' && prefs.level !== 'beginner' ? 2 : 1, format: 'Bike, rower or elliptical: 6 rounds of 30 seconds hard and 90 seconds easy, after a 5-minute warm-up. Hard means about 8 out of 10 effort.', hardBpm: [Math.round(hrMax * 0.8), Math.round(hrMax * 0.9)] }
       : null,
     intervalsNote: intervalsOk ? null : (limits.has('heart') ? 'No hard intervals with a heart or blood-pressure condition unless your doctor agrees.' : f.heavy || limits.has('knee') || f.age >= 50 ? 'Hard intervals are skipped for now to protect your joints and heart. Steady cardio and walking give most of the benefit.' : prefs.level === 'beginner' ? 'Add one interval session after 6 to 8 weeks of steady training.' : 'Not needed for this goal.'),
     lowImpactOnly: lowImpact, options: names, steps: f.steps, notes,
@@ -468,8 +500,8 @@ function buildAnalysis({ f, type, prefs, goal, body, measures, protein, calories
   adj('Your week', `${prefs.days} training days of about ${prefs.minutes} minutes (${program.split.toLowerCase()}), with at least one full rest day.`, prefs.days === prefs.recommendedDays ? `${prefs.days} days is the best fit for your goal and experience: enough work to progress, enough rest to recover${f.cut ? ' while eating less' : ''}.` : `${prefs.recommendedDays} days would be the best fit for your goal and experience. Your ${prefs.days} days still works; the plan spreads the work so each muscle gets two good sessions a week where possible.`);
   if (f.tall) adj('Tall frame', 'Leg press, hack squat, box squat and trap-bar lifts come before barbell back squats. Cable and machine rows and pulldowns are preferred. Pull-ups are built up with assisted versions.', 'Long thigh bones push your hips back in a squat, which loads the lower back. Long arms travel further on presses and pull-ups, so they feel harder. Machines fix the path and protect you while you learn.');
   if (f.short) adj('Shorter frame', 'Barbell and goblet squat patterns, floor presses and push-ups are favoured. Machine seats and cable heights are adjusted so handles line up with your chest.', 'Shorter limbs give good leverage on squats, deadlifts and presses, so heavy basic lifts suit you. Add a foot block or seat cushion when handles or platforms are too far away.');
-  if (f.veryHeavy) adj('Higher body weight', 'No jumping or running for now. Guided machines first, push-ups start on a bench or wall, cardio is walking, cycling, swimming or the elliptical. Rest between sets is 15 seconds longer.', 'Your joints carry your body weight with every step. Low-impact work builds fitness without overloading knees, hips and back, and you can add impact later as you get lighter. Check that benches and chairs are rated for your weight.');
-  else if (f.heavy) adj('Extra body fat', 'Low-impact cardio, stable exercises (machines, supported rows) and a walking base before any intervals.', 'Extra body fat raises joint load, so the plan builds your capacity first and adds intensity later.');
+  if (f.veryHeavy) adj('Higher body weight', 'No jumping or running for now. Guided machines first, push-ups start on a bench or wall, cardio is cycling, swimming or the elliptical. Rest between sets is 15 seconds longer.', 'Your joints carry your body weight with every step. Low-impact work builds fitness without overloading knees, hips and back, and you can add impact later as you get lighter. Check that benches and chairs are rated for your weight.');
+  else if (f.heavy) adj('Extra body fat', 'Low-impact cardio, stable exercises (machines, supported rows) and an easy cycling or swimming base before any intervals.', 'Extra body fat raises joint load, so the plan builds your capacity first and adds intensity later.');
   if (f.light) adj('Lighter build', 'Heavier compound lifts (leg press, presses, rows), 3 to 4 days, light cardio, and a firm reminder to eat enough.', 'Lighter frames gain muscle fastest from heavy, simple lifts plus a calorie surplus. Cardio and too many exercises burn the energy you need to grow.');
   if (f.female) adj('Women\'s training', 'Glutes get 2 to 3 sessions a week, with hip thrusts and single-leg work. Upper back and shoulders get regular volume. Reps stay in the same ranges as for men.', 'Women build muscle in the same way as men and can lift just as heavy relative to their strength. Lifting does not make you bulky. It firms the hips, legs and arms, and it protects bones.');
   if (f.older) adj(f.senior ? 'Age 60 and over' : 'Age 45 and over', f.senior ? 'Longer warm-up, 3 to 4 days, joint-friendly moves, higher reps (10 to 15), carries and sit-to-stands for daily strength.' : 'Longer warm-up, extra rest, joint-friendly variations first, and effort kept 3 reps from the limit.', 'Muscle and tendon recovery slows with age but responds just as well to lifting. Strength training is the best protection against losing muscle and bone.');
@@ -479,7 +511,7 @@ function buildAnalysis({ f, type, prefs, goal, body, measures, protein, calories
   if (type === 'balanced') adj('Healthy and balanced goal', 'Shorter sessions, fewer days, and an enjoyable activity every week.', 'Consistency beats intensity. The plan you can keep doing for 6 months beats a perfect plan you drop in 3 weeks.');
   prefs.limits.forEach((l) => adj({ knee: 'Knee pain', back: 'Lower back pain', shoulder: 'Shoulder pain', wrist: 'Wrist pain', elbow: 'Elbow pain', heart: 'Heart or blood pressure' }[l], { knee: 'No deep loaded knee bends, lunges, hack squats or leg extensions. Leg press, step-ups, glute bridges and hip thrusts are used instead.', back: 'No barbell deadlifts or bent-over rows. Supported rows, pulldowns, hip thrusts and cable pull-throughs are used.', shoulder: 'No heavy overhead barbell press, dips or upright rows. Machine and landmine presses, and neutral grips, are used.', wrist: 'Push-ups are done on fists or handles, planks on the forearms, and barbell curls are avoided.', elbow: 'Skull crushers, close-grip push-ups and heavy curls are left out. Cable and light moves are used.', heart: 'Machines, cables and light loads only. Effort stays at 3 reps from the limit, rest is longer, and holds like planks are avoided.' }[l], 'The plan removed anything that commonly aggravates this and kept the muscle work the same. If pain continues, see a physiotherapist.'));
   if (prefs.place === 'home') adj('Training at home', 'Slow tempo, pauses, single-leg and one-arm moves, and loaded backpacks replace heavy weights.', 'Muscle does not care if the load is a barbell or a backpack. It cares about hard sets close to the limit.');
-  if (prefs.place === 'both') adj('Gym plus home', 'Every day has a gym version and a home version. Same muscles, same sets.', 'If you cannot get to the gym, you still train the same muscles with the same effort.');
+  if (prefs.place === 'both') adj('Gym plus home', 'Every gym exercise has a matching home exercise: same muscles, same movement, same sets, same order. Where your equipment allows it, it is the very same exercise.', 'If you cannot get to the gym, you still train the same muscles with the same effort, so the week stays on track.');
 
   const focus = focusList(f, type, prefs, taper);
 
@@ -503,7 +535,7 @@ function buildAnalysis({ f, type, prefs, goal, body, measures, protein, calories
   if (f.build || (f.light && (type === 'muscular' || type === 'athletic'))) warnings.push('Your calorie number is at maintenance. To gain muscle faster, set a target weight a little above your current weight in Goals; the app then adds a small surplus. Without extra food, a lighter frame cannot grow much.');
   if (body.bodyFatSource === 'estimate') warnings.push('Body fat is estimated from height, weight and age and can be off by several points, especially if you are muscular or very small. Add a waist and neck measurement to improve it.');
 
-  const approach = f.cut ? 'The plan protects your muscle while fat comes down: lift to keep your strength, walk a lot, keep protein high.' : f.build ? 'The plan is built to add muscle: heavy compound lifts, little cardio, enough food.' : 'You are already near your target range, so the plan builds shape with progressive lifting at steady weight.';
+  const approach = f.cut ? 'The plan protects your muscle while fat comes down: lift to keep your strength, keep your steps up, keep protein high.' : f.build ? 'The plan is built to add muscle: heavy compound lifts, little cardio, enough food.' : 'You are already near your target range, so the plan builds shape with progressive lifting at steady weight.';
   const headline = `${heightClass[0].toUpperCase()}${heightClass.slice(1)}, ${buildClass} (BMI ${body.bmi}, about ${body.bodyFatPct}% body fat). ${approach}`;
 
   return {
@@ -533,24 +565,26 @@ function trainingPlan({ profile = {}, type, mode, body, goal, steps, protein, ca
   const bodyCtx = { tall: f.tall, short: f.short, heavy: f.heavy, older: f.older, female: f.female, light: f.light, type };
   const homeEquip = new Set(prefs.equipment);
   const primaryWhere = prefs.place === 'home' ? 'home' : 'gym';
-  const mk = (where) => ({ where, equip: homeEquip, level: prefs.level, limits, body: bodyCtx, flags: f, type });
+  const mk = (where) => ({ where, equip: homeEquip, level: prefs.level, limits, body: bodyCtx, flags: f, type, setTrim: trimFor(prefs.days, prefs.level) });
   const ctxPrimary = mk(primaryWhere), ctxHome = mk('home');
 
   const split = SPLITS[prefs.days];
   const days = designDays(prefs.days, f, type, prefs);
-  const seenPrimary = new Set(), seenHome = new Set(); // exercises already used this week, so a slot that comes up twice gets a different one
+  const seenPrimary = new Set(); // exercises already used this week, so a slot that comes up twice gets a different one
   const sessions = days.map((slots, i) => {
     const kind = sessionKind(slots);
     const exercises = buildExercises(slots, ctxPrimary, true, prefs.minutes, seenPrimary);
+    const light = prefs.days === 7 && i === 6; // the seventh day is a short pump-and-core day, so a 7-day week still recovers
+    if (light) exercises.forEach((e) => { e.sets = Math.min(e.sets, 2); });
     const session = {
       id: String.fromCharCode(65 + i), title: split.titles[i], where: primaryWhere,
       focus: [...new Set(exercises.flatMap((e) => e.targets))],
-      minutes: sessionMinutes(exercises), warmup: WARMUP[kind], exercises, cooldown: COOLDOWN, homeBackup: null,
+      light, minutes: sessionMinutes(exercises), warmup: WARMUP[kind], exercises, cooldown: COOLDOWN, homeBackup: null,
       quick: quickSession(slots, ctxHome, prefs.level),
     };
     if (primaryWhere === 'gym') {
-      const hb = buildExercises(slots, ctxHome, false, Math.min(prefs.minutes, 50), seenHome);
-      session.homeBackup = { title: `${split.titles[i]} at home`, minutes: sessionMinutes(hb), exercises: hb, note: prefs.equipment.length ? `Uses what you have at home: ${prefs.equipment.join(', ')}.` : 'Uses bodyweight, a chair or step, and a backpack or water bottles. Tell the app what equipment you own to get a stronger home version.' };
+      const hb = buildHomeTwins(exercises, ctxHome);
+      session.homeBackup = { title: `${split.titles[i]} at home`, minutes: sessionMinutes(hb), exercises: hb, note: `Same muscles, same sets, same order as the gym version: every exercise has a matching one at home. ` + (prefs.equipment.length ? `Uses what you have: ${prefs.equipment.join(', ')}.` : 'Uses bodyweight, a chair or step, and a backpack or water bottles. Tell the app what equipment you own to get a stronger home version.') };
     }
     return session;
   });
@@ -560,19 +594,19 @@ function trainingPlan({ profile = {}, type, mode, body, goal, steps, protein, ca
   const volume = volumeReport(sessions, prefs.level, f);
 
   // The week: training days, easy-cardio days, and a full rest day.
-  const trainDays = WEEK_DAYS[prefs.days];
+  const trainDays = prefs.weekdays.length === prefs.days ? prefs.weekdays : WEEK_DAYS[prefs.days];
   let easyLeft = Math.min(cardio.easy.perWeek, 7 - prefs.days - 1);
   const week = DAY.map((d, i) => {
     const t = trainDays.indexOf(i);
-    if (t >= 0) return { day: d, kind: 'train', sessionId: sessions[t].id, label: sessions[t].title, minutes: sessions[t].minutes };
+    if (t >= 0) return { day: d, kind: 'train', sessionId: sessions[t].id, label: sessions[t].title, minutes: sessions[t].minutes, focus: sessions[t].focus, exerciseCount: sessions[t].exercises.length };
     if (i !== 6 && easyLeft > 0) { easyLeft -= 1; return { day: d, kind: 'active', label: 'Easy cardio or an active day', minutes: cardio.easy.minutes, note: `${cardio.easy.minutes} minutes: ${cardio.options.slice(0, 3).join(', ')}. Pick from the active menu.` }; }
-    return { day: d, kind: 'rest', label: i === 6 ? 'Full rest and a gentle walk' : 'Rest and walk', note: steps ? `Hit your ${steps.toLocaleString()} steps and stretch if you like.` : 'Walk and stretch if you like.' };
+    return { day: d, kind: 'rest', label: i === 6 ? 'Full rest' : 'Rest day', note: 'Stretch or do a light mobility flow if you like. Your steps are tracked separately.' };
   });
 
   const program = {
     split: split.name, daysPerWeek: prefs.days, minutesPerSession: prefs.minutes, place: prefs.place, level: prefs.level,
     week, sessions, volume, cardio,
-    active: { menu: active, minimumDay: { title: 'The 10-minute floor', detail: 'Short on time or energy? Do one round of: 10 squats, 8 push-ups (any version), a 20-second plank, 10 glute bridges. Then a 5-minute walk. Doing this keeps the habit alive, and a habit is worth more than any single session.' }, restDay: 'On rest days walk, stretch or do a yoga flow. Light movement helps you recover faster than lying still.' },
+    active: { menu: active, minimumDay: { title: 'The 10-minute floor', detail: 'Short on time or energy? Do one round of: 10 squats, 8 push-ups (any version), a 20-second plank, 10 glute bridges. Then 5 minutes of easy stretching. Doing this keeps the habit alive, and a habit is worth more than any single session.' }, restDay: 'On rest days stretch or do a yoga flow. Light movement helps you recover faster than lying still.' },
     progression: progressionPlan(f, prefs.level, prefs.place),
     busyGym: BUSY_GYM,
     equipmentUpgrades: ['A set of resistance bands (cheapest and most useful)', 'Adjustable or fixed dumbbells (filled water cans work in the meantime)', 'A doorway pull-up bar', 'A sturdy bench or chair for step-ups and supported rows'],
@@ -583,7 +617,7 @@ function trainingPlan({ profile = {}, type, mode, body, goal, steps, protein, ca
 
   const lines = [
     `${split.name}: ${prefs.days} sessions a week of about ${Math.round(sessions.reduce((m, s) => m + s.minutes, 0) / sessions.length)} minutes${prefs.place === 'home' ? ' at home' : prefs.place === 'both' ? ' (gym, with a home version of every day)' : ' at the gym (with a home version of every day)'}.`,
-    `Each session: ${sessions[0].exercises.slice(0, 4).map((e) => e.name.toLowerCase()).join(', ')} and more. Sets, reps, rest and swaps are listed per exercise.`,
+    `Every training day has its own exercise list (${sessions.map((s) => s.title).join(', ')}). Sets, reps, rest and swaps are listed per exercise.`,
     `Cardio: about ${cardio.weeklyEasyMinutes} easy minutes a week${cardio.lowImpactOnly ? ' (low impact)' : ''}, plus ${steps ? steps.toLocaleString() : 'daily'} steps.`,
     'Can not train? Use the Quick 20 or an active day: you still move forward.',
   ];

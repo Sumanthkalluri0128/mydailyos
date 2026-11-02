@@ -32,15 +32,15 @@ test('library: unique ids, known slots/limits/equipment, a cue for each, and a s
 });
 
 test('every goal, level, place and number of days gives a full, sane program', () => {
-  for (const type of TYPE_IDS) for (const level of L.LEVELS) for (const place of L.PLACES) for (const days of [2, 3, 4, 5, 6]) {
+  for (const type of TYPE_IDS) for (const level of L.LEVELS) for (const place of L.PLACES) for (const days of [2, 3, 4, 5, 6, 7]) {
     const p = plan(woman, type, { level, place, days });
     const g = prog(p);
     assert.equal(p.ready, true);
     assert.equal(g.sessions.length, g.daysPerWeek);
-    assert.ok(g.daysPerWeek <= (level === 'beginner' ? 4 : level === 'intermediate' ? 5 : 6));
+    assert.equal(g.daysPerWeek, days, 'the number of gym days chosen is the number of days built');
     assert.equal(g.week.length, 7);
     assert.equal(g.week.filter((d) => d.kind === 'train').length, g.daysPerWeek);
-    assert.ok(g.week.some((d) => d.kind === 'rest'), 'a full rest day');
+    if (days < 7) assert.ok(g.week.some((d) => d.kind === 'rest'), 'a full rest day');
     for (const s of g.sessions) {
       assert.ok(s.exercises.length >= 4, `${type}/${level}/${place}/${days} ${s.id} has ${s.exercises.length}`);
       assert.equal(new Set(s.exercises.map((e) => e.id)).size, s.exercises.length, 'no repeated exercise in a session');
@@ -141,8 +141,8 @@ test('women get glutes at least twice a week; older lifters get longer rests, ea
   const glutes = w.sessions.filter((s) => s.exercises.some((e) => e.targets.includes('glutes') && ['glute', 'hinge', 'squat', 'lunge'].includes(e.slot))).length;
   assert.ok(glutes >= 2);
   assert.ok(w.sessions.filter((s) => s.exercises.some((e) => e.slot === 'glute')).length >= 2, 'direct glute work twice');
-  const s = plan(senior, 'balanced', { level: 'beginner', days: 6 });
-  assert.ok(prog(s).daysPerWeek <= 4);
+  const s = plan(senior, 'balanced', { level: 'beginner', days: 7 });
+  assert.ok(prog(s).daysPerWeek <= 5, 'over 55 is held to 5 days');
   assert.ok(s.training.prefs.notes.length >= 1);
   assert.ok(prog(s).sessions[0].exercises.every((e) => e.rir >= 3));
   assert.ok(prog(s).sessions[0].exercises[0].restSec >= 120);
@@ -167,8 +167,9 @@ test('cardio: heart-rate zones, intervals only for those who can take them, and 
   assert.equal(g.cardio.maxHeartRateBpm, Math.round(208 - 0.7 * 28));
   assert.ok(g.cardio.easy.zoneBpm[0] < g.cardio.easy.zoneBpm[1]);
   assert.ok(g.cardio.intervals && g.cardio.intervals.perWeek >= 1);
-  const walk = g.active.menu.find((a) => a.id === 'walk-brisk');
-  assert.equal(walk.kcal30, Math.round(4.3 * 82 * 0.5));
+  const cyc = g.active.menu.find((a) => a.id === 'cycle-easy');
+  assert.equal(cyc.kcal30, Math.round(5.8 * 82 * 0.5));
+  assert.ok(!g.active.menu.some((a) => /walk/i.test(a.id)), 'walking is its own activity in the app, never offered as a workout substitute');
   assert.ok(g.active.menu.length >= 8 && g.active.minimumDay.detail);
   const home = prog(plan(man, 'athletic', { level: 'intermediate', place: 'home' }));
   assert.ok(home.active.menu.every((a) => a.where !== 'gym'));
@@ -192,7 +193,7 @@ test('setup is reported honestly: defaults are flagged, bad input is ignored, li
   assert.equal(none.training.prefs.setupDone, false);
   assert.equal(none.training.prefs.level, 'beginner');
   const c = sanitizePrefs({ place: 'moon', level: 'god', days: 99, minutes: 5, equipment: ['dumbbells', 'laser'], limits: 'knee,hip', focus: ['glutes', 'x', 'arms', 'core', 'back'] });
-  assert.deepEqual(c, { place: '', level: '', days: null, minutes: null, equipment: ['dumbbells'], limits: ['knee'], focus: ['glutes', 'arms', 'core'] });
+  assert.deepEqual(c, { place: '', level: '', days: null, minutes: null, equipment: ['dumbbells'], limits: ['knee'], focus: ['glutes', 'arms', 'core'], weekdays: [] });
   assert.deepEqual(sanitizePrefs(null).equipment, []);
   assert.ok(TRAINING_OPTIONS.places.length === 3 && TRAINING_OPTIONS.limits.length === 6);
 });
@@ -227,4 +228,94 @@ test('every exercise (main, home backup and quick circuit) names its movement sl
   const p = plan(man, 'muscular', null, {}).training.program;
   const slots = ['squat', 'hinge', 'lunge', 'glute', 'quad', 'ham', 'calf', 'hpress', 'ipress', 'fly', 'vpress', 'lateral', 'rear', 'tri', 'vpull', 'hrow', 'bicep', 'core'];
   p.sessions.forEach((s) => [...s.exercises, ...s.quick.exercises].forEach((e) => assert.ok(slots.includes(e.slot), `${e.name} has slot ${e.slot}`)));
+});
+
+test('every chosen gym day is built with its own exercises, from 2 to 7 days, and the week shows every one of them', () => {
+  for (const days of [2, 3, 4, 5, 6, 7]) for (const level of L.LEVELS) {
+    const g = prog(plan(man, 'athletic', { level, place: 'gym', days, minutes: 60 }));
+    const train = g.week.filter((d) => d.kind === 'train');
+    assert.equal(train.length, days, `${level}/${days}: week shows ${train.length} training days`);
+    assert.equal(new Set(train.map((d) => d.sessionId)).size, days, 'a different session on each day');
+    for (const d of train) assert.ok(d.exerciseCount >= 4 && d.focus.length >= 1);
+    const titles = g.sessions.map((s) => s.title);
+    assert.equal(new Set(titles).size, titles.length, 'titles are distinct');
+    if (days === 7) { assert.equal(g.sessions[6].light, true); assert.ok(g.sessions[6].exercises.every((e) => e.sets <= 2)); }
+  }
+});
+
+test('a long week gets lighter sessions so the total stays recoverable, and the person is told why', () => {
+  const few = prog(plan(man, 'lean', { level: 'beginner', place: 'gym', days: 3 }));
+  const many = plan(man, 'lean', { level: 'beginner', place: 'gym', days: 6 });
+  const sets = (g) => g.sessions.flatMap((s) => s.exercises).reduce((m, e) => Math.max(m, e.sets), 0);
+  assert.ok(sets(prog(many)) <= sets(few));
+  assert.ok(many.training.prefs.notes.some((n) => /6 gym days/.test(n)), 'explains the choice');
+});
+
+test('home twins: every gym exercise has a matching home exercise (same slot, same sets, same order, nothing gym-only)', () => {
+  for (const type of TYPE_IDS) for (const equipment of [[], ['dumbbells'], ['dumbbells', 'bench', 'bands', 'pullupbar']]) for (const prof of [man, woman, tall, heavy]) {
+    const g = prog(plan(prof, type, { level: 'intermediate', place: 'both', days: 5, equipment }));
+    for (const s of g.sessions) {
+      const gymIds = new Set(s.exercises.map((e) => e.id));
+      let lastPos = 0;
+      for (const h of s.homeBackup.exercises) {
+        const gym = s.exercises.find((e) => e.id === h.replaces.id);
+        assert.ok(gym, 'each home exercise says which gym exercise it replaces');
+        assert.equal(h.slot, gym.slot, `${h.name} keeps the slot of ${gym.name}`);
+        assert.equal(h.sets, gym.sets, 'same number of sets');
+        assert.ok(h.replaces.position > lastPos, 'same order'); lastPos = h.replaces.position;
+        assert.notEqual(L.BY_ID[h.id].venue, 'gym');
+        assert.ok(h.matchNote && h.match);
+        if (equipment.length === 0) assert.equal(L.BY_ID[h.id].eq.length, 0, `${h.name} needs equipment the person does not own`);
+        else assert.ok(L.BY_ID[h.id].eq.every((t) => equipment.includes(t)), `${h.name} needs ${L.BY_ID[h.id].eq}`);
+      }
+      assert.equal(new Set(s.homeBackup.exercises.map((e) => e.id)).size, s.homeBackup.exercises.length, 'no repeated home exercise in a day');
+      assert.ok(s.homeBackup.exercises.length >= Math.ceil(s.exercises.length * 0.8), 'almost every gym exercise is matched');
+      assert.ok(gymIds.size === s.exercises.length);
+    }
+  }
+});
+
+test('home twins feel natural: a machine press becomes a dumbbell or push-up press, a pulldown becomes a pulling move, a hip thrust stays a hip thrust', () => {
+  const twinOf = (gymId, equipment, slot) => {
+    const ctx = { where: 'home', equip: new Set(equipment), level: 'intermediate', limits: new Set(), body: {} };
+    const t = L.homeTwin(L.BY_ID[gymId], slot, ctx);
+    return t && t.ex.id;
+  };
+  assert.equal(twinOf('chest-press-machine', ['dumbbells', 'bench'], 'hpress'), 'db-bench');
+  assert.equal(twinOf('chest-press-machine', ['dumbbells'], 'hpress'), 'floor-press');
+  assert.ok(['pushup', 'pushup-handles', 'incline-pushup', 'knee-pushup'].includes(twinOf('chest-press-machine', [], 'hpress')));
+  assert.equal(twinOf('lat-pulldown', ['bands'], 'vpull'), 'band-pulldown');
+  assert.ok(['band-assisted-pullup', 'neg-pullup', 'pullup', 'chinup'].includes(twinOf('lat-pulldown', ['pullupbar', 'bands'], 'vpull')) || twinOf('lat-pulldown', ['pullupbar', 'bands'], 'vpull') === 'band-pulldown');
+  assert.equal(twinOf('hip-thrust-machine', [], 'glute'), 'sofa-hip-thrust');
+  assert.equal(twinOf('leg-press', ['dumbbells'], 'squat'), 'goblet-squat');
+  assert.equal(twinOf('leg-press', [], 'squat'), 'backpack-squat');
+  assert.equal(twinOf('goblet-squat', ['dumbbells'], 'squat'), 'goblet-squat', 'the same exercise when the equipment is there');
+  assert.equal(twinOf('seated-row', ['bands'], 'hrow'), 'band-row');
+  assert.equal(twinOf('pallof', ['bands'], 'core'), 'pallof-band');
+});
+
+test('injury limits are honoured in the home twins too: a knee limit never gets a loaded knee-bend twin', () => {
+  const g = prog(plan(man, 'athletic', { level: 'intermediate', place: 'both', days: 5, limits: ['knee'], equipment: ['dumbbells', 'bench'] }));
+  for (const s of g.sessions) for (const h of s.homeBackup.exercises) assert.ok(!L.BY_ID[h.id].avoid.includes('knee'), h.name);
+});
+
+test('a gym day is built from gym equipment, not from bags, towels and bottles', () => {
+  const home = /bag|bottle|towel|backpack|water can|sofa|chair|sit-to-stand/i;
+  for (const type of TYPE_IDS) for (const prof of [man, woman, heavy]) {
+    const g = prog(plan(prof, type, { level: 'beginner', place: 'gym', days: 4 }));
+    for (const s of g.sessions) for (const e of s.exercises) assert.ok(!home.test(e.name), `${s.title}: ${e.name}`);
+  }
+});
+
+test('the weekdays the person picks are the days the plan trains, and they set the number of days', () => {
+  const g = prog(plan(man, 'athletic', { level: 'intermediate', place: 'gym', weekdays: [0, 2, 3, 5], days: 3 }));
+  assert.equal(g.daysPerWeek, 4, 'the calendar wins over a stale day count');
+  assert.deepEqual(g.week.map((d, i) => (d.kind === 'train' ? i : -1)).filter((i) => i >= 0), [0, 2, 3, 5]);
+  const q = sanitizePrefs({ weekdays: '5,1,1,9,x,' });
+  assert.deepEqual(q.weekdays, [1, 5]);
+  const one = prog(plan(man, 'athletic', { level: 'intermediate', weekdays: [3] }));
+  assert.ok(one.daysPerWeek >= 2, 'a single day is not a plan: falls back to the recommended days');
+  const sen = plan(senior, 'balanced', { level: 'beginner', weekdays: [0, 1, 2, 3, 4, 5, 6] });
+  assert.equal(prog(sen).daysPerWeek, 5);
+  assert.equal(prog(sen).week.filter((d) => d.kind === 'train').length, 5);
 });

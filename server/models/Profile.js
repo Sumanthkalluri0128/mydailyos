@@ -35,7 +35,8 @@ const schema = new mongoose.Schema(
     training: {
       place: { type: String, enum: ['gym', 'home', 'both', ''], default: '' },
       level: { type: String, enum: ['beginner', 'intermediate', 'advanced', ''], default: '' },
-      days: { type: Number, min: 2, max: 6, default: null },
+      days: { type: Number, min: 2, max: 7, default: null },
+      weekdays: { type: [{ type: Number, min: 0, max: 6 }], default: [] }, // gym days: 0 = Monday ... 6 = Sunday
       minutes: { type: Number, min: 20, max: 120, default: null },
       equipment: { type: [{ type: String, enum: ['dumbbells', 'bands', 'bench', 'pullupbar', 'kettlebell'] }], default: [] },
       limits: { type: [{ type: String, enum: ['knee', 'back', 'shoulder', 'wrist', 'elbow', 'heart'] }], default: [] },

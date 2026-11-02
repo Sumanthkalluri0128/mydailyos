@@ -32,7 +32,7 @@ async function latestMeasures(userId) {
 const typeList = () => TYPE_IDS.map((id) => ({ id, label: TYPES[id].label, blurb: TYPES[id].blurb }));
 
 // Saved setup, with any preview values from the query on top (a query key that is present replaces the saved one, even when empty).
-const PREF_KEYS = ['place', 'level', 'days', 'minutes', 'equipment', 'limits', 'focus'];
+const PREF_KEYS = ['place', 'level', 'days', 'minutes', 'equipment', 'limits', 'focus', 'weekdays'];
 function prefsFor(profile, override) {
   const saved = profile?.training ? { ...profile.training } : {};
   if (override) for (const k of PREF_KEYS) if (override[k] !== undefined) saved[k] = override[k];
@@ -44,7 +44,7 @@ async function history(userId, today) {
   const from = addDays(today, -182), fromW = addDays(today, -70);
   const [sessions, activity, weights, waists] = await Promise.all([
     BodyPlanSession.find({ userId, date: { $gte: from, $lte: today } }).sort({ date: 1, createdAt: 1 }).limit(500).lean(),
-    ActivityLog.find({ userId, date: { $gte: from, $lte: today } }).select('date category durationMinutes sets clientId').limit(1500).lean(),
+    ActivityLog.find({ userId, date: { $gte: from, $lte: today } }).select('date category activityName durationMinutes sets clientId').limit(1500).lean(),
     WeightLog.find({ userId, date: { $gte: fromW, $lte: today } }).select('date weightKg').sort({ date: 1 }).limit(200).lean(),
     HealthLog.find({ userId, type: 'waist', date: { $gte: fromW, $lte: today } }).select('date value').sort({ date: 1 }).limit(60).lean(),
   ]);

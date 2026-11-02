@@ -127,3 +127,16 @@ waist readings. Nothing is guessed: with no history the plan says "find your wei
 
 Not changed: calories and macros (the app's weight-trend engine owns those), and the exercise library. Limits: advice comes from general
 strength-training practice and your own logged numbers; it is not medical advice, and logging is only as good as what is entered.
+
+## 10. Gym days, home twins and the skip button (v56)
+
+* **Days**: 2 to 7 gym days, honoured exactly (only lifters over 55 are held to 5). Every chosen day has its own exercise list. Long weeks
+  (7 days, or 5+ for beginners) take one set off each exercise; day 7 is a light "shape and core" session.
+* **The week no longer loses days**: the re-planner used to refuse a third lifting day in a row and any Sunday, so a 5 or 6 day plan showed
+  about 4. Scheduled days now stay; the rule only applies when a missed session slides onto a free day.
+* **Home twins**: each gym exercise is matched one-to-one to a home exercise (`TWINS` in `exerciseLibrary.js`): same slot, same sets,
+  same order; the identical exercise when the equipment is owned (goblet squat), else the closest pattern (leg press -> backpack squat,
+  lat pulldown -> band pulldown, hip thrust machine -> sofa hip thrust). Injury limits still apply; nothing risky is substituted.
+* **Gym days use gym equipment**: bodyweight and bag/towel moves are home-only or rank last at the gym (core exempt).
+* **Phone**: reminder buttons ("Skipped it", "Mark done", "Snooze", water) now run while the app is closed (background task), clear the
+  reminder, confirm what happened, and a tap is never replayed on the next launch.

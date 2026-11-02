@@ -12,6 +12,7 @@ const FEEDBACK = [["loved", "😍 Loved it"], ["too_heavy", "😮‍💨 Too hea
 
 export default function PlannerMeal({ day, meal, who, adding, onToggleAdd, onLog, onRemove, onAddSuggestion, onLogSuggestion, onLock, onFeedback, onEditQty, onLogMeal, extras, children, onDrop, dragging }) {
   const [more, setMore] = useState(false);
+  const [sv, setSv] = useState({}); // servings chosen per suggestion before adding it
   const [editId, setEditId] = useState(null);
   const [editBusy, setEditBusy] = useState(false);
   const saveQty = async (i, q) => { setEditBusy(true); try { if (await onEditQty(i, q)) setEditId(null); } finally { setEditBusy(false); } };
@@ -64,14 +65,25 @@ export default function PlannerMeal({ day, meal, who, adding, onToggleAdd, onLog
         <div className="pl-suggest" role="group" aria-label={`Suggestions for ${meal}`}>
           <b>💡 {m.addOnText ? cap(m.addOnText) : "Balance this meal"}</b>
           {m.hint?.kind === "partial" && <p className="pl-sub">{chefLine(m.hint, who)}</p>}
-          {sugg.map((s) => (
-            <div key={s.key || s.foodName} className="planner-item suggested">
-              {badge("suggested")}
-              <span><strong>{s.foodName}</strong><small>{s.calories} kcal · {s.protein} g protein · {s.why}</small></span>
-              <button className="secondary-button" onClick={() => onAddSuggestion(s)}>+ Plan</button>
-              {day.kind === "today" && <button className="secondary-button" onClick={() => onLogSuggestion(s)}>Log</button>}
-            </div>
-          ))}
+          {sugg.map((s0) => {
+            const key = s0.key || s0.foodName, n = sv[key] || 1;
+            const k = (x) => Math.round((Number(x) || 0) * n * 10) / 10;
+            const s = n === 1 ? s0 : { ...s0, quantity: Math.round(s0.quantity * n * 100) / 100, calories: Math.round(s0.calories * n), protein: k(s0.protein), fiber: k(s0.fiber), carbohydrates: k(s0.carbohydrates), fat: k(s0.fat) };
+            const setN = (v) => setSv((x) => ({ ...x, [key]: Math.min(20, Math.max(0.5, v)) }));
+            return (
+              <div key={key} className="planner-item suggested">
+                {badge("suggested")}
+                <span><strong>{s.foodName}</strong><small>{s.quantity} {s.servingUnit} · {s.calories} kcal · {s.protein} g protein · {s0.why}</small></span>
+                <span className="servings-row" role="group" aria-label={`Servings of ${s0.foodName}`}>
+                  <button type="button" className="servings-btn" aria-label="Fewer servings" disabled={n <= 0.5} onClick={() => setN(n - 0.5)}>−</button>
+                  <b aria-live="polite" className="servings-val">{n} serving{n === 1 ? "" : "s"}</b>
+                  <button type="button" className="servings-btn" aria-label="More servings" disabled={n >= 20} onClick={() => setN(n + 0.5)}>+</button>
+                </span>
+                <button className="secondary-button" onClick={() => onAddSuggestion(s)}>+ Plan</button>
+                {day.kind === "today" && <button className="secondary-button" onClick={() => onLogSuggestion(s)}>Log</button>}
+              </div>
+            );
+          })}
           {m.more.length > 0 && <button className="link-button" onClick={() => setMore(!more)}>{more ? "Show fewer" : `Show more (${m.more.length})`}</button>}
         </div>
       )}

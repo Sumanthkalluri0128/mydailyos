@@ -19,6 +19,7 @@ const GROUP = { chest: "Chest", back: "Back", shoulders: "Shoulders", arms: "Arm
 const cap = (s) => (s ? s[0].toUpperCase() + s.slice(1) : s);
 const rest = (sec) => (sec >= 90 ? `${Math.round((sec / 60) * 10) / 10} min` : `${sec} s`);
 
+const WEEKDAY_ITEMS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((label, id) => ({ id, label }));
 function Chips({ label, hint, items, value, multi, onChange, star, max }) {
   const on = (id) => (multi ? value.includes(id) : value === id);
   const click = (id) => {
@@ -52,7 +53,8 @@ export function TrainingSetup({ options, prefs, serverPrefs, onChange }) {
       {serverPrefs && !serverPrefs.setupDone && <p className="bp-note">Tell us how you train and the plan below fits you exactly. Until then it assumes you are new to lifting and train at a gym.</p>}
       <Chips label="Where do you train?" items={options.places} value={prefs.place} onChange={(v) => set("place", v)} />
       <Chips label="Your experience" items={options.levels} value={prefs.level} onChange={(v) => set("level", v)} />
-      <Chips label="Days a week" hint="★ is the best fit for your goal" items={options.days.map((d) => ({ id: d, label: `${d}` }))} value={prefs.days} onChange={(v) => set("days", v)} star={serverPrefs ? serverPrefs.recommendedDays : null} />
+      <Chips label="Gym days a week" hint="Every day you pick gets its own exercises. ★ is the best fit for your goal" items={options.days.map((d) => ({ id: d, label: `${d}` }))} value={prefs.days} onChange={(v) => onChange({ ...prefs, days: v, weekdays: [] })} star={serverPrefs ? serverPrefs.recommendedDays : null} />
+      <Chips label="Which days?" hint="Optional. Pick the exact weekdays you go and the plan is laid out on them." items={WEEKDAY_ITEMS} value={prefs.weekdays || []} multi onChange={(v) => { const next = [...v].sort((a, b) => a - b); onChange({ ...prefs, weekdays: next, days: next.length >= 2 ? next.length : prefs.days }); }} />
       <Chips label="Minutes a session" items={options.minutes.map((d) => ({ id: d, label: `${d}` }))} value={prefs.minutes} onChange={(v) => set("minutes", v)} />
       {home && <Chips label="What do you have at home?" hint="Nothing is fine too. A backpack and water bottles count." items={options.equipment} value={prefs.equipment} multi onChange={(v) => set("equipment", v)} />}
       <Chips label="Anything that hurts or limits you?" hint="Those moves are removed and replaced." items={options.limits} value={prefs.limits} multi onChange={(v) => set("limits", v)} />
@@ -115,7 +117,8 @@ function FormGuide({ f }) {
 }
 
 /** One exercise: the picture, today's target (from what you did last time), the set logger, how to do it, and the swaps. */
-function Exercise({ e, n, showSwaps, log, setLog, canLog }) {
+function Exercise({ e, n, showSwaps, log, setLog, canLog, onSwap, onSkip, onReset }) {
+  const [pick, setPick] = useState(false);
   const sw = e.swaps;
   const t = e.next;
   const sets = e.setsToday || e.sets;
@@ -125,6 +128,8 @@ function Exercise({ e, n, showSwaps, log, setLog, canLog }) {
   return (
     <li className="bp-ex">
       <div className="bp-ex-top"><span className="bp-n">{n}</span><b>{e.name}</b></div>
+      {e.swappedFrom && <p className="bp-match">Swapped in for {e.swappedFrom}. <button type="button" className="bp-link" onClick={() => onReset(e)}>Use the original</button></p>}
+      {e.replaces && <p className="bp-match">{e.match === "same" ? "Same as the gym" : `Home match for: ${e.replaces.name}`}</p>}
       <ExercisePic ex={e} />
       {e.sets ? <div className="bp-badges"><span>{sets} sets</span><span>{e.reps}</span><span>rest {rest(e.restSec)}</span></div> : <div className="bp-badges"><span>{e.reps}</span></div>}
       {t && (
@@ -136,6 +141,7 @@ function Exercise({ e, n, showSwaps, log, setLog, canLog }) {
       )}
       {e.effortToday && <p className="bp-muted">{e.effortToday}</p>}
       <p className="bp-cue">{e.cue}</p>
+      {e.matchNote && <p className="bp-muted">{e.matchNote}</p>}
       <FormGuide f={e.form} />
       {canLog && rows.length > 0 && (
         <div className="bp-log" role="group" aria-label={`Log ${e.name}`}>
@@ -147,6 +153,21 @@ function Exercise({ e, n, showSwaps, log, setLog, canLog }) {
             </div>
           ))}
           <button type="button" className="bp-link" onClick={() => setLog(e.id, [...rows, { ...(rows[rows.length - 1] || { weightKg: "", reps: "" }) }].slice(0, 8))}>+ Add a set</button>
+        </div>
+      )}
+      {onSwap && (
+        <div className="bp-exact">
+          {showSwaps && sw && <button type="button" className="bp-link" onClick={() => setPick(!pick)} aria-expanded={pick}>Swap this exercise</button>}
+          <button type="button" className="bp-link" onClick={() => onSkip(e)}>Skip it today</button>
+          {pick && sw && (
+            <ul className="bp-lines">
+              {[...(sw.busy || []), ...(sw.dumbbellOnly ? [sw.dumbbellOnly] : []), ...(sw.home ? [sw.home] : [])].filter((x, i, a) => a.findIndex((y) => y.id === x.id) === i).map((x) => (
+                <li key={x.id}><b>{x.name}</b> <span className="bp-muted">· {x.kind}</span><br />
+                  <button type="button" className="bp-link" onClick={() => { onSwap(e, x, false); setPick(false); }}>Use today</button>{" "}
+                  <button type="button" className="bp-link" onClick={() => { onSwap(e, x, true); setPick(false); }}>Always use this</button></li>
+              ))}
+            </ul>
+          )}
         </div>
       )}
       <details>
@@ -202,6 +223,36 @@ export function AdaptCard({ adapt, onApply, busy }) {
 
 const WAYS = [["gym", "🏋️ Gym"], ["home", "🏠 Home"], ["quick", "⏱️ Quick"]];
 
+/** Every training day of the week with its full exercise list, so nothing is hidden behind a tap. Gym list, or the matching home exercises. */
+function WeekOverview({ program, onPick }) {
+  const [home, setHome] = useState(false);
+  const trainDays = program.week.map((d, i) => ({ d, i })).filter(({ d }) => d.kind === "train" && d.sessionId);
+  const hasHome = program.sessions.some((x) => x.homeBackup);
+  return (
+    <div className="bp-overview">
+      <h4 className="bp-h">Your {trainDays.length} training day{trainDays.length === 1 ? "" : "s"} this week</h4>
+      {hasHome && (
+        <div className="bp-tabs" role="tablist" aria-label="Gym or home match">
+          <button type="button" role="tab" aria-selected={!home} className={`bp-tab${!home ? " on" : ""}`} onClick={() => setHome(false)}>🏋️ Gym</button>
+          <button type="button" role="tab" aria-selected={home} className={`bp-tab${home ? " on" : ""}`} onClick={() => setHome(true)}>🏠 Home match</button>
+        </div>
+      )}
+      {trainDays.map(({ d, i }) => {
+        const s = program.sessions.find((x) => x.id === d.sessionId);
+        if (!s) return null;
+        const list = home && s.homeBackup ? s.homeBackup.exercises : s.exercises;
+        return (
+          <button key={d.day} type="button" className="bp-ov-day" onClick={() => onPick(i)} aria-label={`${d.day}: ${s.title}. Open this day`}>
+            <b>{d.day} · {s.title}{s.light ? " (light)" : ""}</b>
+            <span className="bp-muted">{list.length} exercises · about {home && s.homeBackup ? s.homeBackup.minutes : s.minutes} min · {(s.focus || []).slice(0, 4).join(", ")}</span>
+            <ol>{list.map((e) => <li key={e.id}>{e.name} · {e.sets} × {e.reps}</li>)}</ol>
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
 /** The Workout tab. Pick a day (today is already chosen), pick where you are, follow the list, log your sets, finish. */
 export function Workout({ program, adapt, onLog, onApplySuggestion, busy }) {
   const today = (new Date().getDay() + 6) % 7;               // Monday = 0
@@ -211,10 +262,18 @@ export function Workout({ program, adapt, onLog, onApplySuggestion, busy }) {
   const [feel, setFeel] = useState("good");
   const [pain, setPain] = useState([]);
   const [skip, setSkip] = useState(false);
+  const [swapPref, setSwapPref] = useState(() => { try { return JSON.parse(localStorage.getItem("bp_swap_pref") || "{}") || {}; } catch { return {}; } }); // original id -> chosen swap, kept on this device
+  const [swapToday, setSwapToday] = useState({});
+  const [skipEx, setSkipEx] = useState([]);
   const d = program.week[day] || program.week[0];
   const s = program.sessions.find((x) => x.id === d.sessionId);
-  const ways = WAYS.filter(([id]) => id !== "home" || (s && s.homeBackup));
-  const list = !s ? [] : way === "home" && s.homeBackup ? s.homeBackup.exercises : way === "quick" ? s.quick.exercises : s.exercises;
+  const ways = program.place === "home" ? [["gym", "🏠 Home"], ["quick", "⏱️ Quick"]] : WAYS.filter(([id]) => id !== "home" || (s && s.homeBackup));
+  const base = !s ? [] : way === "home" && s.homeBackup ? s.homeBackup.exercises : way === "quick" ? s.quick.exercises : s.exercises;
+  const picks = { ...swapPref, ...swapToday };
+  const shown = base.map((e) => { const p = way === "gym" ? picks[e.id] : null; return p && p.id !== e.id ? { ...e, id: p.id, name: p.name, cue: p.cue || e.cue, kind: p.kind, next: undefined, swaps: undefined, form: undefined, weightHint: undefined, swappedFrom: e.name, origId: e.id } : e; });
+  const list = shown.filter((e) => !skipEx.includes(e.id));
+  const swapTo = (e, x, always) => { const o = e.origId || e.id; const v = { id: x.id, name: x.name, cue: x.cue, kind: x.kind }; setSwapToday((m) => ({ ...m, [o]: v })); if (always) { const m = { ...swapPref, [o]: v }; setSwapPref(m); try { localStorage.setItem("bp_swap_pref", JSON.stringify(m)); } catch { /* storage unavailable */ } } };
+  const swapReset = (e) => { const o = e.origId; setSwapToday((m) => ({ ...m, [o]: { id: o } })); const m = { ...swapPref }; delete m[o]; setSwapPref(m); try { localStorage.setItem("bp_swap_pref", JSON.stringify(m)); } catch { /* storage unavailable */ } };
   const todayStr = ymd(new Date());
   const isFuture = d.date && d.date > todayStr;
   const finished = d.status === "done" || d.status === "extra" || d.status === "partial";
@@ -243,8 +302,9 @@ export function Workout({ program, adapt, onLog, onApplySuggestion, busy }) {
             </button>
           ))}
         </div>
-        <p className="bp-legend">✅ done &nbsp; 💪 planned &nbsp; ○ not done (it slides along) &nbsp; 🚶 easy cardio &nbsp; 😴 rest</p>
+        <p className="bp-legend">✅ done &nbsp; 💪 gym day &nbsp; ○ not done (it slides along) &nbsp; 🚶 easy cardio &nbsp; 😴 rest</p>
         {d.statusNote && <p className="bp-note">{d.statusNote}</p>}
+        <WeekOverview program={program} onPick={setDay} />
 
         {!s && (
           <div>
@@ -264,7 +324,9 @@ export function Workout({ program, adapt, onLog, onApplySuggestion, busy }) {
               {ways.map(([id, label]) => <button key={id} type="button" role="tab" aria-selected={way === id} className={`bp-tab${way === id ? " on" : ""}`} onClick={() => setWay(id)}>{label}</button>)}
             </div>
             {way === "gym" && <details className="bp-det"><summary>Warm-up (about 8 minutes)</summary><Lines items={s.warmup} /></details>}
-            <ol className="bp-exlist">{list.map((e, i) => <Exercise key={e.id} e={e} n={i + 1} showSwaps={way === "gym"} log={canLog ? rowsFor(e) : null} setLog={setLog} canLog={canLog} />)}</ol>
+            <ol className="bp-exlist">{shown.map((e) => skipEx.includes(e.id)
+              ? <li key={e.id} className="bp-ex"><span className="bp-muted">{e.name} skipped today. </span><button type="button" className="bp-link" onClick={() => setSkipEx((x) => x.filter((y) => y !== e.id))}>Undo</button></li>
+              : <Exercise key={e.id} e={e} n={list.indexOf(e) + 1} showSwaps={way === "gym"} log={canLog ? rowsFor(e) : null} setLog={setLog} canLog={canLog} onSwap={canLog && way !== "quick" ? swapTo : undefined} onSkip={(x) => setSkipEx((v) => [...v, x.id])} onReset={swapReset} />)}</ol>
             {way === "gym" && <details className="bp-det"><summary>Cool-down</summary><Lines items={s.cooldown} /></details>}
             {way === "gym" && <details className="bp-det"><summary>Gym is busy?</summary><Lines items={program.busyGym} /></details>}
 

@@ -78,7 +78,7 @@ const LIB = [
   x('hack-squat', 'Hack squat machine', 'squat', 'gym', [], 1, ['knee'], ['machine', 'tall', 'heavy'], 'Back flat on the pad, feet forward on the plate. Lower under control and press through the whole foot.'),
   x('smith-squat', 'Smith machine squat', 'squat', 'gym', [], 2, ['heart'], ['machine', 'tall', 'heavy'], 'Feet a little in front of the bar so your shins stay upright. Sit down and back, then drive up.'),
   x('box-squat', 'Box squat (to a bench or chair)', 'squat', 'both', [], 1, [], ['bw', 'joint', 'tall'], 'Sit back to a sturdy bench or chair, touch it lightly without dropping onto it, then stand up. Hold a weight at your chest to make it harder.'),
-  x('sit-to-stand', 'Sit-to-stand (high chair)', 'squat', 'both', [], 1, [], ['bw', 'joint'], 'Sit on the front of a sturdy chair, lean forward a little and stand up without pushing on your hands. Sit back down slowly.'),
+  x('sit-to-stand', 'Sit-to-stand (high chair)', 'squat', 'home', [], 1, [], ['bw', 'joint'], 'Sit on the front of a sturdy chair, lean forward a little and stand up without pushing on your hands. Sit back down slowly.'),
   x('tempo-squat', 'Slow bodyweight squat (3 seconds down)', ['squat', 'quad'], 'both', [], 1, [], ['bw'], 'Take three seconds to go down, pause for one second at the bottom, then stand up. The slow tempo does the job of extra weight.'),
   x('backpack-squat', 'Backpack goblet squat', 'squat', 'home', [], 2, [], ['bw', 'short'], 'Hold a backpack filled with books or water bottles against your chest. Same movement as a goblet squat.'),
   x('back-squat', 'Barbell back squat', 'squat', 'gym', [], 3, ['knee', 'back', 'heart'], ['free', 'heavy', 'heavyBar', 'short'], 'Bar on your upper back, belly braced, sit down between your hips with the whole foot on the floor. Always use the rack safety bars.'),
@@ -110,7 +110,7 @@ const LIB = [
   x('leg-ext', 'Leg extension machine', 'quad', 'gym', [], 1, ['knee'], ['machine'], 'Pad on your lower shin. Straighten your legs, pause, lower for three seconds. Use a light weight if your knees are sensitive.'),
   x('leg-curl-seated', 'Seated leg curl', 'ham', 'gym', [], 1, [], ['machine', 'joint'], 'Pad just above your heels. Curl under you, pause, return slowly without letting the stack slam.'),
   x('leg-curl-lying', 'Lying leg curl', 'ham', 'gym', [], 1, [], ['machine'], 'Hips pressed into the pad. Curl your heels to your glutes and lower for three seconds.'),
-  x('slider-curl', 'Towel hamstring curl (on a smooth floor)', 'ham', 'both', [], 2, [], ['bw', 'joint'], 'Lie on your back with your heels on a towel. Lift your hips, slide your heels out and pull them back in without dropping your hips.'),
+  x('slider-curl', 'Towel hamstring curl (on a smooth floor)', 'ham', 'home', [], 2, [], ['bw', 'joint'], 'Lie on your back with your heels on a towel. Lift your hips, slide your heels out and pull them back in without dropping your hips.'),
   x('band-leg-curl', 'Banded leg curl', 'ham', 'home', ['bands'], 1, [], ['joint'], 'Anchor the band at ankle height and lie face down. Curl your heel toward your glute against the band.'),
   x('nordic', 'Nordic hamstring lower', 'ham', 'both', [], 3, ['knee'], ['bw'], 'Anchor your ankles under something heavy. Lower your body forward as slowly as you can, catch yourself with your hands, push back up.'),
   x('calf-machine', 'Standing calf raise machine', 'calf', 'gym', [], 1, [], ['machine'], 'Rise high on your toes, pause for one second at the top, lower until your heels are below the platform.'),
@@ -137,7 +137,7 @@ const LIB = [
   x('cable-fly', 'Cable fly (low to high)', 'fly', 'gym', [], 2, ['shoulder'], ['cable'], 'Pulleys low, a small bend in your elbows. Sweep your hands up and together at chest height, return slowly.'),
   x('db-fly', 'Dumbbell fly', 'fly', 'both', ['dumbbells', 'bench'], 2, ['shoulder'], ['free'], 'Slight elbow bend, open your arms until you feel a stretch across your chest, then hug the weights back up.'),
   x('band-fly', 'Banded chest fly', 'fly', 'home', ['bands'], 1, [], ['joint'], 'Anchor the band behind you at chest height and bring your hands together in front of you with soft elbows.'),
-  x('palm-press', 'Palm press (chest squeeze)', 'fly', 'both', [], 1, ['heart'], ['bw', 'hold'], 'Press your palms together in front of your chest as hard as you can for 10 seconds. Breathe normally.'),
+  x('palm-press', 'Palm press (chest squeeze)', 'fly', 'home', [], 1, ['heart'], ['bw', 'hold'], 'Press your palms together in front of your chest as hard as you can for 10 seconds. Breathe normally.'),
   // ---------------------------------------------------------------- push: shoulders and triceps
   x('shoulder-press-machine', 'Shoulder press machine', 'vpress', 'gym', [], 1, ['shoulder'], ['machine', 'joint', 'heavy'], 'Seat so the handles start at shoulder height. Press up without locking out, lower slowly.'),
   x('db-shoulder-press', 'Dumbbell shoulder press', 'vpress', 'both', ['dumbbells'], 2, ['shoulder'], ['free'], 'Sit with back support if you can. Press until your arms are nearly straight. Keep your ribs down and do not arch your lower back.'),
@@ -151,7 +151,7 @@ const LIB = [
   x('lateral-cable', 'Cable lateral raise', 'lateral', 'gym', [], 1, [], ['cable'], 'Pulley low, work one arm at a time. Lift out to shoulder height with a soft elbow and lower slowly.'),
   x('lateral-machine', 'Lateral raise machine', 'lateral', 'gym', [], 1, [], ['machine', 'joint'], 'Pads against your arms. Raise to shoulder height and lower slowly.'),
   x('lateral-band', 'Banded lateral raise', 'lateral', 'home', ['bands'], 1, ['shoulder'], ['joint'], 'Stand on the band, lift out to shoulder height with soft elbows.'),
-  x('lateral-bottle', 'Lateral raise with water bottles or bags', 'lateral', 'both', [], 1, [], ['bw'], 'Fill two bottles or hold two small bags. Same movement as a dumbbell lateral raise.'),
+  x('lateral-bottle', 'Lateral raise with water bottles or bags', 'lateral', 'home', [], 1, [], ['bw'], 'Fill two bottles or hold two small bags. Same movement as a dumbbell lateral raise.'),
   x('rev-pec-deck', 'Reverse pec deck (rear shoulder fly)', 'rear', 'gym', [], 1, [], ['machine', 'joint'], 'Chest on the pad, arms level with your shoulders. Open your arms wide by squeezing your shoulder blades together.'),
   x('face-pull', 'Cable face pull', 'rear', 'gym', [], 1, [], ['cable', 'joint'], 'Rope at face height. Pull toward your forehead with high elbows and rotate your hands outward at the end.'),
   x('rear-fly-supported', 'Chest-supported rear fly (incline bench)', 'rear', 'both', ['dumbbells', 'bench'], 1, [], ['free', 'joint'], 'Chest on a bench set at an incline. Open the dumbbells out to the side with soft elbows and squeeze your shoulder blades.'),
@@ -166,7 +166,7 @@ const LIB = [
   x('diamond-pushup', 'Close-grip push-up', 'tri', 'both', [], 2, ['wrist', 'elbow'], ['bw'], 'Hands slightly closer than your shoulders, elbows brushing your ribs as you lower.'),
   x('band-pushdown', 'Banded triceps pushdown', 'tri', 'home', ['bands'], 1, [], ['joint'], 'Anchor the band high, elbows pinned to your sides, push down until your arms are straight.'),
   x('kickback-db', 'Dumbbell triceps kickback', 'tri', 'both', ['dumbbells'], 1, [], ['free'], 'Hinge forward, upper arm in line with your back, straighten your elbow and squeeze.'),
-  x('kickback-bottle', 'Triceps kickback with a water bottle', 'tri', 'both', [], 1, [], ['bw'], 'Hinge forward, upper arm in line with your back, straighten your elbow and squeeze.'),
+  x('kickback-bottle', 'Triceps kickback with a water bottle', 'tri', 'home', [], 1, [], ['bw'], 'Hinge forward, upper arm in line with your back, straighten your elbow and squeeze.'),
   // ---------------------------------------------------------------- pull
   x('lat-pulldown', 'Lat pulldown', 'vpull', 'gym', [], 1, [], ['machine', 'tall', 'joint', 'heavy'], 'Grip a little wider than your shoulders and lean back slightly. Pull the bar to your upper chest with your elbows going down and back.'),
   x('close-pulldown', 'Close-grip (V-handle) pulldown', 'vpull', 'gym', [], 1, [], ['cable', 'tall', 'joint'], 'Chest tall, pull the handle to your upper chest and squeeze your lats.'),
@@ -177,15 +177,15 @@ const LIB = [
   x('neg-pullup', 'Slow-lowering pull-up', 'vpull', 'both', ['pullupbar'], 2, ['shoulder', 'elbow'], ['bw'], 'Step or jump to the top position and lower yourself for four to five seconds. Builds the strength for a full pull-up.'),
   x('band-assisted-pullup', 'Band-assisted pull-up', 'vpull', 'home', ['pullupbar', 'bands'], 2, ['shoulder', 'elbow'], ['bw'], 'Loop a band over the bar and under your knee or foot. Pull up using the band to help the bottom half.'),
   x('band-pulldown', 'Banded lat pulldown', 'vpull', 'home', ['bands'], 1, [], ['joint'], 'Anchor the band high (door anchor). Kneel and pull your elbows down to your ribs.'),
-  x('superman-pulldown', 'Superman pulldown (lying on the floor)', 'vpull', 'both', [], 1, ['back'], ['bw'], 'Lie face down with arms overhead. Lift your chest slightly and sweep your elbows down to your ribs, squeezing your back.'),
-  x('towel-pull', 'Towel pull-apart (standing lat squeeze)', 'vpull', 'both', [], 1, ['heart'], ['bw', 'hold'], 'Hold a towel tight overhead and pull outward as if tearing it, bringing your elbows down to your ribs while keeping the pull.'),
+  x('superman-pulldown', 'Superman pulldown (lying on the floor)', 'vpull', 'home', [], 1, ['back'], ['bw'], 'Lie face down with arms overhead. Lift your chest slightly and sweep your elbows down to your ribs, squeezing your back.'),
+  x('towel-pull', 'Towel pull-apart (standing lat squeeze)', 'vpull', 'home', [], 1, ['heart'], ['bw', 'hold'], 'Hold a towel tight overhead and pull outward as if tearing it, bringing your elbows down to your ribs while keeping the pull.'),
   x('seated-row', 'Seated cable row', 'hrow', 'gym', [], 1, [], ['cable', 'joint', 'tall'], 'Chest tall. Pull the handle to your belly button, squeeze your shoulder blades, return with control and do not rock.'),
   x('chest-row-machine', 'Chest-supported row machine', 'hrow', 'gym', [], 1, [], ['machine', 'joint', 'heavy', 'tall'], 'Chest on the pad. Pull your elbows back past your body and squeeze, return slowly.'),
   x('tbar', 'T-bar row', 'hrow', 'gym', [], 2, ['back'], ['free', 'heavy'], 'Hinge with a flat back and pull the handle to your lower chest. Keep your hips still.'),
   x('bb-row', 'Barbell bent-over row', 'hrow', 'gym', [], 3, ['back', 'heart'], ['free', 'heavy', 'heavyBar'], 'Hinge to about 45 degrees, flat back, pull the bar to your belly. Do not jerk your torso up.'),
   x('db-row', 'One-arm dumbbell row (hand on a bench)', 'hrow', 'both', ['dumbbells', 'bench'], 2, [], ['free', 'uni'], 'Hand and knee on a bench, flat back. Pull the dumbbell to your hip. Supported, so your lower back is protected.'),
   x('db-row-supported', 'Chest-supported dumbbell row (incline bench)', 'hrow', 'both', ['dumbbells', 'bench'], 1, [], ['free', 'joint'], 'Chest on a bench set at an incline. Row both dumbbells toward your hips and squeeze.'),
-  x('bag-row', 'One-arm row with a bag or water can (hand on a chair)', 'hrow', 'both', [], 1, [], ['bw', 'uni'], 'One hand and one knee on a chair or bed. Row a loaded bag or water can to your hip.'),
+  x('bag-row', 'One-arm row with a bag or water can (hand on a chair)', 'hrow', 'home', [], 1, [], ['bw', 'uni'], 'One hand and one knee on a chair or bed. Row a loaded bag or water can to your hip.'),
   x('inverted-row', 'Inverted row (sturdy table or low bar)', 'hrow', 'both', [], 2, [], ['bw'], 'Lie under a very sturdy table or low bar and pull your chest up with a straight body. Only use a table that cannot tip or slide.'),
   x('band-row', 'Banded row', 'hrow', 'home', ['bands'], 1, [], ['joint'], 'Anchor the band at chest height, pull the ends to your ribs and squeeze your shoulder blades.'),
   x('db-curl', 'Dumbbell biceps curl', 'bicep', 'both', ['dumbbells'], 1, [], ['free'], 'Elbows by your sides. Curl up, squeeze, lower for two to three seconds. No swinging.'),
@@ -195,7 +195,7 @@ const LIB = [
   x('incline-curl', 'Incline dumbbell curl', 'bicep', 'both', ['dumbbells', 'bench'], 2, ['shoulder'], ['free'], 'Lean back on an incline bench, arms hanging. Curl up without moving your elbows forward.'),
   x('preacher-machine', 'Preacher curl machine', 'bicep', 'gym', [], 1, [], ['machine', 'joint'], 'Upper arms flat on the pad. Curl up and lower fully under control.'),
   x('band-curl', 'Banded biceps curl', 'bicep', 'home', ['bands'], 1, ['shoulder'], ['joint'], 'Stand on the band, elbows by your sides, curl up and lower slowly.'),
-  x('backpack-curl', 'Backpack or water-can curl', 'bicep', 'both', [], 1, [], ['bw'], 'Hold a loaded backpack by the handle or a filled can. Curl up and lower slowly.'),
+  x('backpack-curl', 'Backpack or water-can curl', 'bicep', 'home', [], 1, [], ['bw'], 'Hold a loaded backpack by the handle or a filled can. Curl up and lower slowly.'),
   // ---------------------------------------------------------------- core
   x('plank', 'Forearm plank', 'core', 'both', [], 1, ['heart'], ['bw', 'hold'], 'Elbows under your shoulders, body in one line, glutes and belly tight. Breathe normally.'),
   x('dead-bug', 'Dead bug', 'core', 'both', [], 1, [], ['bw', 'joint'], 'Back flat on the floor. Lower the opposite arm and leg slowly while your lower back stays pressed down.'),
@@ -207,7 +207,19 @@ const LIB = [
   x('captain-chair', "Captain's chair knee raise", 'core', 'gym', [], 2, ['back', 'shoulder'], ['machine'], 'Forearms on the pads, back on the rest. Lift your knees toward your chest and lower slowly.'),
   x('reverse-crunch', 'Reverse crunch', 'core', 'both', [], 2, ['back'], ['bw'], 'Lie on your back, knees bent. Curl your hips off the floor toward your chest and lower slowly.'),
   x('farmer-carry', 'Farmer carry', 'core', 'both', ['dumbbells'], 1, [], ['free', 'joint', 'hold'], 'Heavy dumbbells at your sides, tall posture. Short steady steps for 30 to 40 seconds.'),
-  x('bag-carry', 'Suitcase carry (water cans or bags)', 'core', 'both', [], 1, [], ['bw', 'joint', 'uni', 'hold'], 'Carry a heavy bag in one hand and stay tall without leaning. Walk 30 to 40 seconds, then switch hands.'),
+  x('bag-carry', 'Suitcase carry (water cans or bags)', 'core', 'home', [], 1, [], ['bw', 'joint', 'uni', 'hold'], 'Carry a heavy bag in one hand and stay tall without leaning. Walk 30 to 40 seconds, then switch hands.'),
+  // ---------------------------------------------------------------- home counterparts of gym lifts (added so every gym move has a natural twin at home)
+  x('backpack-rdl', 'Backpack Romanian deadlift', 'hinge', 'home', [], 1, ['back'], ['bw', 'tall', 'joint'], 'Hold a loaded backpack against your thighs. Soft knees, push your hips back until the back of your legs stretch, then squeeze your glutes to stand.'),
+  x('sofa-hip-thrust', 'Sofa hip thrust (backpack on your hips)', ['glute', 'hinge'], 'home', [], 1, [], ['bw', 'glute', 'joint'], 'Upper back on a sturdy sofa or bed edge, a loaded backpack across your hips. Drive through your heels until your body is level, squeeze for one second, lower slowly.'),
+  x('band-kickback', 'Banded glute kickback', 'glute', 'home', ['bands'], 1, [], ['glute', 'uni'], 'Loop the band around your ankles or foot, hands and knees on the floor. Kick back and slightly up without arching your lower back.'),
+  x('donkey-kick', 'Donkey kick (on forearms)', 'glute', 'both', [], 1, [], ['bw', 'glute', 'uni', 'joint'], 'On hands or forearms and knees, keep your knee bent and press the sole of your foot up toward the ceiling. Squeeze at the top, lower slowly.'),
+  x('side-lying-abduction', 'Side-lying hip raise', 'glute', 'both', [], 1, [], ['bw', 'glute', 'uni', 'joint'], 'Lie on your side with your legs straight. Lift the top leg slightly behind you, toes pointing forward, and lower slowly. Do both sides.'),
+  x('banded-lateral-walk', 'Banded lateral walk', 'glute', 'home', ['bands'], 1, [], ['glute', 'joint'], 'Band just above your knees, a quarter squat. Take small steps sideways and keep tension on the band the whole time.'),
+  x('sl-box-squat', 'Single-leg box squat (to a chair)', 'squat', 'both', [], 2, ['knee'], ['bw', 'uni', 'balance', 'short'], 'Stand on one leg in front of a chair. Sit back to touch it lightly, then stand up on that leg. Hold a doorframe for balance if you need to.'),
+  x('floor-fly', 'Dumbbell floor fly', 'fly', 'both', ['dumbbells'], 1, ['shoulder'], ['free', 'joint'], 'Lie on the floor with soft elbows. Open your arms until your upper arms touch the floor, then hug the weights back together over your chest.'),
+  x('chair-dip', 'Bench or chair dip (feet on the floor)', 'tri', 'home', [], 2, ['shoulder', 'elbow', 'wrist'], ['bw'], 'Hands on the edge of a very sturdy chair or bench, hips close to it. Lower until your elbows are at 90 degrees only, then press up.'),
+  x('towel-door-row', 'Towel door row', ['hrow', 'vpull'], 'home', [], 2, ['back'], ['bw'], 'Loop a towel around both handles of a solid door that closes firmly and opens away from you. Lean back with straight arms, then pull your chest to your hands.'),
+  x('hanging-knee-raise', 'Hanging knee raise', 'core', 'both', ['pullupbar'], 2, ['back', 'shoulder', 'heart'], ['bw'], 'Hang from the bar with your shoulders pulled down. Lift your knees toward your chest without swinging, then lower slowly.'),
 ];
 
 const BY_ID = Object.fromEntries(LIB.map((e) => [e.id, e]));
@@ -240,6 +252,8 @@ function score(ex, ctx) {
   if (b.type === 'athletic' && (t.includes('uni') || t.includes('power'))) s += 1;
   if (b.light && t.includes('heavy')) s += 1;
   if (ctx.where === 'home' && ctx.level !== 'beginner' && ex.eq.length) s += 1; // use what they own
+  // At a gym the main work is machines, cables and weights. Floor and bodyweight moves are for home, so they only win when nothing else fits (core moves are naturally bodyweight).
+  if (ctx.where === 'gym' && t.includes('bw') && !ex.eq.length && !ex.slots.includes('core')) s -= 5;
   return s - INDEX[ex.id] * 0.001; // the library order is the expert tie-break
 }
 
@@ -267,7 +281,7 @@ function switchHint(from, to) {
   return 'Machines feel lighter. Find your weight in two warm-up sets, then stay with the same reps.';
 }
 
-const brief = (ex, from) => ({ id: ex.id, name: ex.name, kind: kindOf(ex), why: KIND_TEXT[kindOf(ex)], hint: switchHint(from, kindOf(ex)) });
+const brief = (ex, from) => ({ id: ex.id, name: ex.name, cue: ex.cue, kind: kindOf(ex), why: KIND_TEXT[kindOf(ex)], hint: switchHint(from, kindOf(ex)) });
 
 /**
  * Alternatives for one exercise in one slot.
@@ -299,4 +313,123 @@ function swapsFor(ex, slot, ctx) {
   };
 }
 
-module.exports = { FORM, LIB, BY_ID, SLOTS, LEVELS, PLACES, LIMITS, HOME_EQUIP, GYM_TOKENS, FOCUS, usable, score, rank, kindOf, swapsFor, KIND_TEXT };
+// ---------------------------------------------------------------------------------------------------------------- gym -> home twins
+// For every gym exercise, the home exercise an expert coach would hand you: same movement pattern, same muscle, the closest feel.
+// Each list is in tiers, best first. Inside a tier the usual ranking decides (level, body, limits). A tier is only used when the person
+// owns the equipment it needs, so an empty home still gets a sensible twin from the last tier.
+const TWINS = {
+  // squats and legs
+  'leg-press': [['goblet-squat', 'kb-goblet'], ['backpack-squat'], ['box-squat'], ['tempo-squat']],
+  'hack-squat': [['goblet-squat', 'kb-goblet'], ['backpack-squat'], ['box-squat'], ['tempo-squat']],
+  'smith-squat': [['goblet-squat', 'kb-goblet'], ['backpack-squat'], ['tempo-squat', 'box-squat']],
+  'back-squat': [['goblet-squat', 'kb-goblet'], ['backpack-squat'], ['sl-box-squat', 'tempo-squat'], ['box-squat']],
+  'leg-ext': [['tempo-squat'], ['wall-sit']],
+  'smith-split': [['split-db'], ['reverse-lunge', 'walking-lunge'], ['step-up']],
+  // hinge and glutes
+  'rdl-bb': [['rdl-db', 'kb-swing'], ['backpack-rdl'], ['sl-rdl'], ['band-pull-through'], ['glute-bridge']],
+  'trap-deadlift': [['rdl-db', 'kb-swing'], ['backpack-rdl'], ['sl-rdl'], ['band-pull-through'], ['glute-bridge']],
+  'pull-through': [['band-pull-through'], ['rdl-db'], ['backpack-rdl'], ['glute-bridge']],
+  'back-ext': [['glute-bridge'], ['backpack-rdl', 'sl-rdl']],
+  'hip-thrust-bb': [['sofa-hip-thrust'], ['banded-bridge', 'sl-glute-bridge'], ['glute-bridge']],
+  'hip-thrust-machine': [['sofa-hip-thrust'], ['banded-bridge', 'sl-glute-bridge'], ['glute-bridge']],
+  'cable-kickback': [['band-kickback'], ['donkey-kick'], ['sl-glute-bridge', 'frog-pump']],
+  'hip-abduction': [['banded-lateral-walk'], ['side-lying-abduction'], ['banded-bridge', 'frog-pump']],
+  // hamstrings and calves
+  'leg-curl-seated': [['band-leg-curl'], ['slider-curl'], ['sl-rdl'], ['glute-bridge']],
+  'leg-curl-lying': [['band-leg-curl'], ['slider-curl'], ['sl-rdl'], ['glute-bridge']],
+  'calf-machine': [['calf-step']], 'calf-press': [['calf-step']],
+  // chest
+  'chest-press-machine': [['db-bench', 'floor-press', 'band-chest-press'], ['pushup', 'pushup-handles', 'incline-pushup', 'knee-pushup']],
+  'bb-bench': [['db-bench', 'floor-press'], ['band-chest-press'], ['pushup', 'pushup-handles', 'incline-pushup', 'knee-pushup']],
+  'smith-bench': [['db-bench', 'floor-press', 'band-chest-press'], ['pushup', 'pushup-handles', 'incline-pushup', 'knee-pushup']],
+  'incline-machine': [['incline-db'], ['band-chest-press'], ['feet-low-pushup', 'incline-pushup'], ['feet-high-pushup']],
+  'incline-bb': [['incline-db'], ['band-chest-press'], ['feet-low-pushup', 'incline-pushup'], ['feet-high-pushup']],
+  'smith-incline': [['incline-db'], ['band-chest-press'], ['feet-low-pushup', 'incline-pushup'], ['feet-high-pushup']],
+  'pec-deck': [['db-fly', 'floor-fly', 'band-fly'], ['palm-press']],
+  'cable-fly': [['band-fly', 'db-fly', 'floor-fly'], ['palm-press']],
+  // shoulders and triceps
+  'shoulder-press-machine': [['db-shoulder-press', 'kb-press', 'band-ohp'], ['backpack-ohp', 'pike-pushup']],
+  'bb-ohp': [['db-shoulder-press', 'kb-press'], ['band-ohp'], ['backpack-ohp', 'pike-pushup']],
+  'landmine-press': [['db-shoulder-press', 'kb-press'], ['band-ohp'], ['backpack-ohp', 'pike-pushup']],
+  'lateral-cable': [['lateral-db', 'lateral-band'], ['lateral-bottle']],
+  'lateral-machine': [['lateral-db', 'lateral-band'], ['lateral-bottle']],
+  'rev-pec-deck': [['rear-fly-supported', 'rear-fly-db', 'band-pull-apart'], ['prone-ytw']],
+  'face-pull': [['band-pull-apart'], ['rear-fly-supported', 'rear-fly-db'], ['prone-ytw']],
+  'pushdown-rope': [['band-pushdown'], ['kickback-db'], ['kickback-bottle', 'diamond-pushup']],
+  'overhead-cable-ext': [['db-overhead-ext'], ['band-pushdown', 'kickback-db'], ['kickback-bottle', 'diamond-pushup']],
+  'skull': [['db-overhead-ext', 'kickback-db'], ['band-pushdown'], ['kickback-bottle', 'diamond-pushup']],
+  'assisted-dip': [['chair-dip'], ['diamond-pushup'], ['kickback-db', 'band-pushdown'], ['kickback-bottle']],
+  // back and biceps
+  'lat-pulldown': [['band-pulldown'], ['band-assisted-pullup', 'neg-pullup', 'pullup', 'chinup'], ['towel-door-row'], ['superman-pulldown', 'towel-pull']],
+  'close-pulldown': [['band-pulldown'], ['chinup', 'band-assisted-pullup', 'neg-pullup'], ['towel-door-row'], ['superman-pulldown', 'towel-pull']],
+  'assisted-pullup': [['band-assisted-pullup', 'neg-pullup'], ['band-pulldown'], ['towel-door-row'], ['superman-pulldown', 'towel-pull']],
+  'straight-arm': [['band-pulldown'], ['superman-pulldown'], ['towel-pull']],
+  'seated-row': [['band-row'], ['db-row-supported', 'db-row'], ['towel-door-row', 'inverted-row'], ['bag-row']],
+  'chest-row-machine': [['db-row-supported'], ['band-row'], ['db-row'], ['towel-door-row', 'inverted-row'], ['bag-row']],
+  'tbar': [['db-row', 'db-row-supported'], ['band-row'], ['inverted-row', 'towel-door-row'], ['bag-row']],
+  'bb-row': [['db-row', 'db-row-supported'], ['band-row'], ['inverted-row', 'towel-door-row'], ['bag-row']],
+  'cable-curl': [['db-curl', 'hammer-curl', 'band-curl'], ['backpack-curl']],
+  'ez-curl': [['db-curl', 'hammer-curl'], ['band-curl'], ['backpack-curl']],
+  'preacher-machine': [['db-curl', 'hammer-curl', 'band-curl'], ['backpack-curl']],
+  'goblet-squat': [['kb-goblet'], ['backpack-squat'], ['box-squat'], ['tempo-squat']],
+  'kb-goblet': [['goblet-squat'], ['backpack-squat'], ['box-squat'], ['tempo-squat']],
+  'rdl-db': [['backpack-rdl'], ['sl-rdl'], ['band-pull-through'], ['glute-bridge']],
+  'kb-swing': [['rdl-db'], ['backpack-rdl'], ['band-pull-through'], ['glute-bridge']],
+  'split-db': [['reverse-lunge', 'walking-lunge'], ['step-up'], ['bulgarian']],
+  'db-bench': [['floor-press'], ['band-chest-press'], ['pushup', 'pushup-handles', 'incline-pushup', 'knee-pushup']],
+  'floor-press': [['band-chest-press'], ['pushup', 'pushup-handles', 'incline-pushup', 'knee-pushup']],
+  'incline-db': [['db-bench', 'floor-press'], ['band-chest-press'], ['feet-low-pushup', 'incline-pushup'], ['feet-high-pushup']],
+  'db-fly': [['floor-fly', 'band-fly'], ['palm-press']],
+  'floor-fly': [['band-fly'], ['palm-press']],
+  'db-shoulder-press': [['kb-press', 'band-ohp'], ['backpack-ohp', 'pike-pushup']],
+  'kb-press': [['db-shoulder-press', 'band-ohp'], ['backpack-ohp', 'pike-pushup']],
+  'lateral-db': [['lateral-band'], ['lateral-bottle']],
+  'rear-fly-supported': [['rear-fly-db', 'band-pull-apart'], ['prone-ytw']],
+  'rear-fly-db': [['rear-fly-supported', 'band-pull-apart'], ['prone-ytw']],
+  'db-overhead-ext': [['band-pushdown'], ['kickback-bottle', 'diamond-pushup']],
+  'kickback-db': [['band-pushdown'], ['kickback-bottle', 'diamond-pushup']],
+  'pullup': [['band-assisted-pullup', 'neg-pullup'], ['band-pulldown'], ['towel-door-row'], ['superman-pulldown']],
+  'chinup': [['band-assisted-pullup', 'neg-pullup'], ['band-pulldown'], ['towel-door-row'], ['superman-pulldown']],
+  'neg-pullup': [['band-pulldown'], ['towel-door-row'], ['superman-pulldown']],
+  'db-row': [['band-row'], ['bag-row'], ['inverted-row', 'towel-door-row']],
+  'db-row-supported': [['band-row'], ['bag-row'], ['inverted-row', 'towel-door-row']],
+  'db-curl': [['band-curl'], ['backpack-curl']], 'hammer-curl': [['band-curl'], ['backpack-curl']], 'incline-curl': [['band-curl'], ['backpack-curl']],
+  'farmer-carry': [['bag-carry']],
+  'hanging-knee-raise': [['reverse-crunch'], ['dead-bug']],
+  // core
+  'pallof': [['pallof-band'], ['dead-bug', 'bird-dog'], ['side-plank', 'plank']],
+  'cable-crunch': [['reverse-crunch'], ['dead-bug'], ['plank']],
+  'captain-chair': [['hanging-knee-raise'], ['reverse-crunch'], ['dead-bug']],
+};
+
+// What to do with the load when the twin replaces a gym move: short, specific, never a number the person has not earned.
+const TWIN_TIPS = {
+  machine: 'Home loads are lighter than a machine stack, so slow it down: 3 seconds on the way down, a one-second pause, and stop with the same reps left.',
+  cable: 'Same muscle, same reps. Bands and bottles are lighter than a cable stack, so use a slow tempo and a full squeeze to make up the difference.',
+  free: 'Same movement, same reps. Take the heaviest weight you have that still leaves the reps in reserve shown.',
+  bw: 'No weight to add? Go slower (3 seconds down), pause at the hardest point, or load a backpack. Same sets, same reps, same effort.',
+};
+
+/**
+ * The home exercise that best matches a gym exercise.
+ *   1. The same exercise, if the person can do it at home with what they own (a goblet squat is a goblet squat anywhere).
+ *   2. The first tier of the twin list the person has the equipment for (best-ranked inside the tier).
+ *   3. Otherwise the best-ranked home exercise for the same slot, preferring the same kind of movement.
+ * Returns null only when every home option for the slot is ruled out (injury limits), so a risky move is never put in its place.
+ */
+function homeTwin(ex, slot, ctxHome, taken = new Set()) {
+  const free = (e) => e && !taken.has(e.id);
+  if (usable(ex, ctxHome) && !taken.has(ex.id)) return { ex, how: 'same', tip: ex.tags.includes('bw') ? TWIN_TIPS.bw : TWIN_TIPS.free };
+  const ranked = rank(slot, ctxHome);
+  const order = new Map(ranked.map((e, i) => [e.id, i]));
+  for (const tier of TWINS[ex.id] || []) {
+    const hit = tier.map((id) => BY_ID[id]).filter((e) => free(e) && order.has(e.id) && e.slots.includes(slot)).sort((a, b) => order.get(a.id) - order.get(b.id))[0];
+    if (hit) return { ex: hit, how: 'twin', tip: TWIN_TIPS[kindOf(ex)] || TWIN_TIPS.bw };
+  }
+  const feel = ['uni', 'glute', 'hold', 'tall', 'short', 'joint', 'balance'];
+  const sim = (e) => feel.filter((t) => ex.tags.includes(t) === e.tags.includes(t)).length - (kindOf(e) === kindOf(ex) ? 0 : 0.5);
+  const fallback = ranked.filter(free).sort((a, b) => sim(b) - sim(a) || order.get(a.id) - order.get(b.id))[0];
+  return fallback ? { ex: fallback, how: 'closest', tip: TWIN_TIPS[kindOf(ex)] || TWIN_TIPS.bw } : null;
+}
+
+module.exports = { FORM, LIB, BY_ID, SLOTS, LEVELS, PLACES, LIMITS, HOME_EQUIP, GYM_TOKENS, FOCUS, usable, score, rank, kindOf, swapsFor, KIND_TEXT, TWINS, homeTwin };

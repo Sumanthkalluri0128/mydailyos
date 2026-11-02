@@ -174,3 +174,13 @@
 .bp-wk.st-done b, .bp-wk.st-extra b { filter: none; }
 .bp-wk.st-notdone { opacity: .65; }
 .bp-wk.st-spare { opacity: .5; }
+
+/* Week overview: every training day with its exercises, and the home match under the gym list */
+.bp-overview { margin: 12px 0 4px; }
+.bp-ov-day { display: block; width: 100%; text-align: left; margin-top: 8px; padding: 10px 12px; border-radius: 12px; border: 0; background: var(--bp-soft); color: inherit; font: inherit; cursor: pointer; }
+.bp-ov-day b { display: block; font-size: 14px; }
+.bp-ov-day ol { margin: 6px 0 0; padding-left: 20px; font-size: 12.5px; line-height: 1.5; }
+.bp-match { margin: 2px 0 0; font-size: 12.5px; font-weight: 700; color: var(--primary); }
+
+.bp-exact{display:flex;flex-wrap:wrap;gap:6px 16px;margin-top:8px}
+.bp-link{background:none;border:0;padding:2px 0;color:var(--primary,#2a6df4);font-weight:700;font-size:13px;cursor:pointer;text-decoration:underline}

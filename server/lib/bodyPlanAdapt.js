@@ -30,6 +30,11 @@ const mondayOf = (date) => addDays(date, -((weekday(date) + 6) % 7));
 /** A logged session counts fully when done, half when partial, nothing when skipped. */
 const credit = (s) => (s.status === 'done' ? 1 : s.status === 'partial' ? 0.5 : 0);
 
+// Classes and gym visits that are strength training even though the catalogue files them under "Cult.fit" or no category:
+// HRX, Adidas Strength+, S&C, Kettlebell, Body Pump, Bootcamp, Burn, Transform, and anything called gym / weights / lifting / resistance.
+const STRENGTH_NAME = /hrx|strength|s&c|conditioning|kettlebell|body\s*pump|bootcamp|\bburn\b|transform|\bgym\b|weight|lifting|resistance|barbell|dumbbell|powerlifting|crossfit/i;
+const isStrengthWork = (a) => /strength|weight/i.test(a.category || '') || STRENGTH_NAME.test(a.activityName || a.name || a.title || '');
+
 /** Other workouts from the activity log that were not logged through the Body plan: lifting counts, cardio adds minutes. */
 function otherActivity(activity, sessionDates) {
   const out = { strengthDays: new Map(), cardioMin: new Map() };
@@ -37,13 +42,13 @@ function otherActivity(activity, sessionDates) {
     if (!a || !a.date || String(a.clientId || '').startsWith('bp-')) continue; // rows the Body plan wrote itself are already counted
     const wk = mondayOf(a.date);
     const sets = (a.sets || []).filter((s) => num(s.reps) > 0).length;
-    const strengthLike = /strength|weight/i.test(a.category || '') || sets > 0;
+    const strengthLike = isStrengthWork(a) || sets > 0;
     if (strengthLike) {
       if (sessionDates.has(a.date)) continue;
       const cur = out.strengthDays.get(a.date) || { week: wk, sets: 0, minutes: 0 };
       cur.sets += sets; cur.minutes += num(a.durationMinutes);
       out.strengthDays.set(a.date, cur);
-    } else out.cardioMin.set(wk, (out.cardioMin.get(wk) || 0) + num(a.durationMinutes));
+    } else if (!/walk/i.test(`${a.category || ''} ${a.activityName || ''}`)) out.cardioMin.set(wk, (out.cardioMin.get(wk) || 0) + num(a.durationMinutes));
   }
   return out;
 }
@@ -246,16 +251,18 @@ function adapt({ program, prefs = {}, mode = 'recomp', today, startedOn, session
     if ((rec || log) && d.kind !== 'train') status = 'extra';
     return { day: DAY[i], date, kind: d.kind, sessionId: d.sessionId || null, label: d.label, status, note };
   });
-  // Re-plan the rest of the week: sessions still owed slide onto the next open days (calendar lifting days first, then the free day with
-  // the most space around it), always in rotation order, never three lifting days in a row, never Sunday (the full rest day).
+  // Re-plan the rest of the week. Every session on the person's own calendar that is still ahead stays exactly where it is: choosing 5 or
+  // 6 gym days must never quietly turn into 4. Sessions that were missed earlier this week slide onto the next FREE day (never a third
+  // lifting day in a row, never a Sunday that was meant as rest), and the sessions are always handed out in rotation order.
   const isDone = (i) => ['done', 'partial', 'extra'].includes(days[i].status);
   const cur0 = weeks[weeks.length - 1];
   const owed = cur0 ? Math.max(0, Math.ceil(cur0.planned - cur0.done - 0.01)) : 0;
   const lifts = new Set(days.map((d, i) => (isDone(i) ? i : -1)).filter((i) => i >= 0));
   const fits = (i) => !(lifts.has(i - 1) && lifts.has(i - 2)) && !(lifts.has(i + 1) && lifts.has(i + 2)) && !(lifts.has(i - 1) && lifts.has(i + 1));
-  const open = (i) => i !== 6 && days[i].date >= today && !isDone(i) && days[i].status !== 'skipped';
+  const stillOpen = (i) => days[i].date >= today && !isDone(i) && days[i].status !== 'skipped';
+  const open = (i) => i !== 6 && stillOpen(i);
   const chosen = [];
-  for (let i = 0; i < 7 && chosen.length < owed; i += 1) if (days[i].kind === 'train' && open(i) && fits(i)) { chosen.push(i); lifts.add(i); }
+  for (let i = 0; i < 7 && chosen.length < owed; i += 1) if (days[i].kind === 'train' && stillOpen(i)) { chosen.push(i); lifts.add(i); } // the plan's own days first, as scheduled
   while (chosen.length < owed) {
     let best = -1, bestGap = -1;
     for (let i = 0; i < 7; i += 1) {
@@ -287,13 +294,13 @@ function adapt({ program, prefs = {}, mode = 'recomp', today, startedOn, session
   const todayDay = days[todayIdx];
   const doneToday = isDone(todayIdx);
   let todaySuggestion;
-  if (doneToday) todaySuggestion = { kind: 'done', text: 'Today is done. Nice work. Walk, stretch, eat well.' };
+  if (doneToday) todaySuggestion = { kind: 'done', text: 'Today is done. Nice work. Stretch, eat well, sleep well.' };
   else if (todayDay.status === 'skipped') todaySuggestion = { kind: 'rest', text: 'Rest today. Coming back fresh beats pushing through.' };
   else if (chosen.includes(todayIdx)) {
     const t = sessionById.get(todayDay.sessionId).title;
     todaySuggestion = { kind: 'train', sessionId: todayDay.sessionId, text: tier === 'returning' || phase.key === 'back' ? `${t}, a little lighter than before. Easing back in beats rushing.` : todayDay.shifted ? `${t} is up today, carried forward from earlier in the week.` : `Today: ${t}.` };
-  } else if (nextUp) todaySuggestion = { kind: 'rest', text: `${todayDay.kind === 'active' ? 'Easy cardio or a walk today.' : 'Rest day. Walk, stretch, sleep well.'} Next lift: ${nextUp.title} on ${nextUp.day}.` };
-  else todaySuggestion = { kind: 'rest', text: todayDay.kind === 'active' ? 'Easy cardio or a walk today. Lifting again tomorrow is better than lifting tired.' : 'Rest day. Walk, stretch, sleep well.' };
+  } else if (nextUp) todaySuggestion = { kind: 'rest', text: `${todayDay.kind === 'active' ? 'Easy cardio today: cycling, swimming or a mobility flow.' : 'Rest day. Stretch, sleep well.'} Next lift: ${nextUp.title} on ${nextUp.day}.` };
+  else todaySuggestion = { kind: 'rest', text: todayDay.kind === 'active' ? 'Easy cardio today: cycling, swimming or a mobility flow. Lifting again tomorrow is better than lifting tired.' : 'Rest day. Stretch, sleep well.' };
   const anyTrainAnyway = !doneToday && !chosen.includes(todayIdx) && nextSession ? { sessionId: nextSession.id, title: nextSession.title, note: lastLift && diffDays(lastLift, today) < 1 ? 'You lifted yesterday, so give those muscles a day.' : 'You can train today. The next session on your rotation is ready.' } : null;
 
   // ---- cardio ramps from what was actually done
@@ -368,7 +375,7 @@ function adapt({ program, prefs = {}, mode = 'recomp', today, startedOn, session
     const alt = ex && ex.swaps && ex.swaps.busy && ex.swaps.busy[0];
     suggestions.push({ id: `stall-${id}`, title: `${ex ? ex.name : 'One lift'} has held for 4 sessions`, detail: alt ? `Try ${alt.name} for 4 to 6 weeks, then come back to it.` : 'Check sleep and food, then try a variation for 4 to 6 weeks.', why: 'A new angle often restarts progress when a lift stalls.' });
   }
-  if (cardio.targetMin > c.startMinutes && cardio.doneMin === 0 && cur && cur.current && weekday(today) >= 3) suggestions.push({ id: 'cardio', title: `Cardio goal this week: ${cardio.targetMin} minutes`, detail: 'Easy cardio counts: a brisk walk is enough.', why: 'Cardio steps up 10 minutes a week from what you managed last week.' });
+  if (cardio.targetMin > c.startMinutes && cardio.doneMin === 0 && cur && cur.current && weekday(today) >= 3) suggestions.push({ id: 'cardio', title: `Cardio goal this week: ${cardio.targetMin} minutes`, detail: 'Easy cycling, swimming, the elliptical or a dance class all count. Walking is tracked separately.', why: 'Cardio steps up 10 minutes a week from what you managed last week.' });
 
   return {
     engine: 'adapt-v1', today, weekStart, tier, status,
