@@ -5,8 +5,10 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { FigThumb, Chip, fmtClock } from "./bits";
 import { elapsedSec, finishActive, personalBests, setsFor, suggestNext, volumeOf, setsDone, estimateKcal } from "../../utils/workoutStore";
 import { confirmAction } from "../../utils/confirm";
+import { SMART_ID } from "../../data/workoutPlan";
 
 const FEELS = [["easy", "😌", "Easy"], ["good", "🙂", "Good"], ["challenging", "😤", "Challenging"], ["hard", "🥵", "Hard"]];
+const PAIN = [["knee", "Knee"], ["back", "Back"], ["shoulder", "Shoulder"], ["wrist", "Wrist"], ["elbow", "Elbow"], ["dizzy", "Dizzy or chest pressure"]];
 
 /** The flat list of steps for a day (an options block counts as one step). */
 export function stepsOf(day) {
@@ -98,6 +100,14 @@ export default function SessionView({ day, st, setActive, swaps, sessions, week,
         <div className="wp-feels" role="radiogroup" aria-label="How was the workout">
           {FEELS.map(([id, emo, label]) => <button key={id} type="button" role="radio" aria-checked={feel === id} className={feel === id ? "on" : ""} onClick={() => setFeel(id)}><span aria-hidden="true">{emo}</span>{label}</button>)}
         </div>
+        {day.source === SMART_ID && (
+          <>
+            <h3 className="wp-h">Anything sore or odd? <small className="wp-muted">(optional)</small></h3>
+            <div className="wp-feels wp-pain" role="group" aria-label="Pain or discomfort">
+              {PAIN.map(([id, label]) => { const on = (active.pain || []).includes(id); return <button key={id} type="button" role="checkbox" aria-checked={on} className={on ? "on" : ""} onClick={() => patch((a) => ({ ...a, pain: on ? (a.pain || []).filter((x) => x !== id) : [...(a.pain || []), id] }))}>{label}</button>; })}
+            </div>
+          </>
+        )}
         <label className="wp-notes"><span>Notes (optional)</span><textarea value={notes} maxLength={300} rows={3} placeholder="Felt good, better form today!" onChange={(e) => setNotes(e.target.value)} /></label>
         {exDone === 0 && itemsDone === 0 && <p className="wp-warn">Nothing is ticked yet. You can still save it.</p>}
         <div className="wp-actions">

@@ -53,7 +53,7 @@ export const fmtClock = (sec) => `${Math.floor(sec / 60)}:${String(sec % 60).pad
  * swaps:    { [originalId]: alternativeId }  (what the person picked for each exercise)
  * onSwap(originalId, altId | null)  picks an alternative, or null for "use the original"
  */
-export default function ExSheet({ ex: shown, tab: firstTab = "how", sessions, swaps, onSwap, favs, onFav, onClose, canSwap = true }) {
+export default function ExSheet({ ex: shown, tab: firstTab = "how", sessions, swaps, onSwap, favs, onFav, onClose, canSwap = true, find = findExercise }) {
   const [tab, setTab] = useState(firstTab);
   const [zoom, setZoom] = useState(false);
   const ref = useRef(null);
@@ -67,8 +67,8 @@ export default function ExSheet({ ex: shown, tab: firstTab = "how", sessions, sw
   }, []);
 
   // an alternative opened from somewhere: show it, but offer the original's alternatives list too
-  const root = shown.alt ? findExercise(shown.parent) : shown;
-  const ex = shown.alt ? { ...root, ...shown, steps: root.steps, avoid: root.avoid } : shown;
+  const root = (shown.alt ? find(shown.parent) : shown) || shown;
+  const ex = shown.alt ? { ...root, ...shown, steps: shown.cue ? [shown.cue, ...(root.steps || []).slice(1)] : root.steps, avoid: root.avoid } : shown;
   const picked = swaps && root ? swaps[root.id] : null;
   const strength = ex.sets > 0;
   const last = strength ? lastPerformance(sessions, ex.id) : null;
@@ -117,6 +117,8 @@ export default function ExSheet({ ex: shown, tab: firstTab = "how", sessions, sw
               {ex.steps?.length ? <ol className="wp-steps">{ex.steps.map((s, i) => <li key={i}><span>{i + 1}</span>{s}</li>)}</ol> : <p className="wp-muted">Move slowly and stay in a pain-free range.</p>}
               {tips.length > 0 && <ul className="wp-tips" aria-label="Tips">{tips.map((t) => <li key={t}>{t}</li>)}</ul>}
               {ex.avoid && <p className="wp-avoid"><b>Avoid:</b> {ex.avoid}</p>}
+              {ex.weightHint && <p className="wp-muted wp-small"><b>How heavy:</b> {ex.weightHint}</p>}
+              {ex.progress && <p className="wp-muted wp-small"><b>When to go up:</b> {ex.progress}</p>}
               <p className="wp-muted wp-small">Stop if you feel sharp pain. Choose an alternative instead.</p>
             </div>
           )}

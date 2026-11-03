@@ -10,6 +10,7 @@
 import { EXTRAS } from "./libraryExtra.js";
 
 export const PLAN_ID = "lean-toned-7";
+export const SMART_ID = "smart"; // the server-built program (utils/unifiedPlan.js)
 export const PLAN = {
   id: PLAN_ID,
   name: "7-Day Lean & Toned",

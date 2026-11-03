@@ -184,3 +184,6 @@
 
 .bp-exact{display:flex;flex-wrap:wrap;gap:6px 16px;margin-top:8px}
 .bp-link{background:none;border:0;padding:2px 0;color:var(--primary,#2a6df4);font-weight:700;font-size:13px;cursor:pointer;text-decoration:underline}
+
+/* the reference sections (progression, cardio, safety) shown inside My plan cards */
+.bp-embed { max-width: none; padding: 0; margin: 0; }

@@ -21,6 +21,7 @@ const MAX_AGE_MS = 7 * 24 * 3600 * 1000; // a queued change older than a week is
 const QUEUEABLE = [
   /^\/api\/water$/, /^\/api\/food-logs$/, /^\/api\/activities\/logs$/, /^\/api\/health-logs$/,
   /^\/api\/weight$/, /^\/api\/tasks$/, /^\/api\/habits\/logs$/,
+  /^\/api\/body-plan\/session$/, // a finished workout: the server ignores a repeat of the same clientId
   // meal planner: eating a planned item (one item at a time, so a replay can never log something twice) and adding to the plan
   /^\/api\/meal-plans\/[^/]+\/log$/, /^\/api\/meal-plans$/,
 ];

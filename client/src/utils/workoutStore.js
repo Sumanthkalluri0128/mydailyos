@@ -1,7 +1,7 @@
 // Logic behind the Workout Plans tab. Everything that decides something (which week you are in, what weight to try next,
 // whether a set was a personal best, the streak) is a pure function so it can be tested with plain `node --test`.
 // Only load/save at the bottom touch localStorage. Data is per person: the key carries the signed-in email.
-import { PLAN_ID, DAYS, dayForDow, dowOf } from "../data/workoutPlan.js";
+import { PLAN_ID, SMART_ID, DAYS, dowOf } from "../data/workoutPlan.js";
 
 const round1 = (n) => Math.round(n * 10) / 10;
 
@@ -48,6 +48,11 @@ export const topWeight = (sets) => Math.max(0, ...sets.map((s) => Number(s.w) ||
  *  - nothing logged yet: weeks 1-2 start light (0 kg = pick a light weight), reps at the bottom of the range
  */
 export function suggestNext(ex, sessions) {
+  // The smart program already worked out today's target from everything you logged (any device): trust it.
+  if (ex.next && ex.next.action) {
+    const t = ex.next, up = t.action === "addWeight" || t.action === "harder";
+    return { w: Number(t.weightKg) || 0, r: t.action === "start" ? ex.repsMin : Number(t.reps) || ex.repsMin, up, first: t.action === "start", note: t.note || "" };
+  }
   const last = lastPerformance(sessions, ex.id);
   const lower = (ex.targets || []).some((t) => t === "legs" || t === "glutes");
   if (!last) return { w: 0, r: ex.repsMin, first: true, note: ex.bw ? "Start with clean reps." : "No history yet. Pick a light weight you can control." };
@@ -66,10 +71,10 @@ export function suggestNext(ex, sessions) {
 export const sessionsOnWeek = (sessions, monday) => sessions.filter((s) => s.date >= monday && s.date <= addDays(monday, 6) && s.dayId);
 
 /** done | today | missed | upcoming | rest for each of the 7 days of the week that contains `today`. */
-export function weekStrip(sessions, today) {
+export function weekStrip(sessions, today, days = DAYS) {
   const monday = mondayOf(today);
   const doneIds = new Set(sessionsOnWeek(sessions, monday).map((s) => s.dayId));
-  return DAYS.map((d, i) => {
+  return days.map((d, i) => {
     const date = addDays(monday, i);
     let status = date > today ? "upcoming" : date === today ? "today" : "missed";
     if (doneIds.has(d.id)) status = "done";
@@ -78,15 +83,17 @@ export function weekStrip(sessions, today) {
   });
 }
 
-/** Training days in a row (rest day and recovery day do not break it). Today not done yet does not break it either. */
-export function streak(sessions, today) {
+/** Training days in a row (rest day and recovery day do not break it). Today not done yet does not break it either.
+ *  `days` is the active plan's week and `soft` the day kinds that never break the chain (the fixed plan only forgives Sunday). */
+export function streak(sessions, today, days = DAYS, soft = ["rest"]) {
   const doneDates = new Set(sessions.map((s) => s.date));
   let n = 0, cursor = today;
   if (!doneDates.has(cursor)) cursor = addDays(cursor, -1); // today is still open
   for (let guard = 0; guard < 400; guard++) {
     if (doneDates.has(cursor)) { n++; cursor = addDays(cursor, -1); continue; }
-    const d = dayForDow(dowOf(fromStr(cursor)));
-    if (d.kind === "rest") { cursor = addDays(cursor, -1); continue; }  // Sunday never breaks the chain
+    const dow = dowOf(fromStr(cursor));
+    const d = days.find((x) => x.dow === dow) || days[0];
+    if (soft.includes(d.kind)) { cursor = addDays(cursor, -1); continue; }  // rest days never break the chain
     break;
   }
   return n;
@@ -147,7 +154,8 @@ export function newActive(day, { week, sessions, swaps, today, now = Date.now() 
       sets[base.id] = Array.from({ length: n }, () => ({ w: s.w, r: base.timed ? base.repsMin : s.r, done: false }));
     }
   }
-  return { id: `ws-${now.toString(36)}`, dayId: day.id, date: today, startedAt: now, pausedMs: 0, pausedAt: 0, sets, checks, choices, skipped: {}, step: 0 };
+  // A smart day can change under you (the week slides), so the session keeps its own copy of the day it started from.
+  return { id: `ws-${now.toString(36)}`, dayId: day.id, date: today, startedAt: now, pausedMs: 0, pausedAt: 0, sets, checks, choices, skipped: {}, step: 0, pain: [], ...(day.source === SMART_ID ? { day } : {}) };
 }
 
 /** Seconds on the clock, excluding paused time. */
@@ -162,13 +170,14 @@ export function finishActive(active, day, { swaps, weightKg, feel, notes, now = 
       if (active.skipped[base.id]) continue;
       const alt = swaps && swaps[base.id] ? base.alts.find((x) => x.id === swaps[base.id]) : null;
       const sets = (active.sets[base.id] || []).filter((s) => s.done).map((s) => ({ w: Number(s.w) || 0, r: Number(s.r) || 0, done: true }));
-      if (sets.length) exercises.push({ id: alt ? alt.id : base.id, name: alt ? alt.name : base.name, from: alt ? base.name : "", sets });
+      if (sets.length) exercises.push({ id: alt ? alt.id : base.id, name: alt ? alt.name : base.name, from: alt ? base.name : "", sets, ...(base.timed ? { timed: true } : {}), ...(base.slot ? { slot: base.slot } : {}) });
     }
   }
   const minutes = Math.max(1, Math.round(elapsedSec(active, now) / 60));
   const items = day.blocks.flatMap((b) => (b.type === "check" ? b.items : b.type === "options" ? b.options.flatMap((o) => o.items) : []));
   return {
-    id: active.id, planId: PLAN_ID, date: active.date, dayId: day.id, title: `Day ${day.n}: ${day.title}`, startedAt: active.startedAt,
+    id: active.id, planId: day.source === SMART_ID ? SMART_ID : PLAN_ID, date: active.date, dayId: day.id, title: `Day ${day.n}: ${day.title}`, startedAt: active.startedAt,
+    ...(day.source === SMART_ID ? { sessionId: day.sessionId || "", way: day.way || "gym", pain: active.pain || [] } : {}),
     minutes, kcal: estimateKcal(day, minutes, weightKg), feel: feel || "", notes: String(notes || "").slice(0, 300),
     exercises, checks: Object.values(active.checks).filter(Boolean).length, checksTotal: items.length,
   };
@@ -176,7 +185,7 @@ export function finishActive(active, day, { swaps, weightKg, feel, notes, now = 
 
 // ---------------------------------------------------------------------------------------------------------------- storage
 const KEY = (owner) => `ff-wp-v1:${owner || "guest"}`;
-export const emptyState = () => ({ startDate: "", swaps: {}, favs: [], sessions: [], active: null, weightKg: 78, unit: "kg", synced: {} });
+export const emptyState = () => ({ startDate: "", swaps: {}, favs: [], sessions: [], active: null, weightKg: 78, unit: "kg", synced: {}, source: "auto", way: {} });
 
 export function loadState(owner) {
   try {

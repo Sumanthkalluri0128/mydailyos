@@ -289,3 +289,20 @@
 @media (max-width: 400px) { .wp-bstats { grid-template-columns: repeat(2, 1fr); } }
 .wp-body { max-width: 860px; margin: 0 auto; }
 .wp-body .bp { padding: 0; }
+
+/* ---- one plan: gym / home / quick, "not today", the smart "this week" card, the plan switch ---- */
+.wp-ways { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; }
+.wp-ways button { padding: 7px 12px; min-height: 36px; border-radius: 999px; border: 1.5px solid rgba(255,255,255,.28); background: rgba(255,255,255,.1); color: inherit; font: inherit; font-weight: 700; font-size: .82rem; cursor: pointer; }
+.wp-ways button.on { background: rgba(255,255,255,.92); color: #1a1208; border-color: transparent; }
+.wp-way-note { margin: 8px 0 0; font-size: .82rem; opacity: .85; }
+.wp-link.on-dark { color: inherit; opacity: .9; display: block; margin-top: 10px; text-align: left; }
+.wp-skip { margin-top: 10px; font-size: .85rem; } .wp-skip p { margin: 0 0 6px; }
+.wp-skip-chip { padding: 7px 12px; border-radius: 999px; border: 1.5px solid rgba(255,255,255,.3); background: rgba(255,255,255,.1); color: inherit; font: inherit; font-weight: 700; font-size: .8rem; cursor: pointer; }
+.wp-skip-chip:disabled { opacity: .5; }
+.wp-today-note { margin: 0; font-size: .92rem; }
+.wp-adapt h3 { margin-top: 0; } .wp-adapt details { margin-top: 8px; } .wp-adapt summary { cursor: pointer; font-weight: 700; }
+.wp-sugg { margin-top: 10px; padding: 10px 12px; border-radius: 14px; border: 1px solid var(--wp-line); background: var(--wp-hot-soft); }
+.wp-sugg.alert { border-color: #d33; } .wp-sugg p { margin: 4px 0 8px; font-size: .86rem; }
+.wp-source .wp-seg button:disabled { opacity: .45; cursor: not-allowed; }
+.wp-pain { grid-template-columns: repeat(auto-fit, minmax(96px, 1fr)); }
+.wp-pain button { min-height: 44px; font-size: .8rem; }

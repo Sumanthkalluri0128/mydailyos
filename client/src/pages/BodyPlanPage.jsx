@@ -1,13 +1,15 @@
-// Body plan, in four tabs so nothing is buried:
-//   Workout = what to do today (default)   Eating = calories, macros, vitamins   Me = goal setup + tape measurements   More = the "why" and extras
-// The top card always shows the headline numbers and the one button that matters: "Use this plan" (saves it so Home, Food and the Planner follow it). Same server API as the phone app: GET /api/body-plan, POST /api/body-plan/apply (server/lib/bodyPlan.js).
-// The plan is worked out on the server, so this page needs a connection.
+// The Body tab of Workout & Body, in three sections so nothing is buried:
+//   Eating = calories, macros, vitamins   Me = body goal setup, how you train + tape measurements   More = the "why" and extras
+// The training days themselves (the workouts, logging, week changes) live on Today and My plan: ONE plan, shown once.
+// The top card always shows the headline numbers and the one button that matters: "Use this plan" (saves it so Home, Food, the Planner and
+// the workouts follow it). Same server API as the phone app: GET /api/body-plan, POST /api/body-plan/apply (server/lib/bodyPlan.js).
+// The plan is worked out on the server; `seed` is the answer the page already has, so opening this tab needs no second request.
 import { useCallback, useEffect, useState } from "react";
 import "./bodyplan.css";
 import { apiFetch } from "../config/api";
 import { getLocalDate } from "../utils/date";
 import { notify } from "../utils/notify";
-import { Section, Lines, TrainingSetup, Analysis, Workout, ActiveDays, Progress, Safety } from "./TrainingSections";
+import { Section, Lines, TrainingSetup, Analysis } from "./TrainingSections";
 
 const ICON = { lean: "🌿", athletic: "🏃", muscular: "🏋️", balanced: "🧘" };
 const TAPE_LABEL = { waist: "Waist", neck: "Neck", hips: "Hips", chest: "Chest", arm: "Upper arm", thigh: "Thigh" };
@@ -27,14 +29,16 @@ async function call(path, options) {
 function Stat({ l, v }) {
   return <div className="bp-stat"><small>{l}</small><b>{v}</b></div>;
 }
-export default function BodyPlanPage({ onBack, onSaved, embedded = false }) {
-  const [d, setD] = useState(null);
+const prefsOf = (plan) => { const sp = plan && plan.training && plan.training.prefs; return sp ? { place: sp.place, level: sp.level, days: sp.days, minutes: sp.minutes, equipment: sp.equipment, limits: sp.limits, focus: sp.focus, weekdays: sp.weekdays || [] } : null; };
+
+export default function BodyPlanPage({ onBack, onSaved, embedded = false, seed = null, startTab = null }) {
+  const [d, setD] = useState(seed);
   const [err, setErr] = useState("");
-  const [pick, setPick] = useState("");
+  const [pick, setPick] = useState(seed ? seed.chosen || "" : "");
   const [vals, setVals] = useState({});
   const [busy, setBusy] = useState(false);
-  const [tab, setTab] = useState(embedded ? "eating" : "workout"); // inside the Workout & Body page the training days live in My plan, so this opens on Eating
-  const [prefs, setPrefs] = useState(null); // the training setup being edited; previewed on the server, saved with "Use this plan"
+  const [tab, setTab] = useState(startTab || "eating");
+  const [prefs, setPrefs] = useState(() => prefsOf(seed && seed.plan)); // the training setup being edited; previewed on the server, saved with "Use this plan"
 
   const load = useCallback(async (type, tp) => {
     try {
@@ -47,12 +51,11 @@ export default function BodyPlanPage({ onBack, onSaved, embedded = false }) {
       const j = await call(`/api/body-plan?${q}`);
       setD(j); setErr("");
       setPick((p) => type || p || j.chosen || "");
-      const sp = j.plan && j.plan.training && j.plan.training.prefs;
-      if (sp && !tp) setPrefs({ place: sp.place, level: sp.level, days: sp.days, minutes: sp.minutes, equipment: sp.equipment, limits: sp.limits, focus: sp.focus, weekdays: sp.weekdays || [] });
+      if (!tp) { const sp = prefsOf(j.plan); if (sp) setPrefs(sp); }
     } catch (e) { setErr(e.message); }
   }, []);
   const changePrefs = (next) => { setPrefs(next); load(pick, next); };
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => { if (!seed) load(); }, [load]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (!d) {
     return (
@@ -87,29 +90,7 @@ export default function BodyPlanPage({ onBack, onSaved, embedded = false }) {
     } catch (e) { notify(`Could not save the plan: ${e.message}`, "error"); } finally { setBusy(false); }
   };
 
-  const clientId = () => `bp${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`;
-  // Log a finished (or skipped) session. The server sends back the re-worked plan, so the week, targets and advice update at once.
-  const logSession = async (payload) => {
-    setBusy(true);
-    try {
-      const j = await call("/api/body-plan/session", { method: "POST", body: JSON.stringify({ ...payload, clientId: clientId() }) });
-      setD((old) => ({ ...old, plan: j.plan }));
-      if (payload.status === "skipped") notify("Noted. Your week has been adjusted.", "success");
-      else notify(j.highlights && j.highlights.length ? `Session logged. ${j.highlights[0].name}: ${j.highlights[0].text}` : "Session logged. Your plan is updated.", "success");
-      onSaved?.();
-      return true;
-    } catch (e) { notify(`Could not save: ${e.message}`, "error"); return false; } finally { setBusy(false); }
-  };
-  // One-tap suggestions (more days, remove moves that hurt, level up) change the saved setup, then the plan is worked out again.
-  const applySuggestion = async (change) => {
-    const next = { ...(prefs || {}), ...(change.prefs || {}) };
-    setPrefs(next);
-    setBusy(true);
-    try { await call("/api/body-plan/apply", { method: "POST", body: JSON.stringify({ type: pick, training: next, date: getLocalDate() }) }); notify("Plan updated.", "success"); await load(pick, next); }
-    catch (e) { notify(`Could not update: ${e.message}`, "error"); } finally { setBusy(false); }
-  };
-
-  const TABS = [["workout", "💪", embedded ? "Smart program" : "Workout"], ["eating", "🍽️", "Eating"], ["me", "📏", "Me"], ["more", "📘", "More"]];
+  const TABS = [["eating", "🍽️", "Eating"], ["me", "📏", "Me"], ["more", "📘", "More"]];
 
   return (
     <section className="bp">
@@ -161,8 +142,6 @@ export default function BodyPlanPage({ onBack, onSaved, embedded = false }) {
             ))}
           </div>
 
-          {tab === "workout" && <Workout program={plan.training.program} adapt={plan.adapt} onLog={logSession} onApplySuggestion={applySuggestion} busy={busy} />}
-
           {tab === "eating" && (
             <>
               <div className="bp-card">
@@ -188,7 +167,7 @@ export default function BodyPlanPage({ onBack, onSaved, embedded = false }) {
               <div className="bp-card">
                 <h3 className="bp-h0">How do you train?</h3>
                 <TrainingSetup options={d.trainingOptions} prefs={prefs} serverPrefs={plan.training.prefs} onChange={changePrefs} />
-                <p className="bp-muted">Your workout updates as you tap. Press “Use this plan” above to keep it.</p>
+                <p className="bp-muted">Your plan updates as you tap. Press “Use this plan” above to keep it, then open Today.</p>
               </div>
               <div className="bp-card">
                 <h3 className="bp-h0">Measurements</h3>
@@ -212,9 +191,6 @@ export default function BodyPlanPage({ onBack, onSaved, embedded = false }) {
           {tab === "more" && (
             <>
               <Section title="Your body analysis"><Analysis a={plan.analysis} /></Section>
-              <Section title="Getting stronger every week"><Progress program={plan.training.program} /></Section>
-              <Section title="Cardio and active days"><ActiveDays program={plan.training.program} /></Section>
-              <Section title="Training safety"><Safety items={plan.training.program.safety} /></Section>
               <Section title="Where this plan comes from">
                 <Lines items={[
                   "Calories and pace: your height, weight, age and sex through the Mifflin-St Jeor energy equation, with a safe floor and a loss pace capped near 1 percent of body weight a week.",
@@ -228,7 +204,6 @@ export default function BodyPlanPage({ onBack, onSaved, embedded = false }) {
               </Section>
               <Section title="About this plan">
                 <div className="bp-stats">
-                  <Stat l="Body fat now" v={`${plan.body.bodyFatPct}% (${plan.body.bodyFatSource === "tape" ? "from tape" : "estimate"})`} />
                   <Stat l="Healthy range" v={`${plan.goal.bodyFatBand[0]} to ${plan.goal.bodyFatBand[1]}%`} />
                   {plan.mode === "lose" && <Stat l="Pace" v={`${plan.goal.weeklyPaceKg} kg / week`} />}
                 </div>
