@@ -13,6 +13,7 @@ import "./motion/stickers.css";
 import "./motion/base.css"; // speech bubble, tap marker, calm mode: last so it wins
 import "./motion/fun.css"; // animated backdrop + lively UI motion
 import "./styles/polish.css"; // logging/profile layout tidy-up
+import "./styles/stability.css"; // last: nothing moves, hides or blocks what you tap
 import FunBackdrop from "./motion/FunBackdrop";
 import Companions from "./motion/Companions";
 import { installTapMarker } from "./motion/tapMarker";
@@ -36,7 +37,12 @@ document.addEventListener("focusin", (event) => {
   const el = event.target;
   if (!(el instanceof HTMLElement) || !el.matches("input, textarea, select")) return;
   if (!window.matchMedia("(pointer: coarse)").matches) return;
-  setTimeout(() => el.scrollIntoView({ block: "center", behavior: "smooth" }), 300);
+  setTimeout(() => {
+    if (!el.isConnected || el.closest('[aria-modal="true"], .wp-sheet, .nv-sheet')) return; // sheets handle their own scrolling
+    const vv = window.visualViewport; const r = el.getBoundingClientRect();
+    const top = 64, bottom = (vv ? vv.height : window.innerHeight) - 8;
+    if (r.top < top || r.bottom > bottom) el.scrollIntoView({ block: "center", behavior: "auto" });
+  }, 300);
 });
 
 ReactDOM.createRoot(document.getElementById("root")).render(

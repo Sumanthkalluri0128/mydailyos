@@ -32,7 +32,7 @@
 .food-logger-page{display:grid;gap:var(--pl-gap);max-width:760px;margin:0 auto}
 .food-logger-header,.today-log-header,.meal-log-header,.selected-food-header{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
 .logger-card,.today-log-card{border-radius:var(--pl-r)!important;padding:16px!important}
-.logger-search{position:sticky;top:0;z-index:5;padding:8px 0;background:var(--bg,inherit)}
+.logger-search{position:sticky;top:var(--nav-top,0px);z-index:5;padding:8px 0;background:var(--bg,inherit)}
 .logger-search input{width:100%;box-sizing:border-box;min-height:46px}
 .meal-selector{display:flex;gap:6px;overflow-x:auto;padding:4px;border-radius:99px;background:rgba(120,120,160,.12);scrollbar-width:none}
 .meal-selector::-webkit-scrollbar{display:none}.meal-selector>*{flex:1 0 auto;white-space:nowrap;border-radius:99px!important}
@@ -140,13 +140,14 @@ button:focus-visible,.chip:focus-visible{outline:none;box-shadow:var(--ring,0 0 
 /* 5. Calmer background: softer blobs, and a frosted panel behind the main content so text never sits on the gradient */
 .fb-blob{opacity:.22}
 [data-theme="dark"] .fb-blob{opacity:.1}
-.app main{background:color-mix(in srgb,var(--surface,#fff) 70%,transparent);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);border-radius:28px;padding:var(--sp-4)}
+/* NO backdrop-filter / transform / filter on <main>: any of them turns <main> into the containing block of every position:fixed sheet inside it (sheets were sized to the whole page and ended up far above or below the screen). */
+.app main{background:color-mix(in srgb,var(--surface,#fff) 82%,transparent);border-radius:28px;padding:var(--sp-4)}
 /* dark mode: a calm solid background instead of blobs and petals */
 [data-theme="dark"] .fb-blob,[data-theme="dark"] .fb-petal,[data-theme="dark"] .fb-star,[data-theme="dark"] .fb-shoot{display:none}
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .fb-blob,:root:not([data-theme="light"]) .fb-petal{display:none}}
 
 /* 8 + 11. Log Food: sticky meal selector, clear selected states */
-.meal-selector{position:sticky;top:8px;z-index:20;padding:6px;border-radius:22px;background:color-mix(in srgb,var(--surface,#fff) 90%,transparent);-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px)}
+.meal-selector{position:sticky;top:calc(var(--nav-top,0px) + 6px);z-index:20;padding:6px;border-radius:22px;background:color-mix(in srgb,var(--surface,#fff) 96%,transparent)}
 .meal-button.active,.chip.active{background:var(--primary,#6c63ff)!important;color:#fff!important;border-color:var(--primary,#6c63ff)!important;box-shadow:0 4px 12px rgba(108,99,255,.35)}
 .meal-button.active .meal-kcal{opacity:.9}
 

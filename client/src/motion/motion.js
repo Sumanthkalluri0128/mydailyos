@@ -1,6 +1,5 @@
 // Shared helpers for the FlexFit motion kit (no dependencies).
 import { useEffect, useRef, useState } from "react";
-import { flushSync } from "react-dom";
 
 /** Older decorative effects (confetti, count-up, page transitions) are off unless localStorage ff_classic_motion=1. */
 export const classicMotion = () => { try { return localStorage.getItem("ff_calm_motion") !== "1"; } catch { return true; } };
@@ -63,10 +62,10 @@ export function fireConfetti({ from, count = 70, spread = Math.PI * 1.1 } = {}) 
   })(t0);
 }
 
-/** Cross-fades a state change with the View Transitions API when available; plain update otherwise. */
+/** Runs a state change. It used to cross-fade with the View Transitions API, but that freezes taps for the length of the fade and
+ *  snapshots fixed elements (tab bar, characters), which felt clumsy. The page now simply swaps and the new page fades in with CSS. */
 export function withTransition(update) {
-  if (prefersReducedMotion() || !classicMotion() || !document.startViewTransition) return update();
-  document.startViewTransition(() => flushSync(update));
+  return update();
 }
 
 /** Show a skeleton only if loading lasts > `delay` ms, then keep it >= `min` ms so it never flashes. */

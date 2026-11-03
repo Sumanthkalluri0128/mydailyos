@@ -15,8 +15,7 @@ export const NAV_GROUPS = [
   ] },
   { title: "Move & body", items: [
     ["water", "💧", "Water", "Hydration"],
-    ["workouts", "🏋️", "Workouts", "7-day plan, live workout log, library"],
-    ["bodyPlan", "💪", "Body plan", "Your goal, calories and gym program"],
+    ["workouts", "🏋️", "Workout & Body", "7-day plan, body goal, calories, library"],
     ["exercise", "🔥", "Exercise", "Workouts and steps"],
     ["weight", "⚖️", "Weight", "Weigh-ins and trend"],
     ["health", "❤️", "Health", "Sleep and measurements"],
@@ -30,7 +29,7 @@ export const NAV_GROUPS = [
 ];
 const TABS = [["dashboard", "🏠", "Home"], ["foodLogger", "🍽️", "Food"], ["planner", "📅", "Plan"], ["workouts", "🏋️", "Workout"], ["progress", "📈", "Progress"]];
 const FOOD_PAGES = ["foodLogger", "food"];
-const PILL = [["dashboard", "🏠", "Home"], ["foodLogger", "🍽️", "Log Food"], ["planner", "📅", "Meal Planner"], ["recipes", "🍲", "Recipes"], ["food", "🥗", "My Foods"], ["workouts", "🏋️", "Workouts"], ["bodyPlan", "💪", "Body Plan"]];
+const PILL = [["dashboard", "🏠", "Home"], ["foodLogger", "🍽️", "Log Food"], ["planner", "📅", "Meal Planner"], ["recipes", "🍲", "Recipes"], ["food", "🥗", "My Foods"], ["workouts", "🏋️", "Workout & Body"]];
 const PILL_IDS = PILL.map((p) => p[0]);
 const KEYS = { dashboard: "home", foodLogger: "log", planner: "planner", recipes: "recipes", food: "food", water: "water", exercise: "exercise", weight: "weight", health: "health", goals: "goals", habit: "habit", task: "task", progress: "progress" };
 const GROUP_KEYS = { "Today": "group.today", "Eat": "group.eat", "Move & body": "group.move", "Stay on track": "group.track" };
@@ -44,7 +43,7 @@ export default function AppNav({ current, go, theme, onToggleTheme, avatar, name
   const [more, setMore] = useState(false);
   const [menu, setMenu] = useState(false);
   const moreRef = useRef(null);
-  const moreOn = !PILL_IDS.includes(current) && current !== "profile";
+  const moreOn = !PILL_IDS.includes(current) && current !== "bodyPlan" && current !== "profile";
   useEffect(() => { setMenu(false); }, [current]);
   useEffect(() => {
     if (!menu) return undefined;
@@ -60,7 +59,7 @@ export default function AppNav({ current, go, theme, onToggleTheme, avatar, name
     window.addEventListener("keydown", esc);
     return () => window.removeEventListener("keydown", esc);
   }, [more]);
-  const is = (id) => current === id || (id === "foodLogger" && FOOD_PAGES.includes(current)) || (id === "planner" && current === "recipes");
+  const is = (id) => current === id || (id === "workouts" && current === "bodyPlan") || (id === "foodLogger" && FOOD_PAGES.includes(current)) || (id === "planner" && current === "recipes");
   const flame = streak?.current > 0 ? <span className="nv-streak" title="Logging streak">🔥 {streak.current}</span> : null;
 
   return (
@@ -73,7 +72,7 @@ export default function AppNav({ current, go, theme, onToggleTheme, avatar, name
         </button>
         <nav className="nv-pill" aria-label="Pages">
           {pill.map(([id, icon, lbl]) => (
-            <button key={id} type="button" className={`nv-pi ${current === id ? "is-on" : ""}`} onClick={() => go(id)} aria-current={current === id ? "page" : undefined}><span aria-hidden="true">{icon}</span>{label(id, lbl)}</button>
+            <button key={id} type="button" className={`nv-pi ${current === id || (id === "workouts" && current === "bodyPlan") ? "is-on" : ""}`} onClick={() => go(id)} aria-current={current === id ? "page" : undefined}><span aria-hidden="true">{icon}</span>{label(id, lbl)}</button>
           ))}
           <div className="nv-more-wrap" ref={moreRef}>
             <button type="button" className={`nv-pi ${moreOn || menu ? "is-on" : ""}`} onClick={() => setMenu((m) => !m)} aria-expanded={menu} aria-haspopup="menu"><span aria-hidden="true">⋯</span>{t("nav.more")}</button>

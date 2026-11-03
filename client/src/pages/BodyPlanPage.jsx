@@ -27,13 +27,13 @@ async function call(path, options) {
 function Stat({ l, v }) {
   return <div className="bp-stat"><small>{l}</small><b>{v}</b></div>;
 }
-export default function BodyPlanPage({ onBack, onSaved }) {
+export default function BodyPlanPage({ onBack, onSaved, embedded = false }) {
   const [d, setD] = useState(null);
   const [err, setErr] = useState("");
   const [pick, setPick] = useState("");
   const [vals, setVals] = useState({});
   const [busy, setBusy] = useState(false);
-  const [tab, setTab] = useState("workout");
+  const [tab, setTab] = useState(embedded ? "eating" : "workout"); // inside the Workout & Body page the training days live in My plan, so this opens on Eating
   const [prefs, setPrefs] = useState(null); // the training setup being edited; previewed on the server, saved with "Use this plan"
 
   const load = useCallback(async (type, tp) => {
@@ -109,12 +109,12 @@ export default function BodyPlanPage({ onBack, onSaved }) {
     catch (e) { notify(`Could not update: ${e.message}`, "error"); } finally { setBusy(false); }
   };
 
-  const TABS = [["workout", "💪", "Workout"], ["eating", "🍽️", "Eating"], ["me", "📏", "Me"], ["more", "📘", "More"]];
+  const TABS = [["workout", "💪", embedded ? "Smart program" : "Workout"], ["eating", "🍽️", "Eating"], ["me", "📏", "Me"], ["more", "📘", "More"]];
 
   return (
     <section className="bp">
-      {onBack && <button type="button" className="bp-back" onClick={onBack}>← Back</button>}
-      <h1 className="bp-title">Body plan</h1>
+      {onBack && !embedded && <button type="button" className="bp-back" onClick={onBack}>← Back</button>}
+      {!embedded && <h1 className="bp-title">Body plan</h1>}
 
       {/* Step 1: the goal. Four big buttons, one line of explanation for the chosen one. */}
       <div className="bp-types" role="radiogroup" aria-label="Body goal">

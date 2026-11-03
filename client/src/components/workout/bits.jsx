@@ -1,6 +1,8 @@
 // Small shared pieces of the Workout Plans tab: theme hook, picture thumbnail, and the exercise detail sheet
 // (How to do / Muscles / Alternatives) that every screen opens.
 import { useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
+import { imageFor } from "../../data/exerciseImages";
 import ExercisePic from "../ExercisePic";
 import { figureFor, figureToSvg } from "../../utils/exerciseFigure";
 import { MUSCLE_LABEL, findExercise } from "../../data/workoutPlan";
@@ -26,6 +28,8 @@ const hasFig = (e) => { try { return !!figureFor(picEx(e)); } catch { return fal
 /** A small still picture (start pose). Falls back to a muscle icon when the exercise has no drawing. */
 export function FigThumb({ ex, size = 56, className = "" }) {
   const theme = useTheme();
+  const photo = imageFor(ex);
+  if (photo) return <img className={`wp-thumb wp-photo ${className}`} src={photo.thumb} alt="" width={size} height={Math.round(size * 0.83)} loading="lazy" decoding="async" />;
   const src = useMemo(() => {
     try {
       const fig = figureFor(picEx(ex));
@@ -51,15 +55,16 @@ export const fmtClock = (sec) => `${Math.floor(sec / 60)}:${String(sec % 60).pad
  */
 export default function ExSheet({ ex: shown, tab: firstTab = "how", sessions, swaps, onSwap, favs, onFav, onClose, canSwap = true }) {
   const [tab, setTab] = useState(firstTab);
+  const [zoom, setZoom] = useState(false);
   const ref = useRef(null);
+  const closeRef = useRef(onClose); closeRef.current = onClose; // the parent makes a new onClose every render: do not re-run the effect (it re-stole focus and scrolled the page)
   useEffect(() => {
     const prev = document.activeElement;
-    ref.current?.focus();
-    const esc = (e) => e.key === "Escape" && onClose();
+    ref.current?.focus({ preventScroll: true });
+    const esc = (e) => { if (e.key === "Escape") closeRef.current(); };
     window.addEventListener("keydown", esc);
-    document.body.style.overflow = "hidden";
-    return () => { window.removeEventListener("keydown", esc); document.body.style.overflow = ""; prev?.focus?.(); };
-  }, [onClose]);
+    return () => { window.removeEventListener("keydown", esc); prev?.focus?.({ preventScroll: true }); };
+  }, []);
 
   // an alternative opened from somewhere: show it, but offer the original's alternatives list too
   const root = shown.alt ? findExercise(shown.parent) : shown;
@@ -69,8 +74,10 @@ export default function ExSheet({ ex: shown, tab: firstTab = "how", sessions, sw
   const last = strength ? lastPerformance(sessions, ex.id) : null;
   const fav = favs.includes(root.id);
   const muscles = (ex.targets || []).filter((m) => MUSCLE_LABEL[m]);
+  const photo = imageFor(ex) || (shown.alt ? null : imageFor(root));
+  const tips = photo && photo.tips && photo.tips.length ? photo.tips : [];
 
-  return (
+  return createPortal(
     <div className="wp-sheet-wrap" onClick={onClose}>
       <div className="wp-sheet" role="dialog" aria-modal="true" aria-label={ex.name} ref={ref} tabIndex={-1} onClick={(e) => e.stopPropagation()}>
         <div className="wp-sheet-head">
@@ -80,7 +87,12 @@ export default function ExSheet({ ex: shown, tab: firstTab = "how", sessions, sw
         </div>
 
         <div className="wp-sheet-body">
-          {hasFig(ex) ? <div className="wp-pic"><ExercisePic ex={picEx(ex)} /></div> : <div className="wp-pic wp-pic-empty" aria-hidden="true"><span>{MUSCLE_ICON[muscles[0]] || "🏋️"}</span></div>}
+          {photo ? (
+            <button type="button" className="wp-photo-big" onClick={() => setZoom(true)} aria-label={`Enlarge the photos for ${ex.name}`}>
+              <img src={photo.how || photo.thumb} alt={`${ex.name}: step by step photos`} decoding="async" />
+              <span aria-hidden="true">⤢ Tap to enlarge</span>
+            </button>
+          ) : hasFig(ex) ? <div className="wp-pic"><ExercisePic ex={picEx(ex)} /></div> : <div className="wp-pic wp-pic-empty" aria-hidden="true"><span>{MUSCLE_ICON[muscles[0]] || "🏋️"}</span></div>}
 
           {shown.alt && <p className="wp-note">Alternative to <b>{root.name}</b>{shown.note ? `. ${shown.note}` : ""}</p>}
 
@@ -103,6 +115,7 @@ export default function ExSheet({ ex: shown, tab: firstTab = "how", sessions, sw
           {tab === "how" && (
             <div className="wp-panel">
               {ex.steps?.length ? <ol className="wp-steps">{ex.steps.map((s, i) => <li key={i}><span>{i + 1}</span>{s}</li>)}</ol> : <p className="wp-muted">Move slowly and stay in a pain-free range.</p>}
+              {tips.length > 0 && <ul className="wp-tips" aria-label="Tips">{tips.map((t) => <li key={t}>{t}</li>)}</ul>}
               {ex.avoid && <p className="wp-avoid"><b>Avoid:</b> {ex.avoid}</p>}
               <p className="wp-muted wp-small">Stop if you feel sharp pain. Choose an alternative instead.</p>
             </div>
@@ -146,6 +159,13 @@ export default function ExSheet({ ex: shown, tab: firstTab = "how", sessions, sw
           )}
         </div>
       </div>
-    </div>
+      {zoom && photo && (
+        <div className="wp-zoom" role="dialog" aria-modal="true" aria-label={`${ex.name} photos`} onClick={(e) => { e.stopPropagation(); setZoom(false); }}>
+          <button type="button" className="wp-zoom-x" aria-label="Close photo">✕</button>
+          <img src={photo.how || photo.thumb} alt={`${ex.name}: step by step photos`} />
+        </div>
+      )}
+    </div>,
+    document.body
   );
 }

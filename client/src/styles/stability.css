@@ -1,0 +1,37 @@
+/* Stability layer. Loaded LAST. Everything here exists so that nothing moves, hides or blocks what you are about to tap.
+   (1) targets never move on hover   (2) sticky bars know how tall the header is   (3) the roaming characters get out of the way of sheets
+   (4) taps are instant on touch screens   (5) sheets scroll inside themselves and never drag the page. */
+
+/* header heights, used by every sticky element under the header */
+:root { --nav-top: 58px; }
+@media (min-width: 1000px) { :root { --nav-top: 76px; } }
+
+/* (1) a button that jumps away from the pointer when you hover it is a button you miss */
+.quick-grid button:hover, .quick button:hover:not(:disabled), .profile-avatar:hover, .nv-round:hover,
+.nv-pi:active, .cp-grid button:hover { transform: none; }
+@media (hover: none) { .card:hover, .large-card:hover { box-shadow: var(--md-shadow, none); } }
+
+/* (4) no 300 ms tap delay, no double-tap zoom, on anything tappable */
+button, a, summary, [role="button"], [role="tab"], select, input[type="checkbox"], input[type="radio"], label { touch-action: manipulation; }
+
+/* (2) the page never shifts sideways or jitters when the scrollbar appears */
+html { overflow-y: scroll; scrollbar-gutter: stable; }
+@media (hover: none) { html { overflow-y: auto; scrollbar-gutter: auto; } }
+.app { min-height: 100vh; min-height: 100dvh; }
+/* anything scrolled into view stops under the sticky header, not behind it */
+:where(h1, h2, h3, section, article, [id], .wp, .bp) { scroll-margin-top: calc(var(--nav-top) + 8px); }
+
+/* (3) the characters walk away while anything is open on top of the page, so they can never sit on a button */
+body:has([aria-modal="true"]) .cp-layer,
+body:has(.wp-sheet-wrap) .cp-layer, body:has(.wp-session) .cp-layer,
+body:has(.nv-sheet-wrap) .cp-layer, body:has(.sh-wrap) .cp-layer, body:has(.tr-modal) .cp-layer, body:has(.gp-modal) .cp-layer,
+body:has(.pal-wrap) .cp-layer, body:has(.as-panel) .cp-layer, body:has(.tr-dim) .cp-layer { display: none; }
+/* below the sticky action bars and the bottom tab bar, above the page */
+.cp-layer { z-index: 44; }
+
+/* (5) sheets scroll inside themselves */
+.wp-sheet, .nv-sheet, .sh-wrap > *, .tr-modal > * { overscroll-behavior: contain; }
+.wp-sheet-wrap, .nv-sheet-wrap, .sh-wrap, .tr-modal, .gp-modal { overscroll-behavior: contain; touch-action: pan-y; }
+
+/* the entrance animation never plays on every state change: only when a page opens */
+.app main > * { animation: none; }

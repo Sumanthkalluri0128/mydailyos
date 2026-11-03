@@ -7,6 +7,8 @@
 //   * `main: true` marks the compound lifts that get one extra set in weeks 5+ (the plan's "add one extra set on main lifts").
 //   * `alts` are the "pick ONE" alternatives from the sheets. They inherit sets / reps / targets from the original.
 
+import { EXTRAS } from "./libraryExtra.js";
+
 export const PLAN_ID = "lean-toned-7";
 export const PLAN = {
   id: PLAN_ID,
@@ -17,7 +19,7 @@ export const PLAN = {
 };
 
 export const MUSCLE_LABEL = { chest: "Chest", back: "Back", shoulders: "Shoulders", arms: "Arms", core: "Core", legs: "Legs", glutes: "Glutes", mobility: "Mobility", cardio: "Cardio" };
-export const FILTERS = ["all", "chest", "back", "shoulders", "arms", "legs", "glutes", "core", "mobility"];
+export const FILTERS = ["all", "chest", "back", "shoulders", "arms", "legs", "glutes", "core", "cardio", "mobility"];
 
 const slug = (s) => String(s).toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
 
@@ -311,17 +313,21 @@ export function allItems() {
 }
 
 /** What the library shows: each distinct exercise once, with its alternatives. Category = first target (or mobility). */
+// Checklist lines on the rest and recovery days (sleep, water, steps...) are habits, not exercises: they stay out of the Library.
+const NOT_EXERCISE = /^(d7|d3r)/;
 export function libraryList() {
   const seen = new Map();
   for (const it of allItems()) {
+    if (NOT_EXERCISE.test(it.id)) continue;
     const cat = it.blockType === "sets" ? (it.targets[0] || "core") : (it.targets && it.targets[0]) || "mobility";
     const key = slug(it.name);
     if (!seen.has(key)) seen.set(key, { ...it, cat, days: [it.dayId] });
     else if (!seen.get(key).days.includes(it.dayId)) seen.get(key).days.push(it.dayId);
   }
+  // exercises that are in the sheets but not in the 7-day plan
+  for (const e of EXTRAS) { const key = slug(e.name); if (!seen.has(key)) seen.set(key, { ...e }); }
   return [...seen.values()].sort((a, b) => a.name.localeCompare(b.name));
 }
-
 export const dayById = (id) => DAYS.find((d) => d.id === id) || null;
 export const dayForDow = (dow) => DAYS.find((d) => d.dow === dow) || DAYS[0];
 /** JS getDay() (0 = Sunday) -> plan dow (1 = Mon … 7 = Sun) */

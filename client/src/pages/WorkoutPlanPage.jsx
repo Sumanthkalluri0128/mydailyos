@@ -13,9 +13,10 @@ import { DAYS, GUIDE, PLAN, FILTERS, MUSCLE_LABEL, dayById, libraryList } from "
 import { addDays, fromStr, inRange, loadState, mondayOf, newActive, phaseFor, saveState, streak, summarize, volumeOf, weekNumber, weekStrip, elapsedSec } from "../utils/workoutStore";
 import ExSheet, { Chip, FigThumb, MUSCLE_ICON, fmtClock } from "../components/workout/bits";
 import SessionView from "../components/workout/SessionView";
+import BodyPlanPage from "./BodyPlanPage";
 import "../components/workout/workoutplan.css";
 
-const VIEWS = [["today", "Today", "🏠"], ["plan", "My plan", "📋"], ["library", "Library", "📚"], ["history", "History", "🕘"]];
+const VIEWS = [["today", "Today", "🏠"], ["plan", "My plan", "📋"], ["body", "Body", "💪"], ["library", "Library", "📚"], ["history", "History", "🕘"]];
 const KCAL_ACTIVITY = { strength: "Strength Training", conditioning: "Bodyweight circuit", recovery: "Walking - Moderate" };
 const FEEL_LABEL = { easy: "😌 Easy", good: "🙂 Good", challenging: "😤 Challenging", hard: "🥵 Hard" };
 const STATUS_ICON = { done: "✓", today: "●", missed: "–", upcoming: "", "rest-past": "☾" };
@@ -34,11 +35,23 @@ async function logToExercise(rec, day, weightKg) {
   return w.ok;
 }
 
-export default function WorkoutPlanPage() {
+export default function WorkoutPlanPage({ startView }) {
   const owner = useMemo(() => currentOwner(), []);
   const [today, setToday] = useState(getLocalDate());
   const [st, setSt] = useState(() => { const s = loadState(owner); return s.startDate ? s : { ...s, startDate: getLocalDate() }; });
-  const [view, setView] = useState(() => { try { return sessionStorage.getItem("ff-wp-view") || "today"; } catch { return "today"; } });
+  const [view, setViewRaw] = useState(() => { if (startView) return startView; try { const v = sessionStorage.getItem("ff-wp-view"); return VIEWS.some((x) => x[0] === v) ? v : "today"; } catch { return "today"; } });
+  const tabsRef = useRef(null);
+  // switching tab keeps you at the tabs (never left at the old scroll position, which is what made the page jump up and down)
+  const setView = useCallback((v) => {
+    setViewRaw(v);
+    requestAnimationFrame(() => { const el = tabsRef.current; if (el && el.getBoundingClientRect().top < 0) window.scrollTo({ top: window.scrollY + el.getBoundingClientRect().top - 66, behavior: "instant" }); });
+  }, []);
+  const [body, setBody] = useState(null); // headline numbers from the body plan (null until the server answers)
+  useEffect(() => {
+    let alive = true;
+    apiFetch(`${API_URL}/api/body-plan?date=${getLocalDate()}`).then((r) => (r.ok ? r.json() : null)).then((j) => { if (alive && j && j.plan && j.plan.ready) setBody({ chosen: j.chosen, plan: j.plan }); }).catch(() => {});
+    return () => { alive = false; };
+  }, []);
   const [dayOpen, setDayOpen] = useState(null);
   const [selDay, setSelDay] = useState(null);
   const [running, setRunning] = useState(false);
@@ -139,22 +152,23 @@ export default function WorkoutPlanPage() {
     <div className="wp">
       <header className="wp-top">
         <div>
-          <h1>Workouts</h1>
+          <h1>Workout &amp; Body</h1>
           <p className="wp-muted">{PLAN.name} · Week {week} · {phase.label}</p>
         </div>
         {run > 0 && <Chip tone="hot" title="Training days in a row">🔥 {run}</Chip>}
       </header>
 
-      <nav className="wp-tabs" aria-label="Workout sections">
+      <nav className="wp-tabs" aria-label="Workout sections" ref={tabsRef}>
         {VIEWS.map(([id, label, ic]) => <button key={id} type="button" className={view === id ? "on" : ""} aria-current={view === id ? "page" : undefined} onClick={() => setView(id)}><span aria-hidden="true">{ic}</span>{label}</button>)}
       </nav>
 
       {view === "today" && (
-        <TodayView strip={strip} shownDay={shownDay} selected={selDay} onPick={setSelDay} st={st} week={week} phase={phase} run={run} weekDone={weekDone} weekPlanned={weekPlanned}
+        <TodayView body={body} strip={strip} shownDay={shownDay} selected={selDay} onPick={setSelDay} st={st} week={week} phase={phase} run={run} weekDone={weekDone} weekPlanned={weekPlanned}
           onStart={startAsk} onResume={resume} onDiscard={async () => { if (await confirmAction("This deletes everything you logged in this workout.", { title: "Discard workout?", confirmText: "Discard", cancelText: "Keep it" })) discard(); }}
           onOpen={(id) => setDayOpen(id)} go={setView} today={today} />
       )}
       {view === "plan" && <PlanView st={st} setSt={setSt} week={week} phase={phase} today={today} onOpen={(id) => setDayOpen(id)} strip={strip} />}
+      {view === "body" && <div className="wp-body"><BodyPlanPage embedded onSaved={() => window.dispatchEvent(new Event("ff:refresh"))} /></div>}
       {view === "library" && <LibraryView favs={st.favs} onFav={onFav} openSheet={openSheet} />}
       {view === "history" && <HistoryView st={st} setSt={setSt} today={today} go={setView} />}
       {sheetEl}
@@ -163,7 +177,7 @@ export default function WorkoutPlanPage() {
 }
 
 // ================================================================================================================ Today
-function TodayView({ strip, shownDay, selected, onPick, st, week, phase, run, weekDone, weekPlanned, onStart, onResume, onDiscard, onOpen, go, today }) {
+function TodayView({ body, strip, shownDay, selected, onPick, st, week, phase, run, weekDone, weekPlanned, onStart, onResume, onDiscard, onOpen, go, today }) {
   const cell = strip.find((s) => s.day.id === shownDay.id);
   const doneRec = st.sessions.find((s) => s.dayId === shownDay.id && s.date === cell.date);
   const exCount = shownDay.blocks.filter((b) => b.type === "sets").reduce((n, b) => n + b.items.length, 0);
@@ -214,6 +228,20 @@ function TodayView({ strip, shownDay, selected, onPick, st, week, phase, run, we
           </div>
         </article>
 
+        {body ? (
+          <section className="wp-card wp-bodycard" aria-label="Your body goal">
+            <div className="wp-row"><h3 className="wp-h">Your body goal</h3><button type="button" className="wp-link" onClick={() => go("body")}>Open ›</button></div>
+            <ul className="wp-bstats">
+              <li><b>{body.plan.calories ? body.plan.calories.toLocaleString() : "–"}</b><small>kcal / day</small></li>
+              <li><b>{body.plan.mode === "lose" ? `${body.plan.goal.targetWeightKg} kg` : "Hold"}</b><small>{body.plan.mode === "lose" ? "target" : "weight"}</small></li>
+              <li><b>{body.plan.steps.toLocaleString()}</b><small>steps / day</small></li>
+              <li><b>{Math.round(body.plan.macros.protein)} g</b><small>protein</small></li>
+            </ul>
+          </section>
+        ) : (
+          <section className="wp-card wp-bodycard"><div className="wp-row"><h3 className="wp-h">Your body goal</h3><button type="button" className="wp-link" onClick={() => go("body")}>Set it up ›</button></div><p className="wp-muted wp-small">Pick lean, athletic, muscular or balanced to get calories, protein and steps that match your workouts.</p></section>
+        )}
+
         <section className="wp-card">
           <h3 className="wp-h">Week {week}: {phase.label}</h3>
           <p>{phase.tip}</p>
@@ -238,6 +266,7 @@ function TodayView({ strip, shownDay, selected, onPick, st, week, phase, run, we
           <h3 className="wp-h">Jump to</h3>
           <div className="wp-quick">
             <button type="button" onClick={() => go("plan")}><span aria-hidden="true">📋</span>My plan</button>
+            <button type="button" onClick={() => go("body")}><span aria-hidden="true">💪</span>Body &amp; food</button>
             <button type="button" onClick={() => go("library")}><span aria-hidden="true">📚</span>Exercise library</button>
             <button type="button" onClick={() => go("history")}><span aria-hidden="true">🕘</span>History</button>
             <button type="button" onClick={() => window.dispatchEvent(new CustomEvent("ff:goto", { detail: { page: "progress" } }))}><span aria-hidden="true">📈</span>Progress</button>

@@ -15,7 +15,6 @@ const WeightPage = lazy(() => import("./pages/WeightPage"));
 const ProfilePage = lazy(() => import("./pages/ProfilePage"));
 const ProgressPage = lazy(() => import("./pages/ProgressPage"));
 const GoalsPage = lazy(() => import("./pages/GoalsPage"));
-const BodyPlanPage = lazy(() => import("./pages/BodyPlanPage"));
 const WorkoutPlanPage = lazy(() => import("./pages/WorkoutPlanPage"));
 const PlannerPage = lazy(() => import("./pages/PlannerPage"));
 const RecipesPage = lazy(() => import("./pages/RecipesPage"));
@@ -80,6 +79,7 @@ function App() {
   // Cross-fade between pages with the View Transitions API (falls back to the .fx-page CSS entrance).
   const setCurrentPage = (page) => withTransition(() => setCurrentPageRaw(page));
 
+  useEffect(() => { window.scrollTo({ top: 0, left: 0, behavior: "instant" }); }, [currentPage]); // every page opens at its top, instantly
   useEffect(() => { refreshFlags(); }, []); // feature flags: from the saved copy now, from the server when it is older than 6 hours
 
   // Bumped when changes made offline finish syncing, so the dashboard reloads with the real numbers.
@@ -611,26 +611,14 @@ function App() {
     );
   }
 
-  if (currentPage === "bodyPlan") {
+  // Body plan and Workouts are one page now ("bodyPlan" still works as a link: it opens the Body tab).
+  if (currentPage === "workouts" || currentPage === "bodyPlan") {
     return (
       <div className="app">
         {shell}
-        <main key={currentPage} className="dashboard fx-page">
+        <main key="workouts" className="dashboard fx-page">
           <Suspense fallback={<PageSkeleton variant="list" />}>
-          <BodyPlanPage />
-        </Suspense>
-        </main>
-      </div>
-    );
-  }
-
-  if (currentPage === "workouts") {
-    return (
-      <div className="app">
-        {shell}
-        <main key={currentPage} className="dashboard fx-page">
-          <Suspense fallback={<PageSkeleton variant="list" />}>
-            <WorkoutPlanPage />
+            <WorkoutPlanPage key={currentPage} startView={currentPage === "bodyPlan" ? "body" : undefined} />
           </Suspense>
         </main>
       </div>

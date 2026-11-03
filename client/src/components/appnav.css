@@ -65,7 +65,7 @@
 /* page area leaves room for the navigation */
 .app { padding-bottom: calc(var(--tab-h) + env(safe-area-inset-bottom, 0px)); }
 .app > .topbar { display: none; }
-:root { --cp-floor: 140px; }  /* roaming characters walk above the tab bar */
+:root { --cp-floor: 72px; }  /* roaming characters walk above the tab bar */
 @media (min-width: 1000px) {
   .nv-bar { display: flex; }
   .nv-top, .nv-tabs { display: none; }
