@@ -1,3 +1,9 @@
+# v58 - Web and phone kept in step (web)
+- Removed 16 exercise photos nothing referenced (`public/exercises`, -244 KB). 73 remain, the same 73 the phone now ships.
+- `data/exerciseImages.js` is now the single source for the photo map: the phone's `exerciseImages.ts` is generated from it (`tools/syncExerciseImages.mjs` in the phone project). Change it here, then regenerate there.
+- New checks (run from the folder that holds `web/` and `mobile/`): `node tools/checkSharedFiles.mjs` (exerciseFigure, training, photo map, photo files identical) and `node tools/checkApiParity.mjs` (every /api path the web or phone calls has a server route; 272 paths checked, none missing).
+- NOT run: `vite build`, client tests, the app in a browser.
+
 # v57 - ONE workout plan (Today, My plan, Body and the live workout now share it) + duplicates removed (web)
 - Two plans used to run side by side: the fixed 7-day plan on Today / My plan, and the server's "Smart program" in the Body tab. They never shared exercises or logs. Now `utils/unifiedPlan.js` turns the smart program into the same day shape as the fixed plan, so Today, My plan, day overview, live workout, History, Library and the exercise sheet all run on ONE plan. Smart is used whenever the server has a plan for you; "My plan > Your plan" switches to the Classic 7-day plan (works fully offline).
 - Smart days: Gym / Home match / Quick 20 chips, "Not today" (the week slides), "Train anyway", the server's today target per exercise, a "This week" card (what changed, one-tap suggestions, is it working), pain chips on the finish screen. Finished workouts go to `POST /api/body-plan/session` (queued offline, safe to repeat).
