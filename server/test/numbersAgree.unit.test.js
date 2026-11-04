@@ -80,3 +80,21 @@ test('goal card shows start, last weigh-in and the 7-day average so "kg done" ca
   const old = S.goalCard({ plan, trendKg: 78, today: T, weighIns: [{ date: '2026-10-31', weightKg: 78 }] });
   assert.match(old.checkLine, /three days ago/);
 });
+
+test('goal card finish date is the SAME estimate as the Weight page arrival (not a second calculation)', () => {
+  const noise = [0.3, -0.4, 0.2, 0.5, -0.3, 0.1, -0.5, 0.4, -0.2, 0.3];
+  const w = series(noise.map((n, i) => 80 - i * 0.12 + n), 3);
+  const plan = { active: true, startKg: 80.3, targetKg: 72.5, startDate: addDays(T, -40), paceKg: 0.5 };
+  const now = planTrendKg(plan, w, null);
+  const range = G.goalRange({ weights: w, goalKg: 72.5, today: T, nowKg: now });
+  assert.equal(range.status, 'ok');
+  const g = S.goalCard({ plan, trendKg: now, rate: 0.79, today: T, weighIns: w, range });   // rate 0.79 would have given a far earlier date before
+  assert.equal(g.eta.likely, range.likely);
+  assert.equal(g.eta.from, range.earliest);
+  assert.equal(g.eta.basis, 'trend');
+  assert.ok(g.eta.line.includes(String(Number(range.likely.slice(0, 4)))), g.eta.line);
+  // too few weigh-ins: falls back to the plan's own pace and says it is still learning
+  const few = S.goalCard({ plan, trendKg: now, rate: null, today: T, weighIns: [], range: { status: 'insufficient' } });
+  assert.equal(few.eta.basis, 'plan');
+  assert.ok(few.etaNote);
+});

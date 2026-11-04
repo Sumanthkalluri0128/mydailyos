@@ -15,6 +15,7 @@ const { safetyReport } = require('./safety');
 const { computeStreaks } = require('./streaks');
 const { addDays, diffDays } = require('./dates');
 const S = require('./simpleGoals');
+const { goalRange } = require('./coachG');
 
 async function loadSimple(uid, today) {
   const [profile, totals, weightRows, foodDates, tape, sleepRows, strengthRows] = await Promise.all([
@@ -41,7 +42,9 @@ async function loadSimple(uid, today) {
 
   // Progress counts from where THIS plan started (see planTrendKg), not from the first weigh-in ever.
   const goalTrend = planTrendKg(plan, weightRows, last?.trendKg ?? null);
-  const goal = S.goalCard({ plan, trendKg: goalTrend, rate, today, weighIns: weightRows });
+  const range = plan.active && plan.targetKg > 0
+    ? goalRange({ weights: weightRows.map((w) => ({ date: w.date, weightKg: Number(w.weightKg) })), goalKg: plan.targetKg, today, nowKg: goalTrend }) : null;
+  const goal = S.goalCard({ plan, trendKg: goalTrend, rate, today, weighIns: weightRows, range });
   const todayRow = days.find((d) => d.date === today) || null;
   const focus = S.dailyFocus(todayRow, targets);
 

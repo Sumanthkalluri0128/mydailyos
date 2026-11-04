@@ -14,7 +14,7 @@ const pct = (v, t) => (t > 0 ? Math.max(0, Math.min(100, Math.round((v / t) * 10
 
 // ------------------------------------------------------------------------------------------------ plain-language copy
 const COPY = {
-  goal: { title: 'Your goal', none: 'Set one goal to get started', done: (kg, total) => `${kg} kg done of ${total} kg`, started: (total) => `Just getting started: ${total} kg to go`, eta: (range) => `Likely to arrive ${range}`, basis: 'Counted from your start weight to the average of your last 7 days of weigh-ins.',
+  goal: { title: 'Your goal', none: 'Set one goal to get started', done: (kg, total) => `${kg} kg done of ${total} kg`, started: (total) => `Just getting started: ${total} kg to go`, eta: (range) => `Likely to arrive ${range}`, etaOpen: (likely, earliest) => `Most likely around ${likely}, as early as ${earliest}`, basis: 'Counted from your start weight to the average of your last 7 days of weigh-ins.',
     lastWeighIn: (kg, when) => `Last weigh-in: ${kg} kg, ${when}`, average: (kg) => `7-day average: ${kg} kg`, started: (kg) => `Started at ${kg} kg`, etaLearning: 'Add a few weigh-ins over two weeks and we will estimate your finish date.' },
   status: { ahead: 'Ahead of plan', on: 'On track', behind: 'A little behind', start: 'Just getting started', maintain: 'Staying steady', reached: 'You reached your goal' },
   focus: { title: "Today's quests", reward: 'All three done. Lovely work today.', rewardXp: (n) => `+${n} XP`, bonus: 'Bonus: steps', empty: 'Set up your profile to see your daily quests.' },
@@ -116,7 +116,7 @@ function checkLine({ plan, cur, weighIns, today }) {
 }
 
 /** The single goal card. `plan` = profile.plan; `trendKg` = latest smoothed weight; `rate` = kg/week trend (negative = losing). */
-function goalCard({ plan, trendKg, rate = null, today, weighIns = null }) {
+function goalCard({ plan, trendKg, rate = null, today, weighIns = null, range = null }) {
   if (!plan || !plan.active || !(plan.startKg > 0) || !(plan.targetKg > 0)) return { active: false, title: COPY.goal.title, empty: COPY.goal.none };
   const dir = plan.targetKg < plan.startKg ? 'lose' : plan.targetKg > plan.startKg ? 'gain' : 'maintain';
   const total = Math.abs(plan.startKg - plan.targetKg);
@@ -138,8 +138,14 @@ function goalCard({ plan, trendKg, rate = null, today, weighIns = null }) {
     // The numbers sit inside the text so the phone and web blur them until the weight is revealed.
     checkLine: checkLine({ plan, cur, weighIns, today }),
     lastWeighIn: lastWeighInView(weighIns, today),
-    eta: eta && !eta.reached ? { from: eta.from, to: eta.to, basis: eta.basis, line: COPY.goal.eta(prettyRange(eta.from, eta.to)) } : null,
-    etaNote: eta && !eta.reached && eta.basis === 'plan' ? COPY.goal.etaLearning : '',
+    // The finish date comes from the SAME estimate as the Weight page's "Likely arrival" (coachG.goalRange: a straight line fitted to your last 4
+    // weeks of weigh-ins). Before, this card used the change between two ends of the smoothed line, which one recent dip could double, so the two
+    // screens gave different dates. With too few weigh-ins (range not "ok") it falls back to the pace your plan set.
+    eta: !eta || eta.reached ? null : (dir !== 'maintain' && range && range.status === 'ok' && range.likely
+      ? { from: range.earliest, to: range.latest || null, likely: range.likely, basis: 'trend',
+          line: range.latest ? COPY.goal.eta(prettyRange(range.earliest, range.latest)) : COPY.goal.etaOpen(prettyDate(range.likely), prettyDate(range.earliest)) }
+      : { from: eta.from, to: eta.to, basis: eta.basis, line: COPY.goal.eta(prettyRange(eta.from, eta.to)) }),
+    etaNote: eta && !eta.reached && eta.basis === 'plan' && !(range && range.status === 'ok') ? COPY.goal.etaLearning : '',
   };
 }
 
