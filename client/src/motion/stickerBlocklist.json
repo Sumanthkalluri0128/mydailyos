@@ -8,7 +8,13 @@
  "ids": [
   "goku/lift-0",
   "jinwoo/peace-0",
-  "tanjiro/chill-1"
+  "tanjiro/chill-1",
+  "kakashi/think-0",
+  "kakashi/read-1",
+  "kakashi/chill-0",
+  "bakugo/noodles-0",
+  "bakugo/laugh-0",
+  "bakugo/game-0"
  ],
  "details": {
   "goku/lift-0": {
@@ -36,6 +42,36 @@
    "size": [
     213,
     179
+   ]
+  },
+  "kakashi/think-0": {
+   "reasons": [
+    "removed on request"
+   ]
+  },
+  "kakashi/read-1": {
+   "reasons": [
+    "removed on request"
+   ]
+  },
+  "kakashi/chill-0": {
+   "reasons": [
+    "removed on request"
+   ]
+  },
+  "bakugo/noodles-0": {
+   "reasons": [
+    "removed on request"
+   ]
+  },
+  "bakugo/laugh-0": {
+   "reasons": [
+    "removed on request"
+   ]
+  },
+  "bakugo/game-0": {
+   "reasons": [
+    "removed on request"
    ]
   }
  }
