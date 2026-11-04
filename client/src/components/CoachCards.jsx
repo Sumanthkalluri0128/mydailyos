@@ -5,6 +5,7 @@ import Buddy from "../motion/Buddy";
 import { notify } from "../utils/notify";
 import { getLocalDate } from "../utils/date";
 import { saveToneSettings, useCoachTone, isGentle } from "../utils/coachTone";
+import { coneGeometry } from "../utils/coneGeometry";
 import "./coachcards.css";
 
 const call = async (path, opts) => {
@@ -121,17 +122,16 @@ function Trend({ series }) {
   );
 }
 function Cone({ r }) {
-  const c = r.cone; const W = 320, H = 110, P = 8;
-  const all = c.flatMap((p) => [p.fast, p.slow, p.mid]).concat(r.goalKg);
-  const lo = Math.min(...all) - 0.4, hi = Math.max(...all) + 0.4;
-  const x = (i) => P + (i / (c.length - 1)) * (W - 2 * P), y = (v) => P + (1 - (v - lo) / (hi - lo)) * (H - 2 * P);
-  const band = c.map((p, i) => `${i ? "L" : "M"}${x(i).toFixed(1)},${y(p.fast).toFixed(1)}`).join(" ") + c.slice().reverse().map((p, k) => `L${x(c.length - 1 - k).toFixed(1)},${y(p.slow).toFixed(1)}`).join(" ") + "Z";
+  const g = coneGeometry(r);
+  if (!g) return null;
   return (
-    <svg viewBox={`0 0 ${W} ${H}`} className="cc-svg" role="img" aria-label="Range of likely arrival dates">
-      <path d={band} className="cc-cone" />
-      <path d={c.map((p, i) => `${i ? "L" : "M"}${x(i).toFixed(1)},${y(p.mid).toFixed(1)}`).join(" ")} className="cc-trend" fill="none" />
-      <line x1={P} x2={W - P} y1={y(r.goalKg)} y2={y(r.goalKg)} className="cc-goal" />
-      <text x={W - P} y={y(r.goalKg) - 3} textAnchor="end" className="cc-goal-label">Goal {r.goalKg} kg</text>
+    <svg viewBox={`0 0 ${g.W} ${g.H}`} className="cc-svg" role="img" aria-label={`Range of likely arrival dates. Most likely around ${shortDate(r.likely)}.`}>
+      <path d={g.band} className="cc-cone" />
+      <line x1={g.P} x2={g.W - g.P} y1={g.goalY} y2={g.goalY} className="cc-goal" />
+      <text x={g.goalLabel.x} y={g.goalLabel.y} className="cc-goal-label">{g.goalLabel.text}</text>
+      <path d={g.mid} className="cc-trend" fill="none" />
+      {g.arrival && <circle cx={g.arrival.x} cy={g.arrival.y} r="4" className="cc-arrival" />}
+      {g.ticks.map((t) => <text key={`${t.x}-${t.date}`} x={t.x} y={g.labelY} textAnchor={t.anchor} className={`cc-tick${t.bold ? " bold" : ""}`}>{shortDate(t.date)}</text>)}
     </svg>
   );
 }
@@ -156,7 +156,7 @@ export function WeightInsights({ refreshKey }) {
         <div className="large-card"><p className="eyebrow">Likely arrival</p>
           {range.status === "ok" ? (<>
             <h3>{shortDate(range.earliest)} – {range.latestOpen ? "later" : shortDate(range.latest)}</h3>
-            <p>Most likely around {shortDate(range.likely)}, at about {Math.abs(range.slopeKgPerWeek)} kg a week. {range.message}</p>
+            <p>Most likely around {shortDate(range.likely)}, {range.remainingKg != null ? `${range.remainingKg} kg to go, ` : ""}at about {Math.abs(range.slopeKgPerWeek)} kg a week. {range.message}</p>
             <Cone r={range} /></>) : <p>{range.message}</p>}
         </div>
       )}

@@ -23,7 +23,9 @@ export function GoalCard({ d, onOpen }) {
       <div><WeightReveal compact reaction={false} text={g.progressLine} /></div>
       {g.statusWhy && <p className="sp-muted sp-why">{g.statusWhy}</p>}
       <div className="sp-bar" role="progressbar" aria-valuenow={g.pct} aria-valuemin={0} aria-valuemax={100}><i style={{ width: `${Math.max(2, g.pct)}%` }} /></div>
+      {g.checkLine && <div className="sp-muted sp-check" data-testid="goal-check"><WeightReveal compact reaction={false} text={g.checkLine} /></div>}
       {g.eta && <p className="sp-muted">{g.eta.line}</p>}
+      {g.basisLine && <p className="sp-muted" style={{ fontSize: "0.8em" }}>{g.basisLine}</p>}
       {g.etaNote && <p className="sp-muted">{g.etaNote}</p>}
     </div>
   );

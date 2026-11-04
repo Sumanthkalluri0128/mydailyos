@@ -3,6 +3,7 @@
 const { addDays, diffDays } = require('./dates');
 const { maxSafeWeeklyLossKg } = require('./trendWeight');
 const { bmi } = require('./safety');
+const { proteinInRange } = require('./journey');
 
 const r1 = (x) => Math.round(x * 10) / 10;
 const r05 = (x) => Math.round(x * 20) / 20;
@@ -93,7 +94,7 @@ function focusProgress(focus, days, t, sleep, strengthDates, today) {
   const week = days.filter((d) => d.date >= monday && d.date <= today);
   const count = {
     logging: week.filter((d) => d.calories > 0).length,
-    protein: t.protein > 0 ? week.filter((d) => d.calories > 0 && d.protein >= t.protein * 0.9).length : 0,
+    protein: t.protein > 0 ? week.filter((d) => d.calories > 0 && proteinInRange(d.protein, t)).length : 0,
     steps: t.steps > 0 ? week.filter((d) => d.steps >= t.steps).length : 0,
     water: t.waterMl > 0 ? week.filter((d) => d.waterMl >= t.waterMl).length : 0,
     sleep: week.filter((d) => sleep[d.date] >= 7).length,
@@ -108,7 +109,7 @@ function adherenceOf(days, t, sleep, strengthDates, today) {
   const strengthWeeks = Math.max(1, n / 7);
   return {
     logging: win.filter((d) => d.calories > 0).length / n,
-    protein: t.protein > 0 ? win.filter((d) => d.calories > 0 && d.protein >= t.protein * 0.9).length / n : 1,
+    protein: t.protein > 0 ? win.filter((d) => d.calories > 0 && proteinInRange(d.protein, t)).length / n : 1,
     steps: t.steps > 0 ? win.filter((d) => d.steps >= t.steps).length / n : 1,
     water: t.waterMl > 0 ? win.filter((d) => d.waterMl >= t.waterMl).length / n : 1,
     sleep: Object.keys(sleep).length >= 7 ? win.filter((d) => sleep[d.date] >= 7).length / n : 1,

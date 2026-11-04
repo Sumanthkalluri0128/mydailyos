@@ -14,7 +14,8 @@ const pct = (v, t) => (t > 0 ? Math.max(0, Math.min(100, Math.round((v / t) * 10
 
 // ------------------------------------------------------------------------------------------------ plain-language copy
 const COPY = {
-  goal: { title: 'Your goal', none: 'Set one goal to get started', done: (kg, total) => `${kg} kg done of ${total} kg`, started: (total) => `Just getting started: ${total} kg to go`, eta: (range) => `Likely to arrive ${range}`, etaLearning: 'Add a few weigh-ins over two weeks and we will estimate your finish date.' },
+  goal: { title: 'Your goal', none: 'Set one goal to get started', done: (kg, total) => `${kg} kg done of ${total} kg`, started: (total) => `Just getting started: ${total} kg to go`, eta: (range) => `Likely to arrive ${range}`, basis: 'Counted from your start weight to the average of your last 7 days of weigh-ins.',
+    lastWeighIn: (kg, when) => `Last weigh-in: ${kg} kg, ${when}`, average: (kg) => `7-day average: ${kg} kg`, started: (kg) => `Started at ${kg} kg`, etaLearning: 'Add a few weigh-ins over two weeks and we will estimate your finish date.' },
   status: { ahead: 'Ahead of plan', on: 'On track', behind: 'A little behind', start: 'Just getting started', maintain: 'Staying steady', reached: 'You reached your goal' },
   focus: { title: "Today's quests", reward: 'All three done. Lovely work today.', rewardXp: (n) => `+${n} XP`, bonus: 'Bonus: steps', empty: 'Set up your profile to see your daily quests.' },
   level: { next: (xp) => `Next level in ${xp} XP`, max: 'Top rank reached' },
@@ -86,6 +87,34 @@ function statusWhy({ plan, weighIns = [], today, trendKg }) {
   return gap >= 0.1 ? COPY.why.off(r1(gap), c.direction) : '';
 }
 
+const whenWords = (date, today) => {
+  const n = diffDays(date, today);
+  if (n <= 0) return 'today';
+  if (n === 1) return 'yesterday';
+  if (n < 7) return `${['', '', 'two', 'three', 'four', 'five', 'six'][n]} days ago`;   // words, so the blurred digits are only weights
+  const [, m, d] = date.split('-').map(Number);
+  return `${d} ${MONTHS[m - 1]}`;
+};
+
+/** Latest weigh-in on or before today (ANY date, not just since the plan started): the number you saw on the scale. */
+function latestWeighIn(weighIns, today) {
+  const rows = (Array.isArray(weighIns) ? weighIns : []).filter((w) => w && w.date && Number(w.weightKg) > 0 && String(w.date).slice(0, 10) <= today)
+    .map((w) => ({ date: String(w.date).slice(0, 10), kg: Number(w.weightKg) })).sort((a, b) => (a.date < b.date ? -1 : 1));
+  return rows.length ? rows[rows.length - 1] : null;
+}
+
+function lastWeighInView(weighIns, today) {
+  const l = latestWeighIn(weighIns, today);
+  return l ? { kg: r1(l.kg), date: l.date, daysAgo: Math.max(0, diffDays(l.date, today)), line: COPY.goal.lastWeighIn(r1(l.kg), whenWords(l.date, today)) } : null;
+}
+/** "Started at 80.3 kg · Last weigh-in: 77.4 kg, today · 7-day average: 77.6 kg" (the last two only when there is a weigh-in). */
+function checkLine({ plan, cur, weighIns, today }) {
+  const l = latestWeighIn(weighIns, today);
+  const parts = [COPY.goal.started(r1(plan.startKg))];
+  if (l) { parts.push(COPY.goal.lastWeighIn(r1(l.kg), whenWords(l.date, today))); if (Math.abs(l.kg - cur) >= 0.05) parts.push(COPY.goal.average(r1(cur))); }
+  return parts.join(' · ');
+}
+
 /** The single goal card. `plan` = profile.plan; `trendKg` = latest smoothed weight; `rate` = kg/week trend (negative = losing). */
 function goalCard({ plan, trendKg, rate = null, today, weighIns = null }) {
   if (!plan || !plan.active || !(plan.startKg > 0) || !(plan.targetKg > 0)) return { active: false, title: COPY.goal.title, empty: COPY.goal.none };
@@ -104,6 +133,11 @@ function goalCard({ plan, trendKg, rate = null, today, weighIns = null }) {
     doneKg: r1(doneKg), totalKg: r1(total), remainingKg: r1(remaining), pct: pct(doneKg, total),
     progressLine: doneKg >= 0.05 ? COPY.goal.done(r1(doneKg), r1(total)) : COPY.goal.started(r1(total)), status, statusLine: COPY.status[status],
     statusWhy: status === 'behind' && Array.isArray(weighIns) ? statusWhy({ plan, weighIns, today, trendKg: cur }) : '',
+    basisLine: COPY.goal.basis,
+    // So "0.4 kg done" can be checked at a glance: where you started, what the scale last said, and the 7-day average the card counts from.
+    // The numbers sit inside the text so the phone and web blur them until the weight is revealed.
+    checkLine: checkLine({ plan, cur, weighIns, today }),
+    lastWeighIn: lastWeighInView(weighIns, today),
     eta: eta && !eta.reached ? { from: eta.from, to: eta.to, basis: eta.basis, line: COPY.goal.eta(prettyRange(eta.from, eta.to)) } : null,
     etaNote: eta && !eta.reached && eta.basis === 'plan' ? COPY.goal.etaLearning : '',
   };
@@ -374,7 +408,7 @@ function weeklyRecap({ days, targets, today, streak, goal }) {
   return { title: COPY.recap.title, win: win.line, id: win.id, loggedDays: logged };
 }
 
-module.exports = {
+module.exports = { latestWeighIn,
   COPY, etaRange, prettyRange, goalCard, statusWhy, goalStatus, dailyFocus, focusDone, CORE_QUESTS, FOCUS_XP, COMEBACK_XP,
   levelSummary, migrateLevel, weeklyScoreSimple, PARTS, SHELVES, FAMILIES, OLD_TO_NEW, OLD_TIER_MAP, buildShelves, oldUnlockedIds, missingAfterMigration,
   streakSummary, targetsView, checkTargetChange, diffTargets, updatedLine, phaseSuggestion, weeklyRecap,

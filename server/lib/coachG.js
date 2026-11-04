@@ -1,10 +1,11 @@
 // Coaching part 1 (Section G): rough-day mode, 7-day experiments, weight-jump explainer, sleep-to-eating link, goal-date range,
 // learning coach and weekly treat allowance. Pure rules: data in, message/decision out. Wording is cautious ("likely", "may") and never punishing.
 const { addDays, diffDays, weekday } = require('./dates');
-const { smoothTrend } = require('./trendWeight');
+const { recentAverage, smoothTrend } = require('./trendWeight');
 
 const r0 = (x) => Math.round(x);
 const r1 = (x) => Math.round(x * 10) / 10;
+const r2 = (x) => Math.round(x * 100) / 100;
 const r10 = (x) => Math.round(x / 10) * 10;
 const avg = (a) => (a.length ? a.reduce((s, x) => s + x, 0) / a.length : 0);
 const mondayOf = (d) => addDays(d, -((weekday(d) + 6) % 7));
@@ -119,12 +120,15 @@ function skipExperiment(state, today, ctx, tipIds) {
  * A "jump" is a weigh-in 0.8 kg or more away from the trend line. Reasons use words like "likely" and "may".
  */
 function explainJump({ weights, days = [], sleepByDate = {}, today, minKg = 0.8 }) {
-  const recent = (weights || []).filter((w) => w.date <= today && diffDays(w.date, today) <= 28);
-  const series = smoothTrend(recent);
+  const upToToday = (weights || []).filter((w) => w.date <= today);
+  // The trend is smoothed over EVERYTHING we have (same as the Weight page), not over a 28-day window: a window seeds the line with its
+  // first reading, which can leave the line far from where you really are. Only the chart and the "enough readings" check use 28 days.
+  const smoothed = smoothTrend(upToToday);
+  const series = smoothed.filter((p) => diffDays(p.date, today) <= 28);
   if (series.length < 4) return { status: 'insufficient', needed: 4, have: series.length, message: 'Weigh in at least 4 times in a month and FlexFit can tell a real change from daily noise.' };
   const last = series[series.length - 1];
   if (diffDays(last.date, today) > 3) return { status: 'none', message: 'No very recent weigh-in to explain.' };
-  const prev = series[series.length - 2];
+  const prev = smoothed[smoothed.length - 2];            // the trend line BEFORE this weigh-in: what the scale was expected to say
   const jump = last.weightKg - prev.trendKg;
   const chart = series.slice(-21);
   if (Math.abs(jump) < minKg) return { status: 'steady', series: chart, trendKg: last.trendKg, message: 'Your weigh-in is close to your trend line. Day-to-day swings of a kilo or so are normal.' };
@@ -154,11 +158,12 @@ function explainJump({ weights, days = [], sleepByDate = {}, today, minKg = 0.8 
   if (up && sl.length && Math.min(...sl) < 6) reasons.push({ id: 'sleep', text: 'You slept under 6 hours recently. Short sleep can raise water retention and the hormone cortisol, so this may be part of it.' });
   const kg = r1(Math.abs(jump));
   return {
-    status: 'jump', direction: up ? 'up' : 'down', kg, trendKg: last.trendKg, series: chart,
+    status: 'jump', direction: up ? 'up' : 'down', kg, scaleKg: last.weightKg, expectedKg: prev.trendKg, trendKg: last.trendKg, series: chart,
     headline: up ? `Up ${kg} kg from your trend. Please do not panic.` : `Down ${kg} kg from your trend. Nice, but treat it as noise.`,
     reasons: reasons.slice(0, 3),
     fallback: reasons.length ? '' : 'Nothing in your logs stands out. Water, salt, digestion and time of day can each move the scale by a kilo or two.',
-    reassure: `Your trend line is the real signal, and it is at ${last.trendKg} kg. Fat does not change this fast, so one reading is not a result.`,
+    // Same numbers as the headline: the reading, where the line was, and where it is now (it barely moves on one reading).
+    reassure: `You expected about ${prev.trendKg} kg and the scale said ${last.weightKg} kg. This reading moved your trend line only to ${last.trendKg} kg, and the trend is the real signal. Fat does not change this fast, so one reading is not a result.`,
   };
 }
 
@@ -184,7 +189,7 @@ function sleepEating({ days, sleepByDate }) {
 // ---------------------------------------------------------------- 5. goal-date range (cone)
 const MAX_DAYS = 730;
 /** Regression on the last 28 days of weigh-ins; the slope's uncertainty gives an earliest and latest arrival date. */
-function goalRange({ weights, goalKg, today }) {
+function goalRange({ weights, goalKg, today, nowKg = null }) {
   const g = Number(goalKg);
   if (!(g > 0)) return { status: 'no_goal', message: 'Set a goal weight to see when you are likely to arrive.' };
   const pts = (weights || []).filter((w) => w.date <= today && diffDays(w.date, today) <= 28 && Number(w.weightKg) > 0).sort((a, b) => (a.date < b.date ? -1 : 1));
@@ -198,25 +203,30 @@ function goalRange({ weights, goalKg, today }) {
   const sse = xs.reduce((s, x, i) => s + (ys[i] - (a + b * x)) ** 2, 0);
   const se = Math.sqrt(sse / (n - 2) / sxx) || 0;
   const band = 1.28 * se;                       // about an 80% range
-  const trend = smoothTrend(pts); const now = trend[trend.length - 1].trendKg;
+  // Distance left is measured from the SAME "now" the goal card shows (average of the last 7 days of weigh-ins; the route passes the plan's
+  // own figure). It used to start from a smoothed line that lags a recent drop, so "to go" here was bigger than on the goal card.
+  const now = Number(nowKg) > 0 ? Number(nowKg) : recentAverage(pts).kg;
   const remaining = g - now; const dir = remaining < 0 ? -1 : remaining > 0 ? 1 : 0;
   if (dir === 0 || Math.abs(remaining) < 0.2) return { status: 'arrived', nowKg: now, message: 'You are at your goal weight.' };
   const mid = b * dir, fast = (b + dir * band) * dir, slow = (b - dir * band) * dir;   // kg/day moving toward the goal
-  const slopeWk = r1(b * 7);
+  const slopeWk = r2(b * 7);
   if (mid < 0.005) return { status: 'not_moving', nowKg: now, slopeKgPerWeek: slopeWk, message: 'Your trend is not heading toward your goal at the moment, so a date would be a guess. Check the plateau tips.' };
   const days = (rate) => (rate > 0.002 ? Math.min(MAX_DAYS, Math.ceil(Math.abs(remaining) / rate)) : null);
   const early = days(fast), likely = days(mid), late = days(slow);
   const cone = [];
-  const horizon = Math.min(MAX_DAYS, late === null ? 182 : late + 7);
+  const openEnded = late === null || late >= MAX_DAYS;
+  // Show the earliest and likely arrival with room to spare; an open-ended later end no longer stretches the chart to two years.
+  const horizon = Math.min(MAX_DAYS, openEnded ? Math.max(likely + 28, Math.round(likely * 1.5)) : late + 7);
   for (let t = 0; t <= horizon; t += 7) {
     const clamp = (w) => (dir < 0 ? Math.max(w, g) : Math.min(w, g));
     cone.push({ date: addDays(today, t), mid: r1(clamp(now + dir * mid * t)), fast: r1(clamp(now + dir * fast * t)), slow: r1(clamp(now + dir * slow * t)) });
   }
   const fmt = (d) => (d === null ? null : addDays(today, d));
   return {
-    status: 'ok', nowKg: now, goalKg: g, slopeKgPerWeek: slopeWk,
-    earliest: fmt(early), likely: fmt(likely), latest: fmt(late), latestOpen: late === null || late >= MAX_DAYS,
-    cone, message: late === null || late >= MAX_DAYS ? 'The later end is open-ended at your current pace, so treat the earliest date as a hope, not a promise.' : 'A range, not a promise. It moves as your trend does.',
+    status: 'ok', nowKg: now, goalKg: g, remainingKg: r1(Math.abs(remaining)), slopeKgPerWeek: slopeWk,
+    startDate: today, endDate: addDays(today, horizon), likelyDays: likely,
+    earliest: fmt(early), likely: fmt(likely), latest: fmt(late), latestOpen: openEnded,
+    cone, message: openEnded ? 'The later end is open-ended at your current pace, so treat the earliest date as a hope, not a promise.' : 'A range, not a promise. It moves as your trend does.',
   };
 }
 

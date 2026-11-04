@@ -23,6 +23,7 @@ const { estimateWeight } = require('../lib/weightEstimate');
 const MealPlan = require('../models/MealPlan');
 const { featureView, ALL } = require('../lib/features');
 const { nextStep } = require('../lib/nextStep');
+const { planTrendKg } = require('../lib/trendWeight');
 
 const router = express.Router();
 router.use(requireAuth);
@@ -126,7 +127,11 @@ router.get('/sleep-eating', wrap(async (req, res) => {
 }));
 router.get('/goal-range', wrap(async (req, res) => {
   const today = todayOf(req); const c = await context(req.user.id, today);
-  res.json({ success: true, ...G.goalRange({ weights: c.weights, goalKg: c.profile?.goals?.targetWeightKg, today }) });
+  // Same target and same "now" as the goal card, so "to go" reads the same everywhere.
+  const plan = c.profile?.plan || {};
+  const goalKg = plan.active && plan.targetKg > 0 ? plan.targetKg : c.profile?.goals?.targetWeightKg;
+  const nowKg = plan.active ? planTrendKg(plan, c.weights, null) : null;
+  res.json({ success: true, ...G.goalRange({ weights: c.weights, goalKg, today, nowKg }) });
 }));
 
 // ---- 6. learning

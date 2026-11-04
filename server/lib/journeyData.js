@@ -3,7 +3,7 @@ const Goal = require('../models/Goal');
 const Profile = require('../models/Profile');
 const WeightLog = require('../models/WeightLog');
 const { buildHistory, lifetimeTotals } = require('./progress');
-const { dailyTarget, expectedEnergy, macroTargets, waterTargetMl } = require('./energy');
+const { dailyTarget, expectedEnergy, macroTargets, macroRanges, waterTargetMl } = require('./energy');
 const { buildJourney } = require('./journey');
 const { addDays } = require('./dates');
 const FoodLog = require('../models/FoodLog');
@@ -16,7 +16,8 @@ function targetsFor(profile) {
   const e = expectedEnergy(profile);
   const macros = macroTargets(target, profile?.currentWeightKg, e?.direction, profile?.goals?.proteinTarget, profile?.goals?.bodyType);
   const g = profile?.goals || {};
-  return { calories: target || 0, direction: e?.direction || 'maintain', protein: macros?.protein || 0, waterMl: g.waterTargetMl || waterTargetMl(profile?.currentWeightKg) || 0, steps: g.stepsTarget || 0, exerciseMinutes: g.exerciseMinutesTarget || 0 };
+  const pr = target > 0 && Number(profile?.currentWeightKg) > 0 ? macroRanges(target, profile.currentWeightKg, e?.direction, g.proteinTarget, g.bodyType).protein : null; // the same range the Targets screen shows
+  return { calories: target || 0, direction: e?.direction || 'maintain', protein: macros?.protein || 0, proteinMin: pr?.min || 0, proteinMax: pr?.max || 0, waterMl: g.waterTargetMl || waterTargetMl(profile?.currentWeightKg) || 0, steps: g.stepsTarget || 0, exerciseMinutes: g.exerciseMinutesTarget || 0 };
 }
 
 async function loadJourney(uid, today) {

@@ -101,17 +101,35 @@ function buildTrend({ weights, plan, today, windowDays = 84 }) {
 const pick = (c) => ({ expected: c.expected, low: c.low, high: c.high });
 
 /**
- * Where you are NOW, measured for the CURRENT plan. The all-time trend line starts at the very first weigh-in ever, so after an
- * older, heavier weight it can sit above the plan's start weight and progress read "0 kg done" for ever. This line starts at the
- * plan's own start weight (on its start date) and follows only the weigh-ins made since. Without an active plan: the all-time trend.
- * @returns kg (smoothed) or null
+ * ONE definition of "where you are now": the average of your weigh-ins in the 7 days up to your latest one (one reading per day, the
+ * last one wins). The goal card, the arrival date and the scale-jump card all use this, so they can never show different "now" weights.
+ * @param points [{date, weightKg}] any order
+ * @returns {{kg:number, latest:string, count:number}|null}
+ */
+function recentAverage(points) {
+  const byDate = new Map();
+  for (const p of points || []) if (p && p.date && Number(p.weightKg) > 0) byDate.set(String(p.date).slice(0, 10), Number(p.weightKg));
+  const dates = [...byDate.keys()].sort();
+  if (!dates.length) return null;
+  const latest = dates[dates.length - 1];
+  const recent = dates.filter((d) => diffDays(d, latest) <= 6).map((d) => byDate.get(d));
+  return { kg: r2(recent.reduce((a, b) => a + b, 0) / recent.length), latest, count: recent.length };
+}
+
+/**
+ * Where you are NOW, measured for the CURRENT plan.
+ * - Starts counting at the plan's own start weight, so an older, heavier weight never hides your progress.
+ * - Once you have weighed in since the plan started, "now" is the AVERAGE of your weigh-ins in the 7 days up to your latest one.
+ *   (The all-day smoothing line is seeded with the start weight and trails behind a real change, which made "kg done" read too low.)
+ * - No weigh-in since the start: the start weight itself (0 kg done), never a guess.
+ * @returns kg or null
  */
 function planTrendKg(plan, weights, fallbackKg = null) {
   const startKg = Number(plan && plan.startKg), startDate = plan && plan.startDate;
   if (!(plan && plan.active && startKg > 0 && startDate)) return fallbackKg;
-  const since = (weights || []).filter((w) => w && w.date >= startDate).map((w) => ({ date: w.date, weightKg: Number(w.weightKg) }));
-  const line = smoothTrend([{ date: startDate, weightKg: startKg }, ...since]);
-  return line.length ? line[line.length - 1].trendKg : fallbackKg;
+  const since = (weights || []).filter((w) => w && w.date >= startDate);
+  const avg = recentAverage(since);
+  return avg ? avg.kg : startKg;
 }
 
-module.exports = { planTrendKg, smoothTrend, corridorAt, corridorStatus, trendRate, buildTrend, maxSafeWeeklyLossKg };
+module.exports = { recentAverage, planTrendKg, smoothTrend, corridorAt, corridorStatus, trendRate, buildTrend, maxSafeWeeklyLossKg };

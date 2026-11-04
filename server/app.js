@@ -71,7 +71,7 @@ function createApp({ allowedOrigins = [] } = {}) {
 
   app.get('/api/health', (req, res) => {
     stats.ping(pingSource(req.headers));
-    return res.status(200).json({ success: true, status: 'healthy', service: 'FlexFit API', version: require('./package.json').version, db: require('mongoose').connection.readyState === 1 ? 'connected' : 'connecting', uptimeSec: Math.round(process.uptime()), timestamp: new Date().toISOString(), mail: require('./lib/mailer').mailStatus().provider || 'not-configured', google: require('./lib/googleClient').configured() ? 'configured' : 'not-configured' });
+    return res.status(200).json({ success: true, status: 'healthy', service: 'FlexFit API', version: require('./package.json').version, apiLevel: require('./lib/apiLevel').API_LEVEL, features: require('./lib/apiLevel').FEATURES, db: require('mongoose').connection.readyState === 1 ? 'connected' : 'connecting', uptimeSec: Math.round(process.uptime()), timestamp: new Date().toISOString(), mail: require('./lib/mailer').mailStatus().provider || 'not-configured', google: require('./lib/googleClient').configured() ? 'configured' : 'not-configured' });
   });
   app.get('/api/version', (req, res) => res.status(200).json({ success: true, version: pkg.version, service: 'FlexFit API' }));
 

@@ -17,6 +17,9 @@
 .cc-cone{fill:var(--primary,#6c4cf1);opacity:.18}
 .cc-goal{stroke:var(--muted,#999);stroke-dasharray:4 4}
 .cc-goal-label{font-size:10px;fill:var(--muted,#888)}
+.cc-arrival{fill:var(--primary,#6c4cf1);stroke:var(--surface,#fff);stroke-width:1.5}
+.cc-tick{font-size:9px;fill:var(--muted,#888)}
+.cc-tick.bold{fill:var(--text,#222);font-weight:700}
 .cc-bullets{padding-left:18px;margin:8px 0;display:grid;gap:4px}
 .cc-insights{display:grid;gap:12px;margin:12px 0}
 .link-button{background:none;border:0;color:var(--primary,#6c4cf1);cursor:pointer;font:inherit;padding:8px 0;min-height:44px}

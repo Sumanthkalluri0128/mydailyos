@@ -14,6 +14,17 @@ function caloriesOnTrack(calories, target, direction) {
   return calories >= target * 0.6 && calories <= target * 1.08; // lose / maintain: not over, and not crash-dieting
 }
 
+/**
+ * Protein counts as done when the day lands IN RANGE (the same min..max range the Targets screen shows).
+ * With no range known (old payloads) it falls back to the old rule: at least 90% of the goal.
+ */
+function proteinInRange(protein, t = {}) {
+  const p = Number(protein) || 0;
+  if (!(t.protein > 0)) return false;
+  if (t.proteinMin > 0) return p >= t.proteinMin && (!(t.proteinMax > 0) || p <= t.proteinMax);
+  return p >= t.protein * 0.9;
+}
+
 /** Which of the day's targets were met. `t` = { calories, direction, protein, waterMl, steps, exerciseMinutes }. */
 const { calorieTargetFor } = require('./eventExtraPure');
 function dayHits(day, t = {}) {
@@ -21,7 +32,7 @@ function dayHits(day, t = {}) {
   return {
     log: (d.calories > 0) || (d.waterMl > 0) || (d.exerciseMinutes > 0) || (d.tasksCompleted > 0) || (d.habitsCompleted > 0) || !!d.weighIn,
     calories: caloriesOnTrack(d.calories, calorieTargetFor(t, d.date), t.direction), // a festival / trip / diet-break day is judged against its widened budget
-    protein: t.protein > 0 && d.protein >= t.protein * 0.9,
+    protein: proteinInRange(d.protein, t),
     water: t.waterMl > 0 && d.waterMl >= t.waterMl,
     move: t.exerciseMinutes > 0 && d.exerciseMinutes >= t.exerciseMinutes,
     steps: t.steps > 0 && d.steps >= t.steps,
@@ -76,7 +87,12 @@ function dailyQuests(day, t, steps) {
     add('calories', '🍽️', t.direction === 'gain' ? 'Fuel up to your target' : 'Stay inside your calorie budget', eaten, cal, 'kcal', h.calories,
       eaten === 0 ? 'Log your first meal to start this quest.' : t.direction === 'gain' ? `${Math.max(0, Math.round(cal * 0.92 - eaten))} kcal to go.` : eaten > cal * 1.08 ? 'Over budget today — a lighter next meal and a walk bring it back.' : `${Math.max(0, Math.round(cal - eaten))} kcal left.`);
   }
-  if (t.protein > 0) add('protein', '🥚', 'Hit your protein', d.protein || 0, t.protein, 'g', h.protein, `${Math.max(0, Math.round(t.protein * 0.9 - (d.protein || 0)))} g to go.`);
+  if (t.protein > 0) {
+    const eaten = d.protein || 0, lo = t.proteinMin > 0 ? t.proteinMin : Math.round(t.protein * 0.9), hi = t.proteinMax > 0 ? t.proteinMax : null;
+    const range = hi ? `${lo} to ${hi} g` : `${lo} g or more`;
+    add('protein', '🥚', 'Land your protein in range', eaten, t.protein, 'g', h.protein,
+      h.protein ? `In range (${range}).` : hi && eaten > hi ? `A little above the ${range} range. Tomorrow, ease back slightly.` : `${Math.max(0, Math.round(lo - eaten))} g more to be in range (${range}). Your target is ${Math.round(t.protein)} g.`);
+  }
   if (t.waterMl > 0) add('water', '💧', 'Drink your water', d.waterMl || 0, t.waterMl, 'ml', h.water, `${Math.max(0, Math.round(t.waterMl - (d.waterMl || 0)))} ml to go.`);
   if (t.steps > 0) add('steps', '👟', 'Walk your steps', d.steps || 0, t.steps, 'steps', h.steps, `${Math.max(0, Math.round(t.steps - (d.steps || 0)))} steps to go.`);
   if (t.exerciseMinutes > 0) add('move', '🏋️', 'Train', d.exerciseMinutes || 0, t.exerciseMinutes, 'min', h.move, `${Math.max(0, Math.round(t.exerciseMinutes - (d.exerciseMinutes || 0)))} min to go.`);
@@ -225,4 +241,4 @@ function buildJourney({ days, targets, today, totals, weights, profile, goals = 
   };
 }
 
-module.exports = { weekChapter, weekChests, weekStartOf, caloriesOnTrack, dayHits, dayXp, xpForLevel, levelFor, buildXp, dailyQuests, weeklyMissions, streakMilestones, weightJourney, goalProgress, buildJourney, GOAL_METRICS, XP_PER, STREAK_STEPS };
+module.exports = { proteinInRange, weekChapter, weekChests, weekStartOf, caloriesOnTrack, dayHits, dayXp, xpForLevel, levelFor, buildXp, dailyQuests, weeklyMissions, streakMilestones, weightJourney, goalProgress, buildJourney, GOAL_METRICS, XP_PER, STREAK_STEPS };

@@ -20,6 +20,8 @@ export default function NorthStarPanel() {
   const [targetKg, setTargetKg] = useState("");
   const [byDate, setByDate] = useState("");
   const [preview, setPreview] = useState(null);
+  const [choice, setChoice] = useState(null);     // { keep, fresh } from the preview: an old start that a re-save would otherwise reset
+  const [ask, setAsk] = useState(null);           // the save waiting for "keep your old start, or start fresh?"
   const [rAt, setRAt] = useState(""); const [rText, setRText] = useState("");
   const [eTitle, setETitle] = useState(""); const [eStart, setEStart] = useState(today); const [eEnd, setEEnd] = useState(today);
   const [extra, setExtra] = useState("900"); const [repeats, setRepeats] = useState("0"); const [wi, setWi] = useState(null);
@@ -35,10 +37,17 @@ export default function NorthStarPanel() {
   useEffect(() => {
     const k = Number(targetKg);
     if (!(k > 0)) { setPreview(null); return undefined; }
-    const t = setTimeout(() => api("GET", `/api/plan/preview?targetKg=${k}${byDate ? `&byDate=${byDate}` : ""}&today=${today}`).then((r) => setPreview(r.derived)).catch((e) => setPreview({ ok: false, reason: e.message })), 400);
+    const t = setTimeout(() => api("GET", `/api/plan/preview?targetKg=${k}${byDate ? `&byDate=${byDate}` : ""}&today=${today}`).then((r) => { setPreview(r.derived); setChoice(r.startChoice || null); }).catch((e) => setPreview({ ok: false, reason: e.message })), 400);
     return () => clearTimeout(t);
   }, [targetKg, byDate, today]);
 
+  // Re-saving an active plan used to restart progress at 0. Ask first when there is an old start that differs from today.
+  const save = (body) => {
+    if (active && choice) { setAsk(body); return; }
+    run(() => api("PUT", `/api/plan?today=${today}`, body), "Your plan is set.");
+  };
+  const confirmStart = (startMode) => { const body = { ...ask, startMode }; setAsk(null); run(() => api("PUT", `/api/plan?today=${today}`, body), startMode === "keep" ? "Your plan is updated. Your start is unchanged." : "Fresh start from today."); };
+  const startText = choice ? `Your plan started at ${choice.keep.startKg} kg on ${choice.keep.startDate}. Today you are ${choice.fresh.startKg} kg.` : "";
   const run = async (fn, ok) => { try { await fn(); notify(ok, "success"); load(); } catch (e) { notify(e.message, "error"); } };
   if (!d) return null;
   const hide = d.safety.hideNumbers; const mask = (s) => (hide ? "••" : s);
@@ -55,10 +64,20 @@ export default function NorthStarPanel() {
         {preview && (
           <div className="fl-preview">
             {preview.ok === false ? <p className="ink">{preview.reason}</p> : <><strong>{preview.direction === "maintain" ? "Maintain" : `About ${preview.paceKg} kg a week`}</strong><p className="ink">{preview.note}</p>
-              {preview.feasible === false && preview.suggestedDate && <button className="fl-btn ghost" onClick={() => run(() => api("PUT", `/api/plan?today=${today}`, { targetKg: Number(targetKg), byDate, useSafeDate: true }), "Your plan is set.")}>Use the safer date ({preview.suggestedDate})</button>}</>}
+              {preview.feasible === false && preview.suggestedDate && <button className="fl-btn ghost" onClick={() => save({ targetKg: Number(targetKg), byDate, useSafeDate: true })}>Use the safer date ({preview.suggestedDate})</button>}</>}
           </div>
         )}
-        <button className="fl-btn" disabled={!preview || preview.ok === false} onClick={() => run(() => api("PUT", `/api/plan?today=${today}`, { targetKg: Number(targetKg), byDate }), "Your plan is set.")}>{active ? "Update my plan" : "Start my plan"}</button>
+        <button className="fl-btn" disabled={!preview || preview.ok === false} onClick={() => save({ targetKg: Number(targetKg), byDate })}>{active ? "Update my plan" : "Start my plan"}</button>
+        {ask && (
+          <div className="fl-preview" role="alertdialog" aria-label="Keep your old start or start fresh">
+            <strong>Keep your old start, or start fresh?</strong>
+            <p className="ink">{hide ? "Your plan has an earlier start weight than today." : <WeightReveal compact reaction={false} text={startText} />}</p>
+            <p className="ink">Keeping it counts all the progress you have made. Starting fresh sets today as the new start, so progress begins again at zero.</p>
+            <button className="fl-btn" onClick={() => confirmStart("keep")}>Keep my old start</button>
+            <button className="fl-btn ghost" onClick={() => confirmStart("fresh")}>Start fresh from today</button>
+            <button className="fl-chip" onClick={() => setAsk(null)}>Cancel</button>
+          </div>
+        )}
       </div>
 
       <div className="fl-card">

@@ -59,6 +59,15 @@ export function say(who, mood = "hype", seed) {
 const n0 = (x) => Math.round(x || 0);
 const hour = () => new Date().getHours();
 
+/**
+ * One line about the next open quest. Protein is judged against a RANGE (e.g. 125 to 160 g), so "88% of 139 g" next to "2 g to go"
+ * (2 g to the bottom of the range) used two different yardsticks in one sentence. For protein we say what you have and the distance to the range.
+ */
+export function questLine(q) {
+  if (q.id === "protein" && q.hint) return `${q.title}: ${q.value} g so far. ${q.hint}`.trim();
+  return `${q.title}: ${q.value}/${q.target} ${q.unit} (${q.pct}%). ${q.hint || ""}`.trim();
+}
+
 /** Comments about what is happening in the person's day. Returns [{mood, text}], best first. */
 export function insights(ctx, who) {
   if (!ctx) return [];
@@ -72,7 +81,7 @@ export function insights(ctx, who) {
     if (!open.length) out.push({ mood: "party", text: "All of today's quests are done! That's a perfect day. 🎉", w: 4 });
     else {
       const next = [...open].sort((a, b) => b.pct - a.pct)[0];
-      out.push({ mood: next.id === "water" ? "drink" : next.id === "move" || next.id === "steps" ? "lift" : next.id === "protein" || next.id === "calories" ? "eat" : "think", text: `${next.title}: ${next.value}/${next.target} ${next.unit} (${next.pct}%). ${next.hint || ""}`.trim(), w: 2 });
+      out.push({ mood: next.id === "water" ? "drink" : next.id === "move" || next.id === "steps" ? "lift" : next.id === "protein" || next.id === "calories" ? "eat" : "think", text: questLine(next), w: 2 });
     }
     out.push({ mood: "think", text: `${q.done}/${q.total} quests done today — ${q.xpAvailable - q.xpEarned} XP still up for grabs.`, w: 1 });
   }

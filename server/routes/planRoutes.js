@@ -15,6 +15,7 @@ const { addDays, diffDays, todayUtc } = require('../lib/dates');
 const { catalogueFoods } = require('../lib/foodCache');
 const { loadCore, corridorPlan } = require('../lib/planData');
 const { smoothTrend, buildTrend, trendRate, maxSafeWeeklyLossKg, planTrendKg } = require('../lib/trendWeight');
+const { resolveStart, startChoice } = require('../lib/planStart');
 const { estimateWeight, analysisRate, estimateNote } = require('../lib/weightEstimate');
 const { weeklyScore } = require('../lib/fatLossScore');
 const { overStatus, rootCauses, localHour } = require('../lib/overDays');
@@ -94,20 +95,21 @@ router.put('/', wrap(async (req, res) => {
   const derived = derivePlan({ currentKg: profile.currentWeightKg, targetKg, byDate, today, heightCm: profile.heightCm, adherence: adherenceOf(core.days, core.targets, core.sleep, core.strengthDates, today) });
   if (!derived.ok) throw new HttpError(400, derived.reason);
   const useSafe = req.body?.useSafeDate === true && derived.suggestedDate;
+  const start = resolveStart({ plan: profile.plan, requested: req.body?.startMode, currentKg: profile.currentWeightKg, today });
   const set = {
-    'plan.active': true, 'plan.startKg': profile.currentWeightKg, 'plan.startDate': today, 'plan.targetKg': targetKg,
+    'plan.active': true, 'plan.startKg': start.startKg, 'plan.startDate': start.startDate, 'plan.targetKg': targetKg,
     'plan.byDate': useSafe ? derived.suggestedDate : byDate || derived.suggestedDate || '', 'plan.paceKg': derived.paceKg, 'plan.focus': derived.focus,
     'goals.targetWeightKg': targetKg, 'goals.weeklyPaceKg': derived.paceKg,
   };
   await Profile.updateOne({ userId: uid }, { $set: set }, { upsert: true });
-  res.json({ success: true, derived, plan: set });
+  res.json({ success: true, derived, plan: set, startMode: start.mode });
 }));
 
 // Preview without saving: what pace and date would this goal mean?
 router.get('/preview', wrap(async (req, res) => {
   const today = todayOf(req); const profile = await ensureProfile(req.user.id);
   const derived = derivePlan({ currentKg: profile.currentWeightKg, targetKg: v.number(req.query.targetKg, 'targetKg', { min: 20, max: 400 }), byDate: req.query.byDate ? v.date(req.query.byDate, 'byDate') : '', today, heightCm: profile.heightCm });
-  res.json({ success: true, derived });
+  res.json({ success: true, derived, startChoice: startChoice({ plan: profile.plan, currentKg: profile.currentWeightKg, today }) });
 }));
 
 router.patch('/focus', wrap(async (req, res) => {
