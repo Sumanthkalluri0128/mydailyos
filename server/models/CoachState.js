@@ -17,6 +17,8 @@ const schema = new S({
   dietBreak: { kind: { type: String, default: '' }, from: { type: String, default: '' }, to: { type: String, default: '' } },
   // The weekly decision ladder (lib/weeklyDecision.js): slow weeks, ladder level, last change, and the decision currently on screen.
   weekly: { type: S.Types.Mixed, default: null },
+  // The daily decision (lib/dailyDecision.js): today's view of the weekly plan. Cached per day and per weekly decision; it never changes the plan.
+  daily: { type: S.Types.Mixed, default: null },
   // What the coach changed and what happened afterwards (newest first, capped), and the one-tap undo for the last automatic change.
   changelog: { type: [S.Types.Mixed], default: [] },
   autoUndo: { type: S.Types.Mixed, default: null },

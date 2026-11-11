@@ -131,6 +131,22 @@ function BodyProgress({ t, busy, run }) {
   );
 }
 
+/** The DAILY decision (GET /api/coach/daily): today's view of the weekly plan. Read-only by design: only the weekly coach changes the plan. */
+function DailyCard({ busy }) {
+  const [d, setD] = useState(null);
+  useEffect(() => { call(`/api/coach/daily?today=${getLocalDate()}`).then((j) => setD(j.decision)).catch(() => {}); }, [busy]);
+  if (!d || !d.targets) return null;
+  const tg = d.targets, rng = (x) => `${x.min}\u2013${x.max} g`;
+  const aim = tg.protein.aim && tg.protein.aim !== tg.protein.goal ? ` (aim ${tg.protein.aim} g today)` : "";
+  return (
+    <section className="dg" aria-label={`Today: ${d.headline}`}>
+      <b className="dg-title">Today: {d.headline}</b>
+      <ul>{(d.messages || []).map((m, i) => <li key={i}>{m}</li>)}</ul>
+      <span className="dg-sub">{fmt(tg.calories)} kcal \u00b7 protein {rng(tg.protein)}{aim} \u00b7 carbs {rng(tg.carbs)} \u00b7 fat {rng(tg.fat)}{tg.waterMl ? ` \u00b7 water ${(tg.waterMl / 1000).toFixed(1)} L` : ""}</span>
+    </section>
+  );
+}
+
 export default function CoachHub() {
   const { t } = useT();
   const [hub, setHub] = useState(null);
@@ -221,6 +237,8 @@ export default function CoachHub() {
           {!!w.outliers && <p className="dg-sub">{t("coach.weekly.outliers", { n: w.outliers })}</p>}
         </section>
       )}
+
+      <DailyCard busy={busy} />
 
       <OfferCard offer={offer} t={t} busy={busy} run={run} />
       <TaperCard taper={taper} t={t} busy={busy} run={run} />

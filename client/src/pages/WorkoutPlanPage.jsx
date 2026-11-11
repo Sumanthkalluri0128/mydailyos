@@ -9,6 +9,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { apiFetch } from "../config/api";
 import { API_URL } from "../config";
 import { getLocalDate } from "../utils/date";
+import { expectedEnergy, macroRanges, waterTargetMl } from "../utils/energy";
 import { currentOwner } from "../utils/cacheOwner";
 import { notify } from "../utils/notify";
 import { confirmAction } from "../utils/confirm";
@@ -57,7 +58,7 @@ async function sendSmart(rec, today, phase) {
   return r.json().catch(() => ({}));
 }
 
-export default function WorkoutPlanPage({ startView }) {
+export default function WorkoutPlanPage({ startView, profile }) {
   const owner = useMemo(() => currentOwner(), []);
   const [today, setToday] = useState(getLocalDate());
   const [st, setSt] = useState(() => { const s = loadState(owner); return s.startDate ? s : { ...s, startDate: getLocalDate() }; });
@@ -257,7 +258,7 @@ export default function WorkoutPlanPage({ startView }) {
           onStart={startAsk} onResume={resume} onDiscard={async () => { if (await confirmAction("This deletes everything you logged in this workout.", { title: "Discard workout?", confirmText: "Discard", cancelText: "Keep it" })) discard(); }}
           onOpen={(id) => setDayOpen(id)} go={setView} today={today} activeDay={activeDay} onWay={(w) => setWay(shownBase, w)} onSkip={skipDay} onApply={applySuggestion} />
       )}
-      {view === "plan" && <PlanView plan={plan} smart={smart} smartOn={smartOn} st={st} setSt={setSt} today={today} onOpen={(id) => setDayOpen(id)} onSource={setSource} weightKg={weightKg} weightFromBody={!!(body && body.plan.body)} onSetup={() => { setBodyTab("me"); setView("body"); }} />}
+      {view === "plan" && <PlanView plan={plan} smart={smart} smartOn={smartOn} st={st} setSt={setSt} today={today} onOpen={(id) => setDayOpen(id)} onSource={setSource} weightKg={weightKg} weightFromBody={!!(body && body.plan.body)} profile={profile} onSetup={() => { setBodyTab("me"); setView("body"); }} />}
       {view === "body" && <div className="wp-body"><BodyPlanPage embedded seed={smart.data} startTab={bodyTab} onSaved={() => { window.dispatchEvent(new Event("ff:refresh")); smart.reload(); }} /></div>}
       {view === "library" && <LibraryView list={library} favs={st.favs} onFav={onFav} openSheet={openSheet} />}
       {view === "history" && <HistoryView st={st} setSt={setSt} today={today} go={setView} />}
@@ -470,7 +471,23 @@ function ItemRow({ it, swaps, openSheet, sets, week }) {
 }
 
 // ================================================================================================================ Plan
-function PlanView({ plan, smart, smartOn, st, setSt, today, onOpen, onSource, weightKg, weightFromBody, onSetup }) {
+// Same numbers as the Macros Today card (one shared energy model). Falls back to the static guide only when no profile is loaded.
+function nutritionRows(profile) {
+  const e = profile ? expectedEnergy(profile) : null;
+  if (!e) return GUIDE.nutrition;
+  const g = profile.goals || {};
+  const r = macroRanges(e.calorieTarget, e.weightKg, e.direction, g.proteinTarget, g.bodyType);
+  const rng = (x) => `${x.min}\u2013${x.max} g (goal ${x.goal} g)`;
+  const water = waterTargetMl(e.weightKg);
+  return [
+    ["Calories", `~${Math.round(e.calorieTarget).toLocaleString()} kcal`],
+    ["Protein", rng(r.protein)], ["Carbs", rng(r.carbs)], ["Fat", rng(r.fat)],
+    ["Fiber", `${r.fiber.goal}+ g`],
+    ["Water", water ? `~${(water / 1000).toFixed(1)} L / day` : GUIDE.nutrition[5][1]],
+  ];
+}
+
+function PlanView({ plan, smart, smartOn, st, setSt, today, onOpen, onSource, weightKg, weightFromBody, profile, onSetup }) {
   const smartFlag = useFlag("smart-program", true);
   const [edit, setEdit] = useState(false);
   const [w, setW] = useState(String(st.weightKg));
@@ -559,7 +576,7 @@ function PlanView({ plan, smart, smartOn, st, setSt, today, onOpen, onSource, we
             </details>
             <details className="wp-card wp-acc">
               <summary>Nutrition targets (daily)</summary>
-              <dl className="wp-dl">{GUIDE.nutrition.map(([k, v]) => <div key={k}><dt>{k}</dt><dd>{v}</dd></div>)}</dl>
+              <dl className="wp-dl">{nutritionRows(profile).map(([k, v]) => <div key={k}><dt>{k}</dt><dd>{v}</dd></div>)}</dl>
               <h4>Pre-workout (30–60 min before)</h4>
               <ul className="wp-list">{GUIDE.pre.map((p) => <li key={p}>{p}</li>)}</ul>
               <h4>Post-workout (within 60 min)</h4>

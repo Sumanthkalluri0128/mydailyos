@@ -30,6 +30,7 @@ const { planTrendKg } = require('../lib/trendWeight');
 const { dayGuide, entryCheck, suggestActivityLevel, isTrained, weekdayMon0 } = require('../lib/dailyCoach');
 const { loadDaily, refreshAutoActivity } = require('../lib/dailyCoachData');
 const { weeklyDecision } = require('../lib/weeklyDecision');
+const { dailyDecision, fastTrend } = require('../lib/dailyDecision');
 const Readiness = require('../models/Readiness');
 const BodyPlanSession = require('../models/BodyPlanSession');
 const ActivityLog = require('../models/ActivityLog');
@@ -426,7 +427,7 @@ async function applyChange({ uid, st, today, dec, auto = false, keepDecision = f
   const entry = logEntry({ dec, today, auto, target: e ? e.calorieTarget : null });
   st.changelog = pushLog(st.changelog, entry);
   st.autoUndo = { date: today, action: dec.action, change: entry.change, auto, goals: before, dietBreak: a.type === 'dietBreak' ? prevDietBreak : undefined, weekly: prevWeekly, keepDecision: keepDecision || undefined };
-  st.markModified('changelog'); st.markModified('autoUndo');
+  st.markModified('changelog'); st.markModified('autoUndo'); dailyStale(st);
   return { entry, kind: a.type === 'steps' ? 'steps' : a.type === 'dietBreak' ? 'break' : a.type === 'targetDate' ? null : 'calorie' };
 }
 
@@ -460,16 +461,21 @@ const withUserLock = (uid, fn) => withProcessLock(uid, () => withLease(lockStore
 
 /** The few cheap facts that can change this week's decision (lib/weeklyRefresh.js). Small queries only. */
 async function quickSignals(uid, today, strengthStatus = null) {
-  const [readiness, waists, weighDates, foodDates, sess] = await Promise.all([
+  const [readiness, waists, weighDates, foodDates, sess, weightRows, prof] = await Promise.all([
     Readiness.find({ userId: uid, date: { $gte: addDays(today, -14), $lte: today } }).select('date sleepHours energy soreness stress').lean(),
     HealthLog.find({ userId: uid, type: 'waist', date: { $gt: addDays(today, -36), $lte: today } }).select('date').lean(),
     WeightLog.distinct('date', { userId: uid, date: { $gt: addDays(today, -14), $lte: today } }),
     FoodLog.distinct('date', { userId: uid, date: { $gt: addDays(today, -14), $lte: today } }),
     BodyPlanSession.find({ userId: uid, date: { $gte: addDays(today, -14), $lte: today } }).select('date updatedAt').limit(60).lean(),
+    WeightLog.find({ userId: uid, date: { $gt: addDays(today, -35), $lte: today } }).sort({ date: 1, createdAt: 1 }).select('date weightKg').lean(),
+    Profile.findOne({ userId: uid }).lean(),
   ]);
   const stamps = (sess || []).map((r) => (r.updatedAt ? new Date(r.updatedAt).toISOString() : r.date)).sort();
+  // The daily engine's early warning: the weekly engine's own "too fast" test, so the weekly coach re-checks today instead of at the next review.
+  const e = prof ? expectedEnergy(prof) : null;
+  const trendFast = e ? fastTrend({ weights: (weightRows || []).map((r) => ({ date: r.date, weightKg: Number(r.weightKg) })), today, direction: e.direction, weightKg: e.weightKg }).fast : false;
   return signalsOf({ recoveryLow: recoverySummary(readiness || [], today).low, waistDates: (waists || []).map((w) => w.date), weighIns14: (weighDates || []).length, foodDays14: (foodDates || []).length,
-    sessionStamp: `${stamps.length}:${stamps[stamps.length - 1] || ''}`, strengthStatus });
+    sessionStamp: `${stamps.length}:${stamps[stamps.length - 1] || ''}`, strengthStatus, trendFast });
 }
 
 /** Everything in the saved weekly state EXCEPT the bookkeeping of the last review: this is the state a re-check starts from. */
@@ -571,6 +577,34 @@ router.post('/weekly/apply', body(s.object({ today: TODAY, decisionId: s.string(
   });
   res.json({ success: true, decision });
 }));
+// ---- Daily decision: works UNDER the weekly decision (lib/dailyDecision.js). It reads the weekly decision, never changes the plan (no apply),
+// and its only influence on the plan is the early 'trend-fast' signal that makes the weekly engine re-check (see quickSignals / weeklyRefresh).
+// Order matters: the weekly engine runs FIRST (it is cheap when already settled), then the daily one reads what it decided. They never run
+// inside each other's lock, so they cannot deadlock.
+const weeklyKey = (w) => (w && w.decision ? `${w.decision.id || w.decision.action}:${w.decision.applied ? 1 : 0}:${w.decision.date || ''}:${w.decision.refreshReason || ''}` : 'none');
+const dailySettled = (st, today) => { const d = st.daily; return !!(d && d.decision && d.date === today && !d.dirty && d.weeklyKey === weeklyKey(st.weekly)); };
+async function dailyView(uid, today) {
+  const wk = await weeklyView(uid, today);                                       // 1. the weekly decision is current (may re-check on 'trend-fast')
+  if (dailySettled(wk.st, today)) return { decision: wk.st.daily.decision, cached: true };
+  return withUserLock(uid, async () => {                                          // 2. the daily one reads it
+    const st = await getState(uid);
+    if (dailySettled(st, today)) return { decision: st.daily.decision, cached: true };
+    const d = await loadDaily(uid, today);
+    const dec = dailyDecision({ profile: d.profile, days: d.days, today, weekly: { decision: st.weekly && st.weekly.decision, state: cleanState(st.weekly) || {} }, dietBreakActive: dietBreakOn(st, today) });
+    const view = { ...dec, date: today };
+    st.daily = { date: today, dirty: false, weeklyKey: weeklyKey(st.weekly), decision: view };
+    st.markModified('daily');
+    await st.save();
+    return { decision: view, cached: false };
+  });
+}
+router.get('/daily', wrap(async (req, res) => {
+  const { decision, cached } = await dailyView(req.user.id, todayOf(req));
+  res.json({ success: true, decision, cached });
+}));
+/** Any plan change (weekly apply, behind-plan offer, undo) makes today's daily numbers stale. Mutates st (the caller saves). */
+function dailyStale(st) { if (st.daily) { st.daily = { ...st.daily, dirty: true }; st.markModified('daily'); } }
+
 /** Puts back what the last applied change touched (goals, diet break, ladder state). Mutates st; the caller saves. */
 async function undoLast({ uid, st, today }) {
   if (!undoView(st.autoUndo, today)) throw new HttpError(409, 'Nothing to undo');
@@ -581,7 +615,7 @@ async function undoLast({ uid, st, today }) {
   st.weekly = { ...(u.weekly || {}), decision: u.keepDecision && u.weekly ? u.weekly.decision : null, undoneOn: today };      // the coach will not auto-apply again for 14 days
   st.changelog = (st.changelog || []).map((e, i) => (i === 0 ? { ...e, undone: true } : e));
   st.autoUndo = null;
-  st.markModified('weekly'); st.markModified('changelog'); st.markModified('autoUndo');
+  st.markModified('weekly'); st.markModified('changelog'); st.markModified('autoUndo'); dailyStale(st);
 }
 router.post('/weekly/undo', body(s.object({ today: TODAY })), wrap(async (req, res) => {
   const uid = req.user.id; const today = todayOf(req);

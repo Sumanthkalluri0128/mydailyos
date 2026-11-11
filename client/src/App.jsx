@@ -623,7 +623,7 @@ function App() {
         {shell}
         <main key="workouts" className="dashboard fx-page">
           <TabSuspense tab={currentPage}>
-            <WorkoutPlanPage key={currentPage} startView={currentPage === "bodyPlan" ? "body" : undefined} />
+            <WorkoutPlanPage key={currentPage} profile={profile} startView={currentPage === "bodyPlan" ? "body" : undefined} />
           </TabSuspense>
         </main>
       </div>

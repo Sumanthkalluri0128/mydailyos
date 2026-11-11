@@ -5,6 +5,8 @@ const { wrap } = require('../lib/http');
 const v = require('../lib/validate');
 const { refreshStoredTarget } = require('../lib/profileEnergy');
 const { refreshAutoActivity } = require('../lib/dailyCoachData');
+const CoachState = require('../models/CoachState');
+const { markDailyDirty } = require('../lib/coachDirty');
 const { endBreak, breakExpired } = require('../lib/planState');
 const { todayUtc } = require('../lib/dates');
 const { diffTargets } = require('../lib/simpleGoals');
@@ -73,6 +75,7 @@ router.patch('/', wrap(async (req, res) => {
     update,
     { new: true, upsert: true, setDefaultsOnInsert: true, runValidators: true }
   );
+  await markDailyDirty(CoachState, req.user.id);   // new goals / body numbers: today's daily decision is re-worked on the next look
   // In auto mode the saved calorie goal mirrors the plan, so exports and other readers never see a stale number.
   res.json({ success: true, profile: (await refreshStoredTarget(Profile, profile)) || profile });
 }));

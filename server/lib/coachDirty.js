@@ -5,4 +5,8 @@
 async function markCoachDirty(CoachState, uid) {
   try { await CoachState.updateOne({ userId: uid, weekly: { $ne: null }, 'weekly.dirty': { $ne: true } }, { $set: { 'weekly.dirty': true } }); } catch { /* the daily check still catches it */ }
 }
-module.exports = { markCoachDirty };
+/** A new weigh-in or a profile / goal edit changes today's numbers: the daily decision is re-worked the next time it is asked. */
+async function markDailyDirty(CoachState, uid) {
+  try { await CoachState.updateOne({ userId: uid, daily: { $ne: null }, 'daily.dirty': { $ne: true } }, { $set: { 'daily.dirty': true } }); } catch { /* the next day catches it */ }
+}
+module.exports = { markCoachDirty, markDailyDirty };

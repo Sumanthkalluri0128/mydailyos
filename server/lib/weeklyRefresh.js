@@ -1,6 +1,6 @@
 // WHEN may the cached weekly decision be re-checked before its 7 days are up?
 // The weekly decision is cached for a week so Home stays quiet and the coach never flip-flops. But a few things genuinely change what it
-// should say: a new low-recovery pattern, the first waist reading (or enough readings to compare), enough weigh-ins / food days to stop
+// should say: the trend turning unsafely fast (the daily engine's early warning), a new low-recovery pattern, the first waist reading (or enough readings to compare), enough weigh-ins / food days to stop
 // saying "not enough data", or a strength trend that flipped after new sessions and effort (RPE) taps. Everything else waits for the review.
 //
 // Safe by design (pure, no database):
@@ -16,7 +16,7 @@ const SESSION_REFRESH = { minWeighIns: 6, minFoodDays: 8, compositionSpanDays: 1
  * @param o.recoveryLow bool   o.waistDates ['YYYY-MM-DD'] waist readings in the last ~36 days   o.weighIns14 n   o.foodDays14 n
  * @param o.sessionStamp string  e.g. "4:2026-11-03" (sessions in 14 days : latest change)   o.strengthStatus 'up'|'flat'|'down'|null
  */
-function signalsOf({ recoveryLow = false, waistDates = [], weighIns14 = 0, foodDays14 = 0, sessionStamp = '', strengthStatus = null } = {}) {
+function signalsOf({ recoveryLow = false, waistDates = [], weighIns14 = 0, foodDays14 = 0, sessionStamp = '', strengthStatus = null, trendFast = false } = {}) {
   const dates = [...new Set((waistDates || []).filter(Boolean))].sort();
   return {
     recoveryLow: !!recoveryLow,
@@ -26,6 +26,7 @@ function signalsOf({ recoveryLow = false, waistDates = [], weighIns14 = 0, foodD
     foodDaysOk: Number(foodDays14) >= SESSION_REFRESH.minFoodDays,
     sessionStamp: String(sessionStamp || ''),
     strengthStatus: strengthStatus || null,
+    trendFast: !!trendFast,                       // the daily engine's early warning (lib/dailyDecision.js fastTrend): same test as the weekly 'too fast' rule
   };
 }
 
@@ -39,6 +40,7 @@ function shouldRefresh({ prev, next, decision, refreshedOn = '', today } = {}) {
   if (!prev) return { refresh: false, reason: '', adopt: true };
   if (decision.applied) return { refresh: false, reason: '', adopt: false };
   if (refreshedOn && diffDays(refreshedOn, today) <= 0) return { refresh: false, reason: '', adopt: false };
+  if (!prev.trendFast && next.trendFast) return { refresh: true, reason: 'trend-fast', adopt: false };      // a safety limit must not wait for the next weekly review
   if (!prev.recoveryLow && next.recoveryLow) return { refresh: true, reason: 'recovery-low', adopt: false };
   if (prev.recoveryLow && !next.recoveryLow) return { refresh: true, reason: 'recovery-back', adopt: false };
   if (prev.strengthStatus && next.strengthStatus && prev.strengthStatus !== next.strengthStatus) return { refresh: true, reason: 'strength', adopt: false };

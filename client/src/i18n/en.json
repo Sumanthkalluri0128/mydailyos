@@ -148,6 +148,7 @@
  "coach.weekly.appliedAuto": "Applied automatically. The coach now waits to see the effect before changing anything else.",
  "coach.weekly.outliers": "{n} unusual weigh-in(s) left out so one odd reading does not move your plan.",
  "coach.refreshed.recovery-low": "Updated early because your recovery has been low this week.",
+ "coach.refreshed.trend-fast": "Updated early because your weight trend is dropping faster than is safe.",
  "coach.refreshed.recovery-back": "Updated early because your recovery is back to normal.",
  "coach.refreshed.strength": "Updated early because your lifts changed.",
  "coach.refreshed.measurement": "Updated early because of your new waist measurement.",

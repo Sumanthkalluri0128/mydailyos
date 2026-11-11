@@ -2,6 +2,8 @@ const express = require('express');
 const WeightLog = require('../models/WeightLog');
 const Profile = require('../models/Profile');
 const { refreshStoredTarget } = require('../lib/profileEnergy');
+const CoachState = require('../models/CoachState');
+const { markCoachDirty, markDailyDirty } = require('../lib/coachDirty');
 const { requireAuth } = require('../middleware/auth');
 const { wrap, HttpError } = require('../lib/http');
 const { createOnce } = require('../lib/idempotent');
@@ -16,6 +18,8 @@ async function syncProfileWeight(userId) {
   const latest = await WeightLog.findOne({ userId }).sort({ date: -1, createdAt: -1 }).lean();
   const profile = await Profile.findOneAndUpdate({ userId }, { $set: { currentWeightKg: latest ? latest.weightKg : null } }, { upsert: true, new: true });
   await refreshStoredTarget(Profile, profile); // a new weight moves the calorie plan
+  await markCoachDirty(CoachState, userId);    // the weekly coach re-reads its signals (a fast trend is re-checked today, not next week)
+  await markDailyDirty(CoachState, userId);    // ... and today's daily decision is re-worked from the new trend
 }
 
 router.get('/', wrap(async (req, res) => {
