@@ -57,7 +57,7 @@ async function history(userId, today) {
   return { sessions, activity, weights, waists, readiness };
 }
 
-async function build(userId, wanted, override, date) {
+async function build(userId, wanted, override, date, fresh = false) {
   const today = date || todayUtc();
   // Same profile Home reads: GET /api/profile first refreshes the automatic activity level, which changes TDEE and so calories and macros.
   // Reading the raw profile here made this page (and the phone's Body plan tab) disagree with the Home macros card.
@@ -68,7 +68,7 @@ async function build(userId, wanted, override, date) {
   const chosen = profile?.goals?.bodyType || '';
   const type = wanted || chosen;
   const prefs = prefsFor(profile, override);
-  const plan = bodyPlan({ profile: profile || {}, type, measures, prefs });
+  const plan = bodyPlan({ profile: profile || {}, type, measures, prefs, fresh });
   if (plan.ready) {
     // Adapt to what was really done. Never throws into the plan: if anything is odd, the person still gets the base program.
     try {
@@ -96,7 +96,7 @@ router.post('/apply', wrap(async (req, res) => {
   const type = v.oneOf(req.body?.type, 'type', TYPE_IDS);
   const sentTraining = req.body?.training && typeof req.body.training === 'object' ? sanitizePrefs(req.body.training) : null;
   const date = req.body?.date ? v.date(req.body.date) : undefined;
-  const { profile, measures, plan } = await build(req.user.id, type, sentTraining || undefined, date);
+  const { profile, measures, plan } = await build(req.user.id, type, sentTraining || undefined, date, req.body?.recalc === true); // the Save button recalculates fresh; small training edits keep the live numbers
   if (!plan.ready) return res.status(400).json({ success: false, message: plan.message, plan });
   const trainingSet = sentTraining ? { training: sentTraining } : {};
   if (!profile?.goals?.bodyPlanStartedOn) trainingSet['goals.bodyPlanStartedOn'] = date || todayUtc(); // week counting starts the day the plan is first saved
@@ -108,7 +108,7 @@ router.post('/apply', wrap(async (req, res) => {
   }
   const set = {
     'goals.bodyType': type,
-    ...(profile?.goals?.bodyType === type && profile?.goals?.bodyPlanStartedOn ? {} : { 'goals.calorieMode': 'auto' }), // same goal re-saved: keep the live calorie mode
+    'goals.calorieMode': 'auto',
     'goals.proteinTarget': null, // automatic: follows weight and body goal
     'goals.targetWeightKg': plan.mode === 'lose' ? plan.goal.targetWeightKg : null,
     'goals.stepsTarget': plan.steps,

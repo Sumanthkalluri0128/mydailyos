@@ -83,7 +83,7 @@ export default function BodyPlanPage({ onBack, onSaved, embedded = false, seed =
   const apply = async () => {
     setBusy(true);
     try {
-      await call("/api/body-plan/apply", { method: "POST", body: JSON.stringify({ type: pick, training: prefs, date: getLocalDate() }) });
+      await call("/api/body-plan/apply", { method: "POST", body: JSON.stringify({ type: pick, training: prefs, date: getLocalDate(), recalc: true }) });
       notify("Plan saved. Your calories, macros, quests and training now follow this body goal.", "success");
       await load(pick, prefs);
       onSaved?.();

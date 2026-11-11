@@ -20,7 +20,6 @@ import { useT } from "../../i18n";
 import { CheckIn, RoughDay, SideQuest, useCoachState, PlateCard, EventMode, CravingTimer } from "../CoachCards";
 import { useCoachTone } from "../../utils/coachTone";
 import HealthyDay from "./HealthyDay";
-import { usePlanProfile } from "./usePlanProfile";
 import HomeSection from "../HomeSection";
 import EatenSheet from "./EatenSheet";
 import StatCard, { StatBar } from "./StatCard";
@@ -122,9 +121,8 @@ export default function HomeDashboard({ profile, summary, activity, water, water
   const name = (profile?.name || "").split(" ")[0];
 
   // ---- one shared energy model (same numbers as mobile + server)
-  const planProfile = usePlanProfile(profile, syncTick); // the saved body plan's calories, so Home matches Body > Eating
-  const e = expectedEnergy(planProfile);
-  const bal = dayBalance(planProfile, { eaten: summary?.calories, workout: Number(activity?.workoutCalories ?? 0), steps: Number(activity?.stepCalories || 0), extra: Number(summary?.eventExtra || 0) });
+  const e = expectedEnergy(profile);
+  const bal = dayBalance(profile, { eaten: summary?.calories, workout: Number(activity?.workoutCalories ?? 0), steps: Number(activity?.stepCalories || 0), extra: Number(summary?.eventExtra || 0) });
   const macros = e ? macroTargets(e.calorieTarget, e.weightKg, e.direction, profile?.goals?.proteinTarget, profile?.goals?.bodyType) : { protein: profile?.goals?.proteinTarget ?? 140, carbs: 250, fat: 70, fiber: 30 };
   const lim = limitTargets(bal.target || 2000);
   const over = bal.budget > 0 && bal.remaining < 0;
