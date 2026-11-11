@@ -5,7 +5,7 @@
 Vercel Production environment variable:
 
 ```text
-API_URL=https://mydailyos.onrender.com
+API_URL=https://mydailyos-268d.onrender.com
 ```
 
 The Vite config explicitly exposes `API_URL` to the browser. The resolved

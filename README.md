@@ -29,7 +29,7 @@ It does **not** use `VITE_API_URL`.
 Set:
 
 ```text
-API_URL=https://mydailyos.onrender.com
+API_URL=https://mydailyos-268d.onrender.com
 ```
 
 ### Local web development
@@ -61,8 +61,8 @@ The web and mobile apps use the same backend account system. Web tokens are stor
 After Render redeploys, check:
 
 ```text
-https://mydailyos.onrender.com/api/health
-https://mydailyos.onrender.com/api/version
+https://mydailyos-268d.onrender.com/api/health
+https://mydailyos-268d.onrender.com/api/version
 ```
 
 `/api/version` should return `2.1.0-auth`.
@@ -70,7 +70,7 @@ https://mydailyos.onrender.com/api/version
 Then the web signup request should reach:
 
 ```text
-POST https://mydailyos.onrender.com/api/auth/signup
+POST https://mydailyos-268d.onrender.com/api/auth/signup
 ```
 
 The backend now returns JSON for unknown `/api/*` routes, so an HTML `<!DOCTYPE ...>` response should no longer occur from this source.

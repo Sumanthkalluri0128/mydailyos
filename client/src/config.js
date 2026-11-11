@@ -1,5 +1,5 @@
 const rawApiUrl =
-  import.meta.env.API_URL || "https://mydailyos.onrender.com";
+  import.meta.env.API_URL || "https://mydailyos-268d.onrender.com";
 
 export const API_API_URL = rawApiUrl.replace(/\/+$/, "");
 // Cookie mode talks to the SAME address as the page (/api/... is forwarded to the server by vercel.json), so the session cookie is first-party and

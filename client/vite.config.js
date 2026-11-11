@@ -13,7 +13,7 @@ export default defineConfig(({ mode }) => {
     define: {
       __APP_VERSION__: JSON.stringify(pkg.version),
       "import.meta.env.API_URL": JSON.stringify(
-        env.API_URL || "https://mydailyos.onrender.com"
+        env.API_URL || "https://mydailyos-268d.onrender.com"
       ),
     },
   };
