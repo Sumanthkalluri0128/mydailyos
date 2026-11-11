@@ -12,7 +12,7 @@ const { wrap, HttpError } = require('../lib/http');
 const { createOnce } = require('../lib/idempotent');
 const v = require('../lib/validate');
 const { buildHistory } = require('../lib/progress');
-const { dailyTarget, expectedEnergy, macroTargets, waterTargetMl } = require('../lib/energy');
+const { dailyTarget, expectedEnergy, resolveTargets } = require('../lib/energy');
 const { addDays, todayUtc } = require('../lib/dates');
 const G = require('../lib/coachG');
 const H = require('../lib/coachH');
@@ -73,8 +73,8 @@ async function context(uid, today) {
     WeightLog.find({ userId: uid, date: { $gte: addDays(today, -60), $lte: today } }).select('date weightKg').lean(),
   ]);
   const target = dailyTarget(profile); const e = expectedEnergy(profile);
-  const macros = macroTargets(target, profile?.currentWeightKg, e?.direction, profile?.goals?.proteinTarget, profile?.goals?.bodyType);
-  const waterMl = profile?.goals?.waterTargetMl || waterTargetMl(profile?.currentWeightKg) || null;
+  const macros = resolveTargets(profile).macros;
+  const waterMl = resolveTargets(profile).waterMl;
   const sleepByDate = {}; for (const s of sleepRows) sleepByDate[s.date] = Math.max(sleepByDate[s.date] || 0, Number(s.value) || 0);
   const breakfastProtein = {}, snackKcal = {};
   for (const m of mealRows) {

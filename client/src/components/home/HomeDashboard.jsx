@@ -24,7 +24,7 @@ import HomeSection from "../HomeSection";
 import EatenSheet from "./EatenSheet";
 import StatCard, { StatBar } from "./StatCard";
 import { apiFetch } from "../../config/api";
-import { dayBalance, expectedEnergy, macroTargets, limitTargets } from "../../utils/energy";
+import { dayBalance, resolveTargets } from "../../utils/energy";
 import { getLocalDate } from "../../utils/date";
 import { notify } from "../../utils/notify";
 import { useCountUp, fireConfetti, buzz } from "../../motion/motion";
@@ -121,13 +121,14 @@ export default function HomeDashboard({ profile, summary, activity, water, water
   const name = (profile?.name || "").split(" ")[0];
 
   // ---- one shared energy model (same numbers as mobile + server)
-  const e = expectedEnergy(profile);
+  const T = resolveTargets(profile); // ONE place that turns the chosen body goal into calories, macros, water and steps
+  const e = T?.energy ?? null;
   const bal = dayBalance(profile, { eaten: summary?.calories, workout: Number(activity?.workoutCalories ?? 0), steps: Number(activity?.stepCalories || 0), extra: Number(summary?.eventExtra || 0) });
-  const macros = e ? macroTargets(e.calorieTarget, e.weightKg, e.direction, profile?.goals?.proteinTarget, profile?.goals?.bodyType) : { protein: profile?.goals?.proteinTarget ?? 140, carbs: 250, fat: 70, fiber: 30 };
-  const lim = limitTargets(bal.target || 2000);
+  const macros = T.macros;
+  const lim = T.limits;
   const over = bal.budget > 0 && bal.remaining < 0;
-  const stepsT = profile?.goals?.stepsTarget ?? 10000;
-  const exT = profile?.goals?.exerciseMinutesTarget ?? 30;
+  const stepsT = T.steps;
+  const exT = T.exerciseMinutes;
   const tw = profile?.goals?.targetWeightKg;
   const left = useCountUp(Math.abs(n0(bal.remaining)), 900);
   const waterL = useCountUp(n0(water?.totalMl), 800) / 1000;
@@ -227,7 +228,7 @@ export default function HomeDashboard({ profile, summary, activity, water, water
   const lv = ctx?.level, q = ctx?.today;
 
   const wpts = useMemo(() => [...(weightHistory || [])].sort((a, b) => String(a.date).localeCompare(String(b.date))).slice(-14).map((w) => Number(w.weightKg)).filter(Number.isFinite), [weightHistory]);
-  const wLeft = latestWeight != null && tw ? Math.abs(latestWeight - tw) : null;
+  const wLeft = profile?.progress ? profile.progress.remainingKg : null; // same kg-to-go as Progress and My Plan (server, plan start and 7-day average)
 
   const [coachState, setCoachState, reloadCoach] = useCoachState();
   // Quiet Home: optional cards appear after you have used the app enough (server rule: lib/features.js). Until the server answers, show everything as before.

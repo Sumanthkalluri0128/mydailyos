@@ -1,3 +1,4 @@
+import { resolveTargets } from "../utils/energy";
 // Drop-in replacement for components/GoalRings.jsx: rings sweep in on load, and pop + confetti + draw a check when a goal closes.
 import { useEffect, useRef, useState } from "react";
 import { buzz, fireConfetti, useCelebrateOnce, useCountUp } from "./motion";
@@ -31,10 +32,13 @@ function Ring({ label, value, target, unit, color, icon, onDone }) {
   );
 }
 
-export default function GoalRings({ summary, water, activity, goals }) {
+export default function GoalRings({ summary, water, activity, goals, profile }) {
+  const T = profile ? resolveTargets(profile) : null; // one source of truth for every screen
+  const calT = T ? T.calories : (goals?.calorieTarget ?? 1800);
+  const protT = T ? T.macros.protein : (goals?.proteinTarget ?? 140);
   const rings = [
-    { label: "Calories", icon: "🍽️", color: "#6847e8", value: summary.calories, target: goals?.calorieTarget ?? 1800, unit: "kcal" },
-    { label: "Protein", icon: "🥩", color: "#e8476f", value: summary.protein, target: goals?.proteinTarget ?? 140, unit: "g" },
+    { label: "Calories", icon: "🍽️", color: "#6847e8", value: summary.calories, target: calT, unit: "kcal" },
+    { label: "Protein", icon: "🥩", color: "#e8476f", value: summary.protein, target: protT, unit: "g" },
     { label: "Water", icon: "💧", color: "#2587d9", value: water.totalMl, target: goals?.waterTargetMl ?? 3000, unit: "ml" },
     { label: "Exercise", icon: "🔥", color: "#20a46b", value: activity.totalMinutes, target: goals?.exerciseMinutesTarget ?? 30, unit: "min" },
   ];

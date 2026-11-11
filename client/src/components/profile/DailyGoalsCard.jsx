@@ -52,14 +52,15 @@ export function DailyGoalsCard(props) {
       </select>
 
       <label>
-        Protein Target (g)
+        Protein Target (g) <small>(leave blank = automatic, matches My Plan)</small>
       </label>
 
       <input
         type="number"
         name="proteinTarget"
         min="1"
-        value={form.proteinTarget}
+        placeholder="Automatic"
+        value={form.proteinTarget ?? ""}
         onChange={handleChange}
       />
 

@@ -6,7 +6,7 @@ const { corridorAt, corridorStatus } = require('./trendWeight');
 const { computeStreaks } = require('./streaks');
 const { dayHits, dailyQuests, levelFor, buildXp, xpForLevel } = require('./journey');
 const { weeklyScore } = require('./fatLossScore');
-const { macroRanges, limitTargets, macroTargets, waterTargetMl } = require('./energy');
+const { limitTargets, waterTargetMl, resolveTargets, weightProgress } = require('./energy');
 const { bmi } = require('./safety');
 
 const r1 = (x) => Math.round(x * 10) / 10;
@@ -118,12 +118,12 @@ function checkLine({ plan, cur, weighIns, today }) {
 /** The single goal card. `plan` = profile.plan; `trendKg` = latest smoothed weight; `rate` = kg/week trend (negative = losing). */
 function goalCard({ plan, trendKg, rate = null, today, weighIns = null, range = null }) {
   if (!plan || !plan.active || !(plan.startKg > 0) || !(plan.targetKg > 0)) return { active: false, title: COPY.goal.title, empty: COPY.goal.none };
-  const dir = plan.targetKg < plan.startKg ? 'lose' : plan.targetKg > plan.startKg ? 'gain' : 'maintain';
-  const total = Math.abs(plan.startKg - plan.targetKg);
   const cur = trendKg > 0 ? trendKg : plan.startKg;
-  const done = dir === 'lose' ? plan.startKg - cur : dir === 'gain' ? cur - plan.startKg : 0;
-  const doneKg = Math.max(0, Math.min(total, done));
-  const remaining = Math.max(0, total - doneKg);
+  const wp = weightProgress({ startKg: plan.startKg, currentKg: cur, targetKg: plan.targetKg, paceKgPerWeek: plan.paceKg }); // the one progress formula
+  const dir = wp ? wp.direction : 'maintain';
+  const total = wp ? wp.exact.totalKg : Math.abs(plan.startKg - plan.targetKg);
+  const doneKg = wp ? wp.exact.doneKg : 0;
+  const remaining = wp ? wp.exact.remainingKg : 0;
   const reached = dir !== 'maintain' && remaining <= 0.05;
   const toward = rate == null ? null : (dir === 'lose' ? -rate : dir === 'gain' ? rate : null);
   const eta = dir === 'maintain' ? null : etaRange({ remainingKg: remaining, plannedPace: plan.paceKg, observedRate: toward, today });
@@ -320,14 +320,15 @@ function streakSummary(loggedDates, today) {
 function targetsView({ profile, target, direction, energy, floor }) {
   const p = profile || {}; const g = p.goals || {}; const kg = Number(p.currentWeightKg) || 0;
   const recCal = energy?.autoTarget || null;
-  const recProtein = target > 0 && kg > 0 ? macroTargets(target, kg, direction, null, g.bodyType).protein : null;
+  const T = resolveTargets({ ...p, goals: { ...g, proteinTarget: null } }); // what "automatic" would give: the recommended value
+  const recProtein = target > 0 && kg > 0 ? T.macros.protein : null;
   const recWater = waterTargetMl(kg);
-  const ranges = target > 0 ? macroRanges(target, kg, direction, g.proteinTarget, g.bodyType) : null;
+  const ranges = target > 0 ? resolveTargets(p).ranges : null;
   const limits = target > 0 ? limitTargets(target) : null;
   const row = (id, label, value, unit, recommended, why, extra = {}) => ({ id, label, value, unit, recommended, why, atRecommended: recommended != null && Number(value) === Number(recommended), ...extra });
   const basic = [
     row('calories', 'Calories', Math.round(target) || null, 'kcal', recCal, recCal ? `Worked out from your body, activity and pace (${g.weeklyPaceKg || 0.5} kg a week), and never below ${floor} kcal.` : 'Add your weight, height and age to get a worked-out number.'),
-    row('protein', 'Protein', g.proteinTarget || recProtein, 'g', recProtein, 'About 1.6 g for every kg of body weight helps you keep muscle while you change your weight.'),
+    row('protein', 'Protein', g.proteinTarget || recProtein, 'g', recProtein, `About ${kg > 0 && recProtein ? (recProtein / kg).toFixed(1) : '1.6'} g for every kg of body weight (set by your body goal) helps you keep muscle while you change your weight.`),
     row('water', 'Water', g.waterTargetMl || recWater, 'ml', recWater, 'About 35 ml for every kg of body weight, kept between 1.5 and 5 litres.'),
     row('steps', 'Steps', g.stepsTarget || 10000, 'steps', 10000, '10,000 is a friendly round goal. Raise or lower it to match your week.'),
     row('goalWeight', 'Goal weight', g.targetWeightKg || null, 'kg', null, 'Your own choice. We keep it above the healthy range for your height.'),

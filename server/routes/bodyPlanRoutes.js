@@ -20,6 +20,7 @@ const { adapt, applyAdapt, sessionHighlights } = require('../lib/bodyPlanAdapt')
 const { addDays, todayUtc } = require('../lib/dates');
 const { refreshAutoActivity } = require('../lib/dailyCoachData');
 const { refreshStoredTarget } = require('../lib/profileEnergy');
+const { resolveStart } = require('../lib/planStart');
 
 const router = express.Router();
 router.use(requireAuth);
@@ -80,7 +81,31 @@ async function build(userId, wanted, override, date, fresh = false) {
       if (a) { plan.training.program = applyAdapt(plan.training.program, a); plan.adapt = a; }
     } catch (e) { plan.adaptError = 'Your plan could not be adjusted just now, so the starting program is shown.'; }
   }
+  // A custom protein number pins Home and the phone to that value while this page shows the automatic one. Say so, instead of silently disagreeing.
+  try {
+    const pin = Number(profile?.goals?.proteinTarget);
+    if (plan.ready && plan.macros && pin > 0 && Math.abs(pin - plan.macros.protein) > 1) {
+      plan.notes = plan.notes || [];
+      plan.notes.unshift(`You set your own protein number (${Math.round(pin)} g), so Home shows that. This plan suggests ${plan.macros.protein} g. Saving this plan switches protein back to automatic so every screen agrees.`);
+      plan.proteinOverride = Math.round(pin);
+    }
+  } catch (_) { /* notes are optional */ }
   return { profile: profile || {}, measures, chosen, plan, hist };
+}
+
+/** The `plan.*` fields behind the progress cards, derived from the saved body plan. Losing: keep the old start or begin fresh. Anything else: no weight target, so no progress bar. */
+function progressRecordFor({ profile, plan, today, startMode }) {
+  const old = profile?.plan || {};
+  if (plan.mode !== 'lose' || !(plan.goal?.targetWeightKg > 0)) return old.active ? { 'plan.active': false } : {};
+  const cur = Number(profile?.currentWeightKg);
+  if (!(cur > 0)) return {};
+  const start = resolveStart({ plan: old, requested: startMode, currentKg: cur, today });
+  const weeks = Number(plan.goal.weeks) > 0 ? Number(plan.goal.weeks) : 0;
+  const d = new Date(today + 'T00:00:00Z'); d.setUTCDate(d.getUTCDate() + weeks * 7);
+  return {
+    'plan.active': true, 'plan.startKg': start.startKg, 'plan.startDate': start.startDate, 'plan.targetKg': plan.goal.targetWeightKg,
+    'plan.paceKg': plan.goal.weeklyPaceKg, 'plan.byDate': weeks ? d.toISOString().slice(0, 10) : (old.byDate || ''),
+  };
 }
 
 router.get('/', wrap(async (req, res) => {
@@ -102,7 +127,7 @@ router.post('/apply', wrap(async (req, res) => {
   if (!profile?.goals?.bodyPlanStartedOn) trainingSet['goals.bodyPlanStartedOn'] = date || todayUtc(); // week counting starts the day the plan is first saved
   if (plan.safety.some((s) => s.id === 'underweight')) {
     // Underweight: save the body goal for macros but never set a weight-loss target.
-    await Profile.updateOne({ userId: req.user.id }, { $set: { 'goals.bodyType': type, 'goals.targetWeightKg': null, 'goals.proteinTarget': null, 'goals.calorieMode': 'auto', ...trainingSet } });
+    await Profile.updateOne({ userId: req.user.id }, { $set: { 'goals.bodyType': type, 'goals.targetWeightKg': null, 'goals.proteinTarget': null, 'goals.calorieMode': 'auto', ...(profile?.plan?.active ? { 'plan.active': false } : {}), ...trainingSet } });
     try { const saved = await Profile.findOne({ userId: req.user.id }); await refreshStoredTarget(Profile, saved); } catch (_) { /* the plan is saved either way */ }
     return res.json({ success: true, applied: { bodyType: type, targetWeightKg: null, training: !!sentTraining }, measures, plan });
   }
@@ -115,6 +140,8 @@ router.post('/apply', wrap(async (req, res) => {
     ...trainingSet,
   };
   if (plan.mode === 'lose') set['goals.weeklyPaceKg'] = plan.goal.weeklyPaceKg;
+  // Choosing a body goal also starts (or ends) the weight-progress record, so the Home and Progress cards follow it everywhere.
+  Object.assign(set, progressRecordFor({ profile, plan, today: date || todayUtc(), startMode: req.body?.startMode }));
   await Profile.updateOne({ userId: req.user.id }, { $set: set });
   try { const saved = await Profile.findOne({ userId: req.user.id }); await refreshStoredTarget(Profile, saved); } catch (_) { /* the plan is saved either way */ }
   res.json({ success: true, applied: { bodyType: type, targetWeightKg: set['goals.targetWeightKg'], weeklyPaceKg: set['goals.weeklyPaceKg'] ?? null, stepsTarget: plan.steps, training: !!sentTraining }, measures, plan });

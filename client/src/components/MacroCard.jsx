@@ -1,20 +1,17 @@
-import { expectedEnergy, macroTargets, macroRanges, rangeStatus, limitTargets } from "../utils/energy";
+import { resolveTargets, rangeStatus } from "../utils/energy";
 import GoalBar from "./GoalBar";
 
 /** Protein / carbs / fat against targets that add up to the calorie target. Protein is shown here and nowhere else. */
 export default function MacroCard({ profile, summary }) {
-  const e = expectedEnergy(profile);
-  const m = e
-    ? macroTargets(e.calorieTarget, e.weightKg, e.direction, profile?.goals?.proteinTarget, profile?.goals?.bodyType)
-    : { protein: profile?.goals?.proteinTarget ?? 140, carbs: 250, fat: 70, fiber: 30 };
-  const cal = e ? e.calorieTarget : 2000;
-  const rg = e ? macroRanges(e.calorieTarget, e.weightKg, e.direction, profile?.goals?.proteinTarget, profile?.goals?.bodyType) : null;
+  const T = resolveTargets(profile);
+  const m = T.macros;
+  const rg = T.ranges;
   const STATUS = { low: "▼ below the minimum", ok: "✓ in range", high: "▲ above the maximum" };
   // One line under each bar: the healthy minimum–maximum, the goal, and where you are (words and symbols, not colour alone).
   const range = (key, value, unit = "g") => rg && (
     <p className="macro-range">Aim for <strong>{rg[key].min}–{rg[key].max} {unit}</strong> · goal {rg[key].goal} {unit} · {STATUS[rangeStatus(value, rg[key])]}</p>
   );
-  const lim = limitTargets(cal);
+  const lim = T.limits;
   const sodium = Math.round(summary.sodium || 0);
   return (
     <div className="card macro-card">

@@ -4,7 +4,7 @@
 //
 // Honest limits: body fat from a tape or from height/weight/age is an ESTIMATE (a few points either way), and every target here is a
 // starting point to adjust from the real trend, not a promise. Adults only.
-const { expectedEnergy, macroTargets, BODY_TYPES, waterTargetMl, KCAL_PER_KG } = require('./energy');
+const { expectedEnergy, resolveTargets, BODY_TYPES, waterTargetMl, KCAL_PER_KG } = require('./energy');
 const { trainingPlan } = require('./trainingPlan');
 const { navyBodyFat } = require('./bodyFat');
 const { maxSafeWeeklyLossKg } = require('./trendWeight');
@@ -129,7 +129,7 @@ function bodyPlan({ profile = {}, type, measures = {}, prefs, fresh = false } = 
   }
   const weeks = mode === 'lose' && pace > 0 ? Math.ceil(lossKg / pace) : 0;
   const calories = e ? e.calorieTarget : null;
-  const macros = calories ? macroTargets(calories, w, e.direction, null, type) : null;
+  const macros = calories ? resolveTargets(planProfile).macros : null;
   if (e && e.atFloor) safety.push({ id: 'at-floor', level: 'notice', title: 'Calories held at a safe minimum', detail: 'Your numbers would need fewer calories than is safe, so the plan stops at the floor and the pace is slower. More walking helps more than eating less.' });
   if (paceSlowed) safety.push({ id: 'pace-slowed', level: 'notice', title: 'Pace slowed to fit a safe calorie floor', detail: `At your size, a faster pace would need fewer calories than is safe. The plan uses ${pace} kg a week, so the time to your target is honest. Walking more and lifting weights move the number without eating less.` });
   if (noRoom) safety.push({ id: 'no-deficit-room', level: 'notice', title: 'Little safe room to cut food', detail: 'Your maintenance calories are already close to the safe minimum. Focus on strength training and walking; weight will move slowly and that is fine.' });

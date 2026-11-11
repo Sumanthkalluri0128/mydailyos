@@ -25,7 +25,7 @@ const PlannerPage = lazy(() => import("./pages/PlannerPage"));
 const RecipesPage = lazy(() => import("./pages/RecipesPage"));
 const OnboardingPage = lazy(() => import("./pages/OnboardingPage"));
 const AdminPage = lazy(() => import("./pages/AdminPage"));
-import { waterTargetMl } from "./utils/energy";
+import { resolveTargets } from "./utils/energy";
 import { currentOwner } from "./utils/cacheOwner";
 import { PageSkeleton } from "./motion/PageTransition";
 import { withTransition } from "./motion/motion";
@@ -707,10 +707,7 @@ function App() {
   // Targets follow body weight when it is known; saved goals are the fallback.
   // The calorie budget, ring and plan all come from the one shared model (DashboardHero / CalorieBalance).
 
-  const waterTarget = currentBoost(
-    waterTargetMl(profile?.currentWeightKg) ??
-    profile?.goals?.waterTargetMl ??
-    3000).goalMl; // plus the optional hot-day boost
+  const waterTarget = currentBoost(resolveTargets(profile)?.waterMl ?? 3000).goalMl; // plus the optional hot-day boost
 
   // ============================================================
   // WEIGHT GOAL CALCULATIONS

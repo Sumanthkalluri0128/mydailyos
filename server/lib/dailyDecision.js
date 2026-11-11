@@ -81,10 +81,10 @@ function fastTrend({ weights = [], today, direction, weightKg = 0 }) {
 
 /** Today's numbers from the one energy model (the plan the weekly decision left behind). */
 function targetsOf(profile, e, aim) {
-  const g = profile.goals || {};
-  const r = E.macroRanges(e.calorieTarget, e.weightKg, e.direction, g.proteinTarget, g.bodyType);
+  const T = E.resolveTargets(profile);
+  const r = T.ranges;
   const high = aim === 'high' ? Math.min(r.protein.max, Math.round(r.protein.goal * DW.proteinHigh)) : r.protein.goal;
-  return { calories: e.calorieTarget, protein: { ...r.protein, aim: high }, carbs: r.carbs, fat: r.fat, fiber: r.fiber, waterMl: g.waterTargetMl || E.waterTargetMl(e.weightKg) || null };
+  return { calories: e.calorieTarget, protein: { ...r.protein, aim: high }, carbs: r.carbs, fat: r.fat, fiber: r.fiber, waterMl: T.waterMl };
 }
 
 /**

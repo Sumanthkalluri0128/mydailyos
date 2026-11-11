@@ -1,3 +1,4 @@
+const { weightProgress } = require('./energy');
 // The "journey" layer that turns daily logging into progress you can feel: XP + levels, today's quests, this week's
 // missions, long-term milestones, and the person's own short / long-term goals with live progress.
 // Pure functions (no database) so every number is unit-tested. All dates are "YYYY-MM-DD".
@@ -128,19 +129,16 @@ function streakMilestones(streak) {
  * `currentKg` the latest. Works for losing and gaining; `weeksLeft` uses the chosen pace.
  */
 function weightJourney({ startKg, currentKg, targetKg, paceKgPerWeek = 0.5 }) {
-  const s = Number(startKg), c = Number(currentKg), g = Number(targetKg);
-  if (!(s > 0) || !(c > 0) || !(g > 0) || Math.abs(s - g) < 0.2) return null;
-  const dir = g < s ? 'lose' : 'gain';
-  const total = Math.abs(s - g);
-  const done = Math.max(0, Math.min(total, dir === 'lose' ? s - c : c - s));
-  const overshoot = dir === 'lose' ? c < g - 0.05 : c > g + 0.05;
+  const wp = weightProgress({ startKg, currentKg, targetKg, paceKgPerWeek });
+  if (!wp || !(Number(currentKg) > 0)) return null;
+  const { direction: dir, exact } = wp;
+  const s = Number(startKg);
   const checkpoints = [0.25, 0.5, 0.75, 1].map((f, i) => {
-    const kg = r1(dir === 'lose' ? s - total * f : s + total * f);
-    return { label: ['First quarter', 'Halfway', 'Final stretch', 'Goal'][i], kg, reached: done >= total * f - 0.001 };
+    const kg = r1(dir === 'lose' ? s - exact.totalKg * f : s + exact.totalKg * f);
+    return { label: ['First quarter', 'Halfway', 'Final stretch', 'Goal'][i], kg, reached: exact.doneKg >= exact.totalKg * f - 0.001 };
   });
-  const remaining = Math.max(0, total - done);
-  const pace = Number(paceKgPerWeek) > 0 ? Number(paceKgPerWeek) : 0.5;
-  return { direction: dir, startKg: r1(s), currentKg: r1(c), targetKg: r1(g), totalKg: r1(total), doneKg: r1(done), remainingKg: r1(remaining), pct: pct(done, total), weeksLeft: remaining > 0 ? Math.ceil(remaining / pace) : 0, reached: remaining <= 0.05 || overshoot, checkpoints };
+  const { exact: _x, ...out } = wp;
+  return { ...out, checkpoints };
 }
 
 // ---------------------------------------------------------------- the person's own goals
@@ -219,7 +217,7 @@ function weekChests(days, t) {
 }
 
 /** Everything for the journey screen. */
-function buildJourney({ days, targets, today, totals, weights, profile, goals = [] }) {
+function buildJourney({ days, targets, today, totals, weights, profile, goals = [], progress = null }) {
   const t = targets || {};
   const sets = { logging: new Set(), water: new Set() };
   for (const d of days) { const h = dayHits(d, t); if (h.log) sets.logging.add(d.date); if (h.water) sets.water.add(d.date); }
@@ -231,7 +229,12 @@ function buildJourney({ days, targets, today, totals, weights, profile, goals = 
   const weekly = weeklyMissions(days, t, today);
   const latestW = weights?.length ? Number(weights[weights.length - 1]) : Number(profile?.currentWeightKg) || null;
   const startW = weights?.length ? Number(weights[0]) : Number(profile?.currentWeightKg) || null;
-  const journey = weightJourney({ startKg: startW, currentKg: latestW, targetKg: profile?.goals?.targetWeightKg, paceKgPerWeek: profile?.goals?.weeklyPaceKg });
+  // Same start, same "now" and same goal weight as the Home card, the Progress tab and My Plan: the plan's start, the plan trend, the plan target.
+  const pl = progress?.plan, onPlan = !!(pl && pl.active && pl.startKg > 0 && pl.targetKg > 0);
+  const journey = weightJourney({
+    startKg: onPlan ? pl.startKg : startW, currentKg: progress?.trendKg > 0 ? progress.trendKg : latestW,
+    targetKg: onPlan ? pl.targetKg : profile?.goals?.targetWeightKg, paceKgPerWeek: onPlan && pl.paceKg > 0 ? pl.paceKg : profile?.goals?.weeklyPaceKg,
+  });
   const decorated = goals.map((g) => ({ ...g, progress: goalProgress(g, days, t, today, latestW) }));
   return {
     level: lv, perfectDays, today: daily, week: weekly, streak: streakMilestones(streaks.logging), waterStreak: streakMilestones(streaks.water),

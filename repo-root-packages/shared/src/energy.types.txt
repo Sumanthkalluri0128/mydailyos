@@ -1,0 +1,45 @@
+export type Sex = 'male' | 'female' | 'other' | '';
+export type ActivityLevel = 'sedentary' | 'light' | 'moderate' | 'very_active' | 'extra_active';
+
+export type GoalDirection = 'lose' | 'maintain' | 'gain';
+export type EnergyProfile = {
+  age?: number | null; sex?: string | null; heightCm?: number | null; currentWeightKg?: number | null;
+  activityLevel?: string | null;
+  activityMode?: string | null;                                   // 'auto' = level from recent days, 'manual' = the level you chose
+  autoActivity?: { targetLevel?: string | null } | null;
+  goals?: { calorieFloor?: number | null; targetWeightKg?: number | null; weeklyPaceKg?: number | null; calorieMode?: string | null; calorieTarget?: number | null; proteinTarget?: number | null; bodyType?: string | null; waterTargetMl?: number | null; stepsTarget?: number | null; exerciseMinutesTarget?: number | null } | null;
+};
+
+export type ExpectedEnergy = {
+  weightKg: number;
+  bmr: number;
+  tdee: number;             // maintenance calories (what you burn on a normal day at this weight)
+  direction: GoalDirection;
+  pace: number;             // kg per week
+  gap: number;              // daily deficit / surplus implied by the pace
+  atFloor: boolean;         // the chosen pace was too aggressive, target held at the safe minimum
+  autoTarget: number;       // what the plan calculates
+  mode: 'auto' | 'manual';
+  calorieTarget: number;    // what to eat: autoTarget, or the person's own number in manual mode
+  baselineActivityKcal: number; // activity already baked into maintenance (the part of the multiplier above "sedentary")
+};
+
+export type BodyType = 'lean' | 'athletic' | 'muscular' | 'balanced';
+export type DayBalance = {
+  target: number; burned: number; bonus: number; extra: number; budget: number; eaten: number; remaining: number;
+  net: number | null; isDeficit: boolean | null; fatKg: number | null; baselineActivityKcal: number | null; hasPlan: boolean;
+};
+export type Macros = { protein: number; fat: number; carbs: number; fiber: number };
+export type MacroRange = { min: number; max: number; goal: number };
+export type Targets = {
+  ready: boolean; energy: ExpectedEnergy | null; direction: GoalDirection; bodyType: string; bodyLabel: string;
+  calories: number; calorieMode: 'auto' | 'manual'; macros: Macros;
+  ranges: { protein: MacroRange; fat: MacroRange; carbs: MacroRange; fiber: MacroRange };
+  limits: { sodiumMg: number; sugar: number }; proteinSource: 'auto' | 'custom';
+  waterMl: number; steps: number; exerciseMinutes: number; goalWeightKg: number | null; paceKgPerWeek: number | null; weeksToGoal: number | null;
+};
+export type WeightProgress = {
+  direction: 'lose' | 'gain'; startKg: number; currentKg: number; targetKg: number; totalKg: number; doneKg: number; remainingKg: number;
+  pct: number; weeksLeft: number; reached: boolean; exact: { totalKg: number; doneKg: number; remainingKg: number };
+};
+// Typed signatures for the generated functions below (the file itself is untyped JavaScript with ts-nocheck).

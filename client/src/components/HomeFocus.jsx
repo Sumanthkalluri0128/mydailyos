@@ -4,7 +4,7 @@
 import { useEffect, useState } from "react";
 import "./homefocus.css";
 import { apiFetch } from "../config/api";
-import { dayBalance, expectedEnergy, macroTargets } from "../utils/energy";
+import { dayBalance, expectedEnergy, resolveTargets } from "../utils/energy";
 import { getLocalDate } from "../utils/date";
 import { notify } from "../utils/notify";
 import Buddy from "../motion/Buddy";
@@ -41,8 +41,9 @@ export default function HomeFocus({ profile, summary, activity, water, waterTarg
   const hour = new Date().getHours();
   const e = expectedEnergy(profile);
   const bal = dayBalance(profile, { eaten: summary?.calories, workout: Number(activity?.workoutCalories ?? 0), steps: Number(activity?.stepCalories || 0), extra: Number(summary?.eventExtra || 0) });
-  const macros = bal.target ? macroTargets(bal.target, profile?.currentWeightKg, e?.direction, profile?.goals?.proteinTarget, profile?.goals?.bodyType) : null;
-  const stepsT = profile?.goals?.stepsTarget ?? 10000;
+  const T = resolveTargets(profile);
+  const macros = bal.target ? T.macros : null;
+  const stepsT = T.steps;
   const over = bal.budget > 0 && bal.remaining < 0;
   const name = (profile?.name || "").split(" ")[0];
   const tw = profile?.goals?.targetWeightKg;

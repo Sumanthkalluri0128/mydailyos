@@ -3,21 +3,19 @@ const Goal = require('../models/Goal');
 const Profile = require('../models/Profile');
 const WeightLog = require('../models/WeightLog');
 const { buildHistory, lifetimeTotals } = require('./progress');
-const { dailyTarget, expectedEnergy, macroTargets, macroRanges, waterTargetMl } = require('./energy');
+const { resolveTargets } = require('./energy');
 const { buildJourney } = require('./journey');
 const { addDays } = require('./dates');
 const FoodLog = require('../models/FoodLog');
 const S = require('./simpleGoals');
 const { computeStreaks } = require('./streaks');
 const { eventExtraMap } = require('./eventExtra');
+const { planTrendKg } = require('./trendWeight');
 
 function targetsFor(profile) {
-  const target = dailyTarget(profile);
-  const e = expectedEnergy(profile);
-  const macros = macroTargets(target, profile?.currentWeightKg, e?.direction, profile?.goals?.proteinTarget, profile?.goals?.bodyType);
-  const g = profile?.goals || {};
-  const pr = target > 0 && Number(profile?.currentWeightKg) > 0 ? macroRanges(target, profile.currentWeightKg, e?.direction, g.proteinTarget, g.bodyType).protein : null; // the same range the Targets screen shows
-  return { calories: target || 0, direction: e?.direction || 'maintain', protein: macros?.protein || 0, proteinMin: pr?.min || 0, proteinMax: pr?.max || 0, waterMl: g.waterTargetMl || waterTargetMl(profile?.currentWeightKg) || 0, steps: g.stepsTarget || 0, exerciseMinutes: g.exerciseMinutesTarget || 0 };
+  const T = resolveTargets(profile); // the one place that turns the body goal into targets
+  const pr = Number(profile?.currentWeightKg) > 0 ? T.ranges.protein : null; // the same range the Targets screen shows
+  return { calories: T.calories || 0, direction: T.direction, protein: T.macros.protein || 0, proteinMin: pr?.min || 0, proteinMax: pr?.max || 0, waterMl: T.waterMl, steps: T.steps, exerciseMinutes: T.exerciseMinutes };
 }
 
 async function loadJourney(uid, today) {
@@ -32,7 +30,7 @@ async function loadJourney(uid, today) {
   const { days } = await buildHistory(uid, from, today);
   const targets = targetsFor(profile);
   targets.extraByDate = await eventExtraMap(uid, days.map((d) => d.date), profile);
-  const journey = buildJourney({ days, targets, today, totals, weights: weightRows.map((w) => Number(w.weightKg)), profile, goals: goals.map((g) => ({ ...g, id: String(g._id) })) });
+  const journey = buildJourney({ days, targets, today, totals, weights: weightRows.map((w) => Number(w.weightKg)), profile, progress: { plan: profile?.plan, trendKg: planTrendKg(profile?.plan, weightRows.map((w) => ({ date: w.date, weightKg: Number(w.weightKg) })), null) }, goals: goals.map((g) => ({ ...g, id: String(g._id) })) });
   // ONE level and ONE quest list everywhere (Section B): the characters, the Home card and the Goals screen all read these.
   const foodDates = await FoodLog.distinct('date', { userId: uid });
   const streak = S.streakSummary(foodDates, today);

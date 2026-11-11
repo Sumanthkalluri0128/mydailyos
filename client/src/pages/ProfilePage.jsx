@@ -29,7 +29,7 @@ function ProfilePage({ onBack }) {
     calorieTarget: 1800,
     calorieMode: "auto",
     weeklyPaceKg: 0.5,
-    proteinTarget: 140,
+    proteinTarget: "",
     waterTargetMl: 3000,
     stepsTarget: 10000,
     targetWeightKg: "",
@@ -138,8 +138,7 @@ function ProfilePage({ onBack }) {
             profile.goals?.weeklyPaceKg ?? 0.5,
 
           proteinTarget:
-            profile.goals?.proteinTarget ??
-            140,
+            profile.goals?.proteinTarget ?? "", // blank = automatic (follows weight + body goal, same as My Plan)
 
           waterTargetMl:
             profile.goals?.waterTargetMl ??
@@ -241,9 +240,9 @@ function ProfilePage({ onBack }) {
                 : {}),
 
               proteinTarget:
-                Number(
-                  form.proteinTarget
-                ),
+                form.proteinTarget === "" || form.proteinTarget === null || form.proteinTarget === undefined
+                  ? null
+                  : Number(form.proteinTarget),
 
               waterTargetMl:
                 Number(

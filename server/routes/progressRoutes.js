@@ -11,7 +11,7 @@ const { buildHistory, getDayDetails, lifetimeTotals } = require('../lib/progress
 const { eventExtraMap } = require('../lib/eventExtra');
 const { buildAchievements } = require('../lib/achievements');
 const { buildWeeklySummary } = require('../lib/weekly');
-const { dailyTarget, expectedEnergy, macroTargets, waterTargetMl } = require('../lib/energy');
+const { dailyTarget, expectedEnergy, resolveTargets } = require('../lib/energy');
 const { buildCoach } = require('../lib/weeklyCoach');
 const CoachState = require('../models/CoachState');
 const coachG = require('../lib/coachG');
@@ -99,12 +99,12 @@ router.get('/coach', cacheGet(), wrap(async (req, res) => {
   ]);
   const target = dailyTarget(profile);
   const e = expectedEnergy(profile);
-  const macros = macroTargets(target, profile?.currentWeightKg, e?.direction, profile?.goals?.proteinTarget, profile?.goals?.bodyType);
+  const macros = resolveTargets(profile).macros;
   const goals = profile?.goals || {};
   const targets = {
     calories: target || null, protein: macros?.protein || null,
-    waterMl: goals.waterTargetMl || waterTargetMl(profile?.currentWeightKg) || null,
-    exerciseMinutes: goals.exerciseMinutesTarget || null, steps: goals.stepsTarget || null,
+    waterMl: resolveTargets(profile).waterMl,
+    exerciseMinutes: resolveTargets(profile).exerciseMinutes, steps: resolveTargets(profile).steps,
   };
   const meals = rows.map((l) => ({ date: l.date, mealType: l.mealType, calories: Number(l.nutritionTotal?.calories || 0) }));
   const foods = rows.map((l) => ({ name: l.foodName, calories: Number(l.nutritionTotal?.calories || 0) }));

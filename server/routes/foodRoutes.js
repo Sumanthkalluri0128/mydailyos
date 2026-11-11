@@ -20,7 +20,7 @@ const { buildHistory, getDayDetails } = require('../lib/progress');
 const { addDays } = require('../lib/dates');
 const { expandWord, englishify } = require('../lib/foodAliases');
 const { searchFoods, tokens } = require('../lib/foodSearch');
-const { dailyTarget, expectedEnergy, macroTargets, macroRanges, dayBalance } = require('../lib/energy');
+const { dailyTarget, expectedEnergy, dayBalance, resolveTargets } = require('../lib/energy');
 
 const { MICROS, microsOf, confidenceOf } = require('../lib/micro');
 const { glycemicOf, pairingTip, load: loadGly, DIABETES_NOTE } = require('../lib/glycemic');
@@ -191,8 +191,8 @@ router.get('/suggest', wrap(async (req, res) => {
   const eaten = logs.reduce((a, l) => { const n = l.nutritionTotal || {}; for (const k of ['calories', 'protein', 'fiber', 'carbohydrates', 'fat']) a[k] += n[k] || 0; return a; }, { calories: 0, protein: 0, fiber: 0, carbohydrates: 0, fat: 0 });
   const target = dailyTarget(profile);
   const e = expectedEnergy(profile);
-  const macros = macroTargets(target, profile?.currentWeightKg, e?.direction, profile?.goals?.proteinTarget, profile?.goals?.bodyType);
-  const ranges = macroRanges(target, profile?.currentWeightKg, e?.direction, profile?.goals?.proteinTarget, profile?.goals?.bodyType);
+  const macros = resolveTargets(profile).macros;
+  const ranges = resolveTargets(profile).ranges;
   const remaining = { calories: target - eaten.calories, protein: macros.protein - eaten.protein, fiber: macros.fiber - eaten.fiber };
   const [shared, mine, favs] = await Promise.all([
     catalogueFoods(Food),
@@ -246,7 +246,7 @@ router.post('/cook-ideas', wrap(async (req, res) => {
   const [profile, details] = await Promise.all([Profile.findOne({ userId: uid }).lean(), getDayDetails(uid, date)]);
   const bal = dayBalance(profile, { eaten: details.summary.calories, workout: details.summary.workoutCalories, steps: details.summary.stepCalories });
   const e = expectedEnergy(profile);
-  const macros = macroTargets(bal.target, profile?.currentWeightKg, e?.direction, profile?.goals?.proteinTarget, profile?.goals?.bodyType);
+  const macros = resolveTargets(profile).macros;
   const remaining = { calories: Math.round(bal.budget - details.summary.calories), protein: Math.round(macros.protein - details.summary.protein) };
   const [shared, mine, recipes, pc] = await Promise.all([
     catalogueFoods(Food), Food.find({ userId: uid, hidden: { $ne: true } }).limit(2000).lean(), Recipe.find({ userId: uid }).lean(), loadPlanContext(uid, {}),
@@ -270,7 +270,7 @@ router.post('/fit', wrap(async (req, res) => {
   ]);
   const bal = dayBalance(profile, { eaten: details.summary.calories, workout: details.summary.workoutCalories, steps: details.summary.stepCalories });
   const e = expectedEnergy(profile);
-  const macros = macroTargets(bal.target, profile?.currentWeightKg, e?.direction, profile?.goals?.proteinTarget, profile?.goals?.bodyType);
+  const macros = resolveTargets(profile).macros;
   const fit = previewFit({
     add: { calories: (food.calories || 0) * servings, protein: (food.protein || 0) * servings },
     today: { eaten: details.summary.calories, budget: bal.budget, protein: details.summary.protein, proteinTarget: macros.protein },

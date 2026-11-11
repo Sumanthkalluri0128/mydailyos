@@ -10,6 +10,11 @@ const { markDailyDirty } = require('../lib/coachDirty');
 const { endBreak, breakExpired } = require('../lib/planState');
 const { todayUtc } = require('../lib/dates');
 const { diffTargets } = require('../lib/simpleGoals');
+const { resolveTargets } = require('../lib/energy');
+const { profileWithViews } = require('../lib/progressView');
+const WeightLog = require('../models/WeightLog');
+const { addDays } = require('../lib/dates');
+const recentWeights = (uid) => WeightLog.find({ userId: uid, date: { $gte: addDays(todayUtc(), -400) } }).select('date weightKg').sort({ date: 1 }).lean();
 
 const router = express.Router();
 router.use(requireAuth);
@@ -60,7 +65,7 @@ router.get('/', wrap(async (req, res) => {
   if (breakExpired(profile, todayUtc())) profile = (await Profile.findOneAndUpdate({ userId: req.user.id }, { $set: endBreak(profile, todayUtc()) }, { new: true })) || profile;
   // Automatic activity: yesterday's steps and training keep the calorie target's level current (once a day, never on one lazy day).
   try { const t = req.query?.today && /^\d{4}-\d{2}-\d{2}$/.test(String(req.query.today)) ? String(req.query.today) : todayUtc(); profile = (await refreshAutoActivity(req.user.id, t)) || profile; } catch (_) { /* the profile still loads */ }
-  res.json({ success: true, profile });
+  res.json({ success: true, profile: profileWithViews(profile, await recentWeights(req.user.id)) });
 }));
 
 router.patch('/', wrap(async (req, res) => {
@@ -68,6 +73,18 @@ router.patch('/', wrap(async (req, res) => {
   // Keep a short history of target changes (shown as one calm line and under Targets).
   const before = Object.keys(set).some((k) => k.startsWith('goals.')) ? await Profile.findOne({ userId: req.user.id }).select('goals').lean() : null;
   const history = before ? diffTargets(before.goals || {}, set, req.body?.today || todayUtc(), 'you asked for it') : [];
+  // A protein number equal to what the plan would give anyway is not an override: store it as automatic (null), so it keeps following
+  // weight and body goal and Home, My Plan and the phone can never drift apart because of a stale pinned number.
+  if (typeof set['goals.proteinTarget'] === 'number') {
+    try {
+      const full = await Profile.findOne({ userId: req.user.id }).lean();
+      const merged = { ...(full || {}), goals: { ...((full || {}).goals || {}) } };
+      for (const [k, val] of Object.entries(set)) if (k.startsWith('goals.')) merged.goals[k.slice(6)] = val;
+      for (const k of ['age', 'heightCm', 'currentWeightKg', 'sex', 'activityLevel']) if (set[k] !== undefined) merged[k] = set[k];
+      const T = resolveTargets({ ...merged, goals: { ...merged.goals, proteinTarget: null } });
+      if (T.ready && Math.abs(T.macros.protein - set['goals.proteinTarget']) <= 1) set['goals.proteinTarget'] = null;
+    } catch (_) { /* keep the number as typed */ }
+  }
   const update = { $set: set };
   if (history.length) update.$push = { targetHistory: { $each: history, $slice: -50 } };
   const profile = await Profile.findOneAndUpdate(
@@ -77,7 +94,8 @@ router.patch('/', wrap(async (req, res) => {
   );
   await markDailyDirty(CoachState, req.user.id);   // new goals / body numbers: today's daily decision is re-worked on the next look
   // In auto mode the saved calorie goal mirrors the plan, so exports and other readers never see a stale number.
-  res.json({ success: true, profile: (await refreshStoredTarget(Profile, profile)) || profile });
+  const saved = (await refreshStoredTarget(Profile, profile)) || profile;
+  res.json({ success: true, profile: profileWithViews(saved, await recentWeights(req.user.id)) });
 }));
 
 module.exports = router;

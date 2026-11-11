@@ -9,7 +9,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { apiFetch } from "../config/api";
 import { API_URL } from "../config";
 import { getLocalDate } from "../utils/date";
-import { expectedEnergy, macroRanges, waterTargetMl } from "../utils/energy";
+import { resolveTargets } from "../utils/energy";
 import { currentOwner } from "../utils/cacheOwner";
 import { notify } from "../utils/notify";
 import { confirmAction } from "../utils/confirm";
@@ -473,12 +473,12 @@ function ItemRow({ it, swaps, openSheet, sets, week }) {
 // ================================================================================================================ Plan
 // Same numbers as the Macros Today card (one shared energy model). Falls back to the static guide only when no profile is loaded.
 function nutritionRows(profile) {
-  const e = profile ? expectedEnergy(profile) : null;
+  const T = profile ? resolveTargets(profile) : null;
+  const e = T && T.ready ? T.energy : null;
   if (!e) return GUIDE.nutrition;
-  const g = profile.goals || {};
-  const r = macroRanges(e.calorieTarget, e.weightKg, e.direction, g.proteinTarget, g.bodyType);
+  const r = T.ranges;
   const rng = (x) => `${x.min}\u2013${x.max} g (goal ${x.goal} g)`;
-  const water = waterTargetMl(e.weightKg);
+  const water = T.waterMl;
   return [
     ["Calories", `~${Math.round(e.calorieTarget).toLocaleString()} kcal`],
     ["Protein", rng(r.protein)], ["Carbs", rng(r.carbs)], ["Fat", rng(r.fat)],

@@ -7,7 +7,7 @@ const { buildWeeklySummary, weekContaining } = require('./weekly');
 const { weeklyNutrients } = require('./nutrients');
 const { detectPlateau } = require('./plateau');
 const { estimateWeight } = require('./weightEstimate');
-const { dailyTarget, expectedEnergy, macroTargets, limitTargets, waterTargetMl } = require('./energy');
+const { resolveTargets } = require('./energy');
 const { addDays, weekday, todayUtc } = require('./dates');
 const { sendMail } = require('./mailer');
 const { renderWeeklyEmail } = require('./emailTemplate');
@@ -17,19 +17,18 @@ const { unsubscribeUrl, appUrl } = require('./unsubscribe');
 async function weeklyBundle(userId, end, profile) {
   const start = addDays(end, -6);
   const { days } = await buildHistory(userId, addDays(start, -7), end);
-  const target = dailyTarget(profile);
-  const e = expectedEnergy(profile);
-  const macros = macroTargets(target, profile?.currentWeightKg, e?.direction, profile?.goals?.proteinTarget, profile?.goals?.bodyType);
+  const T = resolveTargets(profile);
+  const target = T.calories, macros = T.macros;
   const g = profile?.goals || {};
   const goals = {
     ...g, calorieTarget: target,
-    proteinTarget: g.proteinTarget || macros.protein,
-    waterTargetMl: waterTargetMl(profile?.currentWeightKg) || g.waterTargetMl || null,
+    proteinTarget: macros.protein,
+    waterTargetMl: T.waterMl,
     exerciseMinutesTarget: g.exerciseMinutesTarget || null,
   };
   const scoreKeys = ['calories', 'protein', 'water', ...(goals.exerciseMinutesTarget ? ['exercise'] : [])];
   const summary = buildWeeklySummary({ current: days.slice(7), previous: days.slice(0, 7), goals });
-  const nutrients = weeklyNutrients(days.slice(7), macros, limitTargets(target));
+  const nutrients = weeklyNutrients(days.slice(7), macros, T.limits);
   return { summary, nutrients, macros, target, scoreKeys };
 }
 

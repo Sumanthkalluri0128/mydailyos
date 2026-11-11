@@ -1,3 +1,4 @@
+import { resolveTargets } from "../utils/energy";
 // Daily goal rings: calories, protein, water and exercise minutes.
 function Ring({ label, value, target, unit, color, icon }) {
   const pct = target > 0 ? Math.min(value / target, 1) : 0;
@@ -19,11 +20,14 @@ function Ring({ label, value, target, unit, color, icon }) {
   );
 }
 
-export default function GoalRings({ summary, water, activity, goals }) {
+export default function GoalRings({ summary, water, activity, goals, profile }) {
+  const T = profile ? resolveTargets(profile) : null; // one source of truth for every screen
+  const calT = T ? T.calories : (goals?.calorieTarget ?? 1800);
+  const protT = T ? T.macros.protein : (goals?.proteinTarget ?? 140);
   return (
     <section className="goal-rings" aria-label="Today's goals">
-      <Ring label="Calories" icon="🍽️" color="#6847e8" value={summary.calories} target={goals?.calorieTarget ?? 1800} unit="kcal" />
-      <Ring label="Protein" icon="🥩" color="#e8476f" value={summary.protein} target={goals?.proteinTarget ?? 140} unit="g" />
+      <Ring label="Calories" icon="🍽️" color="#6847e8" value={summary.calories} target={calT} unit="kcal" />
+      <Ring label="Protein" icon="🥩" color="#e8476f" value={summary.protein} target={protT} unit="g" />
       <Ring label="Water" icon="💧" color="#2587d9" value={water.totalMl} target={goals?.waterTargetMl ?? 3000} unit="ml" />
       <Ring label="Exercise" icon="🔥" color="#20a46b" value={activity.totalMinutes} target={goals?.exerciseMinutesTarget ?? 30} unit="min" />
     </section>
