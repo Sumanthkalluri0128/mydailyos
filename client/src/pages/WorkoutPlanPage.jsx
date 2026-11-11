@@ -471,6 +471,7 @@ function ItemRow({ it, swaps, openSheet, sets, week }) {
 
 // ================================================================================================================ Plan
 function PlanView({ plan, smart, smartOn, st, setSt, today, onOpen, onSource, weightKg, weightFromBody, onSetup }) {
+  const smartFlag = useFlag("smart-program", true);
   const [edit, setEdit] = useState(false);
   const [w, setW] = useState(String(st.weightKg));
   const saveW = () => { const n = Number(w); if (n >= 30 && n <= 300) { setSt((s) => ({ ...s, weightKg: n })); setEdit(false); } else notify("Enter a weight between 30 and 300 kg.", "info"); };
