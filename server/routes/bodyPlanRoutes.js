@@ -18,6 +18,8 @@ const { bodyPlan, TYPES, TYPE_IDS } = require('../lib/bodyPlan');
 const { sanitizePrefs, TRAINING_OPTIONS, maxDaysFor } = require('../lib/trainingPlan');
 const { adapt, applyAdapt, sessionHighlights } = require('../lib/bodyPlanAdapt');
 const { addDays, todayUtc } = require('../lib/dates');
+const { refreshAutoActivity } = require('../lib/dailyCoachData');
+const { refreshStoredTarget } = require('../lib/profileEnergy');
 
 const router = express.Router();
 router.use(requireAuth);
@@ -57,7 +59,12 @@ async function history(userId, today) {
 
 async function build(userId, wanted, override, date) {
   const today = date || todayUtc();
-  const [profile, measures, hist] = await Promise.all([Profile.findOne({ userId }).lean(), latestMeasures(userId), history(userId, today)]);
+  // Same profile Home reads: GET /api/profile first refreshes the automatic activity level, which changes TDEE and so calories and macros.
+  // Reading the raw profile here made this page (and the phone's Body plan tab) disagree with the Home macros card.
+  let profile = null;
+  try { const fresh = await refreshAutoActivity(userId, today); profile = fresh ? (typeof fresh.toObject === 'function' ? fresh.toObject() : fresh) : null; } catch (_) { /* fall back to the stored profile */ }
+  const [stored, measures, hist] = await Promise.all([profile ? null : Profile.findOne({ userId }).lean(), latestMeasures(userId), history(userId, today)]);
+  profile = profile || stored;
   const chosen = profile?.goals?.bodyType || '';
   const type = wanted || chosen;
   const prefs = prefsFor(profile, override);
@@ -96,6 +103,7 @@ router.post('/apply', wrap(async (req, res) => {
   if (plan.safety.some((s) => s.id === 'underweight')) {
     // Underweight: save the body goal for macros but never set a weight-loss target.
     await Profile.updateOne({ userId: req.user.id }, { $set: { 'goals.bodyType': type, 'goals.targetWeightKg': null, 'goals.proteinTarget': null, 'goals.calorieMode': 'auto', ...trainingSet } });
+    try { const saved = await Profile.findOne({ userId: req.user.id }); await refreshStoredTarget(Profile, saved); } catch (_) { /* the plan is saved either way */ }
     return res.json({ success: true, applied: { bodyType: type, targetWeightKg: null, training: !!sentTraining }, measures, plan });
   }
   const set = {
@@ -108,6 +116,7 @@ router.post('/apply', wrap(async (req, res) => {
   };
   if (plan.mode === 'lose') set['goals.weeklyPaceKg'] = plan.goal.weeklyPaceKg;
   await Profile.updateOne({ userId: req.user.id }, { $set: set });
+  try { const saved = await Profile.findOne({ userId: req.user.id }); await refreshStoredTarget(Profile, saved); } catch (_) { /* the plan is saved either way */ }
   res.json({ success: true, applied: { bodyType: type, targetWeightKg: set['goals.targetWeightKg'], weeklyPaceKg: set['goals.weeklyPaceKg'] ?? null, stepsTarget: plan.steps, training: !!sentTraining }, measures, plan });
 }));
 
