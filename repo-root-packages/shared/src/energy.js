@@ -225,12 +225,12 @@ const BODY_LABELS = { lean: 'Lean & toned', athletic: 'Athletic, V-shape', muscu
 /**
  * EVERY target a screen needs, worked out in one place from the saved profile (body, goal weight, pace, body goal, your own overrides).
  * Home, My Plan, Profile, Progress, rings, widgets, emails and the coach must call this and nothing else, so a change of body goal
- * shows up everywhere at once. Returns null only when there is no profile at all.
+ * shows up everywhere at once. Never returns null: with no profile it answers like an empty one (1800 kcal split into macros).
  *   ready          false when weight, height or age is missing (calories then come from the saved number, macros from the calories)
  *   proteinSource  'custom' when the person typed their own protein, otherwise 'auto' (follows weight and body goal)
  */
-function resolveTargets(p) {
-  if (!p) return null;
+function resolveTargets(profile) {
+  const p = profile || {}; // still loading / signed out: behave like an empty profile (saved-calorie split), never null
   const g = p.goals || {};
   const e = expectedEnergy(p);
   const bodyType = BODY_TYPES[g.bodyType] ? g.bodyType : '';

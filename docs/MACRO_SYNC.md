@@ -33,3 +33,7 @@ Regenerate with `node tools/syncShared.mjs` from the repo root. `--check` fails 
 
 ## If Home still shows 140 g
 Profile > Protein > clear the box > Save (or save your body plan once).
+
+## Crash guard
+`resolveTargets` never returns null (no profile = answers like an empty profile), so a screen that renders before the profile loads cannot crash.
+`cd client && node ../tools/smokeRender.mjs` renders Home, Macros, Rings, Workout plan and Account with no / empty / full profiles and fails on any crash. Run it in CI before deploying.
