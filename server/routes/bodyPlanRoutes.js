@@ -108,7 +108,7 @@ router.post('/apply', wrap(async (req, res) => {
   }
   const set = {
     'goals.bodyType': type,
-    'goals.calorieMode': 'auto',
+    ...(profile?.goals?.bodyType === type && profile?.goals?.bodyPlanStartedOn ? {} : { 'goals.calorieMode': 'auto' }), // same goal re-saved: keep the live calorie mode
     'goals.proteinTarget': null, // automatic: follows weight and body goal
     'goals.targetWeightKg': plan.mode === 'lose' ? plan.goal.targetWeightKg : null,
     'goals.stepsTarget': plan.steps,

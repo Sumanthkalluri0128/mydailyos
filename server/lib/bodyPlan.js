@@ -108,9 +108,14 @@ function bodyPlan({ profile = {}, type, measures = {}, prefs } = {}) {
   const safeCap = maxSafeWeeklyLossKg(w);
   let pace = mode === 'lose' ? Math.min(safeCap, w * t.maxLossPctPerWeek) : 0;
   pace = mode === 'lose' ? Math.max(0.2, Math.round(pace * 20) / 20) : 0;
+  // Once this body goal is saved, follow the person's LIVE settings (the pace the coach may have adjusted, a manual calorie number), so this
+  // page shows exactly the numbers Home and the phone use. Only a different goal being previewed starts from the fresh calculation.
+  const g0 = profile.goals || {};
+  const followSaved = mode === 'lose' && g0.bodyType === type && !!g0.bodyPlanStartedOn;
+  if (followSaved && Number(g0.weeklyPaceKg) > 0) pace = Math.min(1, Math.max(0.1, Number(g0.weeklyPaceKg)));
 
   // Calories and macros through the same engine the rest of the app uses, so Home shows exactly this.
-  const planProfile = { ...profile, goals: { ...(profile.goals || {}), targetWeightKg: mode === 'lose' ? targetKg : null, weeklyPaceKg: pace || 0.5, calorieMode: 'auto', bodyType: type, proteinTarget: null } };
+  const planProfile = { ...profile, goals: { ...(profile.goals || {}), targetWeightKg: mode === 'lose' ? targetKg : null, weeklyPaceKg: pace || 0.5, calorieMode: followSaved ? (g0.calorieMode || 'auto') : 'auto', bodyType: type, proteinTarget: null } };
   let e = expectedEnergy(planProfile);
   // When the safety floor limits the calories, the pace we promised cannot be reached. Slow it to what the food allows, so the weeks
   // and checkpoints are honest, and recompute through the same engine so Home still shows exactly these numbers.

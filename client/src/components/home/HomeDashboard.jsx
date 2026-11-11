@@ -20,6 +20,7 @@ import { useT } from "../../i18n";
 import { CheckIn, RoughDay, SideQuest, useCoachState, PlateCard, EventMode, CravingTimer } from "../CoachCards";
 import { useCoachTone } from "../../utils/coachTone";
 import HealthyDay from "./HealthyDay";
+import BodyPlanHomeCard from "./BodyPlanHomeCard";
 import HomeSection from "../HomeSection";
 import EatenSheet from "./EatenSheet";
 import StatCard, { StatBar } from "./StatCard";
@@ -295,6 +296,9 @@ export default function HomeDashboard({ profile, summary, activity, water, water
           <span aria-hidden="true">🎯</span><span><b>Choose your body goal and get a plan</b><small>Lean, athletic, strong or balanced: get calories, macros and training for it.</small></span>
         </button>
       )}
+
+      {/* ---------- saved body plan: same numbers as Body > Eating, with today and this week ---------- */}
+      {!!profile?.goals?.bodyType && <Safe name="BodyPlanHomeCard"><BodyPlanHomeCard goTo={goTo} refreshKey={syncTick} /></Safe>}
 
       {/* ---------- nutrition · macros · habits ---------- */}
       <section className="hd-mid">
