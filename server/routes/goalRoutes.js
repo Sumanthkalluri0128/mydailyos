@@ -11,6 +11,7 @@ const { checkTargetChange } = require('../lib/simpleGoals');
 const { GOAL_METRICS } = require('../lib/journey');
 const { todayUtc } = require('../lib/dates');
 
+const { s, body } = require('../lib/schema');
 const router = express.Router();
 router.use(requireAuth);
 
@@ -46,9 +47,9 @@ router.get('/simple', wrap(async (req, res) => {
 }));
 
 // POST /api/goals/check-target { key, value }  runs the app's safety rules on a typed target before it is saved.
-router.post('/check-target', wrap(async (req, res) => {
+router.post('/check-target', body(s.object({ key: s.string({ max: 40 }), value: s.any({ maxJson: 200 }) })), wrap(async (req, res) => {
   const profile = await Profile.findOne({ userId: req.user.id }).lean();
-  const floor = profile?.sex === 'male' ? 1500 : 1200;
+  const floor = require('../lib/energy').calorieFloorOf(profile);
   res.json({ success: true, ...checkTargetChange(String(req.body?.key || ''), req.body?.value, { profile: profile || {}, floor }) });
 }));
 

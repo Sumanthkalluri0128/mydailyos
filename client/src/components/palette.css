@@ -6,7 +6,7 @@
 .pal-list li { display: flex; align-items: center; gap: 12px; min-height: 48px; padding: 6px 10px; border-radius: 12px; cursor: pointer; }
 .pal-list li.on { background: color-mix(in srgb, var(--accent, #6c5ce7) 14%, transparent); }
 .pal-list img { object-fit: contain; border-radius: 8px; }
-.pal-empty { color: var(--muted, #667); cursor: default !important; }
+.pal-empty.pal-empty { color: var(--muted, #667); cursor: default; }
 .pal-hint { display: block; margin-top: 8px; color: var(--muted, #667); }
 .pal-help dl { display: grid; gap: 8px; margin: 0; }
 .pal-help dl div { display: grid; grid-template-columns: 11rem 1fr; gap: 12px; align-items: center; }

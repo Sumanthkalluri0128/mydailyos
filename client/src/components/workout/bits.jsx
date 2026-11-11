@@ -164,7 +164,7 @@ export default function ExSheet({ ex: shown, tab: firstTab = "how", sessions, sw
       {zoom && photo && (
         <div className="wp-zoom" role="dialog" aria-modal="true" aria-label={`${ex.name} photos`} onClick={(e) => { e.stopPropagation(); setZoom(false); }}>
           <button type="button" className="wp-zoom-x" aria-label="Close photo">✕</button>
-          <img src={photo.how || photo.thumb} alt={`${ex.name}: step by step photos`} />
+          <img loading="lazy" decoding="async" src={photo.how || photo.thumb} alt={`${ex.name}: step by step photos`} />
         </div>
       )}
     </div>,

@@ -94,6 +94,11 @@ function createGoogleRouter({ allowedOrigins = [] } = {}) {
 
       const sessionToken = jwt.sign({ sub: user._id.toString(), email: user.email }, process.env.JWT_SECRET, { expiresIn: '30d' });
       // `existing=1` lets the app say "your data is here" instead of starting onboarding for someone who already has an account.
+      // Website + cookie mode: send a 60-second one-time code instead of the real token (tokens in URLs end up in browser history and logs).
+      if (require('../lib/session').enabled() && /^https?:/i.test(returnTo)) {
+        const code = jwt.sign({ purpose: 'google-exchange', jti: crypto.randomBytes(12).toString('hex'), sub: user._id.toString() }, process.env.JWT_SECRET, { expiresIn: '60s' });
+        return back({ google: 'ok', code, email: user.email, existing: created ? '' : '1' });
+      }
       return back({ google: 'ok', token: sessionToken, email: user.email, existing: created ? '' : '1' });
     } catch (e) {
       console.error('google callback error:', e.message);

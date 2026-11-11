@@ -3,7 +3,7 @@
 const Profile = require('../models/Profile');
 const User = require('../models/User');
 const { sendMail } = require('./mailer');
-const { unsubscribeUrl, appUrl, BACKUP_PURPOSE } = require('./unsubscribe');
+const { unsubscribeUrl, appUrl, BACKUP_PURPOSE, downloadUrl, DOWNLOAD_TTL_HOURS } = require('./unsubscribe');
 const { todayUtc } = require('./dates');
 const { dueForBackup, buildBackupMail, backupWeek, MAX_ATTACH_BYTES } = require('./backupMail');
 
@@ -19,8 +19,11 @@ async function sendWeeklyBackups({ today = todayUtc(), send = sendMail, exportFi
     try {
       const user = await User.findById(p.userId).select('name email').lean();
       if (!user || !user.email) continue;
-      const files = await exportFiles(p.userId);
-      const mail = buildBackupMail({ name: user.name, files, unsubscribeUrl: unsubscribeUrl(p.userId, process.env, BACKUP_PURPOSE), appUrl: appUrl(), weekLabel: thisWeek.from });
+      // Default: an expiring download link, no attachment. BACKUP_MODE=attach keeps the old behaviour (data in the inbox).
+      const attachMode = String(process.env.BACKUP_MODE || '').toLowerCase() === 'attach';
+      const dl = attachMode ? '' : downloadUrl(p.userId);
+      const files = attachMode ? await exportFiles(p.userId) : [];
+      const mail = buildBackupMail({ name: user.name, files, downloadUrl: dl, ttlHours: DOWNLOAD_TTL_HOURS, unsubscribeUrl: unsubscribeUrl(p.userId, process.env, BACKUP_PURPOSE), appUrl: appUrl(), weekLabel: thisWeek.from });
       await send({ to: user.email, subject: mail.subject, text: mail.text, html: mail.html, headers: mail.headers, attachments: mail.attachments });
       await Profile.updateOne({ userId: p.userId }, { $set: { 'notify.lastBackupEmail': thisWeek.from } });
       sent += 1;

@@ -21,6 +21,7 @@ export const NAV_GROUPS = [
     ["health", "❤️", "Health", "Sleep and measurements"],
   ] },
   { title: "Stay on track", items: [
+    ["coach", "🧭", "Coach", "Diet and gym coach, check-in, what changed"],
     ["goals", "🏆", "Goals", "Quests, targets, your journey"],
     ["habit", "🔁", "Habits", "Daily routines and streaks"],
     ["task", "📋", "Tasks", "To-dos and reminders"],

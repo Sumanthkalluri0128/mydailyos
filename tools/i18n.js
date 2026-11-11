@@ -40,8 +40,9 @@ if (cmd === "export" && arg) {
 } else if (cmd === "check") {
   const en = load("en");
   for (const l of ["hi", "te", "ta"]) {
-    const d = load(l); const keys = Object.keys(en).filter((k) => !k.startsWith("_") && !k.startsWith("lang."));
+    const d = load(l); const keys = Object.keys(en).filter((k) => !k.startsWith("_"));
     const miss = keys.filter((k) => !d[k]);
+    if (miss.length) process.exitCode = 1;
     console.log(`${l}: ${keys.length - miss.length}/${keys.length} translated${d._meta?.needsReview ? " (needs native review)" : ""}`, miss.length ? "missing: " + miss.join(", ") : "");
   }
 } else if (cmd === "reviewed" && arg) { const d = load(arg); d._meta.needsReview = false; save(arg, d); console.log(`${arg} marked reviewed`); }

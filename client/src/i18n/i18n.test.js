@@ -19,7 +19,7 @@ test("missing placeholder value is left visible instead of 'undefined'", () => {
 });
 test("every shipped language covers all English keys with matching placeholders", () => {
   for (const l of ["hi", "te", "ta"]) {
-    const miss = missingKeys(dicts, l).filter((k) => !k.startsWith("lang."));
+    const miss = missingKeys(dicts, l);
     assert.deepEqual(miss, [], `${l} is missing ${miss.join(", ")}`);
     assert.deepEqual(placeholderProblems(dicts, l), [], `${l} placeholder mismatch`);
     assert.equal(dicts[l]._meta.needsReview, true);       // honest flag until a native speaker signs off
@@ -29,4 +29,11 @@ test("every shipped language covers all English keys with matching placeholders"
 test("translations stay in their own script", () => {
   const range = { hi: /[ऀ-ॿ]/, te: /[ఀ-౿]/, ta: /[஀-௿]/ };
   for (const l of ["hi", "te", "ta"]) assert.ok(range[l].test(dicts[l]["nav.home"]) && range[l].test(dicts[l]["next.breakfast.text"]));
+});
+test("no language file has keys English does not (drift in either direction fails)", () => {
+  const en = Object.keys(dicts.en).filter((k) => !k.startsWith("_"));
+  for (const l of ["hi", "te", "ta"]) {
+    const extra = Object.keys(dicts[l]).filter((k) => !k.startsWith("_") && !en.includes(k));
+    assert.deepEqual(extra, [], `${l} has keys that English does not: ${extra.join(", ")}`);
+  }
 });

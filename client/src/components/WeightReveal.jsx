@@ -57,7 +57,7 @@ export default function WeightReveal({ text, prefix = "", from, compact = false,
         {prefix}
         {runs(shown).map((r, i) => (r.num ? <span key={i} className="wr-n" style={{ filter: blur > 0.4 ? `blur(${blur.toFixed(1)}px)` : undefined, opacity: t < 1 ? 0.35 + 0.65 * t : 1 }}>{r.t}</span> : r.t))}
       </span>
-      {face && <img className="wr-face" src={stickerFor(who, "wave", 1).src} alt="" aria-hidden="true" draggable="false" />}
+      {face && <img loading="lazy" decoding="async" className="wr-face" src={stickerFor(who, "wave", 1).src} alt="" aria-hidden="true" draggable="false" />}
       <span className="wr-sr" aria-live="polite">{revealed ? `${prefix}${text}` : ""}</span>
     </button>
   );

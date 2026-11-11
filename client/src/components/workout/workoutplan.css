@@ -19,7 +19,7 @@
 .wp-small { font-size: .84rem; }
 .wp-sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
 .wp h1, .wp h2, .wp h3, .wp h4, .wp p { margin: 0; }
-.wp-h { font-size: 1.05rem; margin: 0 0 10px !important; letter-spacing: -.01em; }
+.wp-h.wp-h { font-size: 1.05rem; margin: 0 0 10px; letter-spacing: -.01em; }
 
 /* ---------- 2. page header, section tabs, layout ---------- */
 .wp-top { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 6px 2px 14px; }
@@ -35,7 +35,7 @@
 
 .wp-card { background: var(--surface); border: 1px solid var(--wp-line); border-radius: var(--wp-r); padding: 16px; }
 .wp-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 8px; }
-.wp-row .wp-h { margin: 0 !important; }
+.wp-row .wp-h.wp-h { margin: 0; }
 
 /* ---------- 3. chips and buttons ---------- */
 .wp-chips { display: flex; flex-wrap: wrap; gap: 6px; }

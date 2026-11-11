@@ -39,3 +39,8 @@
 .cc-sensei { display: flex; align-items: center; gap: 10px; }
 .cc-sensei h3 { margin: 0; }
 .cc-locked { margin: 8px 0 0; padding-left: 18px; font-size: 0.88rem; color: var(--muted, #667); }
+
+.cc-chips{display:flex;flex-wrap:wrap;gap:8px;margin:6px 0 12px}
+.cc-chips .chip{min-height:44px}
+.cc-chips .chip.on{outline:2px solid var(--accent,#5b5bd6)}
+.cc-advice{margin-top:8px}

@@ -143,7 +143,7 @@
       }
     },
     {
-      "name": "E: man, 70y 160cm 52kg sedentary, wants 48kg — safety floor (1500) is above maintenance (1410), so a 'lose' goal must not exceed maintenance",
+      "name": "E: man, 70y 160cm 52kg sedentary, wants 48kg \u2014 safety floor (1500) is above maintenance (1410), so a 'lose' goal must not exceed maintenance",
       "profile": {
         "age": 70,
         "sex": "male",
@@ -164,6 +164,144 @@
         "calorieTarget": 1410,
         "mode": "auto",
         "baselineActivityKcal": 0
+      }
+    },
+    {
+      "name": "H: automatic mode, no-activity level reached (2 lazy days): the target uses it",
+      "profile": {
+        "age": 30,
+        "sex": "male",
+        "heightCm": 175,
+        "currentWeightKg": 80,
+        "activityLevel": "moderate",
+        "goals": {
+          "targetWeightKg": 72
+        },
+        "activityMode": "auto",
+        "autoActivity": {
+          "targetLevel": "sedentary"
+        }
+      },
+      "expect": {
+        "bmr": 1749,
+        "tdee": 2099,
+        "direction": "lose",
+        "pace": 0.5,
+        "gap": 550,
+        "autoTarget": 1550,
+        "calorieTarget": 1550,
+        "mode": "auto",
+        "atFloor": false,
+        "baselineActivityKcal": 0
+      }
+    },
+    {
+      "name": "I: manual mode ignores the stored automatic level",
+      "profile": {
+        "age": 30,
+        "sex": "male",
+        "heightCm": 175,
+        "currentWeightKg": 80,
+        "activityLevel": "moderate",
+        "goals": {
+          "targetWeightKg": 72
+        },
+        "activityMode": "manual",
+        "autoActivity": {
+          "targetLevel": "sedentary"
+        }
+      },
+      "expect": {
+        "bmr": 1749,
+        "tdee": 2711,
+        "direction": "lose",
+        "pace": 0.5,
+        "gap": 550,
+        "autoTarget": 2160,
+        "calorieTarget": 2160,
+        "mode": "auto",
+        "atFloor": false,
+        "baselineActivityKcal": 612
+      }
+    },
+    {
+      "name": "J: automatic mode with no reading yet uses the chosen level",
+      "profile": {
+        "age": 30,
+        "sex": "male",
+        "heightCm": 175,
+        "currentWeightKg": 80,
+        "activityLevel": "moderate",
+        "goals": {
+          "targetWeightKg": 72
+        },
+        "activityMode": "auto",
+        "autoActivity": null
+      },
+      "expect": {
+        "bmr": 1749,
+        "tdee": 2711,
+        "direction": "lose",
+        "pace": 0.5,
+        "gap": 550,
+        "autoTarget": 2160,
+        "calorieTarget": 2160,
+        "mode": "auto",
+        "atFloor": false,
+        "baselineActivityKcal": 612
+      }
+    },
+    {
+      "name": "K: your own safe minimum (1,700) holds an aggressive pace",
+      "profile": {
+        "age": 30,
+        "sex": "male",
+        "heightCm": 175,
+        "currentWeightKg": 80,
+        "activityLevel": "moderate",
+        "goals": {
+          "targetWeightKg": 60,
+          "weeklyPaceKg": 1,
+          "calorieFloor": 1700
+        }
+      },
+      "expect": {
+        "bmr": 1749,
+        "tdee": 2711,
+        "direction": "lose",
+        "pace": 1,
+        "gap": 1100,
+        "autoTarget": 1700,
+        "calorieTarget": 1700,
+        "mode": "auto",
+        "atFloor": true,
+        "baselineActivityKcal": 612
+      }
+    },
+    {
+      "name": "L: no own floor = the default 1,500 for men",
+      "profile": {
+        "age": 30,
+        "sex": "male",
+        "heightCm": 175,
+        "currentWeightKg": 80,
+        "activityLevel": "moderate",
+        "goals": {
+          "targetWeightKg": 60,
+          "weeklyPaceKg": 1
+        }
+      },
+      "expect": {
+        "bmr": 1749,
+        "tdee": 2711,
+        "direction": "lose",
+        "pace": 1,
+        "gap": 1100,
+        "autoTarget": 1610,
+        "calorieTarget": 1610,
+        "mode": "auto",
+        "atFloor": false,
+        "baselineActivityKcal": 612
       }
     }
   ],

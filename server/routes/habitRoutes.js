@@ -73,7 +73,7 @@ router.get('/:id/stats', wrap(async (req, res) => {
 
   const logs = await HabitLog.find({ userId: req.user.id, habitId: habit._id }).select('date completed').lean();
   const done = new Set(logs.filter((l) => l.completed).map((l) => l.date));
-  const { current, best } = computeStreak(done, today);
+  const { current, best } = computeStreak(done, today, { forgive: true });
 
   // Completion rate over the last 30 days (or since the habit was created, if that's more recent).
   const created = toStr(new Date(habit.createdAt));

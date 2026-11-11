@@ -16,6 +16,7 @@ import { DAYS, GUIDE, PLAN, SMART_ID, FILTERS, MUSCLE_LABEL, dayById, findExerci
 import { addDays, fromStr, inRange, loadState, mondayOf, newActive, phaseFor, saveState, streak, summarize, volumeOf, weekNumber, weekStrip, elapsedSec } from "../utils/workoutStore";
 import { findInDays, mergeLibrary, programToDays, sessionPayload, smartPhase, smartProgression, smartStrip, variantDay } from "../utils/unifiedPlan";
 import useSmartPlan, { smartUsable } from "../utils/useSmartPlan";
+import { useFlag } from "../utils/flagStore";
 import ExSheet, { Chip, FigThumb, fmtClock } from "../components/workout/bits";
 import SessionView from "../components/workout/SessionView";
 import AdaptCard from "../components/workout/AdaptCard";
@@ -85,7 +86,9 @@ export default function WorkoutPlanPage({ startView }) {
   useEffect(() => { try { sessionStorage.setItem("ff-wp-view", view); } catch { /* ignore */ } }, [view]);
 
   // ------------------------------------------------------------------------------------------------------------ the one plan
-  const smartOn = smartUsable(smart.data, today) && st.source !== "classic";
+  // Staged rollout: the one-plan Smart program is on for everyone until you create the flag "smart-program" in the admin flags, then only for the people it names.
+  const smartFlag = useFlag("smart-program", true);
+  const smartOn = smartFlag && smartUsable(smart.data, today) && st.source !== "classic";
   const body = smart.data && smart.data.plan && smart.data.plan.ready ? { chosen: smart.data.chosen, plan: smart.data.plan } : null;
   const weightKg = (body && body.plan.body && body.plan.body.weightKg) || st.weightKg;
   const plan = useMemo(() => {
@@ -472,7 +475,7 @@ function PlanView({ plan, smart, smartOn, st, setSt, today, onOpen, onSource, we
   const [w, setW] = useState(String(st.weightKg));
   const saveW = () => { const n = Number(w); if (n >= 30 && n <= 300) { setSt((s) => ({ ...s, weightKg: n })); setEdit(false); } else notify("Enter a weight between 30 and 300 kg.", "info"); };
   const restart = async () => { if (await confirmAction("Week 1 starts again from this week. Your logged workouts stay in History.", { title: "Restart the plan?", confirmText: "Restart", cancelText: "Cancel", danger: false })) setSt((s) => ({ ...s, startDate: today })); };
-  const canSmart = smartUsable(smart.data, today);
+  const canSmart = smartFlag && smartUsable(smart.data, today);
   const whyNot = smart.data && smart.data.plan && !smart.data.plan.ready ? smart.data.plan.message : smart.status === "loading" ? "Loading your smart plan…" : smart.error ? `Not available right now (${smart.error})` : "Pick a body goal in the Body tab to unlock it.";
   const program = plan.program;
   const prefs = program && smart.data.plan.training.prefs;

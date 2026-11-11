@@ -9,10 +9,12 @@ const { wrap, HttpError } = require('../lib/http');
 const { todayUtc } = require('../lib/dates');
 const { buildWrapped, monthRange } = require('../lib/wrapped');
 
+const { cacheGet } = require('../lib/userCache');
+
 const router = express.Router();
 router.use(requireAuth);
 
-router.get('/', wrap(async (req, res) => {
+router.get('/', cacheGet(), wrap(async (req, res) => {
   const month = String(req.query.month || todayUtc().slice(0, 7));
   if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(month)) throw new HttpError(400, 'month must be YYYY-MM');
   const showHealth = req.query.health === '1' || req.query.health === 'true';

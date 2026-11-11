@@ -28,6 +28,10 @@ export function checkJump(plannedKg, recentBestKg) {
 
 export const DEFAULT_PLATES = { kg: [25, 20, 15, 10, 5, 2.5, 1.25], lb: [45, 35, 25, 10, 5, 2.5] };
 export const DEFAULT_BAR = { kg: 20, lb: 45 };
+/**
+ * @param {number | string} target
+ * @param {{ unit?: string, barWeight?: number | string, plates?: number[] }} [options]
+ */
 export function plateCalc(target, { unit = 'kg', barWeight, plates } = {}) {
   const u = unit === 'lb' ? 'lb' : 'kg';
   const hasBar = barWeight !== '' && barWeight !== null && barWeight !== undefined && Number.isFinite(Number(barWeight));

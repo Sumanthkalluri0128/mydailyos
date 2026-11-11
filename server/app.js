@@ -52,6 +52,7 @@ const { createGoogleRouter } = require('./routes/googleRoutes');
 function createApp({ allowedOrigins = [] } = {}) {
   const app = express();
   app.disable('x-powered-by');
+  app.locals.allowedOrigins = allowedOrigins;       // used by the cookie CSRF check (middleware/auth.js)
   app.set('trust proxy', 1); // Render terminates TLS in front of the app; needed for correct client IPs
 
   app.use(securityHeaders);
@@ -62,6 +63,7 @@ function createApp({ allowedOrigins = [] } = {}) {
         if (!origin || allowedOrigins.includes(origin)) return callback(null, true);
         return callback(new Error(`CORS blocked for origin: ${origin}`));
       },
+      credentials: true,                                  // lets the website send its httpOnly session cookie (only to the allowed origins above)
       exposedHeaders: ['Content-Disposition', 'RateLimit-Remaining', 'Retry-After'],
     })
   );
@@ -77,6 +79,8 @@ function createApp({ allowedOrigins = [] } = {}) {
 
   // Generous global ceiling per IP; auth and export routes have their own, tighter limits.
   app.use('/api', rateLimit({ windowMs: 60_000, max: 400 }));
+
+  app.use('/api', require('./lib/userCache').bumpOnWrite);   // any successful write forgets that person's cached summaries
 
   app.use('/api/auth', authRoutes);
   app.use('/api/google', createGoogleRouter({ allowedOrigins }));

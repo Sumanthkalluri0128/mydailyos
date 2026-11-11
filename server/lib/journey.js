@@ -223,7 +223,7 @@ function buildJourney({ days, targets, today, totals, weights, profile, goals = 
   const t = targets || {};
   const sets = { logging: new Set(), water: new Set() };
   for (const d of days) { const h = dayHits(d, t); if (h.log) sets.logging.add(d.date); if (h.water) sets.water.add(d.date); }
-  const streaks = { logging: computeStreak(sets.logging, today), water: computeStreak(sets.water, today) };
+  const streaks = { logging: computeStreak(sets.logging, today, { forgive: true }), water: computeStreak(sets.water, today, { forgive: true }) };
   const { xp, perfectDays } = buildXp(days, t, streaks);
   const lv = levelFor(xp);
   const todayRow = days.find((d) => d.date === today) || null;

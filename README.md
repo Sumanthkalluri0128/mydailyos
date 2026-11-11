@@ -78,3 +78,19 @@ The backend now returns JSON for unknown `/api/*` routes, so an HTML `<!DOCTYPE 
 ## Security
 
 No real `.env` file or database password is included in this cleaned source package. Set secrets only in your local ignored `.env` files or deployment environment settings.
+
+# v63 (web + server + mobile): daily coach
+- Server: lib/dailyCoach.js (pure) + lib/dailyCoachData.js; GET /api/coach/day-guide, GET /api/coach/entry-check, GET /api/coach/activity-level.
+- Activity level: Profile.activityMode ('auto' default | 'manual') + Profile.autoActivity. Auto = yesterday's steps and training; the calorie TARGET level
+  only moves after 2 days in a row agree (energy.activityLevelOf, mirrored in the web and mobile energy files and pinned by the shared fixtures).
+- Heavy day (+500 kcal over budget) / cheat day (+1000): scale ignored for the next days, 3 recovery days (no fasting, steps +2,000), never a cut.
+- Missed training / no-activity day: explained, never punished; 4+ days off lowers the first loads.
+- Entry feedback while logging food (EntryCheck) and "what am I?" (DayGuideCard: Automatic / I choose, with a switch suggestion).
+
+# v64: the weekly decision + one safe minimum
+- Server: lib/weeklyDecision.js; GET /api/coach/weekly (once a week, cached), POST /api/coach/weekly/apply. Reads 2 weeks of weigh-ins, food, steps and
+  training and changes ONE thing at a time: under-eating > too little data > too fast > adherence > on track (ladder resets) > heavy days /
+  missed training / low steps (explained, never cut) > ladder: wait, steps +1,500, incline walk, -100 kcal (carbs), 7-day diet break, reassess.
+  A suggestion only advances the ladder when you tap Apply; 10-day cool-down; a planned diet break after 8 weeks in a deficit.
+- Profile.goals.calorieFloor + energy.calorieFloorOf (server, web, mobile; pinned by the shared fixtures): every engine reads ONE safe minimum.
+- Entry check: evening protein nudge. Home: WeeklyDecisionCard. Today's coach card: "Safe minimum" control.

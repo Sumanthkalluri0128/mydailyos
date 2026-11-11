@@ -1,3 +1,4 @@
+import { isSignedIn } from "../auth/session";
 // The tour UI: welcome (3 screens), real spotlight with cut-out, first-win cheers, first-week checklist, screen hints with a "?" replay,
 // "what's new" dots and a finish moment with the Rookie sticker. All state lives in tourStore.js; all rules in tourEngine.js.
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
@@ -223,7 +224,7 @@ export default function TourHost({ page, go, profile }) {
   const step = saved.status === "active" ? T.current({ ...eng, status: "active" }) : null;
 
   // sign-in: pull what the server remembers
-  useEffect(() => { if (localStorage.getItem("mydailyos_token")) S.syncFromServer(); }, []);
+  useEffect(() => { if (isSignedIn()) S.syncFromServer(); }, []);
   // a brand-new account opens the welcome right after onboarding; Profile > "Replay the tour" opens it again
   useEffect(() => { if (profile && profile.onboarded !== false && S.tourPending() && !saved.welcomeSeen) setWelcome(true); }, [profile, saved.welcomeSeen]);
   useEffect(() => { const f = () => setWelcome(true); window.addEventListener("flexfit:tour-open", f); return () => window.removeEventListener("flexfit:tour-open", f); }, []);

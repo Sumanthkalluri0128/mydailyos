@@ -1,0 +1,34 @@
+.dg { margin: 0 0 14px; border-radius: 16px; border: 1.5px solid var(--border, #e3e0f5); background: var(--primary-soft, #f1edff); padding: 12px 14px; }
+.dg-head { display: flex; gap: 10px; align-items: center; width: 100%; background: none; border: 0; padding: 0; color: inherit; text-align: left; cursor: pointer; font: inherit; }
+.dg-ic { font-size: 22px; line-height: 1; }
+.dg-title { font-weight: 800; display: block; }
+.dg-sub { display: block; font-size: 13px; opacity: .8; }
+.dg-body { margin-top: 10px; display: grid; gap: 8px; }
+.dg-body ul { margin: 0; padding-left: 18px; font-size: 13.5px; line-height: 1.5; }
+.dg-days { display: flex; gap: 8px; flex-wrap: wrap; }
+.dg-day { flex: 1 1 120px; border: 1.5px solid var(--border, #ddd); border-radius: 12px; padding: 8px 10px; font-size: 12.5px; background: var(--surface, rgba(255,255,255,.5)); }
+.dg-day b { display: block; }
+.dg-seg { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.dg-seg button { border: 1.5px solid var(--border, #ddd); background: transparent; color: inherit; border-radius: 999px; padding: 6px 12px; font-weight: 700; cursor: pointer; font-size: 13px; }
+.dg-seg button.on { background: var(--primary-solid, var(--primary)); border-color: var(--primary); color: #fff; }
+.dg-seg select { border: 1.5px solid var(--border, #ddd); border-radius: 10px; padding: 6px 8px; background: transparent; color: inherit; }
+.dg-warn { border-color: rgba(229, 72, 77, .5); background: rgba(229, 72, 77, .08); }
+.dg-chip { display: inline-block; font-size: 11.5px; font-weight: 800; padding: 2px 8px; border-radius: 999px; background: var(--primary); color: #fff; margin-left: 6px; vertical-align: middle; }
+.dg-fix { display: flex; gap: 6px; flex-wrap: wrap; }
+.dg-fix span { border: 1.5px solid var(--border, #ddd); border-radius: 999px; padding: 3px 10px; font-size: 12.5px; }
+
+/* Coach hub */
+.ch { display: grid; gap: 0; max-width: 720px; margin: 0 auto; }
+.ch .dg { display: grid; gap: 6px; }
+.ch-next { border-color: var(--primary, #6c5ce7); }
+.ch-row { display: grid; gap: 4px; margin-top: 4px; }
+.ch-lab { font-size: 12.5px; opacity: .8; }
+.ch-green { color: #2aa876; font-weight: 700; opacity: 1; }
+.ch-amber { color: #b07d00; font-weight: 700; opacity: 1; }
+.ch-red { color: #e5484d; font-weight: 700; opacity: 1; }
+.ch-switch { display: flex; gap: 10px; align-items: flex-start; cursor: pointer; }
+.ch-switch input { margin-top: 4px; width: 20px; height: 20px; }
+.ch-log { display: grid; gap: 2px; margin-top: 8px; font-size: 13px; }
+
+/* "behind plan" choices inside the offer card */
+.ch-opt { display: flex; flex-direction: column; gap: 4px; padding: 8px 0; border-top: 1px solid var(--border, #e3e3e3); }

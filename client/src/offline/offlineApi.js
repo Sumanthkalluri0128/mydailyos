@@ -24,6 +24,9 @@ const QUEUEABLE = [
   /^\/api\/body-plan\/session$/, // a finished workout: the server ignores a repeat of the same clientId
   // meal planner: eating a planned item (one item at a time, so a replay can never log something twice) and adding to the plan
   /^\/api\/meal-plans\/[^/]+\/log$/, /^\/api\/meal-plans$/,
+  // coach: today's check-in (one row per day, saving again replaces it) and an "Apply" tap. The tap carries the id of the suggestion the person saw,
+  // so after a delay the server applies it only if it is still the same suggestion; otherwise it answers 409 and the queue drops it.
+  /^\/api\/coach\/readiness$/, /^\/api\/coach\/weekly\/apply$/,
 ];
 const pathOf = (url) => { try { return new URL(url, window.location.origin).pathname; } catch { return ""; } };
 export const isQueueable = (method, url) => String(method).toUpperCase() === "POST" && QUEUEABLE.some((r) => r.test(pathOf(url)));
@@ -81,18 +84,25 @@ export function flushQueue(sender) {
       let q = await readQueue();
       q = q.filter((x) => Date.now() - x.at < MAX_AGE_MS);
       const keep = [];
-      let stop = false;
+      let stop = false, staleCoach = 0;
       for (const op of q) {
         if (stop || op.owner !== owner) { keep.push(op); continue; } // another person's changes wait for them to sign in
         let res;
         try { res = await sender(op); } catch { stop = true; keep.push(op); telemetry({ syncFailed: 1 }); continue; }
         if (res.ok) sent++;
         else if (res.status === 401 || res.status === 429 || res.status >= 500) { stop = true; keep.push(op); if (res.status >= 500) telemetry({ syncFailed: 1 }); }
-        else dropped++; // 400/404/409...: the server will never accept it, replaying would loop forever
+        else { dropped++; if (res.status === 409 && pathOf(op.url) === "/api/coach/weekly/apply") staleCoach++; } // 400/404/409...: the server will never accept it, replaying would loop forever
       }
       await writeQueue(keep);
       if (dropped) telemetry({ writesDropped: dropped });
-      if (dropped) set({ lastError: `${dropped} offline change${dropped > 1 ? "s" : ""} could not be saved.` });
+      if (dropped) {
+        // Say WHY when we know: a coach tap that waited offline is refused when the coach has a newer suggestion by then (never applied blindly).
+        const other = dropped - staleCoach;
+        const parts = [];
+        if (staleCoach) parts.push("The coach has a newer suggestion, so your earlier Apply tap was not used. Please look at the new one.");
+        if (other) parts.push(`${other} offline change${other > 1 ? "s" : ""} could not be saved.`);
+        set({ lastError: parts.join(" ") });
+      }
     } finally {
       set({ syncing: false });
     }

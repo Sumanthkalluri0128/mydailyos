@@ -2,11 +2,22 @@
 const express = require('express');
 const Profile = require('../models/Profile');
 const { wrap } = require('../lib/http');
-const { verifyAny, BACKUP_PURPOSE, page } = require('../lib/unsubscribe');
+const { verifyAny, verifyDownload, BACKUP_PURPOSE, page } = require('../lib/unsubscribe');
+const { rateLimit } = require('../middleware/rateLimit');
 
 const WORDS = { 'unsub-weekly': ['weekly summaries', 'notify.weeklyEmail', 'No more weekly emails.'], [BACKUP_PURPOSE]: ['weekly backup emails', 'notify.backupEmail', 'No more weekly backup emails.'] };
 
 const router = express.Router();
+
+// The weekly backup email links here instead of attaching your data. The link is signed, expires after 48 hours, and is limited to a few tries.
+router.get('/backup-download', rateLimit({ windowMs: 15 * 60_000, max: 10, keyFn: (req) => `bk|${req.ip}`, message: 'Too many tries. Please wait a few minutes.' }), wrap(async (req, res) => {
+  const userId = verifyDownload(req.query.token);
+  if (!userId) return res.status(410).type('html').send(page('Link expired', '<h2>This link has expired</h2><p>For your privacy, backup links stop working after 48 hours. Open the app: Profile, Download my data.</p>'));
+  const files = await require('./accountRoutes').buildExportFiles(userId);
+  const wantCsv = String(req.query.format || '').toLowerCase() === 'csv';
+  const f = files.find((x) => (wantCsv ? /\.csv$/ : /\.json$/).test(x.filename)) || files[0];
+  res.set({ 'Content-Type': f.contentType, 'Content-Disposition': `attachment; filename="${f.filename}"`, 'Cache-Control': 'no-store', 'X-Robots-Tag': 'noindex' }).send(f.content);
+}));
 
 router.get('/unsubscribe', (req, res) => {
   const token = String(req.query.token || '');

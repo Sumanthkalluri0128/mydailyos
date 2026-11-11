@@ -7,8 +7,13 @@ const { addDays } = require('./dates');
  * current streak (ending today, or yesterday if today isn't done *yet* — so a
  * streak isn't shown as broken at 9am) and the best streak ever.
  */
-function computeStreak(dateSet, today) {
+function computeStreak(dateSet, today, { forgive = false, restDates = [] } = {}) {
   if (!dateSet || dateSet.size === 0) return { current: 0, best: 0 };
+  // Forgiving mode (what the app uses): a rest day or ONE missed day a week does not reset the streak. See lib/streaks.js.
+  if (forgive) {
+    const r = require('./streaks').computeStreaks([...dateSet], today, { freeze: true, restDates });
+    return { current: r.current, best: r.longest };
+  }
 
   const sorted = [...dateSet].sort();
   let best = 1;
@@ -74,7 +79,7 @@ function buildAchievements({ days, totals, goals, today }) {
   }
 
   const streaks = {};
-  for (const key of Object.keys(sets)) streaks[key] = computeStreak(sets[key], today);
+  for (const key of Object.keys(sets)) streaks[key] = computeStreak(sets[key], today, { forgive: true });
 
   const badges = [];
   for (const b of STREAK_BADGES) {

@@ -1,0 +1,72 @@
+name: CI
+# Repo layout: web/ (client + server), mobile/MyDailyOSMobile, tools/, version.json at the root.
+on:
+  workflow_dispatch:
+  push: { branches: [main] }
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  server:
+    name: Server tests
+    runs-on: ubuntu-latest
+    defaults: { run: { working-directory: web/server } }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm, cache-dependency-path: web/server/package-lock.json }
+      - run: npm ci || npm install   # lock file is refreshed the first time mongodb-memory-server is added
+      - run: npm test
+        env: { JWT_SECRET: ci-secret-not-used-in-prod, NODE_ENV: test }
+
+  client:
+    name: Web tests and build
+    runs-on: ubuntu-latest
+    defaults: { run: { working-directory: web/client } }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm, cache-dependency-path: web/client/package-lock.json }
+      - run: npm ci
+      - run: npm test
+      - run: npm run build
+      - run: npx --yes stylelint@16 "src/**/*.css" --config .stylelintrc.json
+
+  phone:
+    name: Phone typecheck and jest
+    runs-on: ubuntu-latest
+    defaults: { run: { working-directory: mobile/MyDailyOSMobile } }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm, cache-dependency-path: mobile/MyDailyOSMobile/package-lock.json }
+      - run: npm ci
+      - run: npx tsc --noEmit
+      - run: npx jest --ci
+      - run: node tools/auditA11y.mjs --check
+
+  keep-in-step:
+    name: Web and phone stay in step
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22 }
+      - run: node tools/checkSharedFiles.mjs
+      - run: node tools/checkApiParity.mjs
+      - run: node tools/syncVersion.mjs --check
+      - run: node tools/syncShared.mjs --check
+      - run: node tools/checkAssetBudget.mjs
+      - run: node tools/checkImportant.mjs
+      - run: node tools/checkWriteValidation.mjs
+      - run: node tools/i18n.js check
+
+  e2e-phone:
+    name: Maestro flows (manual)
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "Maestro needs an emulator build; run it from EAS or locally. See mobile/MyDailyOSMobile/.maestro/README.md"

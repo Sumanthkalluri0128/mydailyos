@@ -36,7 +36,7 @@ async function loadJourney(uid, today) {
   // ONE level and ONE quest list everywhere (Section B): the characters, the Home card and the Goals screen all read these.
   const foodDates = await FoodLog.distinct('date', { userId: uid });
   const streak = S.streakSummary(foodDates, today);
-  journey.level = S.levelSummary({ days, targets, streaks: { logging: { best: computeStreaks(foodDates, today).longest } }, comebacks: streak.comebacks, floor: profile?.journey?.xpFloor || 0 });
+  journey.level = S.levelSummary({ days, targets, streaks: { logging: { best: computeStreaks(foodDates, today, { freeze: true }).longest } }, comebacks: streak.comebacks, floor: profile?.journey?.xpFloor || 0 });
   const focus = S.dailyFocus(days.find((d) => d.date === today) || null, targets);
   journey.today = { ...journey.today, quests: focus.quests.map((q) => ({ ...q, xp: 0 })), done: focus.done, total: focus.total, xpEarned: 0, xpAvailable: 0, complete: focus.complete };
   journey.streak = { ...journey.streak, current: streak.current, best: Math.max(journey.streak?.best || 0, streak.longest) };

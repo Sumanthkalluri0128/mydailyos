@@ -16,6 +16,7 @@
 //   * Cardio ramps from what was done last week (+10 minutes), not from the calendar.
 const { addDays, diffDays, weekday } = require('./dates');
 const { smoothTrend, trendRate, maxSafeWeeklyLossKg } = require('./trendWeight');
+const { topSetRpe, effortAdvice, recoverySummary, sessionAdjust } = require('./readiness');
 
 const r1 = (x) => Math.round(x * 10) / 10;
 const r05 = (x) => Math.round(x * 2) / 2;
@@ -68,7 +69,7 @@ function performance(rec, ex) {
   const val = (s) => (num(s.reps) > 0 ? num(s.reps) : num(s.seconds));
   const top = Math.max(...sets.map((s) => num(s.weightKg)));
   const atTop = sets.filter((s) => num(s.weightKg) === top);
-  return { date: rec.date, weightKg: top, reps: atTop.map(val), allReps: sets.map(val), n: sets.length, feel: rec.feel || '', phase: rec.phase || '' };
+  return { date: rec.date, weightKg: top, reps: atTop.map(val), allReps: sets.map(val), n: sets.length, feel: rec.feel || '', phase: rec.phase || '', rpe: topSetRpe(ex.sets) };
 }
 
 function targetFor(allHist, ex, phase) {
@@ -88,15 +89,20 @@ function targetFor(allHist, ex, phase) {
   const total = (h) => h.reps.reduce((a, b) => a + b, 0);
   const dropped = prev && prev2 && prev.weightKg === last.weightKg && prev2.weightKg === last.weightKg && total(prev) <= total(prev2) - 2 && total(last) <= total(prev) - 2;
 
-  let t;
+  const eff = effortAdvice(last.rpe === undefined ? null : last.rpe);     // how hard the top sets felt (optional RPE 1-10)
+  let t, extra = '';
   if (dropped) t = { action: 'recover', weightKg: last.weightKg, reps: lo, sets: Math.max(2, baseSets - 1), note: 'Your reps dipped two sessions in a row. That is tiredness, not weakness. Same weight, one set fewer this week, then build again.' };
   else if (allAtTop && bodyweight) t = { action: 'harder', weightKg: 0, reps: lo, sets: baseSets, note: ex.swaps && ex.swaps.harder ? `Every set reached ${hi}. Time for a harder version: ${ex.swaps.harder.name}.` : `Every set reached ${hi}. Slow the tempo (3 seconds down) or add a loaded backpack, and start again at ${lo}.` };
-  else if (allAtTop) { const w = r05(last.weightKg + stepFor(ex.slot, last.weightKg)); t = { action: 'addWeight', weightKg: w, reps: lo, sets: baseSets, note: `Every set reached ${hi} at ${last.weightKg} kg. Add a small step to ${w} kg and start again at ${lo} reps.` }; }
+  else if (allAtTop && eff.hold && !bodyweight) t = { action: 'hold', weightKg: last.weightKg, reps: hi, sets: baseSets, note: `Every set reached ${hi} at ${last.weightKg} kg, but it felt close to your limit (RPE ${last.rpe}). Repeat ${last.weightKg} kg with a little more in reserve, then add weight when it feels smoother.` };
+  else if (allAtTop) { const w = r05(last.weightKg + Math.min(stepFor(ex.slot, last.weightKg) * eff.jump, last.weightKg * 0.1)); if (eff.jump > 1) extra = eff.note; t = { action: 'addWeight', weightKg: w, reps: lo, sets: baseSets, note: `Every set reached ${hi} at ${last.weightKg} kg. Add a small step to ${w} kg and start again at ${lo} reps.` }; }
   else {
     const low = Math.min(...last.reps);
-    const reps = clamp(low + 1, lo, hi);
+    const easy = eff.jump > 1 && last.rpe <= 6.5;     // very easy last time: two more reps is fine
+    const reps = clamp(low + (easy ? 2 : 1), lo, hi);
+    if (easy) extra = eff.note;
     t = { action: 'addRep', weightKg: last.weightKg, reps, sets: baseSets, note: bodyweight ? `Last time ${low} on your weakest set. Aim for ${reps} on every set.` : `Last time ${low} reps at ${last.weightKg} kg on your weakest set. Aim for ${reps} on every set at the same weight.` };
   }
+  if (extra && t.note) t.note += ` ${extra}`;
   t.last = lastInfo;
   // The phase changes how much to lift, never how well you did: easy week and return weeks are lighter, then the build resumes.
   if (t.weightKg > 0 && phase.loadFactor < 1 && t.action !== 'recover') {
@@ -121,7 +127,7 @@ function targetFor(allHist, ex, phase) {
  * @param o.weights   [{date, weightKg}]    o.waists [{date, value}] (cm)
  * @param o.paceKgPerWeek planned loss pace (lose mode)    o.maxDays the most days a week this person should train
  */
-function adapt({ program, prefs = {}, mode = 'recomp', today, startedOn, sessions = [], activity = [], weights = [], waists = [], paceKgPerWeek = 0, maxDays = 5 } = {}) {
+function adapt({ program, prefs = {}, mode = 'recomp', today, startedOn, sessions = [], activity = [], weights = [], waists = [], paceKgPerWeek = 0, maxDays = 5, readiness = [] } = {}) {
   if (!program || !today) return null;
   const planned = program.daysPerWeek;
   const weekStart = mondayOf(today);
@@ -178,7 +184,10 @@ function adapt({ program, prefs = {}, mode = 'recomp', today, startedOn, session
   const easyThisWeek = done.some((s) => s.phase === 'easy' && s.date >= weekStart);   // an easy week stays easy until Sunday
   const backThisWeek = done.some((s) => s.phase === 'back' && s.date >= weekStart);
   const regress = [...byId.entries()].filter(([, h]) => h.length >= 3 && (() => { const t = (x) => x.reps.reduce((a, b) => a + b, 0); const [a, b, c] = h.slice(-3); return a.weightKg === c.weightKg && b.weightKg === c.weightKg && t(b) <= t(a) - 2 && t(c) <= t(b) - 2; })()).map(([id]) => id);
-  const fatigue = (recentRecs.length >= 3 && hardShare >= 0.5) || regress.length >= 2 || painRecent.length >= 2;
+  const recovery = recoverySummary(readiness, today);                                   // sleep / energy / soreness / stress of the last 7 days
+  const todayEntry = (readiness || []).filter((r) => r && r.date === today).pop() || null;
+  const todayAdj = sessionAdjust(todayEntry);
+  const fatigue = (recentRecs.length >= 3 && hardShare >= 0.5) || regress.length >= 2 || painRecent.length >= 2 || recovery.low;
 
   let name = 'Build', loadFactor = 1, setDelta = 0, rirAdd = 0, why = '', tier;
   if (!everLifted) tier = diffDays(start, today) >= 14 ? 'restart' : 'new';
@@ -202,7 +211,7 @@ function adapt({ program, prefs = {}, mode = 'recomp', today, startedOn, session
     why = `${gapDays} days since your last lift. Strength fades a little in a break and comes back fast. Start at about ${Math.round(loadFactor * 100)} percent of your last weights${gapDays > 28 ? ' with one set fewer' : ''}, keep 1 more rep in reserve, and build again from here.`;
   } else if (fatigue && !easyLastWeek && everLifted) {
     name = 'Easy week'; loadFactor = 0.9; setDelta = -1; rirAdd = 1;
-    why = painRecent.length >= 2 ? 'You reported discomfort in two recent sessions, so this week is lighter while it settles.' : regress.length >= 2 ? 'Reps have slipped on two or more lifts for two sessions in a row. That is tiredness, so this week is lighter and you come back stronger.' : 'Most of your recent sessions felt hard. A lighter week now protects the progress you are making.';
+    why = recovery.low && !(painRecent.length >= 2) && regress.length < 2 && !(recentRecs.length >= 3 && hardShare >= 0.5) ? 'Your sleep, energy and soreness have been low this week, so this week is lighter. Recovery is when the strength is built.' : painRecent.length >= 2 ? 'You reported discomfort in two recent sessions, so this week is lighter while it settles.' : regress.length >= 2 ? 'Reps have slipped on two or more lifts for two sessions in a row. That is tiredness, so this week is lighter and you come back stronger.' : 'Most of your recent sessions felt hard. A lighter week now protects the progress you are making.';
   } else if (everLifted && afterEasy + 1 >= every && !easyLastWeek) {
     name = 'Easy week'; loadFactor = 0.9; setDelta = -1; rirAdd = 1;
     why = `This is training week ${afterEasy + 1} since your last easy week. A lighter week on schedule keeps joints and energy fresh. Weights are about 10 percent lighter, one set fewer.`;
@@ -384,19 +393,35 @@ function adapt({ program, prefs = {}, mode = 'recomp', today, startedOn, session
     todayPlan: todaySuggestion, trainAnyway: anyTrainAnyway, nextSessionId: nextSession ? nextSession.id : null,
     nextUp, daysSinceLastLift: gapDays,
     targets, boosted, cardio, body, changes, suggestions,
+    readiness: { today: todayAdj, week: recovery },
   };
 }
 
 /** Copy of the program with each exercise carrying `next` (today's target) and `setsToday`, so screens only have to show it. */
 function applyAdapt(program, a) {
   if (!a) return program;
-  const mark = (e) => { const t = a.targets[e.id]; return t ? { ...e, next: t, setsToday: t.sets, effortToday: a.phase.rirAdd ? `Stop with about ${Math.min(5, (e.rir || 3) + a.phase.rirAdd)} reps left` : e.effort } : e; };
+  // Today's readiness check changes TODAY'S session only (lighter, one set fewer when red, one more rep in reserve). The weekly progression
+  // is never rewritten by one bad night, so tomorrow's targets come back unchanged.
+  const adj = a.readiness && a.readiness.today && ['amber', 'red'].includes(a.readiness.today.band) ? a.readiness.today : null;
+  const todaySid = adj && a.todayPlan && a.todayPlan.kind === 'train' ? a.todayPlan.sessionId : null;
+  const mark = (e, sid) => {
+    const t0 = a.targets[e.id];
+    if (!t0) return e;
+    const isToday = !!todaySid && sid === todaySid;
+    const rirAdd = Math.max(a.phase.rirAdd || 0, isToday ? adj.rirAdd : 0);
+    let t = t0, sets = t0.sets;
+    if (isToday) {
+      sets = Math.max(2, t0.sets + adj.setDelta);
+      t = { ...t0, sets, ...(t0.weightKg > 0 ? { weightKg: r05(t0.weightKg * adj.loadFactor) } : {}), note: `${t0.note || ''} Today: ${adj.note}`.trim(), readinessBand: adj.band };
+    }
+    return { ...e, next: t, setsToday: sets, effortToday: rirAdd ? `Stop with about ${Math.min(5, (e.rir || 3) + rirAdd)} reps left` : e.effort };
+  };
   return {
     ...program,
     sessions: program.sessions.map((s) => ({
-      ...s, exercises: s.exercises.map(mark),
-      homeBackup: s.homeBackup ? { ...s.homeBackup, exercises: s.homeBackup.exercises.map(mark) } : s.homeBackup,
-      quick: s.quick ? { ...s.quick, exercises: s.quick.exercises.map(mark) } : s.quick,
+      ...s, exercises: s.exercises.map((e) => mark(e, s.id)),
+      homeBackup: s.homeBackup ? { ...s.homeBackup, exercises: s.homeBackup.exercises.map((e) => mark(e, s.id)) } : s.homeBackup,
+      quick: s.quick ? { ...s.quick, exercises: s.quick.exercises.map((e) => mark(e, s.id)) } : s.quick,
     })),
     week: program.week.map((d, i) => ({ ...d, kind: a.week.days[i].kind, sessionId: a.week.days[i].sessionId, label: a.week.days[i].label, date: a.week.days[i].date, status: a.week.days[i].status, statusNote: a.week.days[i].note, shifted: !!a.week.days[i].shifted })),
   };

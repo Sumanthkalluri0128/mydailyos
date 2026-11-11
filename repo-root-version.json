@@ -1,0 +1,1 @@
+{ "version": "62.0.0", "note": "One version for web, server and phone. Change it here, then run: node tools/syncVersion.mjs" }

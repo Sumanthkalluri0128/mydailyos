@@ -23,9 +23,16 @@ function slopePerWeek(points) {
  * @param estimate optional result of estimateWeight(): what the food log implies since the last weigh-in. Analysis only: it never
  *                 changes the slope, the weigh-in count or any chart; it adds a note, and it stops a stale scale from saying "on track".
  */
-function detectPlateau({ weights, profile = {}, today, target = null, windowDays = 21, estimate = null }) {
-  const out = detectFromScale({ weights, profile, today, target, windowDays });
+function detectPlateau({ weights, profile = {}, today, target = null, windowDays = 21, estimate = null, cycle = null }) {
+  const out = withCycle(detectFromScale({ weights, profile, today, target, windowDays }), cycle);
   return withEstimate(out, estimate, profile);
+}
+
+/** A flat (or slightly up) scale during the monthly water window is not a plateau: say so, and do not suggest eating less. Only with the cycle log on. */
+function withCycle(out, cycle) {
+  if (!cycle || !(out.status === 'plateau' || (out.status === 'wrong_direction' && out.slopeKgPerWeek !== null && Math.abs(out.slopeKgPerWeek) <= 0.5))) return out;
+  return { ...out, status: 'water_window', suggestedKcalChange: 0, cycle: { day: cycle.day, length: cycle.length },
+    message: `Your scale looks flat, but you are around day ${cycle.day} of a ${cycle.length}-day cycle, when water often hides fat loss. Wait about a week and compare the same part of your cycle before changing your target.` };
 }
 
 /** Adds the food-log estimate to a scale-based verdict. Real weigh-ins keep the final say. */
@@ -71,7 +78,7 @@ function detectFromScale({ weights, profile = {}, today, target = null, windowDa
 
   const want = direction === 'lose' ? -1 : 1;          // sign we want the slope to have
   const progress = slope * want;                        // positive = moving the right way
-  const floor = profile.sex === 'male' ? 1500 : 1200;
+  const floor = require('./energy').calorieFloorOf(profile);
   const step = 100 + (pace >= 0.75 ? 50 : 0);
 
   if (progress >= pace * 0.5) { out.status = 'on_track'; out.message = `You're ${direction === 'lose' ? 'losing' : 'gaining'} about ${Math.abs(slope)} kg a week — on track.`; return out; }
@@ -90,4 +97,4 @@ function detectFromScale({ weights, profile = {}, today, target = null, windowDa
   return out;
 }
 
-module.exports = { detectPlateau, slopePerWeek, withEstimate };
+module.exports = { detectPlateau, slopePerWeek, withEstimate, withCycle };

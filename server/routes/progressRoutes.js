@@ -24,12 +24,14 @@ const { sendMail } = require('../lib/mailer');
 const { rateLimit } = require('../middleware/rateLimit');
 const v = require('../lib/validate');
 
+const { cacheGet } = require('../lib/userCache');
+
 const router = express.Router();
 router.use(requireAuth);
 
 const MAX_RANGE_DAYS = 800;
 
-router.get('/history', wrap(async (req, res) => {
+router.get('/history', cacheGet(), wrap(async (req, res) => {
   const from = v.date(req.query.from, 'from');
   const to = v.date(req.query.to, 'to');
   if (from > to) throw new HttpError(400, 'from must not be after to');
@@ -78,7 +80,7 @@ router.get('/day', dayHandler((req) => req.query.date));
 router.get('/history/day', dayHandler((req) => req.query.date));
 router.get('/day/:date', dayHandler((req) => req.params.date));
 
-router.get('/streaks', wrap(async (req, res) => {
+router.get('/streaks', cacheGet(), wrap(async (req, res) => {
   const today = v.date(req.query.today);
   const dates = await FoodLog.distinct('date', { userId: req.user.id });
   // Rough-day mode: a day with at least one tiny action still counts toward the streak.
@@ -87,7 +89,7 @@ router.get('/streaks', wrap(async (req, res) => {
 }));
 
 // Weekly coach: 1–2 things to change, this week's boss-fight challenge, and a review for the weekly screen.
-router.get('/coach', wrap(async (req, res) => {
+router.get('/coach', cacheGet(), wrap(async (req, res) => {
   const today = req.query.today ? v.date(req.query.today, 'today') : todayUtc();
   const uid = req.user.id;
   const [profile, history, rows] = await Promise.all([
@@ -122,16 +124,16 @@ router.get('/coach', wrap(async (req, res) => {
 }));
 
 // Vitamins and minerals for one day (min-max range per nutrient, "not enough data" instead of misleading zeros) and the week view.
-router.get('/micro', wrap(async (req, res) => {
+router.get('/micro', cacheGet(), wrap(async (req, res) => {
   const date = req.query.date ? v.date(req.query.date, 'date') : todayUtc();
   res.json({ success: true, ...(await microForDay(req.user.id, date)) });
 }));
-router.get('/micro/weekly', wrap(async (req, res) => {
+router.get('/micro/weekly', cacheGet(), wrap(async (req, res) => {
   const end = req.query.end ? v.date(req.query.end, 'end') : todayUtc();
   res.json({ success: true, ...(await microForWeeks(req.user.id, end)) });
 }));
 
-router.get('/achievements', wrap(async (req, res) => {
+router.get('/achievements', cacheGet(), wrap(async (req, res) => {
   const today = req.query.today ? v.date(req.query.today, 'today') : todayUtc();
   const uid = req.user.id;
   const [{ days }, totals, profile] = await Promise.all([
@@ -143,7 +145,7 @@ router.get('/achievements', wrap(async (req, res) => {
 }));
 
 // Trailing 7 days ending on `end` (default: today) vs the 7 days before that, plus nutrient averages vs targets.
-router.get('/weekly', wrap(async (req, res) => {
+router.get('/weekly', cacheGet(), wrap(async (req, res) => {
   const end = req.query.end ? v.date(req.query.end, 'end') : todayUtc();
   const profile = await Profile.findOne({ userId: req.user.id }).lean();
   const { summary, nutrients } = await weeklyBundle(req.user.id, end, profile);
@@ -151,7 +153,7 @@ router.get('/weekly', wrap(async (req, res) => {
 }));
 
 // Is the scale moving the way the goal says it should? (needs ~3 weigh-ins over two weeks)
-router.get('/plateau', wrap(async (req, res) => {
+router.get('/plateau', cacheGet(), wrap(async (req, res) => {
   const today = req.query.today ? v.date(req.query.today, 'today') : todayUtc();
   const profile = await Profile.findOne({ userId: req.user.id }).lean();
   res.json({ success: true, ...(await plateauFor(req.user.id, today, profile, dailyTarget(profile))) });

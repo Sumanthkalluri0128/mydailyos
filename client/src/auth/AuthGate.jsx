@@ -1,6 +1,8 @@
 import { Suspense, lazy, useEffect, useState } from "react";
 
 import { apiFetch, clearSession, startOfflineSync, syncNow } from "../config/api";
+import { API_URL } from "../config";
+import { isSignedIn, startSession, signInExtras } from "./session";
 const AuthPage = lazy(() => import("../pages/AuthPage")); // only needed while signed out: signed-in visits never download it
 import { purgeOthers } from "../offline/offlineApi";
 import { parseGoogleHash, loginNoticeFor, sessionDecision, gateView } from "./gateLogic";
@@ -15,11 +17,12 @@ function readGoogleRedirect() {
   if (!parsed) return googleRedirect;
   window.history.replaceState(null, "", window.location.pathname + window.location.search);
   googleRedirect = parsed;
-  if (googleRedirect.status === "ok" && googleRedirect.token) {
+  if (googleRedirect.status === "ok" && (googleRedirect.token || googleRedirect.code)) {
     // Whoever was signed in before is replaced; their saved dashboard copy goes with them (the new account is loaded below).
     localStorage.removeItem("mydailyos_dash_v1");
     localStorage.removeItem("mydailyos_user");
-    localStorage.setItem("mydailyos_token", googleRedirect.token);
+    if (googleRedirect.token) startSession(googleRedirect.token);          // classic mode: the redirect carried the token
+    // cookie mode: the redirect carried a one-time code, swapped for the httpOnly cookie in the effect below
   }
   return googleRedirect;
 }
@@ -42,7 +45,15 @@ export default function AuthGate({ children }) {
     window.addEventListener("mydailyos:unauthorized", handleUnauthorized);
     readGoogleRedirect();
 
-    const token = localStorage.getItem("mydailyos_token");
+    // Cookie mode + Google: swap the one-time code for the httpOnly cookie first (it works once, for 60 seconds).
+    const exchange = redirect && redirect.code
+      ? fetch(`${API_URL}/api/auth/exchange`, { method: "POST", ...(signInExtras().credentials ? { credentials: signInExtras().credentials } : {}), headers: { "Content-Type": "application/json", ...signInExtras().headers }, body: JSON.stringify({ code: redirect.code }) })
+          .then((r) => r.json().catch(() => ({})).then((d) => { if (r.ok && d.success) startSession(d.token); }))
+          .catch(() => {})
+      : Promise.resolve();
+
+    exchange.then(() => {
+    const token = isSignedIn();
 
     if (token) {
       apiFetch("/api/account/me")
@@ -76,6 +87,7 @@ export default function AuthGate({ children }) {
     } else {
       setReady(true);
     }
+    });
 
     return () => {
       cancelled = true;

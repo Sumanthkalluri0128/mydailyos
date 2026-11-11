@@ -2,12 +2,15 @@
 // calorie / macro / quest number in the app follows it. Both take the person's training setup (place, level, days, minutes, equipment,
 // limits, focus): GET previews it without saving, POST /apply saves it with the body goal.
 const express = require('express');
+const CoachState = require('../models/CoachState');
+const { markCoachDirty } = require('../lib/coachDirty');
 const Profile = require('../models/Profile');
 const HealthLog = require('../models/HealthLog');
 const WeightLog = require('../models/WeightLog');
 const ActivityLog = require('../models/ActivityLog');
 const Activity = require('../models/Activity');
 const BodyPlanSession = require('../models/BodyPlanSession');
+const Readiness = require('../models/Readiness');
 const { requireAuth } = require('../middleware/auth');
 const { wrap, HttpError } = require('../lib/http');
 const v = require('../lib/validate');
@@ -42,13 +45,14 @@ function prefsFor(profile, override) {
 // What the person actually did, for the adaptive plan: 26 weeks of Body plan sessions, other workouts, weigh-ins and waist readings.
 async function history(userId, today) {
   const from = addDays(today, -182), fromW = addDays(today, -70);
-  const [sessions, activity, weights, waists] = await Promise.all([
+  const [sessions, activity, weights, waists, readiness] = await Promise.all([
     BodyPlanSession.find({ userId, date: { $gte: from, $lte: today } }).sort({ date: 1, createdAt: 1 }).limit(500).lean(),
     ActivityLog.find({ userId, date: { $gte: from, $lte: today } }).select('date category activityName durationMinutes sets clientId').limit(1500).lean(),
     WeightLog.find({ userId, date: { $gte: fromW, $lte: today } }).select('date weightKg').sort({ date: 1 }).limit(200).lean(),
     HealthLog.find({ userId, type: 'waist', date: { $gte: fromW, $lte: today } }).select('date value').sort({ date: 1 }).limit(60).lean(),
+    Readiness.find({ userId, date: { $gte: addDays(today, -14), $lte: today } }).select('date sleepHours energy soreness stress').sort({ date: 1 }).lean(),
   ]);
-  return { sessions, activity, weights, waists };
+  return { sessions, activity, weights, waists, readiness };
 }
 
 async function build(userId, wanted, override, date) {
@@ -115,6 +119,12 @@ const WAYS = ['gym', 'home', 'quick'];
 const PHASES = ['', 'learn', 'build', 'easy', 'back'];
 
 /** Clean what the phone or browser sent. Unknown values are dropped; numbers are clamped; nothing here can write outside the schema. */
+/** Effort of a set, RPE 1-10 in half steps; anything else is simply not recorded. */
+function cleanRpe(v) {
+  const n = Number(v);
+  return v !== null && v !== undefined && v !== '' && Number.isFinite(n) && n >= 1 && n <= 10 ? Math.round(n * 2) / 2 : null;
+}
+
 function cleanExercises(raw) {
   return (Array.isArray(raw) ? raw : []).slice(0, 24).map((e) => {
     const id = String(e?.id || '').slice(0, 60);
@@ -123,6 +133,7 @@ function cleanExercises(raw) {
       reps: Math.min(1000, Math.max(0, Math.round(Number(x?.reps) || 0))),
       weightKg: Math.min(1000, Math.max(0, Math.round((Number(x?.weightKg) || 0) * 100) / 100)),
       seconds: Math.min(7200, Math.max(0, Math.round(Number(x?.seconds) || 0))),
+      rpe: cleanRpe(x?.rpe),
     })).filter((x) => x.reps > 0 || x.seconds > 0);
     return { id, name: String(e.name || '').slice(0, 120), slot: String(e.slot || '').slice(0, 20), done: e.done !== false && sets.length > 0, sets };
   }).filter(Boolean);
@@ -168,6 +179,7 @@ router.post('/session', wrap(async (req, res) => {
       if (act) await ActivityLog.create({ userId: req.user.id, clientId: clientId ? `bp-${clientId}` : undefined, activityId: act._id, date, activityName: act.name, category: act.category, durationMinutes: minutes, weightKg: kg, met: act.met, caloriesBurned: (act.met * 3.5 * kg / 200) * minutes, notes: `Body plan: ${doc.title || 'workout'}` });
     } catch (e) { /* the session itself is saved; only the calorie entry is skipped */ }
   }
+  await markCoachDirty(CoachState, req.user.id);                      // effort (RPE) taps and new sessions can flip the strength trend
   const built = await build(req.user.id, '', undefined, asOf);
   res.status(201).json({ success: true, session: saved, highlights, plan: built.plan });
 }));
@@ -189,3 +201,4 @@ router.delete('/session/:id', wrap(async (req, res) => {
 }));
 
 module.exports = router;
+module.exports.build = build;     // the coach hub reads today's adapted plan through the same function

@@ -20,6 +20,9 @@ export function stepsOf(day) {
   return out;
 }
 
+// Effort of the heaviest set (RPE). The coach makes the next jump bigger after an easy one and holds the weight after a grinding one.
+const RPE_CHOICES = [[6, "Easy"], [7, "Comfortable"], [8, "Hard"], [9, "Very hard"], [10, "All out"]];
+
 function Stepper({ value, onChange, step = 1, min = 0, max = 999, label, wide }) {
   const n = Number(value) || 0;
   const set = (v) => onChange(Math.min(max, Math.max(min, Math.round(v * 100) / 100)));
@@ -218,6 +221,17 @@ function ExStep({ base, active, patch, swaps, sessions, week, setRest, openSheet
             <button type="button" className="wp-link" onClick={addSet}>＋ Add set</button>
             {rows.length > 1 && doneCount < rows.length && <button type="button" className="wp-link" onClick={dropSet}>− Remove set</button>}
           </div>
+          {!base.bw && !base.timed && doneCount > 0 && (
+            <div className="wp-rpe" role="group" aria-label="How hard was your heaviest set? Optional">
+              <span className="wp-rpe-q">How hard was your heaviest set? <em>Optional. Your coach uses it to choose the next weight.</em></span>
+              <div className="wp-rpe-row">
+                {RPE_CHOICES.map(([v, label]) => {
+                  const on = rows.some((r) => r.rpe === v);
+                  return <button key={v} type="button" className={`wp-rpe-chip ${on ? "on" : ""}`} aria-pressed={on} onClick={() => rows.forEach((_, i) => setRow(i, { rpe: on ? undefined : v }))}>{label}</button>;
+                })}
+              </div>
+            </div>
+          )}
         </div>
       )}
 

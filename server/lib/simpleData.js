@@ -34,7 +34,7 @@ async function loadSimple(uid, today) {
   const energy = expectedEnergy(p);
   const target = dailyTarget(p);
   const direction = energy?.direction || 'maintain';
-  const floor = p.sex === 'male' ? 1500 : 1200;
+  const floor = require('./energy').calorieFloorOf(p);
   const series = smoothTrend(weightRows.map((w) => ({ date: w.date, weightKg: Number(w.weightKg) })));
   const last = series[series.length - 1] || null;
   const rate = trendRate(series, today);
@@ -49,7 +49,7 @@ async function loadSimple(uid, today) {
   const focus = S.dailyFocus(todayRow, targets);
 
   const streak = S.streakSummary(foodDates, today);
-  const level = S.levelSummary({ days, targets, streaks: { logging: { best: computeStreaks(foodDates, today).longest } }, comebacks: streak.comebacks, floor: p.journey?.xpFloor || 0 });
+  const level = S.levelSummary({ days, targets, streaks: { logging: { best: computeStreaks(foodDates, today, { freeze: true }).longest } }, comebacks: streak.comebacks, floor: p.journey?.xpFloor || 0 });
 
   const sleep = Object.fromEntries(sleepRows.map((r) => [r.date, Number(r.value)]));
   const score = S.weeklyScoreSimple(days, targets, today, sleep);

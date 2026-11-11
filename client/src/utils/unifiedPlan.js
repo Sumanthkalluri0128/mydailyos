@@ -198,7 +198,7 @@ const FEEL = { easy: "easy", good: "good", challenging: "hard", hard: "hard" };
 export function sessionPayload(rec, { today, phase = "", way = "gym" } = {}) {
   const exercises = (rec.exercises || []).map((e) => ({
     id: e.id, name: e.name, slot: e.slot || "",
-    sets: (e.sets || []).filter((s) => s.done !== false).map((s) => (e.timed ? { seconds: num(s.r), reps: 0, weightKg: 0 } : { reps: num(s.r), weightKg: num(s.w), seconds: 0 })),
+    sets: (e.sets || []).filter((s) => s.done !== false).map((s) => (e.timed ? { seconds: num(s.r), reps: 0, weightKg: 0 } : { reps: num(s.r), weightKg: num(s.w), seconds: 0, ...(Number(s.rpe) >= 1 && Number(s.rpe) <= 10 ? { rpe: Number(s.rpe) } : {}) })),
   })).filter((e) => e.sets.length);
   const status = rec.status === "partial" ? "partial" : "done";
   return {

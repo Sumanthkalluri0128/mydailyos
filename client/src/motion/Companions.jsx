@@ -1,3 +1,4 @@
+import { isSignedIn } from "../auth/session";
 // Roaming companion. ONE character lives along the bottom of the screen and changes every few minutes (or when you pick one):
 //  • wander, hop, nap at night; you can PICK THEM UP, DRAG and THROW them (gravity + bounces)
 //  • tap = pet (hearts, "bond" grows) · double-tap = celebrate · tap again for comments from your real data + chat chips
@@ -58,8 +59,8 @@ const FOODS = ["🍛", "🍜", "🍔", "🍱", "🥗", "🍎", "🍕", "🥪"];
 export default function Companions() {
   const [on, setOn] = useState(companionsEnabled());
   useEffect(() => { const f = () => setOn(companionsEnabled()); window.addEventListener("ff:companions", f); return () => window.removeEventListener("ff:companions", f); }, []);
-  const [authed, setAuthed] = useState(() => !!localStorage.getItem("mydailyos_token"));
-  useEffect(() => { const t = setInterval(() => setAuthed(!!localStorage.getItem("mydailyos_token")), 2500); return () => clearInterval(t); }, []);
+  const [authed, setAuthed] = useState(() => isSignedIn());
+  useEffect(() => { const t = setInterval(() => setAuthed(isSignedIn()), 2500); return () => clearInterval(t); }, []);
   if (!on || !authed) return null;
   return <Layer />;
 }

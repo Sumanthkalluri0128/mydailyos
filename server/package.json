@@ -1,6 +1,6 @@
 {
   "name": "flexfit-backend",
-  "version": "2.9.0",
+  "version": "62.0.0",
   "private": true,
   "scripts": {
     "start": "node server.js",
@@ -10,7 +10,9 @@
     "send-weekly": "node scripts/sendWeekly.js",
     "send-backups": "node scripts/sendBackups.js",
     "audit-foods": "node scripts/auditFoods.js",
-    "preview-email": "node scripts/previewEmail.js"
+    "preview-email": "node scripts/previewEmail.js",
+    "restore:drill": "node --test test/restoreDrill.test.js",
+    "restore": "node scripts/restoreBackup.js"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",
@@ -23,7 +25,8 @@
     "nodemailer": "^10.0.13"
   },
   "devDependencies": {
-    "nodemon": "^3.1.7"
+    "nodemon": "^3.1.7",
+    "mongodb-memory-server": "^10.1.4"
   },
   "optionalDependencies": {
     "@sentry/node": "^8.42.0"

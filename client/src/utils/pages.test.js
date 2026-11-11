@@ -52,7 +52,8 @@ test("weight: hidden numbers are decoys and screen readers are told it is hidden
 
 // ---- auth gate
 test("auth gate: Google redirect is read and a bad one explains itself", () => {
-  assert.deepEqual(parseGoogleHash("#google=ok&token=abc"), { status: "ok", token: "abc", reason: "" });
+  assert.deepEqual(parseGoogleHash("#google=ok&token=abc"), { status: "ok", token: "abc", code: "", reason: "" });
+  assert.deepEqual(parseGoogleHash("#google=ok&code=xyz.123&email=a%40b.c"), { status: "ok", token: "", code: "xyz.123", reason: "" });   // cookie mode: a one-time code, never the token
   assert.equal(parseGoogleHash("#admin"), null); assert.equal(parseGoogleHash(""), null);
   assert.equal(loginNoticeFor(parseGoogleHash("#google=cancelled")), "Google sign-in was cancelled.");
   assert.equal(loginNoticeFor(parseGoogleHash("#google=error&reason=Not%20allowed")), "Not allowed");

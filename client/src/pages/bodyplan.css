@@ -187,3 +187,12 @@
 
 /* the reference sections (progression, cardio, safety) shown inside My plan cards */
 .bp-embed { max-width: none; padding: 0; margin: 0; }
+
+/* Effort (RPE) picker under the sets */
+.wp-rpe { margin-top: 10px; display: grid; gap: 6px; }
+.wp-rpe-q { font-size: 13px; font-weight: 700; }
+.wp-rpe-q em { display: block; font-weight: 400; font-style: normal; opacity: .75; font-size: 12px; }
+.wp-rpe-row { display: flex; flex-wrap: wrap; gap: 8px; }
+.wp-rpe-chip { border: 1.5px solid var(--border, #ddd); background: transparent; color: inherit; border-radius: 999px; padding: 6px 12px; font-weight: 700; font-size: 12.5px; cursor: pointer; }
+.wp-rpe-chip.on { background: var(--primary-solid, var(--primary)); border-color: var(--primary); color: #fff; }
+.bp-t-hold { border-left-color: #e0a100; }

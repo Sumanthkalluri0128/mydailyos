@@ -35,7 +35,7 @@ app.listen(PORT, '0.0.0.0', () => {
   console.log(`FlexFit server running on port ${PORT}`);
   console.log(`Allowed CORS origins: ${allowedOrigins.join(', ')}`);
   const mail = require('./lib/mailer').mailStatus();
-  console.log(mail.ready ? `Mail: sending via ${mail.provider}` : 'Mail: NOT CONFIGURED — password-reset emails cannot be sent (see SETUP_V5.md)');
+  console.log(mail.ready ? `Mail: sending via ${mail.provider}` : 'Mail: NOT CONFIGURED — password-reset emails cannot be sent (see docs/SETUP_V5.md)');
   console.log(require('./lib/googleClient').configured() ? 'Google: sign-in enabled' : 'Google: not configured (the Continue with Google button is hidden)');
   require('./lib/keepAwake').startKeepAwake(); // stops the free instance sleeping while it is awake
 });

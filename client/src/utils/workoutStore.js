@@ -169,7 +169,7 @@ export function finishActive(active, day, { swaps, weightKg, feel, notes, now = 
     for (const base of b.items) {
       if (active.skipped[base.id]) continue;
       const alt = swaps && swaps[base.id] ? base.alts.find((x) => x.id === swaps[base.id]) : null;
-      const sets = (active.sets[base.id] || []).filter((s) => s.done).map((s) => ({ w: Number(s.w) || 0, r: Number(s.r) || 0, done: true }));
+      const sets = (active.sets[base.id] || []).filter((s) => s.done).map((s) => ({ w: Number(s.w) || 0, r: Number(s.r) || 0, done: true, ...(Number(s.rpe) >= 1 && Number(s.rpe) <= 10 ? { rpe: Number(s.rpe) } : {}) }));
       if (sets.length) exercises.push({ id: alt ? alt.id : base.id, name: alt ? alt.name : base.name, from: alt ? base.name : "", sets, ...(base.timed ? { timed: true } : {}), ...(base.slot ? { slot: base.slot } : {}) });
     }
   }

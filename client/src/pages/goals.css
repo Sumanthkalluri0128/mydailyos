@@ -24,7 +24,7 @@
 .gp-presets{display:flex;flex-wrap:wrap;gap:6px;margin:10px 0}.gp-presets button{border:1px dashed rgba(127,127,160,.5);background:none;color:inherit;border-radius:999px;padding:6px 11px;font-size:12px;font-weight:700;cursor:pointer}
 .gp-add{width:100%;padding:12px;border-radius:14px;border:0;background:linear-gradient(135deg,#5b3df0,#b04bff);color:#fff;font-weight:800;cursor:pointer}
 .gp-actions{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap}.gp-actions button{border-radius:10px;border:1px solid rgba(127,127,160,.35);background:none;color:inherit;padding:6px 12px;font-weight:700;cursor:pointer}
-.gp-actions .primary{background:#7a5cff;color:#fff;border-color:#7a5cff}.gp-del{color:#e0443a!important}
+.gp-actions .primary{background:#7a5cff;color:#fff;border-color:#7a5cff}.gp-del.gp-del{color:#e0443a}
 .gp-modal{position:fixed;inset:0;background:rgba(10,8,30,.55);display:grid;place-items:center;z-index:90;padding:16px}
 .gp-form{width:min(420px,100%);background:var(--surface,#1d1f3a);color:inherit;border-radius:20px;padding:18px;display:grid;gap:10px}
 [data-theme="light"] .gp-form{background:#fff}

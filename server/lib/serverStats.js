@@ -3,7 +3,9 @@
 // Only AGGREGATE counts are kept: no user ids, no emails, no request bodies.
 const DAY_MS = 86_400_000;
 const KEEP_DAYS = 14;
-const COUNTERS = ['errors5xx', 'syncFailed', 'writesDropped', 'wakeReports'];
+// Card-open counters tell you which Home cards people really use ("card.water" = opened the water card). Retire the ones nobody opens.
+const CARD_IDS = ['calories', 'water', 'steps', 'w', 'ex', 'checkin', 'sidequest', 'eventmode', 'rough', 'plate'];
+const COUNTERS = ['errors5xx', 'syncFailed', 'writesDropped', 'wakeReports', ...CARD_IDS.map((id) => `card.${id}`)];
 const SOURCES = ['self', 'github', 'other'];
 
 const dayOf = (ms) => new Date(ms).toISOString().slice(0, 10);
@@ -89,4 +91,4 @@ function createStats({ now = Date.now, startedAt = now() } = {}) {
 /** Which keep-alive source sent this /api/health request: our own self-ping, the GitHub workflow, or anything else (a monitor, a browser). */
 const pingSource = (headers = {}) => { const v = String(headers['x-keepalive'] || '').toLowerCase(); return v === 'self' || v === 'github' ? v : 'other'; };
 
-module.exports = { createStats, percentile, pingSource, COUNTERS };
+module.exports = { CARD_IDS, createStats, percentile, pingSource, COUNTERS };

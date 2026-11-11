@@ -1,3 +1,4 @@
+import { isSignedIn } from "../auth/session";
 // Tour progress: kept in this browser (localStorage) AND on the server (/api/tour), merged so nothing completed is lost.
 // No third-party trackers: the only network calls are to our own API.
 import content from "./tourContent.js";
@@ -13,7 +14,7 @@ const subs = new Set(), cheers = new Set();
 let pushT = null;
 
 const persist = () => { try { localStorage.setItem(KEY, JSON.stringify(saved)); } catch { /* private mode: keep going in memory */ } };
-const push = () => { clearTimeout(pushT); pushT = setTimeout(() => { if (!localStorage.getItem("mydailyos_token")) return; apiFetch("/api/tour", { method: "PUT", body: JSON.stringify(saved) }).catch(() => {}); }, 1200); };
+const push = () => { clearTimeout(pushT); pushT = setTimeout(() => { if (!isSignedIn()) return; apiFetch("/api/tour", { method: "PUT", body: JSON.stringify(saved) }).catch(() => {}); }, 1200); };
 function set(patch, { sync = true } = {}) { saved = { ...saved, ...patch, updatedAt: Date.now() }; persist(); subs.forEach((f) => f(saved)); if (sync) push(); }
 
 export const getTour = () => saved;

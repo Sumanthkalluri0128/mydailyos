@@ -5,7 +5,7 @@ export function parseGoogleHash(hash) {
   const h = String(hash || "").replace(/^#/, "");
   if (!h.includes("google=")) return null;
   const p = new URLSearchParams(h);
-  return { status: p.get("google"), token: p.get("token") || "", reason: p.get("reason") || "" };
+  return { status: p.get("google"), token: p.get("token") || "", code: p.get("code") || "", reason: p.get("reason") || "" };
 }
 
 /** The line shown on the sign-in page after a Google redirect that did not work (nothing for a success or no redirect). */

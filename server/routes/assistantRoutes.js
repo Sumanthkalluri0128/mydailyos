@@ -69,7 +69,11 @@ async function buildSnapshot(uid, today, hour) {
   const estimate = estimateWeight({ days: core.days, weights: core.weights, profile: p, today });
   const measuredRate = series.length >= 3 ? trendRate(series, today) : null;
   const { ratePerWeek: rate, source: rateSource } = analysisRate({ measuredRate, lastWeighIn: core.weights.length ? core.weights[core.weights.length - 1].date : null, today, estimate });
-  const pl = (core.weights.length >= 3 || (estimate && estimate.meaningful)) ? detectPlateau({ weights: core.weights, profile: p, today, target, estimate }) : null;
+  let pl = (core.weights.length >= 3 || (estimate && estimate.meaningful)) ? detectPlateau({ weights: core.weights, profile: p, today, target, estimate }) : null;
+  if (pl && (pl.status === 'plateau' || pl.status === 'wrong_direction')) {
+    const hint = await require('./coachRoutes').cycleHintFor(uid, today).catch(() => null);          // one small read, only when the scale looks flat
+    if (hint) pl = detectPlateau({ weights: core.weights, profile: p, today, target, estimate, cycle: hint });
+  }
   const weight = {
     latestKg: latest, trendKg: series.length ? series[series.length - 1].trendKg : null, targetKg: g.targetWeightKg || null, paceKg: g.weeklyPaceKg || null,
     ratePerWeek: rateSource === 'scale' && Number.isFinite(rate) ? Math.round(rate * 100) / 100 : null,

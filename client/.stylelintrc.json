@@ -1,0 +1,19 @@
+{
+  "rules": {
+    "declaration-no-important": true,
+    "block-no-empty": true,
+    "color-no-invalid-hex": true,
+    "declaration-block-no-duplicate-properties": [true, { "ignore": ["consecutive-duplicates-with-different-values"] }],
+    "no-duplicate-selectors": null,
+    "property-no-unknown": true,
+    "unit-no-unknown": true,
+    "no-invalid-double-slash-comments": true
+  },
+  "overrides": [
+    {
+      "// reason": "!important is allowed ONLY where it must beat everything: reduced-motion / calm mode, print, and the gentle-mode hide. Nowhere else.",
+      "files": ["src/motion/*.css", "src/styles/redesign.css", "src/components/coachcards.css", "src/components/home/home.css"],
+      "rules": { "declaration-no-important": null }
+    }
+  ]
+}

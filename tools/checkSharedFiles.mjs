@@ -13,10 +13,19 @@ for (const [web, phone, strip] of [
   ['utils/exerciseFigure.js', 'utils/exerciseFigure.ts', dropNoCheck],
   ['utils/training.js', 'utils/training.js', (s) => s],
   ['utils/coneGeometry.js', 'utils/coneGeometry.ts', dropNoCheck],
+  ['utils/coachText.js', 'utils/coachText.ts', dropNoCheck],
+  ['utils/bodyCards.js', 'utils/bodyCards.ts', dropNoCheck],
 ]) {
   const a = read(path.join(W, web)), b = strip(read(path.join(M, phone)));
   console.log(`${a === b ? 'same ' : 'DIFF '} ${web}  <->  ${phone}`);
   if (a !== b) failures.push(web);
+}
+
+// 1b. translation files: the phone's copies must equal the web's
+for (const l of ['en', 'hi', 'te', 'ta']) {
+  const a = read(path.join(W, `i18n/${l}.json`)), b = read(path.join(M, `i18n/${l}.json`));
+  console.log(`${a === b ? 'same ' : 'DIFF '} i18n/${l}.json  <->  i18n/${l}.json`);
+  if (a !== b) failures.push(`i18n/${l}.json`);
 }
 
 // 2. the exercise photo map: the phone's file is generated from the web file, so its rows must equal the web rows (plus the phone-only names)

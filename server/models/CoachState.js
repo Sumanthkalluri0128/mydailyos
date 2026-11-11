@@ -15,6 +15,15 @@ const schema = new S({
   gentle: { type: Boolean, default: false },
   event: { kind: { type: String, enum: ['', 'festival', 'wedding', 'trip'], default: '' }, from: { type: String, default: '' }, to: { type: String, default: '' }, label: { type: String, default: '', maxlength: 40 } },
   dietBreak: { kind: { type: String, default: '' }, from: { type: String, default: '' }, to: { type: String, default: '' } },
+  // The weekly decision ladder (lib/weeklyDecision.js): slow weeks, ladder level, last change, and the decision currently on screen.
+  weekly: { type: S.Types.Mixed, default: null },
+  // What the coach changed and what happened afterwards (newest first, capped), and the one-tap undo for the last automatic change.
+  changelog: { type: [S.Types.Mixed], default: [] },
+  autoUndo: { type: S.Types.Mixed, default: null },
+  // Optional cycle awareness (lib/cycle.js): OFF by default. Only the days a period started are kept; used to avoid reading the monthly water shift
+  // as a stalled diet. Erasable in one tap, in the account export, and deleted with the account.
+  cycle: { enabled: { type: Boolean, default: false }, starts: { type: [String], default: [] }, length: { type: Number, min: 21, max: 45, default: null } },
+  gymToday: { type: S.Types.Mixed, default: null },          // {date, kind}: what the full adaptive gym plan said for today (written by the Coach page)
   showAll: { type: Boolean, default: false },
   seenFeatures: { type: [String], default: [] },
   treat: { weeklyKcal: { type: Number, default: 0, min: 0, max: 5000 }, entries: [{ _id: false, date: String, name: { type: String, maxlength: 80 }, kcal: Number }] },

@@ -6,6 +6,8 @@ const { requireAuth } = require('../middleware/auth');
 const { wrap, HttpError } = require('../lib/http');
 const { createOnce } = require('../lib/idempotent');
 const v = require('../lib/validate');
+const mongoose = require('mongoose');
+const { parseCursor, applyCursor, pageSize, finishPage } = require('../lib/paginate');
 
 const router = express.Router();
 router.use(requireAuth);
@@ -24,8 +26,11 @@ router.get('/', wrap(async (req, res) => {
     if (req.query.from) filter.date.$gte = v.date(req.query.from, 'from');
     if (req.query.to) filter.date.$lte = v.date(req.query.to, 'to');
   }
-  const limit = Math.min(Math.max(parseInt(req.query.limit, 10) || 1500, 1), 5000);
-  res.json({ success: true, logs: await WeightLog.find(filter).sort({ date: -1, createdAt: -1 }).limit(limit).lean() });
+  const limit = pageSize(req.query.limit, 1500, 5000);
+  const cur = parseCursor(req.query.cursor); if (cur === false) throw new HttpError(400, 'cursor is not valid');
+  const rows = await WeightLog.find(applyCursor(filter, cur, mongoose.Types.ObjectId)).sort({ date: -1, _id: -1 }).limit(limit + 1).lean();
+  const { page, hasMore, nextCursor } = finishPage(rows, limit);
+  res.json({ success: true, logs: page, hasMore, nextCursor });
 }));
 
 router.get('/date/:date', wrap(async (req, res) => {

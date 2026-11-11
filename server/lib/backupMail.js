@@ -17,25 +17,26 @@ const kb = (bytes) => (bytes >= 1048576 ? `${(bytes / 1048576).toFixed(1)} MB` :
  * The email itself. If the files together are too big to attach, it is sent without them and says where to download.
  * Calm wording only; the health data warning is plain, not alarming.
  */
-function buildBackupMail({ name, files, unsubscribeUrl: unsub, appUrl: app, weekLabel }) {
+function buildBackupMail({ name, files, unsubscribeUrl: unsub, appUrl: app, weekLabel, downloadUrl: dl, ttlHours = 48 }) {
   const list = (files || []).filter((f) => f && f.filename && f.content !== undefined);
   const total = list.reduce((t, f) => t + Buffer.byteLength(f.content), 0);
-  const attach = list.length > 0 && total <= MAX_ATTACH_BYTES;
+  const attach = !dl && list.length > 0 && total <= MAX_ATTACH_BYTES;   // with a link, nothing is attached
   const hasCsv = list.some((f) => /\.csv$/i.test(f.filename));
   const what = hasCsv ? 'The JSON file has everything; the CSV opens in a spreadsheet.' : 'The JSON file has everything.';
   const hi = name ? `Hi ${String(name).split(' ')[0]},` : 'Hi,';
   const lines = [
     hi, '',
     `Here is your weekly FlexFit backup${weekLabel ? ` (week of ${weekLabel})` : ''}.`,
-    attach ? `Attached: ${list.map((f) => `${f.filename} (${kb(Buffer.byteLength(f.content))})`).join(' and ')}. ${what}`
+    dl ? `Download your backup (the link works for ${ttlHours} hours): ${dl}`
+      : attach ? `Attached: ${list.map((f) => `${f.filename} (${kb(Buffer.byteLength(f.content))})`).join(' and ')}. ${what}`
       : 'Your data is too large to attach this week. Download it any time in the app: Profile, Download my data.',
     '',
-    'This file contains your personal health and food data. Keep it somewhere safe, and delete this email when you no longer need it.',
+    dl ? 'This backup contains your personal health and food data. Do not forward this email: anyone with the link can download it until it expires.' : 'This file contains your personal health and food data. Keep it somewhere safe, and delete this email when you no longer need it.',
     app ? `Open FlexFit: ${app}` : '',
     '', unsub ? `Stop these backup emails: ${unsub}` : 'You can stop these emails in Profile, Reports & emails.',
   ].filter((l, i, a) => !(l === '' && a[i - 1] === ''));
   const text = lines.join('\n');
-  const html = `<div style="font-family:-apple-system,Segoe UI,Roboto,Arial,sans-serif;color:#1f2340;max-width:520px;margin:auto;line-height:1.5"><p>${esc(hi)}</p><p>Here is your weekly FlexFit backup${weekLabel ? ` (week of ${esc(weekLabel)})` : ''}.</p><p>${attach ? `Attached: ${list.map((f) => `<strong>${esc(f.filename)}</strong> (${kb(Buffer.byteLength(f.content))})`).join(' and ')}. ${what}` : 'Your data is too large to attach this week. Download it any time in the app: Profile, Download my data.'}</p><p style="color:#6b7090">This file contains your personal health and food data. Keep it somewhere safe, and delete this email when you no longer need it.</p>${app ? `<p><a href="${esc(app)}">Open FlexFit</a></p>` : ''}<p style="font-size:12px;color:#6b7090">${unsub ? `<a href="${esc(unsub)}">Stop these backup emails</a>` : 'You can stop these emails in Profile, Reports &amp; emails.'}</p></div>`;
+  const html = `<div style="font-family:-apple-system,Segoe UI,Roboto,Arial,sans-serif;color:#1f2340;max-width:520px;margin:auto;line-height:1.5"><p>${esc(hi)}</p><p>Here is your weekly FlexFit backup${weekLabel ? ` (week of ${esc(weekLabel)})` : ''}.</p><p>${dl ? `<a href="${esc(dl)}"><strong>Download your backup</strong></a> (the link works for ${ttlHours} hours; after that, use Profile, Download my data in the app).` : attach ? `Attached: ${list.map((f) => `<strong>${esc(f.filename)}</strong> (${kb(Buffer.byteLength(f.content))})`).join(' and ')}. ${what}` : 'Your data is too large to attach this week. Download it any time in the app: Profile, Download my data.'}</p><p style="color:#6b7090">This file contains your personal health and food data. Keep it somewhere safe, and delete this email when you no longer need it.</p>${app ? `<p><a href="${esc(app)}">Open FlexFit</a></p>` : ''}<p style="font-size:12px;color:#6b7090">${unsub ? `<a href="${esc(unsub)}">Stop these backup emails</a>` : 'You can stop these emails in Profile, Reports &amp; emails.'}</p></div>`;
   return {
     subject: 'Your weekly FlexFit backup', text, html, attached: attach, attachments: attach ? list : [],
     headers: unsub ? { 'List-Unsubscribe': `<${unsub}>`, 'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click' } : undefined,

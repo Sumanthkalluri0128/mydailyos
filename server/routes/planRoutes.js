@@ -34,7 +34,13 @@ const { oilKcal } = require('../lib/oil');
 const { computeStreaks } = require('../lib/streaks');
 const { startBreak, endBreak, breakExpired } = require('../lib/planState');
 
+const { s, body } = require('../lib/schema');
 const router = express.Router();
+/** Persistent very-low days or low/high swings over the last two weeks: used only for a kind, supportive notice (lib/bodyAnalysis.js). */
+const restrictionOf = (core, today) => {
+  const E = require('../lib/energy');
+  return require('../lib/bodyAnalysis').restrictionPattern({ days: core.days.filter((d) => d.date <= today), target: E.dailyTarget(core.profile), floor: E.calorieFloorOf(core.profile) });
+};
 router.use(requireAuth);
 
 const todayOf = (req) => (req.query.today ? v.date(req.query.today, 'today') : todayUtc());
@@ -61,7 +67,7 @@ router.get('/', wrap(async (req, res) => {
   const lost = plan.active && plan.startKg && last ? Math.max(0, plan.startKg - planTrendKg(plan, core.weights, last.trendKg)) : 0;
   const total = plan.active && plan.startKg && plan.targetKg ? Math.abs(plan.startKg - plan.targetKg) : 0;
   const rate = trendRate(series, today);
-  const safety = safetyReport({ profile: core.profile, trendRate: rate, avgIntake7: avgIntake(core.days, today), loggedDays7: core.days.filter((d) => d.date > addDays(today, -7) && d.calories > 0).length });
+  const safety = safetyReport({ profile: core.profile, trendRate: rate, avgIntake7: avgIntake(core.days, today), loggedDays7: core.days.filter((d) => d.date > addDays(today, -7) && d.calories > 0).length, restriction: restrictionOf(core, today) });
   const weeksSince = plan.active ? diffDays(plan.lastBreakEnd && plan.lastBreakEnd > plan.startDate ? plan.lastBreakEnd : plan.startDate, today) / 7 : 0;
   const onBreak = !!plan.breakUntil && plan.breakUntil >= today;
   res.json({
@@ -112,7 +118,7 @@ router.get('/preview', wrap(async (req, res) => {
   res.json({ success: true, derived, startChoice: startChoice({ plan: profile.plan, currentKg: profile.currentWeightKg, today }) });
 }));
 
-router.patch('/focus', wrap(async (req, res) => {
+router.patch('/focus', body(s.object({ focus: s.required(s.array(s.string({ max: 20 }), { max: 3 })) })), wrap(async (req, res) => {
   const ids = Array.isArray(req.body?.focus) ? req.body.focus.filter((x) => typeof x === 'string').slice(0, 3) : null;
   const ok = ['logging', 'protein', 'steps', 'water', 'sleep', 'strength'];
   if (!ids || ids.some((x) => !ok.includes(x))) throw new HttpError(400, 'Choose up to three focus habits');
@@ -155,7 +161,7 @@ router.delete('/events/:id', wrap(async (req, res) => {
 }));
 
 // ---- maintenance break
-router.post('/break', wrap(async (req, res) => {
+router.post('/break', body(s.object({ action: s.string({ max: 10, oneOf: ['start', 'end'] }), today: s.date() })), wrap(async (req, res) => {
   const today = todayOf(req); const uid = req.user.id;
   const profile = await ensureProfile(uid);
   if (req.body?.action === 'end') {
@@ -262,7 +268,7 @@ async function dietDayFor(req, src) {
   return { date, diet, variant, needsProfile: !core.ranges, ...day };
 }
 router.get('/diet-day', wrap(async (req, res) => { res.json({ success: true, ...(await dietDayFor(req, req.query)) }); }));
-router.post('/diet-day/apply', wrap(async (req, res) => {
+router.post('/diet-day/apply', body(s.object({ date: s.date(), diet: s.string({ max: 1, oneOf: ['v', 'e', 'n'] }), variant: s.number({ min: 0, max: 50 }), today: s.date() })), wrap(async (req, res) => {
   const uid = req.user.id;
   const day = await dietDayFor(req, req.body || {});   // rebuilt on the server: never trusts client-sent items
   await MealPlan.deleteMany({ userId: uid, date: day.date, why: 'Healthy day', logged: false });
@@ -284,7 +290,7 @@ router.get('/outcomes', wrap(async (req, res) => {
   const { series } = trendInputs(core);
   const last = series[series.length - 1];
   const rate = trendRate(series, today);
-  const safety = safetyReport({ profile, trendRate: rate, avgIntake7: avgIntake(core.days, today), loggedDays7: core.days.filter((d) => d.date > addDays(today, -7) && d.calories > 0).length });
+  const safety = safetyReport({ profile, trendRate: rate, avgIntake7: avgIntake(core.days, today), loggedDays7: core.days.filter((d) => d.date > addDays(today, -7) && d.calories > 0).length, restriction: restrictionOf(core, today) });
   const tape = await HealthLog.find({ userId: uid, type: { $in: ['waist', 'hips', 'neck'] } }).sort({ date: 1, createdAt: 1 }).select('type date value').lean();
   const by = (t) => tape.filter((x) => x.type === t);
   const first = (t) => by(t)[0]?.value ?? null, latest = (t) => by(t).slice(-1)[0]?.value ?? null;

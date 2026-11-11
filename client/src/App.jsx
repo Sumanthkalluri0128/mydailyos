@@ -1,4 +1,8 @@
 import { useEffect, useState, Suspense, lazy } from "react";
+import ErrorBoundary from "./components/ErrorBoundary";
+import "./components/errorBoundary.css";
+// Every tab sits in its own error boundary (reported to Sentry with the tab name); switching tabs clears the error.
+const TabSuspense = ({ tab, children }) => <ErrorBoundary scope="tab" name={String(tab || "")} resetKey={tab}><Suspense fallback={<PageSkeleton variant="list" />}>{children}</Suspense></ErrorBoundary>;
 import { refreshFlags } from "./utils/flagStore";
 import { loadTone } from "./utils/coachTone";
 import { loadFeatures } from "./utils/features";
@@ -15,6 +19,7 @@ const WeightPage = lazy(() => import("./pages/WeightPage"));
 const ProfilePage = lazy(() => import("./pages/ProfilePage"));
 const ProgressPage = lazy(() => import("./pages/ProgressPage"));
 const GoalsPage = lazy(() => import("./pages/GoalsPage"));
+const CoachPage = lazy(() => import("./pages/CoachPage"));
 const WorkoutPlanPage = lazy(() => import("./pages/WorkoutPlanPage"));
 const PlannerPage = lazy(() => import("./pages/PlannerPage"));
 const RecipesPage = lazy(() => import("./pages/RecipesPage"));
@@ -395,7 +400,7 @@ function App() {
 
   if (profile && profile.onboarded === false) {
     return (
-      <Suspense fallback={<PageSkeleton variant="list" />}>
+      <TabSuspense tab={currentPage}>
       <OnboardingPage
         profile={profile}
         onDone={(updated) => {
@@ -407,7 +412,7 @@ function App() {
           } catch { /* ignore */ }
         }}
       />
-      </Suspense>
+      </TabSuspense>
     );
   }
 
@@ -422,7 +427,7 @@ function App() {
         {shell}
 
         <main key={currentPage} className="dashboard fx-page">
-          <Suspense fallback={<PageSkeleton variant="list" />}>
+          <TabSuspense tab={currentPage}>
           <FoodLogger
             date={today}
             goTo={setCurrentPage}
@@ -430,7 +435,7 @@ function App() {
               setCurrentPage("dashboard")
             }
           />
-        </Suspense>
+        </TabSuspense>
         </main>
 
       </div>
@@ -446,9 +451,9 @@ function App() {
       <div className="app">
         {shell}
         <main key={currentPage} className="dashboard fx-page">
-          <Suspense fallback={<PageSkeleton variant="list" />}>
+          <TabSuspense tab={currentPage}>
             <HealthPage onBack={() => setCurrentPage("dashboard")} />
-          </Suspense>
+          </TabSuspense>
         </main>
       </div>
     );
@@ -461,13 +466,13 @@ function App() {
         {shell}
 
         <main key={currentPage} className="dashboard fx-page">
-          <Suspense fallback={<PageSkeleton variant="list" />}>
+          <TabSuspense tab={currentPage}>
           <ExercisePage
             onBack={() =>
               setCurrentPage("dashboard")
             }
           />
-        </Suspense>
+        </TabSuspense>
         </main>
 
       </div>
@@ -485,13 +490,13 @@ function App() {
         {shell}
 
         <main key={currentPage} className="dashboard fx-page">
-          <Suspense fallback={<PageSkeleton variant="list" />}>
+          <TabSuspense tab={currentPage}>
           <TaskPage
             onBack={() =>
               setCurrentPage("dashboard")
             }
           />
-        </Suspense>
+        </TabSuspense>
         </main>
 
       </div>
@@ -509,13 +514,13 @@ function App() {
         {shell}
 
         <main key={currentPage} className="dashboard fx-page">
-          <Suspense fallback={<PageSkeleton variant="list" />}>
+          <TabSuspense tab={currentPage}>
           <HabitPage
             onBack={() =>
               setCurrentPage("dashboard")
             }
           />
-        </Suspense>
+        </TabSuspense>
         </main>
 
       </div>
@@ -533,13 +538,13 @@ function App() {
         {shell}
 
         <main key={currentPage} className="dashboard fx-page">
-          <Suspense fallback={<PageSkeleton variant="list" />}>
+          <TabSuspense tab={currentPage}>
           <WaterPage
             onBack={() =>
               setCurrentPage("dashboard")
             }
           />
-        </Suspense>
+        </TabSuspense>
         </main>
 
       </div>
@@ -557,13 +562,13 @@ function App() {
         {shell}
 
         <main key={currentPage} className="dashboard fx-page">
-          <Suspense fallback={<PageSkeleton variant="list" />}>
+          <TabSuspense tab={currentPage}>
           <WeightPage
             onBack={() =>
               setCurrentPage("dashboard")
             }
           />
-        </Suspense>
+        </TabSuspense>
         </main>
 
       </div>
@@ -581,13 +586,13 @@ function App() {
         {shell}
 
         <main key={currentPage} className="dashboard fx-page">
-          <Suspense fallback={<PageSkeleton variant="list" />}>
+          <TabSuspense tab={currentPage}>
           <ProfilePage
             onBack={() =>
               setCurrentPage("dashboard")
             }
           />
-        </Suspense>
+        </TabSuspense>
         </main>
 
       </div>
@@ -603,9 +608,9 @@ function App() {
       <div className="app">
         {shell}
         <main key={currentPage} className="dashboard fx-page">
-          <Suspense fallback={<PageSkeleton variant="list" />}>
+          <TabSuspense tab={currentPage}>
             <AdminPage onBack={() => { try { history.replaceState(null, "", location.pathname + location.search); } catch { /* ignore */ } setCurrentPage("dashboard"); }} />
-          </Suspense>
+          </TabSuspense>
         </main>
       </div>
     );
@@ -617,9 +622,22 @@ function App() {
       <div className="app">
         {shell}
         <main key="workouts" className="dashboard fx-page">
-          <Suspense fallback={<PageSkeleton variant="list" />}>
+          <TabSuspense tab={currentPage}>
             <WorkoutPlanPage key={currentPage} startView={currentPage === "bodyPlan" ? "body" : undefined} />
-          </Suspense>
+          </TabSuspense>
+        </main>
+      </div>
+    );
+  }
+
+  if (currentPage === "coach") {
+    return (
+      <div className="app">
+        {shell}
+        <main key={currentPage} className="dashboard fx-page">
+          <TabSuspense tab={currentPage}>
+            <CoachPage onBack={() => setCurrentPage("dashboard")} />
+          </TabSuspense>
         </main>
       </div>
     );
@@ -630,9 +648,9 @@ function App() {
       <div className="app">
         {shell}
         <main key={currentPage} className="dashboard fx-page">
-          <Suspense fallback={<PageSkeleton variant="list" />}>
+          <TabSuspense tab={currentPage}>
           <GoalsPage onBack={() => setCurrentPage("dashboard")} />
-        </Suspense>
+        </TabSuspense>
         </main>
       </div>
     );
@@ -643,9 +661,9 @@ function App() {
       <div className="app">
         {shell}
         <main key={currentPage} className="dashboard fx-page">
-          <Suspense fallback={<PageSkeleton variant="list" />}>
+          <TabSuspense tab={currentPage}>
           <ProgressPage onBack={() => setCurrentPage("dashboard")} />
-        </Suspense>
+        </TabSuspense>
         </main>
       </div>
     );
@@ -656,11 +674,11 @@ function App() {
       <div className="app">
         {shell}
         <main key={currentPage} className="dashboard fx-page">
-          <Suspense fallback={<PageSkeleton variant="list" />}>
+          <TabSuspense tab={currentPage}>
             {currentPage === "planner"
               ? <PlannerPage onBack={() => setCurrentPage("dashboard")} goTo={setCurrentPage} />
               : <RecipesPage onBack={() => setCurrentPage("foodLogger")} />}
-          </Suspense>
+          </TabSuspense>
         </main>
       </div>
     );
@@ -677,9 +695,9 @@ function App() {
         {shell}
 
         <main key={currentPage} className="dashboard fx-page">
-          <Suspense fallback={<PageSkeleton variant="list" />}>
+          <TabSuspense tab={currentPage}>
           <FoodPage />
-        </Suspense>
+        </TabSuspense>
         </main>
 
       </div>

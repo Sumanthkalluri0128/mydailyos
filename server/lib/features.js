@@ -14,6 +14,21 @@ const UNLOCKS = {
   northstar: { when: (c) => c.activeDays >= 14, hint: 'Use the app on 14 different days.' },
 };
 const ALWAYS = ['profile'];
+
+// Home cards that are NOT needed on day one. A new person sees a quiet Home; each card appears once they have used the app enough to want it.
+// Cards not listed here (hero, stat cards, rough day, plate card...) are always shown. `showAll` shows every card.
+// To retire a card nobody opens: delete its line here (open counts per card are in /api/admin stats as card.<id>).
+const HOME_CARDS = {
+  checkin: { when: (c) => c.activeDays >= 2 },      // sleep + energy check-in: after the second day
+  sidequest: { when: (c) => c.activeDays >= 3 },
+  eventmode: { when: (c) => c.activeDays >= 7 },
+};
+const HOME_CARD_IDS = ['checkin', 'sidequest', 'eventmode'];
+/** The ids of the optional Home cards to show right now. */
+function homeCardsView({ counts, showAll = false } = {}) {
+  const c = cleanCounts(counts);
+  return Object.keys(HOME_CARDS).filter((id) => showAll || HOME_CARDS[id].when(c));
+}
 const ALL = [...ALWAYS, ...CORE, ...Object.keys(UNLOCKS)];
 
 const num = (x) => { const n = Number(x); return Number.isFinite(n) && n > 0 ? Math.floor(n) : 0; };
@@ -31,4 +46,4 @@ function featureView({ counts, showAll = false, seen = [] } = {}) {
   return { showAll: !!showAll, visible, locked, newlyUnlocked: newly, counts: c };
 }
 
-module.exports = { CORE, UNLOCKS, ALL, ALWAYS, cleanCounts, featureView };
+module.exports = { CORE, UNLOCKS, ALL, ALWAYS, HOME_CARDS, HOME_CARD_IDS, homeCardsView, cleanCounts, featureView };

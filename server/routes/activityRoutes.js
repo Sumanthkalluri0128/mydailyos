@@ -10,6 +10,9 @@ const { stepCalories, stepDistanceKm, stepsByDate, profileWeight } = require('..
 const { computeRecords } = require('../lib/records');
 const { planImport, FALLBACK } = require('../lib/hcImport');
 
+const mongoose = require('mongoose');
+const { parseCursor, applyCursor, pageSize, finishPage } = require('../lib/paginate');
+const { s, body } = require('../lib/schema');
 const router = express.Router();
 router.use(requireAuth);
 
@@ -29,8 +32,11 @@ router.get('/logs', wrap(async (req, res) => {
     const from = v.date(req.query.from, 'from');
     const to = v.date(req.query.to, 'to');
     if (from > to) throw new HttpError(400, 'from must be on or before to');
-    const logs = await ActivityLog.find({ userId: req.user.id, date: { $gte: from, $lte: to } }).sort({ date: -1, createdAt: -1 }).limit(1000).lean();
-    return res.json({ success: true, logs });
+    const limit = pageSize(req.query.limit, 1000, 1000);
+    const cur = parseCursor(req.query.cursor); if (cur === false) throw new HttpError(400, 'cursor is not valid');
+    const rows = await ActivityLog.find(applyCursor({ userId: req.user.id, date: { $gte: from, $lte: to } }, cur, mongoose.Types.ObjectId)).sort({ date: -1, _id: -1 }).limit(limit + 1).lean();
+    const { page, hasMore, nextCursor } = finishPage(rows, limit);
+    return res.json({ success: true, logs: page, hasMore, nextCursor });
   }
   const date = v.date(req.query.date);
   res.json({ success: true, logs: await ActivityLog.find({ userId: req.user.id, date }).sort({ createdAt: -1 }).lean() });
@@ -100,7 +106,7 @@ router.post('/logs', wrap(async (req, res) => {
 }));
 
 // Import exercise sessions read from Health Connect on the phone. Safe to repeat: the same session never imports twice.
-router.post('/import', wrap(async (req, res) => {
+router.post('/import', body(s.object({ sessions: s.array(s.object({}, { passthrough: true }), { max: 2000 }) })), wrap(async (req, res) => {
   const raw = Array.isArray(req.body?.sessions) ? req.body.sessions : [];
   if (!raw.length) return res.json({ success: true, imported: 0, skipped: [], logs: [] });
   const dates = raw.map((r) => String(r?.date || '')).filter((d) => /^\d{4}-\d{2}-\d{2}$/.test(d)).sort();

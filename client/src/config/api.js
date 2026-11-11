@@ -1,8 +1,9 @@
 import { API_URL } from "../config";
+import { getToken, isSignedIn, endSession, requestExtras } from "../auth/session";
 import { enqueue, flushQueue, isQueueable, saveGet, savedGet, refreshPending, purgeOthers, wipeAll } from "../offline/offlineApi";
 
 export function clearSession() {
-  localStorage.removeItem("mydailyos_token");
+  endSession();
   localStorage.removeItem("mydailyos_user");
   // The saved dashboard copy belongs to the person who just left. Their queued offline changes stay (tagged with their
   // email) so they are still sent if the same person signs back in.
@@ -19,13 +20,15 @@ const json = (body, status = 200, extra = {}) =>
   new Response(JSON.stringify(body), { status, headers: { "Content-Type": "application/json", ...extra } });
 
 function buildRequest(input, options) {
-  const token = localStorage.getItem("mydailyos_token");
+  const token = isSignedIn() ? getToken() || "cookie" : null;      // truthy = someone is signed in (the cookie itself is invisible to scripts)
+  const extras = requestExtras();
   const headers = new Headers(options.headers || {});
+  for (const [k, v] of Object.entries(extras.headers || {})) headers.set(k, v);
   headers.set("Accept", "application/json");
   if (options.body && !headers.has("Content-Type")) headers.set("Content-Type", "application/json");
-  if (token) headers.set("Authorization", `Bearer ${token}`);
+  if (token && token !== "cookie") headers.set("Authorization", `Bearer ${token}`);
   const url = typeof input === "string" && input.startsWith("/") ? `${API_URL}${input}` : input;
-  return { url, init: { ...options, headers }, token };
+  return { url, init: { ...options, headers, ...(extras.credentials ? { credentials: extras.credentials } : {}) }, token };
 }
 
 export async function apiFetch(input, options = {}) {
@@ -76,8 +79,8 @@ export async function apiFetch(input, options = {}) {
 
 /** Sends one queued change (used by the replay loop). Returns { ok, status }. */
 async function sendQueued(op) {
-  const token = localStorage.getItem("mydailyos_token");
-  const res = await fetch(op.url, { method: op.method, headers: { "Content-Type": "application/json", Accept: "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) }, body: op.body });
+  const token = getToken(); const extras = requestExtras();
+  const res = await fetch(op.url, { method: op.method, headers: { "Content-Type": "application/json", Accept: "application/json", ...(extras.headers || {}), ...(token ? { Authorization: `Bearer ${token}` } : {}) }, ...(extras.credentials ? { credentials: extras.credentials } : {}), body: op.body });
   return { ok: res.ok, status: res.status };
 }
 

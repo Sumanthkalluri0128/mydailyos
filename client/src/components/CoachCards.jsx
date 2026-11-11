@@ -1,3 +1,4 @@
+import { useT } from "../i18n";
 import { useCallback, useEffect, useState } from "react";
 import { API_URL } from "../config";
 import { apiFetch } from "../config/api";
@@ -23,6 +24,39 @@ export function useCoachState() {
   const load = useCallback(() => { call(`/state?today=${getLocalDate()}`).then(setS).catch(() => {}); }, []);
   useEffect(() => { load(); }, [load]);
   return [s, setS, load];
+}
+
+// 0. One-tap sleep + energy check-in. Sleep hours from Health Connect (phone) count automatically, so then only energy is asked.
+export function CheckIn({ state, reload }) {
+  const { t } = useT();
+  const c = state?.checkin;
+  const [busy, setBusy] = useState(false);
+  const [open, setOpen] = useState(false);
+  if (!c) return null;
+  const send = async (body) => { setBusy(true); try { await post("/checkin", body); await reload(); } catch (e) { notify(e.message, "error"); } finally { setBusy(false); } };
+  const haveSleep = c.sleepHours != null; const haveEnergy = c.energy != null;
+  const done = haveEnergy && haveSleep;
+  if (done && !open) {
+    return (
+      <section className="cc-strip cc-checkin" aria-label="Today's check-in">
+        <span><strong>{c.advice.headline}</strong> {c.advice.workout}</span>
+        <button type="button" className="chip" onClick={() => setOpen(true)}>{t("checkin.change")}</button>
+      </section>
+    );
+  }
+  return (
+    <section className="large-card cc-checkin" aria-label="Sleep and energy check-in">
+      <p className="eyebrow">{t("checkin.title")}</p>
+      {haveSleep && c.sleepSource === "device"
+        ? <p>Sleep: <strong>{c.sleepHours.toFixed(1)} h</strong> <small>({t("checkin.fromHC")})</small></p>
+        : <><p>{t("checkin.sleepQ")}{haveSleep ? <small> (now: {c.sleepHours.toFixed(1)} h)</small> : null}</p>
+          <div className="cc-chips" role="group" aria-label="Sleep">{c.choices.sleep.map((o) => <button key={o.id} type="button" className="chip" disabled={busy} onClick={() => send({ sleep: o.id })}>{t(`checkin.sleep.${o.id}`)}</button>)}</div></>}
+      <p>{t("checkin.energyQ")}</p>
+      <div className="cc-chips" role="group" aria-label="Energy">{c.choices.energy.map((o) => <button key={o.id} type="button" className={`chip${c.energy === o.id ? " on" : ""}`} aria-pressed={c.energy === o.id} disabled={busy} onClick={() => send({ energy: o.id })}>{t(`checkin.energy.${o.id}`)}</button>)}</div>
+      {c.advice.level !== "unknown" && <p className="cc-advice"><strong>{c.advice.headline}</strong><br />{c.advice.workout}<br /><small>{c.advice.food}</small></p>}
+      {done && <button type="button" className="secondary-button" onClick={() => setOpen(false)}>{t("checkin.done")}</button>}
+    </section>
+  );
 }
 
 // 1. Rough day ("rest arc"): three tiny things, streak kept, fewer reminders. One tap on from Home.

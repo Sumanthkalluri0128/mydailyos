@@ -54,3 +54,22 @@ test('unsubscribe: weekly and backup links are separate', { skip: !unsub }, () =
   assert.deepEqual(unsub.verifyAny(b, secret), { userId: 'u1', purpose: unsub.BACKUP_PURPOSE });
   assert.equal(unsub.verifyAny('junk', secret), null);
 });
+
+test('backup mail with a download link: nothing attached, link and expiry in the email, health-data warning says not to forward', () => {
+  const m = buildBackupMail({ name: 'Asha', files, downloadUrl: 'https://api.x/api/email/backup-download?token=abc', ttlHours: 48 });
+  assert.equal(m.attached, false); assert.deepEqual(m.attachments, []);
+  assert.match(m.text, /backup-download\?token=abc/); assert.match(m.text, /48 hours/); assert.match(m.text, /Do not forward/);
+  assert.match(m.html, /Download your backup/);
+});
+
+test('backup download token: valid for its purpose, rejected for others and when expired', { skip: !unsub }, () => {
+  const t = unsub.downloadToken('u1', 's3cret');
+  assert.equal(unsub.verifyDownload(t, 's3cret'), 'u1');
+  assert.equal(unsub.verifyDownload(t, 'other-secret'), null);
+  assert.equal(unsub.verifyDownload(unsub.sign('u1', 's3cret'), 's3cret'), null);          // an unsubscribe token cannot download data
+  assert.equal(unsub.verifyDownload(unsub.downloadToken('u1', 's3cret', -1), 's3cret'), null);
+  assert.equal(unsub.verifyAny(t, 's3cret'), null);                                          // and a download token cannot unsubscribe
+  const url = unsub.downloadUrl('u1', { JWT_SECRET: 's3cret', PUBLIC_API_URL: 'https://api.x/' });
+  assert.match(url, /^https:\/\/api\.x\/api\/email\/backup-download\?token=/);
+  assert.equal(unsub.downloadUrl('u1', { JWT_SECRET: 's3cret' }), '');
+});

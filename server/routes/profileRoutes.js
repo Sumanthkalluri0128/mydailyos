@@ -4,6 +4,7 @@ const { requireAuth } = require('../middleware/auth');
 const { wrap } = require('../lib/http');
 const v = require('../lib/validate');
 const { refreshStoredTarget } = require('../lib/profileEnergy');
+const { refreshAutoActivity } = require('../lib/dailyCoachData');
 const { endBreak, breakExpired } = require('../lib/planState');
 const { todayUtc } = require('../lib/dates');
 const { diffTargets } = require('../lib/simpleGoals');
@@ -21,17 +22,20 @@ function parseUpdate(body = {}) {
   if (body.heightCm !== undefined) set.heightCm = v.nullableNumber(body.heightCm, 'heightCm', { min: 50, max: 250 });
   if (body.currentWeightKg !== undefined) set.currentWeightKg = v.nullableNumber(body.currentWeightKg, 'currentWeightKg', { min: 1, max: 700 });
   if (body.activityLevel !== undefined) set.activityLevel = v.oneOf(body.activityLevel, 'activityLevel', ACTIVITY);
+  if (body.activityMode !== undefined) set.activityMode = v.oneOf(body.activityMode, 'activityMode', ['auto', 'manual']);
   if (body.onboarded !== undefined) set.onboarded = v.bool(body.onboarded, 'onboarded');
 
   const g = body.goals;
   if (g && typeof g === 'object') {
     if (g.calorieTarget !== undefined) set['goals.calorieTarget'] = v.number(g.calorieTarget, 'calorieTarget', { min: 500, max: 20000 });
     if (g.calorieMode !== undefined) set['goals.calorieMode'] = v.oneOf(g.calorieMode, 'calorieMode', ['auto', 'manual']);
+    if (g.calorieFloor !== undefined) set['goals.calorieFloor'] = v.nullableNumber(g.calorieFloor, 'calorieFloor', { min: 1000, max: 3000 }); // empty = the default floor
     if (g.proteinTarget !== undefined) set['goals.proteinTarget'] = v.nullableNumber(g.proteinTarget, 'proteinTarget', { min: 1, max: 1000 }); // empty = automatic from your weight and body goal
     if (g.waterTargetMl !== undefined) set['goals.waterTargetMl'] = v.number(g.waterTargetMl, 'waterTargetMl', { min: 250, max: 20000 });
     if (g.stepsTarget !== undefined) set['goals.stepsTarget'] = v.number(g.stepsTarget, 'stepsTarget', { min: 1, max: 200000 });
     if (g.exerciseMinutesTarget !== undefined) set['goals.exerciseMinutesTarget'] = v.number(g.exerciseMinutesTarget, 'exerciseMinutesTarget', { min: 1, max: 1440 });
     if (g.bodyType !== undefined) set['goals.bodyType'] = v.oneOf(g.bodyType, 'bodyType', ['', 'lean', 'athletic', 'muscular', 'balanced'], '');
+    if (g.coachAuto !== undefined) set['goals.coachAuto'] = v.oneOf(g.coachAuto, 'coachAuto', ['off', 'safe'], 'off');
     if (g.weeklyPaceKg !== undefined) set['goals.weeklyPaceKg'] = v.number(g.weeklyPaceKg, 'weeklyPaceKg', { min: 0.1, max: 1 });
     if (g.targetWeightKg !== undefined) set['goals.targetWeightKg'] = v.nullableNumber(g.targetWeightKg, 'targetWeightKg', { min: 1, max: 700 });
   }
@@ -52,6 +56,8 @@ router.get('/', wrap(async (req, res) => {
   let profile = (await Profile.findOne({ userId: req.user.id })) || (await Profile.create({ userId: req.user.id }));
   // A finished maintenance break hands the calorie target back to the plan the next time the profile is read.
   if (breakExpired(profile, todayUtc())) profile = (await Profile.findOneAndUpdate({ userId: req.user.id }, { $set: endBreak(profile, todayUtc()) }, { new: true })) || profile;
+  // Automatic activity: yesterday's steps and training keep the calorie target's level current (once a day, never on one lazy day).
+  try { const t = req.query?.today && /^\d{4}-\d{2}-\d{2}$/.test(String(req.query.today)) ? String(req.query.today) : todayUtc(); profile = (await refreshAutoActivity(req.user.id, t)) || profile; } catch (_) { /* the profile still loads */ }
   res.json({ success: true, profile });
 }));
 

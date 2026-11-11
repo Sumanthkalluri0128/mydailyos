@@ -9,22 +9,29 @@ const v = require('../lib/validate');
 const WeightLog = require('../models/WeightLog');
 const { measureTrends, TYPES: BODY_TYPES } = require('../lib/measurements');
 const { addDays, todayUtc } = require('../lib/dates');
+const CoachState = require('../models/CoachState');
+const { markCoachDirty } = require('../lib/coachDirty');
 
 const router = express.Router();
 router.use(requireAuth);
+const mongoose = require('mongoose');
+const { parseCursor, applyCursor, pageSize, finishPage } = require('../lib/paginate');
 
 const RANGES = {
   steps: [0, 200000], sleep: [0.1, 24], heartRate: [20, 250], bloodPressure: [50, 260], glucose: [20, 800],
-  waist: [10, 300], chest: [10, 300], hips: [10, 300], arm: [5, 150], thigh: [10, 200], neck: [10, 100], oil: [0.25, 60],
+  waist: [10, 300], chest: [10, 300], hips: [10, 300], arm: [5, 150], thigh: [10, 200], neck: [10, 100], oil: [0.25, 60], energy: [1, 5],
 };
-const ONE_PER_DAY = new Set(['steps', 'sleep']); // re-saving the same day replaces the value (oil and measurements keep every entry)
+const ONE_PER_DAY = new Set(['steps', 'sleep', 'energy']); // re-saving the same day replaces the value (oil and measurements keep every entry)
 
 router.get('/', wrap(async (req, res) => {
   const type = v.oneOf(req.query.type, 'type', HealthLog.TYPES);
   const q = { userId: req.user.id, type };
   if (req.query.from || req.query.to) q.date = { $gte: v.date(req.query.from || '0000-01-01', 'from'), $lte: v.date(req.query.to || '9999-12-31', 'to') };
-  const limit = Math.min(Math.max(parseInt(req.query.limit, 10) || 120, 1), 1000);
-  res.json({ success: true, logs: await HealthLog.find(q).sort({ date: -1, createdAt: -1 }).limit(limit).lean() });
+  const limit = pageSize(req.query.limit, 120, 1000);
+  const cur = parseCursor(req.query.cursor); if (cur === false) throw new HttpError(400, 'cursor is not valid');
+  const rows = await HealthLog.find(applyCursor(q, cur, mongoose.Types.ObjectId)).sort({ date: -1, _id: -1 }).limit(limit + 1).lean();
+  const { page, hasMore, nextCursor } = finishPage(rows, limit);
+  res.json({ success: true, logs: page, hasMore, nextCursor });
 }));
 
 // Waist / hips / chest / arm / thigh trends next to weight (last `days` days, default 90).
@@ -61,7 +68,7 @@ router.post('/', wrap(async (req, res) => {
   const date = v.date(req.body?.date);
   const [lo, hi] = RANGES[type];
   let value = v.number(req.body?.value, 'value', { min: lo, max: hi });
-  if (type === 'steps') value = Math.round(value);
+  if (type === 'steps' || type === 'energy') value = Math.round(value);
   let value2 = null;
   if (type === 'bloodPressure') {
     value2 = v.number(req.body?.value2, 'diastolic', { min: 30, max: 160 });
@@ -82,6 +89,7 @@ router.post('/', wrap(async (req, res) => {
       { $set: base, $setOnInsert: { userId: req.user.id, ...(clientId ? { clientId } : {}) } },
       { upsert: true, new: true, setDefaultsOnInsert: true }
     );
+    if (type === 'waist' || type === 'neck' || type === 'hips') await markCoachDirty(CoachState, req.user.id);   // a new body measurement can change this week's decision
     return res.status(201).json({ success: true, log });
   }
   const { doc, duplicate } = await createOnce(HealthLog, req.user.id, clientId, base);

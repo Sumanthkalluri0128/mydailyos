@@ -165,7 +165,7 @@ body:has(.hd) {
 @media (max-width: 860px) {
   .hr { border-radius: 26px; }
   .hr-panel { padding: 18px 18px 16px; gap: 8px; }
-  .hr-coach .bd { width: 72px !important; height: 72px !important; }
+  .hr-coach .bd.bd { width: 72px; height: 72px; }
 }
 @media (max-width: 720px) {
   .hd { gap: 12px; }
@@ -180,7 +180,7 @@ body:has(.hd) {
 }
 @media (max-width: 380px) { .sc-cal { flex-direction: column; align-items: flex-start; } }
 @media (prefers-reduced-motion: reduce) { .hr-sun, .pk, .pg-crown { animation: none !important; } .hr-bubble { transition: none; animation: none; } }
-html.ff-calm .pk, html.ff-calm .hr-sun, html.ff-calm .pg-crown { animation: none !important; }
+html.ff-calm .pk.pk, html.ff-calm .hr-sun.hr-sun, html.ff-calm .pg-crown.pg-crown { animation: none; }
 
 
 /* ============ v30 polish: quiet hero, stat-card shortcuts, Fix my day, minimised review ============ */

@@ -7,17 +7,23 @@ const weekKey = (d) => addDays(d, -((weekday(d) + 6) % 7));
  * `dates` = distinct YYYY-MM-DD days with at least one food entry. A streak survives until the day ends.
  * With `{ freeze: true }` ONE missed day per calendar week (Mon–Sun) is bridged instead of breaking the streak — never two
  * missed days in a row, and a freeze only counts once you have logged again after the gap. Frozen days are not counted as logged.
+ * `restDates` are planned rest days (a training rest day, "Not today"): they never break a streak, never use up the weekly freeze,
+ * and are not counted as logged either. Any number in a row is fine, because you chose them.
  */
-function computeStreaks(dates, today, { freeze = false } = {}) {
+function computeStreaks(dates, today, { freeze = false, restDates = [] } = {}) {
   const set = new Set(dates);
+  const rest = new Set((restDates || []).filter((d) => !set.has(d)));   // a day you logged is a logged day, never a rest day
   const loggedToday = set.has(today);
   let current = 0;
   const frozen = [];
+  const rested = [];
   const usedWeeks = new Set();
   let cursor = loggedToday ? today : addDays(today, -1);
-  for (;;) {
+  for (let guard = 0; guard < 4000; guard += 1) {
     if (set.has(cursor)) { current += 1; cursor = addDays(cursor, -1); continue; }
-    const canFreeze = freeze && current > 0 && cursor < today && set.has(addDays(cursor, -1)) && !usedWeeks.has(weekKey(cursor));
+    if (rest.has(cursor) && cursor <= today) { rested.push(cursor); cursor = addDays(cursor, -1); continue; }
+    const before = addDays(cursor, -1);
+    const canFreeze = freeze && current > 0 && cursor < today && (set.has(before) || rest.has(before)) && !usedWeeks.has(weekKey(cursor));
     if (!canFreeze) break;
     usedWeeks.add(weekKey(cursor)); frozen.push(cursor); cursor = addDays(cursor, -1);
   }
@@ -28,16 +34,16 @@ function computeStreaks(dates, today, { freeze = false } = {}) {
     if (!prev) run = 1;
     else {
       const gap = diffDays(prev, d);
-      const missed = addDays(prev, 1);
-      if (gap === 1) run += 1;
-      else if (freeze && gap === 2 && !used.has(weekKey(missed))) { used.add(weekKey(missed)); run += 1; }
+      const missedDays = Array.from({ length: gap - 1 }, (_, k) => addDays(prev, k + 1)).filter((m) => !rest.has(m));
+      if (missedDays.length === 0) run += 1;
+      else if (freeze && missedDays.length === 1 && !used.has(weekKey(missedDays[0]))) { used.add(weekKey(missedDays[0])); run += 1; }
       else { run = 1; used = new Set(); }
     }
     if (run > longest) longest = run;
     prev = d;
   }
-  const last14 = Array.from({ length: 14 }, (_, i) => { const d = addDays(today, i - 13); return { date: d, logged: set.has(d), frozen: frozen.includes(d) }; });
-  return { current, longest, loggedToday, totalDays: set.size, last14, frozen, freezeUsedThisWeek: usedWeeks.has(weekKey(today)), weekly: weeklyStreak(set, today), ...comebackInfo(set, today) };
+  const last14 = Array.from({ length: 14 }, (_, i) => { const d = addDays(today, i - 13); return { date: d, logged: set.has(d), frozen: frozen.includes(d), rest: rested.includes(d) }; });
+  return { current, longest, loggedToday, totalDays: set.size, last14, frozen, restDays: rested, freezeUsedThisWeek: usedWeeks.has(weekKey(today)), weekly: weeklyStreak(set, today), ...comebackInfo(set, today) };
 }
 
 /**

@@ -93,3 +93,12 @@ test("queued changes older than a week are dropped, not replayed blindly", async
   const sent = []; await api.flushQueue(async (op) => { sent.push(op); return { ok: true, status: 200 }; });
   assert.equal(sent.length, 0); assert.equal((await api.pendingOps()).length, 0);
 });
+
+test("coach check-in and Apply taps are queued offline; undo, offers and the cycle log are not", async () => {
+  const { isQueueable } = await import("./offlineApi.js");
+  assert.equal(isQueueable("POST", "/api/coach/readiness"), true);
+  assert.equal(isQueueable("POST", "/api/coach/weekly/apply"), true);
+  assert.equal(isQueueable("POST", "/api/coach/weekly/undo"), false);
+  assert.equal(isQueueable("POST", "/api/coach/offer/apply"), false);
+  assert.equal(isQueueable("GET", "/api/coach/readiness"), false);
+});

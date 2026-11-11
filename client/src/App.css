@@ -1133,10 +1133,12 @@ button {
     border-color 0.18s ease, color 0.18s ease;
 }
 
-button:disabled {
+button:disabled,
+button:disabled:hover,
+button:disabled:active {
   opacity: 0.62;
   cursor: not-allowed;
-  transform: none !important;
+  transform: none;
 }
 
 /* Top navigation */
@@ -2291,8 +2293,8 @@ label {
 /* Remove the old automatically generated icon because the JSX
    now provides the icon itself. */
 .topbar > div:first-child::before {
-  display: none !important;
-  content: none !important;
+  display: none;
+  content: none;
 }
 
 .brand-home:hover {

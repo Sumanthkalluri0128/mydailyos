@@ -180,3 +180,15 @@ test("the smart plan is only used when it is ready and worked out for this week"
   assert.equal(smartUsable(null, TODAY), false);
   assert.equal(toStrength({ id: "x", name: "test lift", repsLo: 8, repsHi: 8, sets: 2, restSec: 60, unit: "reps" }).reps, "8");
 });
+
+test("effort (RPE) is sent with the sets only when it was chosen and valid", () => {
+  const d = variantDay(days.find((x) => x.kind === "strength"), "gym");
+  const a = newActive(d, { week: 1, sessions: [], swaps: {}, today: TODAY, now: 1000 });
+  const ex = d.blocks.find((b) => b.type === "sets").items;
+  a.sets[ex[0].id] = [{ w: 40, r: 8, done: true, rpe: 8 }, { w: 40, r: 8, done: true, rpe: 15 }, { w: 40, r: 8, done: true }];
+  const rec = finishActive(a, d, { swaps: {}, weightKg: 78, feel: "good", notes: "", now: 1000 + 30 * 60000 });
+  const sets = sessionPayload(rec, { today: TODAY }).exercises[0].sets;
+  assert.equal(sets[0].rpe, 8);
+  assert.equal("rpe" in sets[1], false);   // out of range: not sent
+  assert.equal("rpe" in sets[2], false);   // not chosen: not sent
+});

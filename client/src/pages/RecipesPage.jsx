@@ -5,6 +5,7 @@ import { notify } from "../utils/notify";
 import { confirmAction } from "../utils/confirm";
 import { undoGate } from "../utils/undo";
 import FoodPicker from "../components/FoodPicker";
+import RecipeImport from "../components/RecipeImport";
 import "../components/logging1.css";
 
 const KEYS = ["calories", "protein", "carbohydrates", "fat", "fiber"];
@@ -34,6 +35,15 @@ export default function RecipesPage({ onBack }) {
       if (d.sticker === "pot") notify("🥘 Sticker unlocked: Pot Boss! Your first shared-pot meal.", "success");
     }
     setPot(null); load();
+  };
+
+  // Import from a link or pasted recipe -> opens in the normal editor (nothing saved until you press Save recipe)
+  const [importing, setImporting] = useState(false);
+  const useImported = async (d) => {
+    const entries = await Promise.all(d.items.map((i) => apiFetch(`/api/foods/${i.foodId}`).then((x) => x.json()).then((r) => r.food).catch(() => null)));
+    setFoodMap((m) => ({ ...m, ...Object.fromEntries(entries.filter(Boolean).map((f) => [f._id, f])) }));
+    setEditing({ ...blank, name: d.name.slice(0, 100), servings: d.servings, notes: d.notes, ingredients: d.items.map((i) => ({ foodId: i.foodId, foodName: i.foodName, quantity: Number(i.quantity), servingUnit: i.servingUnit })) });
+    setImporting(false);
   };
 
   // Paste ingredients -> editable draft (nothing saved until you press Save recipe)
@@ -166,7 +176,9 @@ export default function RecipesPage({ onBack }) {
     <div className="recipes-page">
       <div className="food-logger-header"><div><button className="secondary-button" onClick={onBack}>← Back</button><div className="bd-head"><h1>Recipes</h1><Buddy scene="chef" size={76} says="Let's cook!" /></div><p>Combine ingredients once, then log or plan a serving in one tap.</p></div></div>
       <div className="large-card">
-        <button className="primary-button" onClick={() => setEditing({ ...blank })}>+ New recipe</button>
+        <button className="primary-button" onClick={() => setEditing({ ...blank })}>+ New recipe</button>{" "}
+        <button className="secondary-button" onClick={() => setImporting(true)}>🔗 Import recipe</button>
+        {importing && <RecipeImport onUse={useImported} onCancel={() => setImporting(false)} />}
         {!recipes.length && <p className="card-description"><Buddy scene="chef" size={56} /> No recipes yet. Build one and it appears in your food list as “{`<name>`}” per serving.</p>}
         {recipes.map((r) => (
           <div className="planner-item" key={r._id}>

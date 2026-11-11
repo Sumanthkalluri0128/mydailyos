@@ -7,7 +7,7 @@ function initMonitoring() {
   if (!dsn) return;
   try {
     Sentry = require('@sentry/node');
-    Sentry.init({ dsn, environment: process.env.NODE_ENV || 'production', tracesSampleRate: 0.1 });
+    Sentry.init({ dsn, environment: process.env.NODE_ENV || 'production', tracesSampleRate: 0.1, release: `mydailyos@${require('../package.json').version}` });
     console.log('Sentry error reporting enabled');
   } catch (e) {
     Sentry = null;

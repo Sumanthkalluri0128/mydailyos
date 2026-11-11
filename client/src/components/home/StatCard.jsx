@@ -2,7 +2,15 @@
 // the ＋ button slot and the corner rules live here once instead of in per-card CSS.
 //   kind: "water" | "steps" | "ex" | "w"  (colour only)    icon / tint: the badge    plus: { label, onClick, tour } adds the ＋ shortcut
 //   Cards with a ＋ need ~190px for badge + ＋ + sticker; the stylesheet keys that off .sc-has-plus, never off the card's name.
-export default function StatCard({ kind, icon, tint, onOpen, plus, sticker, children }) {
+import ErrorBoundary from "../ErrorBoundary";
+export default function StatCard(props) {
+  return <ErrorBoundary scope="home-card" name={`StatCard:${props.kind}`}><StatCardInner {...props} /></ErrorBoundary>;
+}
+import { apiFetch } from "../../config/api";
+// Counts one open per card (name only, no person): tells you which Home cards nobody uses.
+const countOpen = (kind) => { try { apiFetch("/api/telemetry/card", { method: "POST", body: JSON.stringify({ card: kind }) }).catch(() => {}); } catch { /* ignore */ } };
+function StatCardInner({ kind, icon, tint, onOpen: open, plus, sticker, children }) {
+  const onOpen = (e) => { if (e && e.type === "keydown" && e.key !== "Enter" && e.key !== " ") return; countOpen(kind); if (open) open(e); };
   return (
     <article className={`sc sc-${kind}${plus ? " sc-has-plus" : ""}`} role="button" tabIndex={0} onClick={onOpen} onKeyDown={onOpen}>
       <span className={`ic ${tint} big`}>{icon}</span>

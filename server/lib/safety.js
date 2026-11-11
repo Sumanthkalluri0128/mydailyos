@@ -10,12 +10,12 @@ const bmi = (kg, cm) => (kg > 0 && cm > 0 ? kg / ((cm / 100) ** 2) : null);
  * @param trendRate    kg/week from the trend line (negative = losing), or null
  * @param avgIntake7   average logged kcal over the last 7 days, and `loggedDays7`
  */
-function safetyReport({ profile = {}, trendRate = null, avgIntake7 = null, loggedDays7 = 0 }) {
+function safetyReport({ profile = {}, trendRate = null, avgIntake7 = null, loggedDays7 = 0, restriction = null }) {
   const flags = [];
   const w = Number(profile.currentWeightKg), h = Number(profile.heightCm);
   const goals = profile.goals || {};
   const direction = goalDirection(w, goals.targetWeightKg);
-  const floor = profile.sex === 'male' ? 1500 : 1200;
+  const floor = require('./energy').calorieFloorOf(profile);
   const nowBmi = bmi(w, h), goalBmi = bmi(Number(goals.targetWeightKg), h);
 
   if (nowBmi !== null && nowBmi < 18.5 && direction === 'lose') flags.push({ id: 'underweight', severity: 'alert', title: 'Your weight is already in the low range', detail: 'For your height, losing more is not recommended. We have paused weight-loss rewards. Please talk to a doctor or dietitian about a healthy plan.' });
@@ -25,6 +25,10 @@ function safetyReport({ profile = {}, trendRate = null, avgIntake7 = null, logge
   if (avgIntake7 !== null && loggedDays7 >= 4 && avgIntake7 < floor * 0.9) flags.push({ id: 'low-intake', severity: 'notice', title: 'Your intake looks very low', detail: `You average about ${Math.round(avgIntake7)} kcal on logged days, below the ${floor} kcal we treat as a safe minimum. If some meals are missing from the log, add them; if not, please eat a little more.` });
   if (direction === 'lose' && Number(goals.weeklyPaceKg) > maxSafeWeeklyLossKg(w)) flags.push({ id: 'pace-high', severity: 'notice', title: 'Your chosen pace is above the recommended rate', detail: `The recommended maximum for you is about ${maxSafeWeeklyLossKg(w)} kg a week.` });
 
+  // Growing bodies need enough food: this app's deficit targets are for adults. A flag, never a number to chase.
+  if (Number(profile.age) > 0 && Number(profile.age) < 18 && direction === 'lose') flags.push({ id: 'minor', severity: 'alert', title: 'Weight-loss targets are meant for adults', detail: 'Growing bodies need enough food. Please talk with a parent or a doctor before changing how you eat. The app will not push you to eat less.' });
+  // Very low days, or very low days followed by very big ones: tiring, hard to keep up, and worth a kind word. Never a diagnosis.
+  if (restriction && restriction.flagged) flags.push({ id: 'restriction-pattern', severity: 'notice', title: 'Eating very little on some days?', detail: 'Very low days, or very low days followed by very big ones, are tiring and hard to keep up. Steady, enough food usually works better. If food feels stressful or out of your control, talking with someone you trust or a doctor can help.' });
   const level = flags.some((f) => f.severity === 'alert') ? 'alert' : flags.length ? 'notice' : 'ok';
   return { level, flags, hideNumbers: !!profile.safety?.hideNumbers, pauseWeightRewards: flags.some((f) => f.id === 'underweight' || f.id === 'goal-too-low') };
 }

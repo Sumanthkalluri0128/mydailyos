@@ -7,13 +7,17 @@ import { createPortal } from "react-dom";
 import "./home.css";
 import "../homefocus.css";
 import HeroCard from "./HeroCard";
+import ErrorBoundary from "../ErrorBoundary";
+const Safe = ({ name, children }) => <ErrorBoundary scope="home-card" name={name}>{children}</ErrorBoundary>;
 import { FirstWeekChecklist } from "../../tour/TourHost";
 import WeightReveal from "../WeightReveal";
 import OverDayCard from "../OverDayCard";
 import { HomeGoal } from "../simple/SimpleProgress";
 import FixMyDay from "./FixMyDay";
+import DayGuideCard from "../DayGuideCard";
+import { CoachNextActionCard } from "../CoachHub";
 import { useT } from "../../i18n";
-import { RoughDay, SideQuest, useCoachState, PlateCard, EventMode, CravingTimer } from "../CoachCards";
+import { CheckIn, RoughDay, SideQuest, useCoachState, PlateCard, EventMode, CravingTimer } from "../CoachCards";
 import { useCoachTone } from "../../utils/coachTone";
 import HealthyDay from "./HealthyDay";
 import HomeSection from "../HomeSection";
@@ -226,12 +230,14 @@ export default function HomeDashboard({ profile, summary, activity, water, water
   const wLeft = latestWeight != null && tw ? Math.abs(latestWeight - tw) : null;
 
   const [coachState, setCoachState, reloadCoach] = useCoachState();
+  // Quiet Home: optional cards appear after you have used the app enough (server rule: lib/features.js). Until the server answers, show everything as before.
+  const showCard = (id) => !coachState || !Array.isArray(coachState.homeCards) || coachState.homeCards.includes(id);
   const tone = useCoachTone();
   const open = (page) => (ev) => { if (ev.key && ev.key !== "Enter" && ev.key !== " ") return; if (ev.key) ev.preventDefault(); goTo(page); };
 
   return (
     <div className={`hd${tone.gentle ? " hd-gentle" : ""}`}>
-      <HeroCard greeting={greet(hour)} name={name} dateText={new Date().toLocaleDateString(undefined, { weekday: "long", day: "numeric", month: "long" }).toUpperCase()} coach={coach} onAsk={onAsk} />
+      <Safe name="HeroCard"><HeroCard greeting={greet(hour)} name={name} dateText={new Date().toLocaleDateString(undefined, { weekday: "long", day: "numeric", month: "long" }).toUpperCase()} coach={coach} onAsk={onAsk} /></Safe>
       <FirstWeekChecklist />
 
       {/* ---------- stat cards: each number appears once, in its own card ---------- */}
@@ -277,11 +283,12 @@ export default function HomeDashboard({ profile, summary, activity, water, water
 
       {/* ---------- quick help: three equal tiles in one row (they open into full-width cards when used) ---------- */}
       <section className="hd-help" aria-label="Quick help">
-        <RoughDay state={coachState} reload={reloadCoach} />
-        <EventMode event={coachState?.event} reload={reloadCoach} />
+        {showCard("checkin") && <Safe name="CheckIn"><CheckIn state={coachState} reload={reloadCoach} /></Safe>}
+        <Safe name="RoughDay"><RoughDay state={coachState} reload={reloadCoach} /></Safe>
+        {showCard("eventmode") && <Safe name="EventMode"><EventMode event={coachState?.event} reload={reloadCoach} /></Safe>}
         <div className="cc-strip"><span>Feeling a craving?</span><CravingTimer onLogged={onChanged} /></div>
       </section>
-      {tone.gentle && <PlateCard refreshKey={syncTick} />}
+      {tone.gentle && <Safe name="PlateCard"><PlateCard refreshKey={syncTick} /></Safe>}
       {/* ---------- body goal: shown until one is chosen (same as the phone app) ---------- */}
       {!!e && !profile?.goals?.bodyType && e.direction !== "gain" && (
         <button type="button" className="bp-cta" onClick={() => goTo("bodyPlan")}>
@@ -345,8 +352,10 @@ export default function HomeDashboard({ profile, summary, activity, water, water
 
       {/* ---------- this week: side quest next to the weekly review (sits under nutrition · macros · habits) ---------- */}
       <section className="hd-week" aria-label="This week">
-        <SideQuest state={coachState} setState={setCoachState} reload={reloadCoach} />
-        {!tone.gentle && <OverDayCard onPlan={() => goTo("planner")} />}
+        {showCard("sidequest") && <Safe name="SideQuest"><SideQuest state={coachState} setState={setCoachState} reload={reloadCoach} /></Safe>}
+        {!tone.gentle && <Safe name="CoachNextActionCard"><CoachNextActionCard /></Safe>}
+        {!tone.gentle && <Safe name="DayGuideCard"><DayGuideCard /></Safe>}
+        {!tone.gentle && <Safe name="OverDayCard"><OverDayCard onPlan={() => goTo("planner")} /></Safe>}
       </section>
 
       {/* ---------- tasks · progress · scene ---------- */}

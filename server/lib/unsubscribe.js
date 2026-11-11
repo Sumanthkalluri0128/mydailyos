@@ -14,10 +14,21 @@ function verifyAny(token, secret = process.env.JWT_SECRET) {
   return null;
 }
 
+const DOWNLOAD_PURPOSE = 'backup-download';
+const DOWNLOAD_TTL_HOURS = 48;
+/** A short-lived link for the weekly backup email, so health data is not sitting in the inbox as an attachment. */
+const downloadToken = (userId, secret = process.env.JWT_SECRET, hours = DOWNLOAD_TTL_HOURS) => jwt.sign({ sub: String(userId), purpose: DOWNLOAD_PURPOSE }, secret, { expiresIn: `${hours}h` });
+const verifyDownload = (token, secret = process.env.JWT_SECRET) => verify(token, secret, DOWNLOAD_PURPOSE);
+
 /** Public base URL of THIS API (Render sets RENDER_EXTERNAL_URL automatically; PUBLIC_API_URL overrides it). */
 const apiBase = (env = process.env) => String(env.PUBLIC_API_URL || env.RENDER_EXTERNAL_URL || '').replace(/\/+$/, '');
 /** The website people open (first non-localhost CLIENT_URL). */
 const appUrl = (env = process.env) => String(env.CLIENT_URL || '').split(',').map((s) => s.trim().replace(/\/$/, '')).find((u) => u && !/localhost|127\.0\.0\.1/.test(u)) || '';
+
+function downloadUrl(userId, env = process.env, hours = DOWNLOAD_TTL_HOURS) {
+  const base = apiBase(env);
+  return base ? `${base}/api/email/backup-download?token=${encodeURIComponent(downloadToken(userId, env.JWT_SECRET, hours))}` : '';
+}
 
 function unsubscribeUrl(userId, env = process.env, purpose = PURPOSE) {
   const base = apiBase(env);
@@ -30,4 +41,4 @@ const page = (title, body) => `<!DOCTYPE html><html lang="en"><head><meta charse
 button{background:#5b5bd6;color:#fff;border:0;border-radius:12px;padding:14px 26px;font-size:16px;font-weight:700;cursor:pointer;min-height:48px}
 p{color:#6b7090;line-height:1.5}</style></head><body><div class="c"><div style="font-size:34px">✦</div>${body}</div></body></html>`;
 
-module.exports = { sign, verify, verifyAny, BACKUP_PURPOSE, unsubscribeUrl, apiBase, appUrl, page, PURPOSE };
+module.exports = { downloadToken, verifyDownload, downloadUrl, DOWNLOAD_TTL_HOURS, sign, verify, verifyAny, BACKUP_PURPOSE, unsubscribeUrl, apiBase, appUrl, page, PURPOSE };

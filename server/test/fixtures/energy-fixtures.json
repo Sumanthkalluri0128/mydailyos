@@ -1,5 +1,5 @@
 {
-  "_readme": "Shared by server, web and mobile tests. Every implementation of the energy model must reproduce these numbers exactly. Expected values for A-D were calculated by hand (Mifflin-St Jeor), not generated.",
+  "_readme": "Shared by server, web and mobile tests. Every implementation of the energy model must reproduce these numbers exactly. Expected values for A-D were calculated by hand (Mifflin-St Jeor), not generated. Balances use EXERCISE_CREDIT = 0.7: wearables and step formulas over-count, so only 70% of activity above the plan's baseline is given back as food.",
   "plans": [
     {
       "name": "A: man, 30y 175cm 80kg moderate, wants 72kg at default pace",
@@ -165,6 +165,144 @@
         "mode": "auto",
         "baselineActivityKcal": 0
       }
+    },
+    {
+      "name": "H: automatic mode, no-activity level reached (2 lazy days): the target uses it",
+      "profile": {
+        "age": 30,
+        "sex": "male",
+        "heightCm": 175,
+        "currentWeightKg": 80,
+        "activityLevel": "moderate",
+        "goals": {
+          "targetWeightKg": 72
+        },
+        "activityMode": "auto",
+        "autoActivity": {
+          "targetLevel": "sedentary"
+        }
+      },
+      "expect": {
+        "bmr": 1749,
+        "tdee": 2099,
+        "direction": "lose",
+        "pace": 0.5,
+        "gap": 550,
+        "autoTarget": 1550,
+        "calorieTarget": 1550,
+        "mode": "auto",
+        "atFloor": false,
+        "baselineActivityKcal": 0
+      }
+    },
+    {
+      "name": "I: manual mode ignores the stored automatic level",
+      "profile": {
+        "age": 30,
+        "sex": "male",
+        "heightCm": 175,
+        "currentWeightKg": 80,
+        "activityLevel": "moderate",
+        "goals": {
+          "targetWeightKg": 72
+        },
+        "activityMode": "manual",
+        "autoActivity": {
+          "targetLevel": "sedentary"
+        }
+      },
+      "expect": {
+        "bmr": 1749,
+        "tdee": 2711,
+        "direction": "lose",
+        "pace": 0.5,
+        "gap": 550,
+        "autoTarget": 2160,
+        "calorieTarget": 2160,
+        "mode": "auto",
+        "atFloor": false,
+        "baselineActivityKcal": 612
+      }
+    },
+    {
+      "name": "J: automatic mode with no reading yet uses the chosen level",
+      "profile": {
+        "age": 30,
+        "sex": "male",
+        "heightCm": 175,
+        "currentWeightKg": 80,
+        "activityLevel": "moderate",
+        "goals": {
+          "targetWeightKg": 72
+        },
+        "activityMode": "auto",
+        "autoActivity": null
+      },
+      "expect": {
+        "bmr": 1749,
+        "tdee": 2711,
+        "direction": "lose",
+        "pace": 0.5,
+        "gap": 550,
+        "autoTarget": 2160,
+        "calorieTarget": 2160,
+        "mode": "auto",
+        "atFloor": false,
+        "baselineActivityKcal": 612
+      }
+    },
+    {
+      "name": "K: your own safe minimum (1,700) holds an aggressive pace",
+      "profile": {
+        "age": 30,
+        "sex": "male",
+        "heightCm": 175,
+        "currentWeightKg": 80,
+        "activityLevel": "moderate",
+        "goals": {
+          "targetWeightKg": 60,
+          "weeklyPaceKg": 1,
+          "calorieFloor": 1700
+        }
+      },
+      "expect": {
+        "bmr": 1749,
+        "tdee": 2711,
+        "direction": "lose",
+        "pace": 1,
+        "gap": 1100,
+        "autoTarget": 1700,
+        "calorieTarget": 1700,
+        "mode": "auto",
+        "atFloor": true,
+        "baselineActivityKcal": 612
+      }
+    },
+    {
+      "name": "L: no own floor = the default 1,500 for men",
+      "profile": {
+        "age": 30,
+        "sex": "male",
+        "heightCm": 175,
+        "currentWeightKg": 80,
+        "activityLevel": "moderate",
+        "goals": {
+          "targetWeightKg": 60,
+          "weeklyPaceKg": 1
+        }
+      },
+      "expect": {
+        "bmr": 1749,
+        "tdee": 2711,
+        "direction": "lose",
+        "pace": 1,
+        "gap": 1100,
+        "autoTarget": 1610,
+        "calorieTarget": 1610,
+        "mode": "auto",
+        "atFloor": false,
+        "baselineActivityKcal": 612
+      }
     }
   ],
   "targets": [
@@ -209,7 +347,7 @@
       }
     },
     {
-      "name": "A, very active day -> only the excess earns food",
+      "name": "A, very active day -> 70% of the excess earns food",
       "plan": 0,
       "day": {
         "eaten": 2000,
@@ -219,10 +357,10 @@
       "expect": {
         "target": 2160,
         "burned": 1200,
-        "bonus": 588,
-        "budget": 2748,
-        "remaining": 748,
-        "net": 1299,
+        "bonus": 412,
+        "budget": 2572,
+        "remaining": 572,
+        "net": 1123,
         "isDeficit": true
       }
     },
@@ -245,7 +383,7 @@
       }
     },
     {
-      "name": "C (sedentary baseline 0) -> every burned kcal counts",
+      "name": "C (sedentary baseline 0) -> 70% of burned kcal counts",
       "plan": 2,
       "day": {
         "eaten": 1000,
@@ -255,10 +393,10 @@
       "expect": {
         "target": 1200,
         "burned": 300,
-        "bonus": 300,
-        "budget": 1500,
-        "remaining": 500,
-        "net": 1042,
+        "bonus": 210,
+        "budget": 1410,
+        "remaining": 410,
+        "net": 952,
         "isDeficit": true
       }
     }

@@ -60,6 +60,45 @@ router.post('/parse-ingredients', wrap(async (req, res) => {
   res.json({ success: true, ...parseIngredients(text, [...mine, ...shared], { servings }) });
 }));
 
+// Import a recipe from a link or from pasted text (a whole recipe page, or "Title / Serves 4 / Ingredients / Method").
+// Nothing is saved: the draft comes back with each ingredient matched to your food database, calories and macros PER SERVING worked out,
+// and the person reviews it, changes the servings (amounts scale) and presses Save.
+const { rateLimit } = require('../middleware/rateLimit');
+const { extractRecipe, extractRecipeFromHtml } = require('../lib/recipeImport');
+const { fetchPage } = require('../lib/safeFetch');
+router.post('/import', rateLimit({ windowMs: 60_000, max: 10, keyFn: (req) => `ri|${req.user.id}`, message: 'Too many imports. Please wait a minute.' }), wrap(async (req, res) => {
+  const url = v.string(req.body?.url, 'url', { max: 2000, required: false });
+  const text = v.string(req.body?.text, 'text', { max: 60000, required: false });
+  if (!url && !text) throw new HttpError(400, 'Paste a recipe or a link');
+  let recipe; let sourceUrl = '';
+  if (url) {
+    let html; try { html = await fetchPage(url); } catch (e) { throw new HttpError(400, e.message || 'Could not open that page.'); }
+    sourceUrl = url;
+    recipe = extractRecipeFromHtml(html) || extractRecipe(html);
+    if (!recipe) throw new HttpError(422, 'No recipe found on that page. Try pasting the ingredients instead.');
+  } else {
+    recipe = extractRecipe(text);
+    if (!recipe) throw new HttpError(422, 'Could not find ingredients in that text. Put one ingredient on each line, for example "2 cups rice".');
+  }
+  const asked = v.number(req.body?.servings, 'servings', { min: 0.25, max: 200, required: false, def: null });
+  const sourceServings = recipe.servings || asked || 4;
+  const [shared, mine] = await Promise.all([catalogueFoods(Food), Food.find({ userId: req.user.id, hidden: { $ne: true } }).select('name brand servingSize servingUnit calories units userId').limit(2000).lean()]);
+  const parsed = parseIngredients(recipe.ingredients.join('\n'), [...mine, ...shared], { servings: sourceServings, maxChars: 12000 });
+  // Macros per serving, from the matched foods (only ingredients that have an amount count; the rest are flagged).
+  const ids = parsed.items.filter((i) => i.quantity > 0).map((i) => i.foodId);
+  const foods = ids.length ? await Food.find({ _id: { $in: ids }, ...visible(req.user.id) }).lean() : [];
+  const byId = new Map(foods.map((f) => [String(f._id), f]));
+  const sum = Object.fromEntries(KEYS.map((k) => [k, 0]));
+  for (const i of parsed.items) { const f = byId.get(i.foodId); if (!f || !(i.quantity > 0)) continue; const { total } = nutritionFor(f, i.quantity); for (const k of KEYS) sum[k] += total[k]; }
+  const perServing = Object.fromEntries(KEYS.map((k) => [k, round1(sum[k] / sourceServings)]));
+  const counted = parsed.items.filter((i) => i.quantity > 0).length;
+  res.json({
+    success: true, name: recipe.name, servings: sourceServings, servingsFound: !!recipe.servings, sourceUrl, steps: recipe.steps,
+    items: parsed.items, unmatched: parsed.unmatched, needsInput: parsed.needsInput, perServing,
+    note: counted < recipe.ingredients.length ? `${counted} of ${recipe.ingredients.length} ingredients were matched with an amount. The calories are lower than the real recipe until you add the rest.` : '',
+  });
+}));
+
 router.get('/', wrap(async (req, res) => {
   res.json({ success: true, recipes: await Recipe.find({ userId: req.user.id }).sort({ name: 1 }).lean() });
 }));

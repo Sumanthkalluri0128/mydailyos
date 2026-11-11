@@ -13,9 +13,15 @@ const schema = new mongoose.Schema(
       enum: ['sedentary', 'light', 'moderate', 'very_active', 'extra_active'],
       default: 'moderate',
     },
+    // 'auto' (default): the calorie target's activity level follows your recent days (lib/dailyCoach.js: it moves only after 2 days in a row
+    // agree). 'manual': always the level you chose above. `autoActivity` is the stored automatic reading, refreshed once a day.
+    activityMode: { type: String, enum: ['auto', 'manual'], default: 'auto' },
+    autoActivity: { type: mongoose.Schema.Types.Mixed, default: null },
     goals: {
       calorieTarget: { type: Number, min: 1, default: 1800 },
       // 'auto' = calculated from body, goal and pace (the saved calorieTarget just mirrors it); 'manual' = the number the person typed.
+      // The safe minimum calories (null = 1,500 men / 1,200 others). Every engine reads it through energy.calorieFloorOf.
+      calorieFloor: { type: Number, min: 1000, max: 3000, default: null },
       calorieMode: { type: String, enum: ['auto', 'manual'], default: 'auto' },
       // null = automatic (from weight, goal and body type). A number is the person's own choice and wins everywhere.
       proteinTarget: { type: Number, min: 1, default: null },
@@ -29,6 +35,8 @@ const schema = new mongoose.Schema(
       // The day the person first saved a Body plan (YYYY-MM-DD). The adaptive plan counts weeks from here, so days before it are never "not done".
       bodyPlanStartedOn: { type: String, default: '' },
       weeklyPaceKg: { type: Number, min: 0.1, max: 1, default: 0.5 },
+      // 'off' = every weekly change needs a tap (default). 'safe' = small changes inside the safe limits are applied for you, with a one-tap undo.
+      coachAuto: { type: String, enum: ['off', 'safe'], default: 'off' },
     },
     // How the person trains (asked on the Body plan screen). Drives the weekly program: where, level, days, time, home equipment,
     // anything that hurts, and muscles to bring up. Empty = not chosen yet, the plan uses sensible defaults and says so.

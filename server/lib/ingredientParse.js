@@ -69,8 +69,8 @@ function toGrams(unit, qty, key, food) {
  * @param foods  [{ _id, name, servingSize, servingUnit, calories, units }]
  * @returns { items, unmatched, servings, oilTspPerServing }
  */
-function parseIngredients(text, foods, { servings = 4 } = {}) {
-  const parts = String(text || '').slice(0, 2000).split(/[\n;]|,(?![^()]*\))/).map((s) => s.trim()).filter(Boolean).slice(0, 40);
+function parseIngredients(text, foods, { servings = 4, maxChars = 2000 } = {}) {
+  const parts = String(text || '').slice(0, maxChars).split(/[\n;]|,(?![^()]*\))/).map((s) => s.trim()).filter(Boolean).slice(0, 40);
   const byName = new Map(foods.map((f) => [norm(f.name), f]));
   const items = [], unmatched = [];
   for (const raw of parts) {

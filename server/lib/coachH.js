@@ -3,7 +3,7 @@
 const { addDays, diffDays, weekday } = require('./dates');
 
 const r10 = (x) => Math.round(x / 10) * 10;
-const calorieFloor = (profile) => (profile && profile.sex === 'male' ? 1500 : 1200);
+const calorieFloor = (profile) => require('./energy').calorieFloorOf(profile);
 
 // ---------------------------------------------------------------- 9. gentle mode: plate balance (no numbers)
 const GROUPS = [

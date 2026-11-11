@@ -2,7 +2,7 @@
 // sets and schedule. Kept small: sets are capped, text is trimmed, and everything is private to the person (in export and deletion).
 const mongoose = require('mongoose');
 
-const setSchema = new mongoose.Schema({ reps: { type: Number, min: 0, max: 1000, default: 0 }, weightKg: { type: Number, min: 0, max: 1000, default: 0 }, seconds: { type: Number, min: 0, max: 7200, default: 0 } }, { _id: false });
+const setSchema = new mongoose.Schema({ reps: { type: Number, min: 0, max: 1000, default: 0 }, weightKg: { type: Number, min: 0, max: 1000, default: 0 }, seconds: { type: Number, min: 0, max: 7200, default: 0 }, rpe: { type: Number, min: 1, max: 10, default: null } }, { _id: false });
 const exSchema = new mongoose.Schema({
   id: { type: String, required: true, maxlength: 60 }, name: { type: String, default: '', maxlength: 120 }, slot: { type: String, default: '', maxlength: 20 },
   done: { type: Boolean, default: true }, sets: { type: [setSchema], default: [] },

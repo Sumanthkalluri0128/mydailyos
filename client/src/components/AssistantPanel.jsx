@@ -93,14 +93,14 @@ export default function AssistantPanel({ go }) {
           <div className="as-body" aria-live="polite">
             {msgs.map((m) => (
               <div key={m.id} className={`as-msg ${m.from}`}>
-                {m.from === "bot" && <img src={face(m.mood)} alt="" width="34" height="34" />}
+                {m.from === "bot" && <img loading="lazy" decoding="async" src={face(m.mood)} alt="" width="34" height="34" />}
                 <div>
                   <p>{m.text}</p>
                   {m.actions?.length > 0 && <div className="as-actions">{m.actions.map((a) => <button key={a.label} type="button" onClick={() => act(a)}>{a.page || a.healthy ? "→ " : ""}{a.label}</button>)}</div>}
                 </div>
               </div>
             ))}
-            {busy && <div className="as-msg bot"><img src={face("think")} alt="" width="34" height="34" /><div><p className="as-dots"><i /><i /><i /></p></div></div>}
+            {busy && <div className="as-msg bot"><img loading="lazy" decoding="async" src={face("think")} alt="" width="34" height="34" /><div><p className="as-dots"><i /><i /><i /></p></div></div>}
             <div ref={end} />
           </div>
           <div className="as-chips" role="group" aria-label="Suggested questions">

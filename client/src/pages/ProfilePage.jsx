@@ -12,6 +12,10 @@ import { TourSettings } from "../tour/TourHost";
 import ReportControls from "../components/ReportControls";
 import { expectedEnergy } from "../utils/energy";
 import WeightReveal from "../components/WeightReveal";
+import { PersonalInfoCard } from "../components/profile/PersonalInfoCard";
+import { BodyProfileCard } from "../components/profile/BodyProfileCard";
+import { DailyGoalsCard } from "../components/profile/DailyGoalsCard";
+import { WeightGoalCard } from "../components/profile/WeightGoalCard";
 
 function ProfilePage({ onBack }) {
   const [form, setForm] = useState({
@@ -348,221 +352,19 @@ function ProfilePage({ onBack }) {
         {/* PERSONAL INFORMATION */}
         {/* ==================================================== */}
 
-        <div className="card">
-
-          <h2>Personal Information</h2>
-
-          <label>
-            Name
-          </label>
-
-          <input
-            type="text"
-            name="name"
-            value={form.name}
-            onChange={handleChange}
-            placeholder="Your name"
-          />
-
-          <label>
-            Age
-          </label>
-
-          <input
-            type="number"
-            name="age"
-            min="1"
-            max="120"
-            value={form.age}
-            onChange={handleChange}
-            placeholder="Age"
-          />
-
-          <label>
-            Sex
-          </label>
-
-          <select
-            name="sex"
-            value={form.sex}
-            onChange={handleChange}
-          >
-            <option value="">
-              Select
-            </option>
-
-            <option value="male">
-              Male
-            </option>
-
-            <option value="female">
-              Female
-            </option>
-
-            <option value="other">
-              Other
-            </option>
-          </select>
-
-        </div>
+        <PersonalInfoCard form={form} handleChange={handleChange} />
 
         {/* ==================================================== */}
         {/* BODY PROFILE */}
         {/* ==================================================== */}
 
-        <div className="card">
-
-          <h2>Body Profile</h2>
-
-          <label>
-            Height (cm)
-          </label>
-
-          <input
-            type="number"
-            name="heightCm"
-            min="50"
-            max="250"
-            step="0.1"
-            value={form.heightCm}
-            onChange={handleChange}
-            placeholder="Example: 173"
-          />
-
-          <label>
-            Current Weight (kg)
-          </label>
-
-          <input
-            type="number"
-            name="currentWeightKg"
-            min="1"
-            max="500"
-            step="0.1"
-            value={form.currentWeightKg}
-            onChange={handleChange}
-            placeholder="Example: 82"
-          />
-
-          <label>
-            Activity Level
-          </label>
-
-          <select
-            name="activityLevel"
-            value={form.activityLevel}
-            onChange={handleChange}
-          >
-            <option value="sedentary">
-              Sedentary
-            </option>
-
-            <option value="light">
-              Lightly Active
-            </option>
-
-            <option value="moderate">
-              Moderately Active
-            </option>
-
-            <option value="very_active">
-              Very Active
-            </option>
-
-            <option value="extra_active">
-              Extra Active
-            </option>
-          </select>
-
-        </div>
+        <BodyProfileCard form={form} handleChange={handleChange} />
 
         {/* ==================================================== */}
         {/* DAILY GOALS */}
         {/* ==================================================== */}
 
-        <div className="card">
-
-          <h2>Daily Goals</h2>
-
-          <label>Calorie target</label>
-
-          <select
-            name="calorieMode"
-            value={form.calorieMode}
-            onChange={(e) => {
-              const mode = e.target.value;
-              setForm((f) => ({ ...f, calorieMode: mode, calorieTarget: mode === "manual" && plan ? plan.autoTarget : f.calorieTarget }));
-            }}
-          >
-            <option value="auto">Auto — worked out for you (recommended)</option>
-            <option value="manual">My own number</option>
-          </select>
-
-          {form.calorieMode === "manual" ? (
-            <>
-              <label>Calories per day (kcal)</label>
-              <input
-                type="number"
-                name="calorieTarget"
-                min="500"
-                value={form.calorieTarget}
-                onChange={handleChange}
-              />
-            </>
-          ) : (
-            <p className="muted">
-              {plan
-                ? `Worked out for you: ${plan.autoTarget.toLocaleString()} kcal a day. It updates when your weight, goal or pace changes.`
-                : "Add your age, height and weight above to get your personal target."}
-            </p>
-          )}
-
-          <label>Weight-change pace (kg per week)</label>
-
-          <select name="weeklyPaceKg" value={form.weeklyPaceKg} onChange={handleChange}>
-            <option value="0.25">0.25 — gentle</option>
-            <option value="0.5">0.5 — recommended</option>
-            <option value="0.75">0.75 — faster</option>
-            <option value="1">1 — fastest</option>
-          </select>
-
-          <label>
-            Protein Target (g)
-          </label>
-
-          <input
-            type="number"
-            name="proteinTarget"
-            min="1"
-            value={form.proteinTarget}
-            onChange={handleChange}
-          />
-
-          <label>
-            Water Target (ml)
-          </label>
-
-          <input
-            type="number"
-            name="waterTargetMl"
-            min="1"
-            value={form.waterTargetMl}
-            onChange={handleChange}
-          />
-
-          <label>
-            Steps Target
-          </label>
-
-          <input
-            type="number"
-            name="stepsTarget"
-            min="1"
-            value={form.stepsTarget}
-            onChange={handleChange}
-          />
-
-        </div>
+        <DailyGoalsCard form={form} handleChange={handleChange} plan={plan} setForm={setForm} />
 
         {/* ==================================================== */}
         {/* ENERGY NEEDS */}
@@ -633,94 +435,7 @@ function ProfilePage({ onBack }) {
         {/* WEIGHT GOAL */}
         {/* ==================================================== */}
 
-        <div className="card">
-
-          <h2>Weight Goal</h2>
-
-          <button
-            type="button"
-            className="bp-cta"
-            style={{ marginBottom: 12 }}
-            onClick={() => window.dispatchEvent(new CustomEvent("ff:goto", { detail: { page: "bodyPlan" } }))}
-          >
-            <span aria-hidden="true">🎯</span>
-            <span>
-              <b>{form.bodyType ? "Body plan (change my body goal)" : "Body plan: choose the body you want"}</b>
-              <small>Lean, athletic, strong or balanced: calories, macros and training worked out for it.</small>
-            </span>
-          </button>
-
-          <label>
-            Target Weight (kg)
-          </label>
-
-          <input
-            type="number"
-            name="targetWeightKg"
-            min="1"
-            max="500"
-            step="0.1"
-            value={form.targetWeightKg}
-            onChange={handleChange}
-            placeholder="Example: 75"
-          />
-
-          {currentWeight !== null &&
-            targetWeight !== null && (
-              <div className="weight-goal-summary">
-
-                <div>
-
-                  <span>
-                    Current Weight
-                  </span>
-
-                  <strong>
-                    <WeightReveal compact reaction={false} text={`${currentWeight.toFixed(1)} kg`} />
-                  </strong>
-
-                </div>
-
-                <div>
-
-                  <span>
-                    Target Weight
-                  </span>
-
-                  <strong>
-                    <WeightReveal compact reaction={false} text={`${targetWeight.toFixed(1)} kg`} />
-                  </strong>
-
-                </div>
-
-                <div>
-
-                  <span>
-                    Goal
-                  </span>
-
-                  <strong>
-                    {weightDirection}
-                  </strong>
-
-                </div>
-
-                <div>
-
-                  <span>
-                    Difference
-                  </span>
-
-                  <strong>
-                    {weightDifference.toFixed(1)} kg
-                  </strong>
-
-                </div>
-
-              </div>
-            )}
-
-        </div>
+        <WeightGoalCard currentWeight={currentWeight} form={form} handleChange={handleChange} targetWeight={targetWeight} weightDifference={weightDifference} weightDirection={weightDirection} />
 
         {/* ==================================================== */}
         {/* SAVE */}

@@ -1,0 +1,7 @@
+{
+  "name": "@mydailyos/shared",
+  "version": "62.0.0",
+  "private": true,
+  "description": "Code and data used by BOTH the website and the phone. Edit it here, then run: node tools/syncShared.mjs",
+  "type": "module"
+}

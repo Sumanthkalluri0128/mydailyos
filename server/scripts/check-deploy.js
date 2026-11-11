@@ -24,7 +24,7 @@ async function runChecks(api, web, { fetchImpl = globalThis.fetch } = {}) {
 
   // 2. email
   const mail = h.j?.mail;
-  add(!!mail && mail !== 'not-configured', 'Email provider configured', mail ? mail : 'none', 'Render -> Environment: set GMAIL_REFRESH_TOKEN (see SETUP_V5.md section 1) together with GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET, then redeploy.');
+  add(!!mail && mail !== 'not-configured', 'Email provider configured', mail ? mail : 'none', 'Render -> Environment: set GMAIL_REFRESH_TOKEN (see docs/SETUP_V5.md section 1) together with GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET, then redeploy.');
   const f = await get(`${api}/api/auth/forgot`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ email: 'deploy-check@invalid.example' }) });
   add(f.r?.status === 200, 'Forgot-password endpoint', f.err || `HTTP ${f.r.status}${f.j?.message ? ` — ${f.j.message}` : ''}`, f.r?.status === 503 ? 'Email is not configured (see above).' : 'Check Render logs for errors on POST /api/auth/forgot.');
 

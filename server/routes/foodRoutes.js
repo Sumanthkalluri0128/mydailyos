@@ -28,6 +28,7 @@ const { cookIdeas } = require('../lib/cookIdeas');
 const Recipe = require('../models/Recipe');
 const FoodReport = require('../models/FoodReport');
 
+const { s, body } = require('../lib/schema');
 const router = express.Router();
 router.use(requireAuth);
 
@@ -224,7 +225,7 @@ router.get('/suggest', wrap(async (req, res) => {
 }));
 
 // POST /api/foods/adopt { name } — add one of the curated healthy foods to the person's own list, then it can be logged like any food.
-router.post('/adopt', wrap(async (req, res) => {
+router.post('/adopt', body(s.object({ name: s.string({ max: 100 }) })), wrap(async (req, res) => {
   const food = await adoptFood(Food, req.user.id, String(req.body?.name || ''));
   if (!food) throw new HttpError(404, 'That food is not in the healthy list');
   res.status(201).json({ success: true, food: present(food.toObject ? food.toObject() : food, req.user.id) });

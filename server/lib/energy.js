@@ -30,6 +30,25 @@ function goalDirection(current, target) {
 }
 
 /**
+ * The activity level the calorie target uses. "manual" (or no automatic reading yet) = the level the person chose.
+ * "auto" = the level worked out from recent days (lib/dailyCoach.js): it only moves after 2 days in a row agree, so one lazy day
+ * never changes what you eat. Identical in the server, web and mobile copies.
+ */
+function activityLevelOf(p) {
+  const a = p && p.autoActivity;
+  return p && p.activityMode === 'auto' && a && ACTIVITY_MULTIPLIER[a.targetLevel] ? a.targetLevel : (p && p.activityLevel);
+}
+
+/**
+ * The safe minimum calories. Your own number (Profile > goals.calorieFloor, 1,000-3,000) wins; otherwise 1,500 for men and 1,200 for
+ * everyone else. EVERY screen and engine reads this one function, so none of them can suggest less than the floor you set.
+ */
+function calorieFloorOf(p) {
+  const f = Number(p && p.goals && p.goals.calorieFloor);
+  return Number.isFinite(f) && f >= 1000 ? Math.round(f) : (p && p.sex === 'male' ? 1500 : 1200);
+}
+
+/**
  * The person's plan. Returns null only when we cannot calculate one (weight, height or age missing).
  *
  *   mode 'auto'   -> calorieTarget is calculated from the body + goal + pace (default)
@@ -45,13 +64,13 @@ function expectedEnergy(p) {
   const b = bmr({ weightKg, heightCm, ageYears: age, sex: p.sex });
   if (b === null) return null;
 
-  const mult = ACTIVITY_MULTIPLIER[p.activityLevel] || ACTIVITY_MULTIPLIER.moderate;
+  const mult = ACTIVITY_MULTIPLIER[activityLevelOf(p)] || ACTIVITY_MULTIPLIER.moderate;
   const tdee = Math.round(b * mult);
   const goals = p.goals || {};
   const direction = goalDirection(weightKg, goals.targetWeightKg);
   const pace = Math.min(1, Math.max(0.1, n(goals.weeklyPaceKg) || 0.5));
   const gap = direction === 'maintain' ? 0 : Math.round((pace * KCAL_PER_KG) / 7);
-  const floor = p.sex === 'male' ? 1500 : 1200; // never a crash diet
+  const floor = calorieFloorOf(p); // never a crash diet
   const raw = direction === 'lose' ? tdee - gap : direction === 'gain' ? tdee + gap : tdee;
   // Never below the safety floor — and when the goal is to lose, never above maintenance (the floor could otherwise push a small,
   // low-activity person into a surplus).
@@ -87,13 +106,17 @@ function dailyTarget(p) {
  *   remaining  = budget - eaten (negative = over)
  *   net        = (maintenance + bonus) - eaten (positive = deficit, negative = surplus)
  */
+/** Share of the activity ABOVE the plan's baseline that is added to the day's food budget. Wearables and step formulas typically over-count by 15-40%,
+ *  so giving it all back quietly erases the deficit. */
+const EXERCISE_CREDIT = 0.7;
+
 function dayBalance(p, { eaten = 0, workout = 0, steps = 0, extra = 0 } = {}) {
   const e = expectedEnergy(p);
   const target = e ? e.calorieTarget : dailyTarget(p);
   const burned = Math.max(0, n(workout)) + Math.max(0, n(steps));
   const eat = Math.max(0, n(eaten));
   const baseline = e ? e.baselineActivityKcal : burned; // unknown body -> don't award anything we can't justify
-  const bonus = e ? Math.max(0, Math.round(burned - baseline)) : 0;
+  const bonus = e ? Math.max(0, Math.round((burned - baseline) * EXERCISE_CREDIT)) : 0;     // watches and step formulas over-count, so only part of the extra activity is given back as food
   const room = Math.max(0, Math.round(n(extra))); // festival / trip / diet-break room for this day (lib/eventExtra.js). It widens the budget but burns nothing, so `net` ignores it.
   const budget = target + bonus + room;
   const net = e ? e.tdee + bonus - eat : null;
@@ -190,7 +213,8 @@ function weeksToGoal(currentKg, targetKg, pace = 0.5) {
 }
 
 module.exports = {
+  EXERCISE_CREDIT,
   ACTIVITY_MULTIPLIER, KCAL_PER_KG, KCAL_PER_STEP_PER_KG, DEFAULT_TARGET,
-  bmr, goalDirection, expectedEnergy, dailyTarget, dayBalance,
+  bmr, goalDirection, activityLevelOf, calorieFloorOf, expectedEnergy, dailyTarget, dayBalance,
   stepCalories, stepDistanceKm, waterTargetMl, macroTargets, BODY_TYPES, macroRanges, rangeStatus, limitTargets, weeksToGoal,
 };

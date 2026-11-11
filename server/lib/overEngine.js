@@ -39,7 +39,7 @@ function analyseOverDays({ profile = null, days = [], today, target: targetIn = 
   const R = RULES;
   const e = profile ? expectedEnergy(profile) : null;
   const target = n(targetIn) > 0 ? n(targetIn) : (profile ? dayBalance(profile, { eaten: 0 }).target : 0);
-  const floor = n(floorIn) > 0 ? n(floorIn) : (profile?.sex === 'male' ? 1500 : 1200);
+  const floor = n(floorIn) > 0 ? n(floorIn) : require('./energy').calorieFloorOf(profile);
   const direction = dirIn || (profile ? goalDirection(e?.weightKg ?? profile.currentWeightKg, profile.goals?.targetWeightKg) : 'lose');
   const gap = e?.gap ?? 0;
   const pace = n(paceKg) > 0 ? n(paceKg) : n(profile?.goals?.weeklyPaceKg);

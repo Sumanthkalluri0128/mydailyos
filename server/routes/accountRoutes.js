@@ -21,7 +21,7 @@ router.use(requireAuth);
 
 const PERSONAL_MODELS = [
   'Profile', 'WeightLog', 'WaterLog', 'Task', 'Habit', 'HabitLog', 'FoodLog', 'ActivityLog', 'WorkoutTemplate',
-  'HealthLog', 'Fast', 'SavedMeal', 'MealPlan', 'Recipe', 'Goal', 'Collection', 'FoodPreference', 'PlanTemplate', 'FoodReport', 'CoachState', 'Medicine', 'MedLog', 'ShareLink', 'TrainingProgram', 'BodyPlanSession',
+  'HealthLog', 'Fast', 'SavedMeal', 'MealPlan', 'Recipe', 'Goal', 'Collection', 'FoodPreference', 'PlanTemplate', 'FoodReport', 'CoachState', 'Medicine', 'MedLog', 'ShareLink', 'TrainingProgram', 'BodyPlanSession', 'Readiness',
 ];
 
 const passwordLimiter = rateLimit({
@@ -60,7 +60,7 @@ router.post('/change-password', passwordLimiter, wrap(async (req, res) => {
 // ---------------------------------------------------------------- export
 async function collectExport(userId) {
   const load = (name, sort = { date: 1, createdAt: 1 }) => require(`../models/${name}`).find({ userId }).sort(sort).lean();
-  const [user, profile, foodLogs, activityLogs, waterLogs, weightLogs, tasks, habits, habitLogs, templates, customFoods, healthLogs, fasts, goals, foodPrefs, planTemplates, coachState, medicines, medLogs, shareLinks, trainingPrograms, bodyPlanSessions] = await Promise.all([
+  const [user, profile, foodLogs, activityLogs, waterLogs, weightLogs, tasks, habits, habitLogs, templates, customFoods, healthLogs, fasts, goals, foodPrefs, planTemplates, coachState, medicines, medLogs, shareLinks, trainingPrograms, bodyPlanSessions, recipes, savedMeals, mealPlans] = await Promise.all([
     User.findById(userId).select('name email createdAt').lean(),
     load('Profile', {}),
     load('FoodLog'), load('ActivityLog'), load('WaterLog'), load('WeightLog'),
@@ -71,8 +71,10 @@ async function collectExport(userId) {
     load('Medicine', { createdAt: 1 }), load('MedLog'), require('../models/ShareLink').find({ userId }).select('-tokenHash').lean(),
     load('TrainingProgram', {}),
     load('BodyPlanSession'),
+    load('Recipe', { createdAt: 1 }), load('SavedMeal', { createdAt: 1 }), load('MealPlan', { createdAt: 1 }),   // were missing from backups before v62
   ]);
-  return { user, profile: profile[0] || null, foodLogs, activityLogs, waterLogs, weightLogs, tasks, habits, habitLogs, templates, customFoods, healthLogs, fasts, goals, foodPreferences: foodPrefs[0] || null, planTemplates, coachState: coachState[0] || null, medicines, medLogs, shareLink: shareLinks[0] || null, trainingProgram: trainingPrograms[0] || null, bodyPlanSessions };
+  const readiness = await load('Readiness');
+  return { user, profile: profile[0] || null, foodLogs, activityLogs, waterLogs, weightLogs, tasks, habits, habitLogs, templates, customFoods, healthLogs, fasts, goals, foodPreferences: foodPrefs[0] || null, planTemplates, coachState: coachState[0] || null, medicines, medLogs, shareLink: shareLinks[0] || null, trainingProgram: trainingPrograms[0] || null, bodyPlanSessions, recipes, savedMeals, mealPlans, readiness };
 }
 
 const CSV_HEADERS = ['type', 'date', 'name', 'quantity', 'unit', 'calories', 'protein_g', 'carbs_g', 'fat_g', 'details', 'notes'];

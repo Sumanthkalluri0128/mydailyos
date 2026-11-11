@@ -1,15 +1,15 @@
-// End-to-end API tests. They need a real MongoDB, so they only run when TEST_MONGO_URI is set:
-//
-//   TEST_MONGO_URI=mongodb://127.0.0.1:27017/flexfit_test npm test
-//
+// End-to-end API tests against a real MongoDB. By default they start `mongodb-memory-server` (see test/helpers/mongo.js).
+// To use your own server instead:  TEST_MONGO_URI=mongodb://127.0.0.1:27017/flexfit_test npm test
 // (Uses a throw-away database and drops it afterwards. Never point this at production data.)
 const test = require('node:test');
 const assert = require('node:assert/strict');
 
-const URI = process.env.TEST_MONGO_URI;
-const skip = !URI && 'set TEST_MONGO_URI to run the API integration tests';
+const dbHelper = require('./helpers/mongo');
+const skip = dbHelper.skipReason();
+let URI;
 
 process.env.JWT_SECRET = process.env.JWT_SECRET || 'test-secret';
+process.env.AUTH_LIMITS_SCALE = '100'; // these tests sign up many times from one address
 
 let server, base, mongoose;
 const today = () => new Date().toISOString().slice(0, 10);
@@ -31,6 +31,7 @@ async function call(method, path, { token, body, raw } = {}) {
 test.before(async () => {
   if (skip) return;
   mongoose = require('mongoose');
+  URI = await dbHelper.start();
   await mongoose.connect(URI);
   await mongoose.connection.dropDatabase();
   const { createApp } = require('../app');
@@ -44,6 +45,7 @@ test.after(async () => {
   await mongoose.connection.dropDatabase();
   await mongoose.disconnect();
   await new Promise((r) => server.close(r));
+  await dbHelper.stop();
 });
 
 const ctx = {};
@@ -555,4 +557,37 @@ test('album: packs are earned, opening gives a new sticker each time, no double-
   assert.equal(open.status, 200); assert.equal(open.sticker.who, 'zoro'); assert.equal(open.owned.length, 1); assert.equal(open.packs.available, 0);
   assert.equal((await call('POST', '/api/album/open', { token: a.token, body: { today: today() } })).status, 400, 'no pack left');
   assert.equal((await call('GET', `/api/album?today=${today()}`, { token: b.token })).owned.length, 0, 'other users are unaffected');
+});
+
+test('recipes: import from pasted text (nothing saved), bad input, and links to private addresses are refused', { skip }, async () => {
+  const text = 'Dal Rice\nServes 3\nIngredients\n1 cup toor dal\n2 tbsp ghee\nzzz unknown thing 1\nMethod\n1. Cook it.';
+  const r = await call('POST', '/api/recipes/import', { token: ctx.alice, body: { text } });
+  assert.equal(r.status, 200); assert.equal(r.name, 'Dal Rice'); assert.equal(r.servings, 3); assert.equal(r.servingsFound, true);
+  assert.deepEqual(r.steps, ['Cook it.']);
+  assert.equal(r.items.length + r.unmatched.length, 3);           // every ingredient is either matched or listed as unmatched
+  assert.ok(r.perServing && typeof r.perServing.calories === 'number');
+  assert.equal((await call('GET', '/api/recipes', { token: ctx.alice })).recipes.length, 0);   // import saves nothing
+  assert.equal((await call('POST', '/api/recipes/import', { token: ctx.alice, body: { text: 'no amounts here at all' } })).status, 422);
+  assert.equal((await call('POST', '/api/recipes/import', { token: ctx.alice, body: {} })).status, 400);
+  assert.equal((await call('POST', '/api/recipes/import', { token: ctx.alice, body: { url: 'http://169.254.169.254/latest/meta-data' } })).status, 400);
+  assert.equal((await call('POST', '/api/recipes/import', { body: { text } })).status, 401);
+});
+
+test('paging and caching: cursor pages cover every row exactly once; summaries refresh after a write', { skip }, async () => {
+  for (let i = 0; i < 5; i += 1) assert.equal((await call('POST', '/api/health-logs', { token: ctx.alice, body: { type: 'oil', date: plus(-i), value: 1 + i } })).status, 201);
+  const seen = []; let cursor = null; let pages = 0;
+  do {
+    const r = await call('GET', `/api/health-logs?type=oil&limit=2${cursor ? `&cursor=${encodeURIComponent(cursor)}` : ''}`, { token: ctx.alice });
+    assert.equal(r.status, 200); seen.push(...r.logs.map((l) => l._id)); cursor = r.nextCursor; pages += 1;
+  } while (cursor && pages < 10);
+  assert.equal(new Set(seen).size, 5); assert.equal(seen.length, 5); assert.equal(pages, 3);
+  assert.equal((await call('GET', '/api/health-logs?type=oil&cursor=junk', { token: ctx.alice })).status, 400);
+
+  const month = today().slice(0, 7);
+  const first = await call('GET', `/api/wrapped?month=${month}`, { token: ctx.alice, raw: true });
+  const second = await call('GET', `/api/wrapped?month=${month}`, { token: ctx.alice, raw: true });
+  assert.equal(first.status, 200); assert.equal(second.headers.get('x-cache'), 'hit');
+  await call('POST', '/api/water', { token: ctx.alice, body: { date: today(), amountMl: 250 } });       // any write
+  const third = await call('GET', `/api/wrapped?month=${month}`, { token: ctx.alice, raw: true });
+  assert.equal(third.headers.get('x-cache'), 'miss');
 });

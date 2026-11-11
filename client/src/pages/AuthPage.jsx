@@ -1,3 +1,4 @@
+import { startSession, signInExtras } from '../auth/session';
 import { useEffect, useState } from 'react';
 import { API_URL } from '../config';
 import '../auth/auth.css';
@@ -48,7 +49,8 @@ export default function AuthPage({ onAuthenticated, notice = '' }) {
         `${API_URL}/api/auth/${mode === 'login' ? 'login' : 'signup'}`,
         {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          ...(signInExtras().credentials ? { credentials: signInExtras().credentials } : {}),
+          headers: { 'Content-Type': 'application/json', ...signInExtras().headers },
           body: JSON.stringify({
             name,
             email,
@@ -61,7 +63,7 @@ export default function AuthPage({ onAuthenticated, notice = '' }) {
 
       // A different person on this browser must not see the previous person's saved dashboard.
       localStorage.removeItem('mydailyos_dash_v1');
-      localStorage.setItem('mydailyos_token', data.token);
+      startSession(data.token);          // cookie mode: only a harmless marker is kept; the token stays in the httpOnly cookie
       localStorage.setItem(
         'mydailyos_user',
         JSON.stringify(data.user)
