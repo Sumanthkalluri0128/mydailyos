@@ -37,3 +37,8 @@ Profile > Protein > clear the box > Save (or save your body plan once).
 ## Crash guard
 `resolveTargets` never returns null (no profile = answers like an empty profile), so a screen that renders before the profile loads cannot crash.
 `cd client && node ../tools/smokeRender.mjs` renders Home, Macros, Rings, Workout plan and Account with no / empty / full profiles and fails on any crash. Run it in CI before deploying.
+
+## Coach hub uses the same goal, "now" and pace
+`server/lib/progressView.js` exports `goalContext(profile, weights, energy)` and `goalTargets(profile, energy)`. The goal card, Progress tab, journey,
+Coach hub body view, goal range and the "ease the last kilos" taper all read goal weight, current weight and pace from them
+(active plan first, else the profile). Before, the hub used the profile goal and a smoothed trend while the goal card used the plan.

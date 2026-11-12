@@ -50,3 +50,22 @@ test('no weight yet: targets come from the saved calories, never a made-up 140 g
   assert.equal(t.macros.protein, 125);
   assert.ok(t.ranges.protein.max >= t.ranges.protein.min);
 });
+
+test('the coach hub, goal range and progress card use the same goal weight, "now" and pace (goalContext)', () => {
+  const { goalContext, goalTargets, progressView } = require('../lib/progressView');
+  const plan = { active: true, startKg: 90, targetKg: 80, startDate: '2026-10-01', paceKg: 0.4 };
+  const rows = [{ date: '2026-10-02', weightKg: 89.8 }, { date: '2026-11-09', weightKg: 86.6 }, { date: '2026-11-10', weightKg: 86.2 }];
+  // a profile whose saved goal weight differs from the plan's: the PLAN wins everywhere
+  const profile = { currentWeightKg: 86.2, plan, goals: { targetWeightKg: 75, weeklyPaceKg: 0.7 } };
+  const c = goalContext(profile, rows);
+  assert.equal(c.targetKg, 80);
+  assert.equal(c.paceKg, 0.4);
+  assert.equal(goalTargets(profile).targetKg, 80);
+  assert.equal(progressView(profile, rows).targetKg, 80);
+  // no plan: the profile goal and the smoothed trend
+  const c2 = goalContext({ currentWeightKg: 86.2, goals: { targetWeightKg: 75 } }, rows);
+  assert.equal(c2.targetKg, 75);
+  assert.ok(c2.nowKg > 85 && c2.nowKg < 88);
+  // nothing known yet: no crash
+  assert.equal(goalContext({}, []).nowKg, null);
+});

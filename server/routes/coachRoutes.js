@@ -27,6 +27,7 @@ const { s, body } = require('../lib/schema');
 const TODAY = s.date();                       // todayOf(req) reads body.today, so every schema below keeps it
 const { SLEEP_CHOICES, ENERGY_CHOICES, pickSleep, coachAdvice } = require('../lib/checkin');
 const { planTrendKg } = require('../lib/trendWeight');
+const { goalContext, goalTargets } = require('../lib/progressView');
 const { dayGuide, entryCheck, suggestActivityLevel, isTrained, weekdayMon0 } = require('../lib/dailyCoach');
 const { loadDaily, refreshAutoActivity } = require('../lib/dailyCoachData');
 const { weeklyDecision } = require('../lib/weeklyDecision');
@@ -189,10 +190,8 @@ router.get('/sleep-eating', wrap(async (req, res) => {
 router.get('/goal-range', wrap(async (req, res) => {
   const today = todayOf(req); const c = await context(req.user.id, today);
   // Same target and same "now" as the goal card, so "to go" reads the same everywhere.
-  const plan = c.profile?.plan || {};
-  const goalKg = plan.active && plan.targetKg > 0 ? plan.targetKg : c.profile?.goals?.targetWeightKg;
-  const nowKg = plan.active ? planTrendKg(plan, c.weights, null) : null;
-  res.json({ success: true, ...G.goalRange({ weights: c.weights, goalKg, today, nowKg }) });
+  const gc = goalContext(c.profile, c.weights);
+  res.json({ success: true, ...G.goalRange({ weights: c.weights, goalKg: gc.targetKg, today, nowKg: gc.onPlan ? gc.nowKg : null }) });
 }));
 
 // ---- 6. learning
@@ -709,8 +708,7 @@ function taperFor({ profile, st, decision, today }) {
   if (!profile || !decision || !decision.forecast || offersPaused(st, decision, today)) return null;
   const e = expectedEnergy(profile);
   if (!e || e.direction !== 'lose') return null;
-  const target = Number(profile.goals && profile.goals.targetWeightKg);
-  const pace = Number(profile.plan && profile.plan.active && profile.plan.paceKg) > 0 ? Number(profile.plan.paceKg) : e.pace;
+  const { targetKg: target, paceKg: pace } = goalTargets(profile, e);
   const t = B.taperPlan({ currentKg: target + decision.forecast.remainingKg, targetKg: target, paceKg: pace, direction: e.direction });
   if (!t) return null;
   const kcal = Math.round((e.tdee - (t.pace * KCAL_PER_KG) / 7) / 10) * 10;
@@ -843,11 +841,9 @@ async function buildBody(uid, today) {
   const profile = d.profile, e = expectedEnergy(profile);
   const decision = st.weekly && st.weekly.decision ? st.weekly.decision : null;
   const m = decision && decision.metrics ? decision.metrics : {};
-  const trend = smoothTrend((d.weights || []).filter((w) => Number(w.weightKg) > 0));
-  const nowKg = trend.length ? trend[trend.length - 1].trendKg : Number(profile.currentWeightKg) || null;
-  const targetKg = Number(profile.goals && profile.goals.targetWeightKg) || null;
+  const gc = goalContext(profile, d.weights, e);          // the same goal weight, "now" and pace as the goal card, Progress and the journey
+  const nowKg = gc.nowKg, targetKg = gc.targetKg, pace = gc.paceKg;
   const plan = profile.plan && profile.plan.active ? profile.plan : {};
-  const pace = Number(plan.paceKg) > 0 ? Number(plan.paceKg) : e ? e.pace : null;
   const strengthStatus = x.strengthTrend ? x.strengthTrend.status : null;
   const rateKgWk = m.rateKgWk === undefined ? null : m.rateKgWk;
 
