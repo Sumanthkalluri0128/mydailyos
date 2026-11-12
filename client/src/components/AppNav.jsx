@@ -17,6 +17,7 @@ export const NAV_GROUPS = [
     ["water", "💧", "Water", "Hydration"],
     ["workouts", "🏋️", "Workout & Body", "7-day plan, body goal, calories, library"],
     ["exercise", "🔥", "Exercise", "Workouts and steps"],
+    ["gymlog", "📓", "Gym log", "Sets, reps, body weight & measurements (private)"],
     ["weight", "⚖️", "Weight", "Weigh-ins and trend"],
     ["health", "❤️", "Health", "Sleep and measurements"],
   ] },

@@ -21,6 +21,7 @@ const ProgressPage = lazy(() => import("./pages/ProgressPage"));
 const GoalsPage = lazy(() => import("./pages/GoalsPage"));
 const CoachPage = lazy(() => import("./pages/CoachPage"));
 const WorkoutPlanPage = lazy(() => import("./pages/WorkoutPlanPage"));
+const GymLogPage = lazy(() => import("./pages/GymLogPage"));
 const PlannerPage = lazy(() => import("./pages/PlannerPage"));
 const RecipesPage = lazy(() => import("./pages/RecipesPage"));
 const OnboardingPage = lazy(() => import("./pages/OnboardingPage"));
@@ -624,6 +625,20 @@ function App() {
         <main key="workouts" className="dashboard fx-page">
           <TabSuspense tab={currentPage}>
             <WorkoutPlanPage key={currentPage} profile={profile} startView={currentPage === "bodyPlan" ? "body" : undefined} />
+          </TabSuspense>
+        </main>
+      </div>
+    );
+  }
+
+  // Gym log: sets/reps, body weight and measurements. Stored in this browser only (never uploaded).
+  if (currentPage === "gymlog") {
+    return (
+      <div className="app">
+        {shell}
+        <main key="gymlog" className="dashboard fx-page">
+          <TabSuspense tab={currentPage}>
+            <GymLogPage onBack={() => setCurrentPage("workouts")} />
           </TabSuspense>
         </main>
       </div>

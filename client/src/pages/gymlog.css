@@ -1,0 +1,60 @@
+/* Gym log (web). Uses the app's theme variables so it follows light / dark automatically. */
+.gl-page { max-width: 760px; margin: 0 auto; padding: 8px 4px 80px; color: var(--text); }
+.gl-title { margin: 6px 0 2px; font-size: 28px; letter-spacing: -0.4px; }
+.gl-back { background: none; border: 0; color: var(--primary); font-weight: 700; font-size: 15px; cursor: pointer; padding: 8px 0; }
+.gl-muted { color: var(--text-muted); font-size: 13px; line-height: 1.45; margin: 2px 0; }
+.gl-private { margin: 2px 0 14px; }
+.gl-sub { margin: 0 0 10px; }
+.gl-tabs { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 14px; }
+.gl-tab, .gl-chip { border: 1px solid var(--border); background: var(--chip-bg); color: var(--text); border-radius: 999px; padding: 9px 15px; font-weight: 700; font-size: 13.5px; cursor: pointer; min-height: 40px; }
+.gl-tab.is-on, .gl-chip.is-on { background: var(--primary-solid); border-color: var(--primary-solid); color: #fff; }
+.gl-chips { display: flex; gap: 6px; flex-wrap: wrap; margin: 6px 0 10px; align-items: center; }
+.gl-chip { padding: 7px 12px; min-height: 34px; font-size: 12.5px; }
+.gl-label { display: block; font-size: 13px; font-weight: 700; color: var(--text-muted); margin: 8px 0 4px; }
+.gl-card { background: var(--surface); border: 1px solid var(--border); border-radius: 20px; padding: 18px; margin-bottom: 14px; box-shadow: 0 1px 3px var(--shadow); }
+.gl-card-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 8px; }
+.gl-card-head h3 { margin: 0; font-size: 17px; }
+.gl-h4 { margin: 14px 0 8px; font-size: 14px; }
+.gl-btn { border: 0; border-radius: 12px; padding: 10px 14px; font-weight: 800; font-size: 14px; cursor: pointer; min-height: 40px; }
+.gl-btn:disabled { opacity: .45; cursor: not-allowed; }
+.gl-soft { background: var(--primary-soft); color: var(--primary); }
+.gl-primary { background: var(--primary-solid); color: #fff; }
+.gl-danger { background: var(--danger-soft); color: var(--danger); }
+.gl-btn:focus-visible, .gl-chip:focus-visible, .gl-tab:focus-visible, .gl-pickrow:focus-visible, .gl-li-main:focus-visible { outline: 3px solid var(--primary); outline-offset: 2px; }
+.gl-row { display: flex; gap: 8px; flex-wrap: wrap; margin: 10px 0; }
+.gl-col { display: flex; flex-direction: column; gap: 8px; margin: 10px 0; }
+.gl-field { display: block; margin-bottom: 12px; }
+.gl-field span { display: block; font-size: 13px; font-weight: 700; color: var(--text-muted); margin-bottom: 5px; }
+.gl-field input, .gl-paste { width: 100%; box-sizing: border-box; border: 1.5px solid var(--border); border-radius: 12px; padding: 11px 13px; font-size: 16px; background: var(--surface); color: var(--text); }
+.gl-field input:focus, .gl-paste:focus, .gl-setrow input:focus { outline: 0; border-color: var(--primary); }
+.gl-paste { font-family: ui-monospace, monospace; font-size: 12px; margin-bottom: 10px; resize: vertical; }
+.gl-grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 0 12px; }
+.gl-datebar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+.gl-datelabel { background: none; border: 0; color: var(--text); cursor: pointer; text-align: center; font-size: 16px; }
+.gl-datelabel small { display: block; color: var(--primary); font-weight: 700; font-size: 12px; }
+.gl-li { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 0; border-top: 1px solid var(--border); }
+.gl-li-main { flex: 1; text-align: left; background: none; border: 0; color: var(--text); cursor: pointer; display: flex; flex-direction: column; gap: 2px; font-size: 15px; padding: 0; }
+.gl-pickrow { width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 11px 0; border: 0; border-top: 1px solid var(--border); background: none; color: var(--text); cursor: pointer; font-size: 15px; text-align: left; }
+.gl-plus { color: var(--primary); font-size: 22px; font-weight: 800; }
+.gl-custom { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border); }
+.gl-sets { margin-bottom: 8px; }
+.gl-sethead, .gl-setrow { display: grid; grid-template-columns: 34px 1fr 1fr 44px; gap: 8px; align-items: center; margin-bottom: 8px; }
+.gl-sethead { font-size: 12px; font-weight: 800; color: var(--text-muted); }
+.gl-setrow input { width: 100%; box-sizing: border-box; min-height: 44px; border: 1.5px solid var(--border); border-radius: 12px; text-align: center; font-size: 16px; font-weight: 700; background: var(--surface); color: var(--text); }
+.gl-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 8px; margin: 6px 0 10px; }
+.gl-stat { background: var(--primary-soft); border-radius: 14px; padding: 11px 13px; display: flex; flex-direction: column; gap: 1px; }
+.gl-stat b { font-size: 17px; }
+.gl-bar { height: 10px; border-radius: 6px; background: var(--chip-bg); overflow: hidden; margin: 6px 0; }
+.gl-bar i { display: block; height: 100%; border-radius: 6px; background: var(--primary); }
+.gl-goal { padding: 10px 0; border-top: 1px solid var(--border); }
+.gl-between { display: flex; justify-content: space-between; align-items: center; }
+.gl-strong { font-size: 13px; margin: 2px 0; }
+.gl-good { color: var(--success); font-size: 12.5px; font-weight: 700; margin: 2px 0; }
+.gl-warn { color: #b07400; font-size: 12.5px; font-weight: 700; margin: 2px 0; }
+[data-theme="dark"] .gl-warn { color: #f0c36a; }
+.gl-chart { width: 100%; height: auto; display: block; }
+.gl-weeks { display: flex; align-items: flex-end; gap: 6px; height: 78px; }
+.gl-week { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; height: 100%; }
+.gl-week small { color: var(--text-muted); font-size: 11px; }
+.gl-week i { width: 100%; border-radius: 5px; display: block; }
+@media (max-width: 520px) { .gl-grid2 { grid-template-columns: 1fr; } .gl-page { padding-inline: 0; } }

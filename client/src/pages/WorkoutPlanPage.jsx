@@ -384,6 +384,7 @@ function TodayView({ plan, body, cell, shownDay, selected, onPick, st, busy, onS
           <div className="wp-quick">
             <button type="button" onClick={() => window.dispatchEvent(new CustomEvent("ff:goto", { detail: { page: "progress" } }))}><span aria-hidden="true">📈</span>Progress</button>
             <button type="button" onClick={() => window.dispatchEvent(new CustomEvent("ff:goto", { detail: { page: "exercise" } }))}><span aria-hidden="true">🧮</span>Routines &amp; plate calculator</button>
+            <button type="button" onClick={() => window.dispatchEvent(new CustomEvent("ff:goto", { detail: { page: "gymlog" } }))}><span aria-hidden="true">📓</span>Gym log &amp; body tracker</button>
           </div>
         </section>
         <p className="wp-muted wp-small">{today === cell.date ? "Stop if you feel sharp pain. This is a training guide, not medical advice." : ""}</p>
