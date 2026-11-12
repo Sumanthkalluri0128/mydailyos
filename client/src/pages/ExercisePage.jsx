@@ -8,6 +8,9 @@ import { API_URL } from "../config";
 import { getLocalDate } from "../utils/date";
 import { estimateBurn } from "../utils/energy";
 import Training from "../components/Training";
+// ONE logger for everything you do: the same screen as the Gym log (sets x reps x weight for lifts, seconds for holds, minutes + pace for cardio).
+// What you log here lands in the Gym log and is counted once in Exercise and Home (utils/gymSyncRunner.js), so nothing is entered twice.
+import { LogTab } from "./GymLogPage";
 
 function ExercisePage({ onBack }) {
   const [activities, setActivities] = useState([]);
@@ -239,6 +242,9 @@ function ExercisePage({ onBack }) {
   // TOTAL CALORIES
   // ============================================================
 
+  // A row with source "gymlog" is the server copy of an exercise you logged above (same entry, same calories). The logger shows it with its sets
+  // and lets you edit or delete it, so this list keeps only the rest (typed by time, Health Connect, finished workouts). Totals still count every row once.
+  const otherLogs = logs.filter((l) => l.source !== "gymlog");
   const totalCalories = logs.reduce(
     (total, log) =>
       total +
@@ -345,18 +351,30 @@ function ExercisePage({ onBack }) {
 
 
       {/* ======================================================
-          ADD ACTIVITY
+          LOG AN EXERCISE (the same logger as the Gym log: the form follows the exercise you pick)
       ====================================================== */}
 
       <div className="large-card">
+        <div className="section-header">
+          <div>
+            <h2>Log an exercise</h2>
+            <p>Lifts take sets, reps and weight. Holds take seconds. Cardio takes minutes and pace. Pick one and the form changes to match.</p>
+          </div>
+        </div>
+        <LogTab />
+      </div>
+
+      <details className="large-card exercise-time-only">
+        <summary><strong>Log by time only</strong> <span className="md-sub">yoga, sports, anything without sets</span></summary>
+        <div>
 
         <div className="section-header">
 
           <div>
-            <h2>Add Exercise</h2>
+            <h2>Add by time</h2>
 
             <p>
-              Enter what you did today.
+              Enter how long you did it.
             </p>
           </div>
 
@@ -544,6 +562,8 @@ function ExercisePage({ onBack }) {
       </div>
 
 
+      </details>
+
       {/* ======================================================
           TODAY'S ACTIVITIES
       ====================================================== */}
@@ -558,10 +578,7 @@ function ExercisePage({ onBack }) {
             </h2>
 
             <p>
-              {logs.length} activity
-              {logs.length === 1
-                ? ""
-                : "ies"} recorded.
+              {otherLogs.length} other activit{otherLogs.length === 1 ? "y" : "ies"} today. Exercises you log above are listed in the logger.
             </p>
           </div>
 
@@ -574,11 +591,15 @@ function ExercisePage({ onBack }) {
             Even 10 minutes counts. Add your first activity above and I will cheer you on!
           </BuddyEmpty>
 
+        ) : otherLogs.length === 0 ? (
+
+          <p className="md-sub">Nothing else today. Your logged exercises are in the logger above.</p>
+
         ) : (
 
           <div className="activity-list">
 
-            {logs.map((log) => (
+            {otherLogs.map((log) => (
 
               <div
                 className="activity-row"
@@ -677,7 +698,7 @@ function ExercisePage({ onBack }) {
                   </div>
                   {items.map((l) => (
                     <div className="history-item" key={l._id}>
-                      <span>{l.activityName} — {l.durationMinutes} min{l.source === "healthconnect" ? ` · from ${l.sourceApp || "Health Connect"}${l.avgHeartRate ? ` · avg ${l.avgHeartRate} bpm` : ""}` : ""}</span>
+                      <span>{l.activityName} — {l.source === "gymlog" && l.sets && l.sets.length ? `${l.sets.length} sets · ` : ""}{l.durationMinutes} min{l.source === "healthconnect" ? ` · from ${l.sourceApp || "Health Connect"}${l.avgHeartRate ? ` · avg ${l.avgHeartRate} bpm` : ""}` : ""}</span>
                       <span>{Math.round(l.caloriesBurned)} kcal</span>
                     </div>
                   ))}

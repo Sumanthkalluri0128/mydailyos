@@ -306,3 +306,25 @@
 .wp-source .wp-seg button:disabled { opacity: .45; cursor: not-allowed; }
 .wp-pain { grid-template-columns: repeat(auto-fit, minmax(96px, 1fr)); }
 .wp-pain button { min-height: 44px; font-size: .8rem; }
+
+/* ---- My own plans (components/workout/PersonalPlans.jsx) ---- */
+.pp-card { display: grid; gap: 12px; }
+.pp-list, .pp-items, .pp-pick-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.pp-row, .pp-item { display: grid; gap: 8px; padding: 10px 12px; border: 1px solid var(--border, #e5e7eb); border-radius: 14px; background: var(--card, #fff); }
+.pp-row { grid-template-columns: 1fr auto; align-items: center; }
+.pp-row.on { border-color: var(--primary, #6c4ce0); }
+.pp-row-t { display: grid; gap: 2px; min-width: 0; }
+.pp-row-t small { color: var(--muted, #6b7280); }
+.pp-row-a, .pp-item-f, .pp-actions, .pp-chips, .pp-head { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.pp-item-f label { display: grid; gap: 2px; font-size: 12px; color: var(--muted, #6b7280); }
+.pp-item-f input { width: 76px; min-height: 40px; padding: 6px 8px; border-radius: 10px; border: 1px solid var(--border, #e5e7eb); font: inherit; }
+.pp-field { display: grid; gap: 4px; font-size: 13px; color: var(--muted, #6b7280); }
+.pp-field input, .pp-name { min-height: 44px; padding: 8px 12px; border-radius: 12px; border: 1px solid var(--border, #e5e7eb); font: inherit; width: 100%; box-sizing: border-box; }
+.pp-name { flex: 1; font-weight: 700; }
+.pp-check { display: flex; gap: 8px; align-items: center; font-size: 14px; }
+.pp-new { display: grid; gap: 10px; padding-top: 6px; border-top: 1px dashed var(--border, #e5e7eb); }
+.pp-del { color: var(--danger, #c0392b); }
+.pp-days { overflow-x: auto; }
+.pp-pick-list button { width: 100%; display: flex; justify-content: space-between; gap: 8px; text-align: left; padding: 12px; min-height: 44px; border: 1px solid var(--border, #e5e7eb); border-radius: 12px; background: var(--card, #fff); font: inherit; cursor: pointer; }
+.pp-pick-list button:disabled { opacity: .5; cursor: default; }
+.pp-pick-list small { color: var(--muted, #6b7280); }

@@ -2,6 +2,7 @@
 // whether a set was a personal best, the streak) is a pure function so it can be tested with plain `node --test`.
 // Only load/save at the bottom touch localStorage. Data is per person: the key carries the signed-in email.
 import { PLAN_ID, SMART_ID, DAYS, dowOf } from "../data/workoutPlan.js";
+import { CUSTOM_SOURCE, cleanPlans } from "./customPlans.js";
 
 const round1 = (n) => Math.round(n * 10) / 10;
 
@@ -154,8 +155,8 @@ export function newActive(day, { week, sessions, swaps, today, now = Date.now() 
       sets[base.id] = Array.from({ length: n }, () => ({ w: s.w, r: base.timed ? base.repsMin : s.r, done: false }));
     }
   }
-  // A smart day can change under you (the week slides), so the session keeps its own copy of the day it started from.
-  return { id: `ws-${now.toString(36)}`, dayId: day.id, date: today, startedAt: now, pausedMs: 0, pausedAt: 0, sets, checks, choices, skipped: {}, step: 0, pain: [], ...(day.source === SMART_ID ? { day } : {}) };
+  // A smart day can change under you (the week slides) and a personal plan can be edited or deleted mid-workout, so the session keeps its own copy of the day it started from.
+  return { id: `ws-${now.toString(36)}`, dayId: day.id, date: today, startedAt: now, pausedMs: 0, pausedAt: 0, sets, checks, choices, skipped: {}, step: 0, pain: [], ...(day.source === SMART_ID || day.source === CUSTOM_SOURCE ? { day } : {}) };
 }
 
 /** Seconds on the clock, excluding paused time. */
@@ -176,7 +177,7 @@ export function finishActive(active, day, { swaps, weightKg, feel, notes, now = 
   const minutes = Math.max(1, Math.round(elapsedSec(active, now) / 60));
   const items = day.blocks.flatMap((b) => (b.type === "check" ? b.items : b.type === "options" ? b.options.flatMap((o) => o.items) : []));
   return {
-    id: active.id, planId: day.source === SMART_ID ? SMART_ID : PLAN_ID, date: active.date, dayId: day.id, title: `Day ${day.n}: ${day.title}`, startedAt: active.startedAt,
+    id: active.id, planId: day.source === SMART_ID ? SMART_ID : day.source === CUSTOM_SOURCE && day.planId ? day.planId : PLAN_ID, date: active.date, dayId: day.id, title: `Day ${day.n}: ${day.title}`, startedAt: active.startedAt,
     ...(day.source === SMART_ID ? { sessionId: day.sessionId || "", way: day.way || "gym", pain: active.pain || [] } : {}),
     minutes, kcal: estimateKcal(day, minutes, weightKg), feel: feel || "", notes: String(notes || "").slice(0, 300),
     exercises, checks: Object.values(active.checks).filter(Boolean).length, checksTotal: items.length,
@@ -185,12 +186,12 @@ export function finishActive(active, day, { swaps, weightKg, feel, notes, now = 
 
 // ---------------------------------------------------------------------------------------------------------------- storage
 const KEY = (owner) => `ff-wp-v1:${owner || "guest"}`;
-export const emptyState = () => ({ startDate: "", swaps: {}, favs: [], sessions: [], active: null, weightKg: 78, unit: "kg", synced: {}, source: "auto", way: {} });
+export const emptyState = () => ({ startDate: "", swaps: {}, favs: [], sessions: [], active: null, weightKg: 78, unit: "kg", synced: {}, source: "auto", way: {}, plans: [] });
 
 export function loadState(owner) {
   try {
     const raw = JSON.parse(localStorage.getItem(KEY(owner)) || "null");
-    if (raw && typeof raw === "object") return { ...emptyState(), ...raw, swaps: raw.swaps || {}, favs: raw.favs || [], sessions: Array.isArray(raw.sessions) ? raw.sessions : [], synced: raw.synced || {} };
+    if (raw && typeof raw === "object") return { ...emptyState(), ...raw, swaps: raw.swaps || {}, favs: raw.favs || [], sessions: Array.isArray(raw.sessions) ? raw.sessions : [], synced: raw.synced || {}, plans: cleanPlans(raw.plans) };
   } catch { /* corrupt or private mode: start fresh */ }
   return emptyState();
 }

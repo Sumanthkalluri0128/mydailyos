@@ -102,7 +102,7 @@ export default function GymLogPage({ onBack }) {
 }
 
 // ------------------------------------------------------------------------------------------------ LOG
-function LogTab() {
+export function LogTab() {
   const { entries, body, profile } = useGymStore();
   const unit = profile.unit;
   const [date, setDate] = useState(getLocalDate());

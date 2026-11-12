@@ -63,3 +63,15 @@ test("treadmill pace: parsing, distance and speed-based calories", () => {
   assert.equal(G.entryKcal(run([{ kg: 0, reps: 30 }]), 70), 221);
   assert.equal(sane({ entries: [{ id: "a", date: "2026-11-12", exId: "tm", unit: "min", sets: [{ kg: 0, reps: 30, pace: 6.5 }, { kg: 0, reps: 5, pace: 99 }] }] }).entries[0].sets[1].pace, undefined);
 });
+
+test("the Gym log's fallback body weight can follow the profile weight (calories agree with Exercise)", async () => {
+  const G2 = await import("./gymMath.js");
+  const e = { id: "w", date: "2026-11-12", exId: "bench", name: "Bench", cat: "chest", unit: "reps", sets: [{ kg: 40, reps: 10 }], at: 1 };
+  const at70 = G2.entryKcal(e);
+  G2.setDefaultBodyKg(82);
+  assert.equal(G2.DEFAULT_BODY_KG, 82);
+  assert.ok(G2.entryKcal(e) > at70, "heavier body, more calories");
+  G2.setDefaultBodyKg("nonsense"); G2.setDefaultBodyKg(5); G2.setDefaultBodyKg(null);
+  assert.equal(G2.DEFAULT_BODY_KG, 82, "bad values are ignored");
+  G2.setDefaultBodyKg(70);
+});

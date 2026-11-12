@@ -7,9 +7,23 @@ import { isSignedIn } from "../auth/session";
 import { getLocalDate } from "./date";
 import { consumeBulkChange, getGym, subscribeGym } from "./gymStore";
 import { EMPTY_MEMORY, applyResult, hasWork, planGymSync } from "./gymSync";
+import { setDefaultBodyKg } from "./gymMath";
 
 const KEY = "flexfit_gymsync_v1";
 let running = false, again = false, bulk = false, started = false, timer = null;
+let profileKgTried = false;
+
+/** The Gym log used a fixed 70 kg when you had not logged a weight there, so its calories disagreed with Exercise (which uses your profile weight). Learn the profile weight once. */
+async function learnProfileWeight() {
+  if (profileKgTried) return;
+  profileKgTried = true;
+  try {
+    const r = await apiFetch("/api/profile");
+    if (!r.ok) { profileKgTried = false; return; }
+    const j = await r.json().catch(() => null);
+    if (j && j.profile) setDefaultBodyKg(j.profile.currentWeightKg);
+  } catch { profileKgTried = false; /* offline: try again on the next sync */ }
+}
 
 function loadMem() {
   try { const j = JSON.parse(localStorage.getItem(KEY) || "null"); return j && j.synced && typeof j.synced === "object" ? { synced: j.synced } : { ...EMPTY_MEMORY, synced: {} }; } catch { return { synced: {} }; }
@@ -25,6 +39,7 @@ export async function syncGymNow() {
   let changed = false;
   try {
     if (!isSignedIn()) return;
+    await learnProfileWeight();
     let m = loadMem();
     for (let round = 0; round < 6; round++) {
       bulk = consumeBulkChange() || bulk;

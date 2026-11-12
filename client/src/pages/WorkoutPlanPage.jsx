@@ -22,6 +22,8 @@ import ExSheet, { Chip, FigThumb, fmtClock } from "../components/workout/bits";
 import SessionView from "../components/workout/SessionView";
 import AdaptCard from "../components/workout/AdaptCard";
 import BodyPlanPage from "./BodyPlanPage";
+import PersonalPlans from "../components/workout/PersonalPlans";
+import { customIdOf, customToDays, sourceFor } from "../utils/customPlans";
 import { ActiveDays, Progress, Safety } from "./TrainingSections";
 import "../components/workout/workoutplan.css";
 
@@ -89,7 +91,8 @@ export default function WorkoutPlanPage({ startView, profile }) {
   // ------------------------------------------------------------------------------------------------------------ the one plan
   // Staged rollout: the one-plan Smart program is on for everyone until you create the flag "smart-program" in the admin flags, then only for the people it names.
   const smartFlag = useFlag("smart-program", true);
-  const smartOn = smartFlag && smartUsable(smart.data, today) && st.source !== "classic";
+  const customPlan = (st.plans || []).find((p) => p.id === customIdOf(st.source)) || null; // a personal plan you made, when that is the one in use
+  const smartOn = smartFlag && !customPlan && smartUsable(smart.data, today) && st.source !== "classic";
   const body = smart.data && smart.data.plan && smart.data.plan.ready ? { chosen: smart.data.chosen, plan: smart.data.plan } : null;
   const weightKg = (body && body.plan.body && body.plan.body.weightKg) || st.weightKg;
   const plan = useMemo(() => {
@@ -104,6 +107,18 @@ export default function WorkoutPlanPage({ startView, profile }) {
         find: (id) => findInDays(days, id), byId: (id) => days.find((d) => d.id === id) || null,
       };
     }
+    if (customPlan) {
+      const lib = libraryList();
+      const days = customToDays(customPlan, (id) => lib.find((x) => x.id === id) || null);
+      const week = weekNumber(st.startDate, today);
+      const strip = weekStrip(st.sessions, today, days);
+      return {
+        smart: false, custom: true, name: customPlan.name, days, strip, week, phase: { id: "custom", label: "Your own plan", tip: "Reach the top of your rep range on every set and the next session suggests a little more weight." }, program: null, adapt: null, progression: GUIDE.progression,
+        run: streak(st.sessions, today, days),
+        goal: { done: strip.filter((c) => c.status === "done" && c.day.kind !== "rest").length, planned: days.filter((d) => d.kind !== "rest").length },
+        find: (id) => findInDays(days, id), byId: (id) => days.find((d) => d.id === id) || null,
+      };
+    }
     const week = weekNumber(st.startDate, today);
     const strip = weekStrip(st.sessions, today);
     return {
@@ -112,7 +127,7 @@ export default function WorkoutPlanPage({ startView, profile }) {
       goal: { done: strip.filter((c) => c.status === "done" && c.day.kind !== "rest").length, planned: DAYS.filter((d) => d.kind !== "rest").length },
       find: findExercise, byId: dayById,
     };
-  }, [smartOn, smart.data, st.sessions, st.startDate, weightKg, today]);
+  }, [smartOn, customPlan, smart.data, st.sessions, st.startDate, weightKg, today]);
   const library = useMemo(() => (plan.smart ? mergeLibrary(libraryList(), plan.days) : libraryList()), [plan]);
 
   const wayOf = (day) => (day.ways && day.ways[st.way[day.id]] ? st.way[day.id] : "gym");
@@ -245,7 +260,7 @@ export default function WorkoutPlanPage({ startView, profile }) {
       <header className="wp-top">
         <div>
           <h1>Workout &amp; Body</h1>
-          <p className="wp-muted">{plan.smart ? `Smart program · ${plan.goal.planned} lifting day${plan.goal.planned === 1 ? "" : "s"} a week` : `${PLAN.name} · Week ${plan.week}`}{smart.status === "cached" && typeof navigator !== "undefined" && !navigator.onLine ? " · offline copy" : ""}</p>
+          <p className="wp-muted">{plan.smart ? `Smart program · ${plan.goal.planned} lifting day${plan.goal.planned === 1 ? "" : "s"} a week` : `${plan.name} · Week ${plan.week}`}{smart.status === "cached" && typeof navigator !== "undefined" && !navigator.onLine ? " · offline copy" : ""}</p>
         </div>
       </header>
 
@@ -258,7 +273,7 @@ export default function WorkoutPlanPage({ startView, profile }) {
           onStart={startAsk} onResume={resume} onDiscard={async () => { if (await confirmAction("This deletes everything you logged in this workout.", { title: "Discard workout?", confirmText: "Discard", cancelText: "Keep it" })) discard(); }}
           onOpen={(id) => setDayOpen(id)} go={setView} today={today} activeDay={activeDay} onWay={(w) => setWay(shownBase, w)} onSkip={skipDay} onApply={applySuggestion} />
       )}
-      {view === "plan" && <PlanView plan={plan} smart={smart} smartOn={smartOn} st={st} setSt={setSt} today={today} onOpen={(id) => setDayOpen(id)} onSource={setSource} weightKg={weightKg} weightFromBody={!!(body && body.plan.body)} profile={profile} onSetup={() => { setBodyTab("me"); setView("body"); }} />}
+      {view === "plan" && <PlanView plan={plan} smart={smart} smartOn={smartOn} st={st} setSt={setSt} today={today} onOpen={(id) => setDayOpen(id)} onSource={setSource} customPlan={customPlan} weightKg={weightKg} weightFromBody={!!(body && body.plan.body)} profile={profile} onSetup={() => { setBodyTab("me"); setView("body"); }} />}
       {view === "body" && <div className="wp-body"><BodyPlanPage embedded seed={smart.data} startTab={bodyTab} onSaved={() => { window.dispatchEvent(new Event("ff:refresh")); smart.reload(); }} /></div>}
       {view === "library" && <LibraryView list={library} favs={st.favs} onFav={onFav} openSheet={openSheet} />}
       {view === "history" && <HistoryView st={st} setSt={setSt} today={today} go={setView} />}
@@ -488,9 +503,10 @@ function nutritionRows(profile) {
   ];
 }
 
-function PlanView({ plan, smart, smartOn, st, setSt, today, onOpen, onSource, weightKg, weightFromBody, profile, onSetup }) {
+function PlanView({ plan, smart, smartOn, st, setSt, today, onOpen, onSource, customPlan, weightKg, weightFromBody, profile, onSetup }) {
   const smartFlag = useFlag("smart-program", true);
   const [edit, setEdit] = useState(false);
+  const [showMine, setShowMine] = useState(false);
   const [w, setW] = useState(String(st.weightKg));
   const saveW = () => { const n = Number(w); if (n >= 30 && n <= 300) { setSt((s) => ({ ...s, weightKg: n })); setEdit(false); } else notify("Enter a weight between 30 and 300 kg.", "info"); };
   const restart = async () => { if (await confirmAction("Week 1 starts again from this week. Your logged workouts stay in History.", { title: "Restart the plan?", confirmText: "Restart", cancelText: "Cancel", danger: false })) setSt((s) => ({ ...s, startDate: today })); };
@@ -505,13 +521,30 @@ function PlanView({ plan, smart, smartOn, st, setSt, today, onOpen, onSource, we
         <section className="wp-card wp-source">
           <h3 className="wp-h">Your plan</h3>
           <div className="wp-seg wide" role="radiogroup" aria-label="Which plan runs Today, History and the live workout">
-            <button type="button" role="radio" aria-checked={smartOn} className={smartOn ? "on" : ""} disabled={!canSmart} onClick={() => onSource("smart")}>Smart · built for you</button>
-            <button type="button" role="radio" aria-checked={!smartOn} className={!smartOn ? "on" : ""} onClick={() => onSource("classic")}>Classic 7-day</button>
+            <button type="button" role="radio" aria-checked={smartOn} className={smartOn ? "on" : ""} disabled={!canSmart} onClick={() => { setShowMine(false); onSource("smart"); }}>Smart · automatic</button>
+            <button type="button" role="radio" aria-checked={!!customPlan} className={customPlan ? "on" : ""} onClick={() => setShowMine(true)}>My plans</button>
+            <button type="button" role="radio" aria-checked={!smartOn && !customPlan} className={!smartOn && !customPlan ? "on" : ""} onClick={() => { setShowMine(false); onSource("classic"); }}>Classic 7-day</button>
           </div>
-          <p className="wp-muted wp-small">{smartOn ? "Made from your body, goal and the workouts you log. Weights and days adjust every week. Your classic plan is one tap away." : canSmart ? "The fixed 7-day beginner plan. Switch to Smart for a plan built around you." : whyNot}</p>
+          <p className="wp-muted wp-small">{smartOn ? "Made from your body, goal and the workouts you log. Weights and days adjust every week by themselves." : customPlan ? `You are using your own plan “${customPlan.name}”. Add or delete exercises in My plans below.` : canSmart ? "The fixed 7-day beginner plan. Switch to Smart for a plan that adjusts to your progress, or build your own under My plans." : whyNot}</p>
         </section>
 
-        {smartOn ? (
+        {(showMine || customPlan) && <PersonalPlans st={st} setSt={setSt} activeId={customPlan ? customPlan.id : ""} onUse={(id) => { setShowMine(true); onSource(sourceFor(id)); }} />}
+
+        {customPlan ? (
+          <article className="wp-hero plan">
+            <div className="wp-hero-glow" aria-hidden="true" />
+            <div className="wp-hero-row"><span className="wp-eyebrow">My plan</span><Chip tone="glass">Your own</Chip></div>
+            <h2>{customPlan.name}</h2>
+            <ul className="wp-goals"><li>✓ {plan.goal.planned} training day{plan.goal.planned === 1 ? "" : "s"} a week</li><li>✓ You choose every exercise, set and rep</li><li>✓ Weights step up when you hit the top of your rep range</li></ul>
+            <div className="wp-hero-cta"><Chip tone="ok">Week {plan.week}</Chip>{!weightFromBody && <button type="button" className="wp-btn glass" onClick={() => setEdit((e) => !e)}>Body weight</button>}</div>
+            {edit && (
+              <div className="wp-inline">
+                <label>Body weight (kg), used to estimate calories<input inputMode="decimal" value={w} onChange={(e) => setW(e.target.value)} /></label>
+                <button type="button" className="wp-btn hot" onClick={saveW}>Save</button>
+              </div>
+            )}
+          </article>
+        ) : smartOn ? (
           <article className="wp-hero plan">
             <div className="wp-hero-glow" aria-hidden="true" />
             <div className="wp-hero-row"><span className="wp-eyebrow">My plan</span><Chip tone="glass">{program.level === "advanced" ? "Experienced" : program.level === "intermediate" ? "Some experience" : "New to lifting"}</Chip></div>
@@ -527,7 +560,7 @@ function PlanView({ plan, smart, smartOn, st, setSt, today, onOpen, onSource, we
             <h2>{PLAN.name} Plan</h2>
             <ul className="wp-goals">{PLAN.goals.map((g) => <li key={g}>✓ {g}</li>)}</ul>
             <div className="wp-chips on-dark">
-              <Chip tone="glass">{weightKg} kg</Chip><Chip tone="glass">{PLAN.profile.heightCm} cm</Chip><Chip tone="glass">{PLAN.profile.steps} steps</Chip><Chip tone="glass">{PLAN.profile.calories}</Chip>
+              <Chip tone="glass">{weightKg} kg</Chip>{profile && profile.heightCm ? <Chip tone="glass">{profile.heightCm} cm</Chip> : null}<Chip tone="glass">{PLAN.profile.steps} steps</Chip><Chip tone="glass">{nutritionRows(profile)[0][1]}</Chip>
             </div>
             <div className="wp-hero-cta">
               <Chip tone="ok">Week {plan.week} · {plan.phase.label}</Chip>
@@ -561,7 +594,8 @@ function PlanView({ plan, smart, smartOn, st, setSt, today, onOpen, onSource, we
       </div>
 
       <div className="wp-col">
-        <section className="wp-card"><h3 className="wp-h">{smartOn ? "How your plan progresses" : "Beginner progression"}</h3><ProgressionBar items={plan.progression} activeId={smartOn ? plan.phase.id : ""} week={plan.week} /></section>
+        <section className="wp-card"><h3 className="wp-h">{smartOn ? "How your plan progresses" : customPlan ? "How your weights progress" : "Beginner progression"}</h3>{customPlan ? <ul className="wp-list"><li>Log every set. The next session suggests your weights from what you did.</li><li>Hit the top of your rep range on every set and the suggestion goes up a little (2 kg upper body, 5 kg lower body, never more than 10%).</li><li>Missed the range? Same weight, one more rep than last time.</li></ul> : <ProgressionBar items={plan.progression} activeId={smartOn ? plan.phase.id : ""} week={plan.week} />}
+        </section>
 
         {smartOn ? (
           <>
@@ -571,10 +605,10 @@ function PlanView({ plan, smart, smartOn, st, setSt, today, onOpen, onSource, we
           </>
         ) : (
           <>
-            <details className="wp-card wp-acc" open>
+            {!customPlan && <details className="wp-card wp-acc" open>
               <summary>Key beginner principles</summary>
               <ul className="wp-list">{GUIDE.principles.map((p) => <li key={p}>{p}</li>)}</ul>
-            </details>
+            </details>}
             <details className="wp-card wp-acc">
               <summary>Nutrition targets (daily)</summary>
               <dl className="wp-dl">{nutritionRows(profile).map(([k, v]) => <div key={k}><dt>{k}</dt><dd>{v}</dd></div>)}</dl>
@@ -583,10 +617,10 @@ function PlanView({ plan, smart, smartOn, st, setSt, today, onOpen, onSource, we
               <h4>Post-workout (within 60 min)</h4>
               <ul className="wp-list">{GUIDE.post.map((p) => <li key={p}>{p}</li>)}</ul>
             </details>
-            <details className="wp-card wp-acc">
+            {!customPlan && <details className="wp-card wp-acc">
               <summary>Expected results (realistic)</summary>
               <ul className="wp-results">{GUIDE.results.map(([k, v]) => { const n = parseInt(k.replace(/\D/g, ""), 10); return <li key={k} className={plan.week >= n ? "on" : ""}><b>{k}</b><span>{v}</span></li>; })}</ul>
-            </details>
+            </details>}
             <details className="wp-card wp-acc">
               <summary>How to use alternatives</summary>
               <ul className="wp-list">{GUIDE.quick.map((p) => <li key={p}>{p}</li>)}</ul>

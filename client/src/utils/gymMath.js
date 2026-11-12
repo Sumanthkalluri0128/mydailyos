@@ -298,7 +298,13 @@ export function parseNum(text, min = 0, max = 100000) {
 // Same formula as the rest of the app (utils/workoutEngine.estimateKcal): MET x 3.5 x body kg / 200 per minute.
 // Time per set = reps x ~3 s of work + ~60 s rest (holds use their own seconds, cardio uses its minutes). It is an ESTIMATE:
 // real burn depends on effort, rest and fitness, and lifting burns far less than most gym-machine numbers suggest.
-export const DEFAULT_BODY_KG = 70;
+/** Body weight used when no weight is logged in the Gym log. 70 until the app learns the profile weight (setDefaultBodyKg), so calories here match the rest of the app. */
+export let DEFAULT_BODY_KG = 70;
+export function setDefaultBodyKg(kg) {
+    const n = Number(kg);
+    if (n >= 30 && n <= 300)
+        DEFAULT_BODY_KG = n;
+}
 export const REST_SEC = 60, TEMPO_SEC = 3;
 const ISOLATION = /curl|extension|raise|fly|kickback|pushdown|shrug|crunch|twist|wrist|calf|abduction|adduction|pullover|face pull|pec deck|rear delt|woodchopper|pallof|toe touch|hydrant|donkey|svend|superman|bird dog|dead bug/i;
 /** MET (energy intensity) for an exercise, by what it is. Compendium-style values, rounded. */

@@ -31,3 +31,8 @@ Tests: phone `npx jest src/utils/__tests__/gymMath.test.ts`; web `npm test`.
 
 ## Treadmill / run pace
 For minute-timed cardio (Treadmill, Running, Walking...) each set also takes an optional **average pace per km** (`GymSet.pace`, typed as `6:30` or `6.5`, accepted 2:00-30:00). With a pace, time x pace gives the distance, and calories come from the speed (ACSM equations, level ground: VO2 = 0.1 x speed m/min + 3.5 walking, 0.2 x speed + 3.5 running, MET = VO2 / 3.5; 6-8 km/h is blended so there is no jump). Without a pace the old per-exercise MET is used. Distance shows in the day list and as `pace_min_per_km` / `distance_km` in the workouts CSV. The synced Exercise row keeps the pace and km in its note. Helpers: `parsePace`, `fmtPace`, `speedKph`, `metForPace`, `setKm`, `entryKm` in `gymMath`.
+
+## One logger for Exercise and Gym log (web + phone)
+The Exercise page no longer has its own minutes-only form as the main way to log. It shows the same logger as the Gym log (`LogTab`, exported from `GymLogPage.jsx` / `gym-log.tsx`): the form follows the exercise you pick (lifts: sets x reps x weight, holds: seconds, cardio: minutes + pace). The old minutes form is folded under "Log by time only" for yoga, sports and anything without sets.
+Server rows with `source: "gymlog"` are the mirror of a Gym log entry, so the Exercise page's "Today's activities" list hides them (the logger already shows them with edit / delete). Totals still count each entry once.
+The Gym log's fallback body weight (used when you have not logged a weight in Body) now follows your profile weight (`setDefaultBodyKg` in `gymMath`) instead of a fixed 70 kg, so calories match the Exercise form.
