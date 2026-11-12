@@ -1,4 +1,6 @@
 import { Suspense, lazy, useEffect, useMemo, useRef, useState } from "react";
+import SilentBoundary from "./SilentBoundary";
+import { loadWithRetry } from "../utils/chunkRecovery";
 
 // Loads a rarely-needed overlay (the assistant, the quick-add palette) AFTER the first screen is up, so it does not weigh on the first load.
 // It mounts when the browser is idle, or at once when the person asks for it (an event or a key). The request that caused the mount is
@@ -6,7 +8,7 @@ import { Suspense, lazy, useEffect, useMemo, useRef, useState } from "react";
 //   events:  window event names that mean "I want it now" (replayed as the same event)
 //   keys:    (KeyboardEvent) => boolean for shortcuts that mean the same (replayed as the same key)
 export default function LateMount({ load, events = [], keys, delay = 1800, ...props }) {
-  const Lazy = useMemo(() => lazy(load), []); // eslint-disable-line react-hooks/exhaustive-deps
+  const Lazy = useMemo(() => lazy(loadWithRetry(load)), []); // eslint-disable-line react-hooks/exhaustive-deps
   const [on, setOn] = useState(false);
   const pending = useRef(null);
 
@@ -27,10 +29,12 @@ export default function LateMount({ load, events = [], keys, delay = 1800, ...pr
 
   if (!on) return null;
   return (
-    <Suspense fallback={null}>
-      <Lazy {...props} />
-      <Replay pending={pending} />
-    </Suspense>
+    <SilentBoundary name="LateMount">
+      <Suspense fallback={null}>
+        <Lazy {...props} />
+        <Replay pending={pending} />
+      </Suspense>
+    </SilentBoundary>
   );
 }
 

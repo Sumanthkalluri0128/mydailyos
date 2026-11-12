@@ -3,7 +3,8 @@ import { Suspense, lazy, useEffect, useState } from "react";
 import { apiFetch, clearSession, startOfflineSync, syncNow } from "../config/api";
 import { API_URL } from "../config";
 import { isSignedIn, startSession, signInExtras } from "./session";
-const AuthPage = lazy(() => import("../pages/AuthPage")); // only needed while signed out: signed-in visits never download it
+const AuthPage = lazy(loadWithRetry(() => import("../pages/AuthPage"))); // only needed while signed out: signed-in visits never download it
+import { loadWithRetry } from "../utils/chunkRecovery";
 import { purgeOthers } from "../offline/offlineApi";
 import { parseGoogleHash, loginNoticeFor, sessionDecision, gateView } from "./gateLogic";
 

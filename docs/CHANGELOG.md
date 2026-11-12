@@ -1,3 +1,10 @@
+# v67 - HOTFIX: blank page "Failed to fetch dynamically imported module ... AssistantPanel-*.js 404" (web)
+- Cause: every deploy renames the built files. A tab or saved page from before the deploy asked for `AssistantPanel-<old hash>.js`, which no longer exists. The assistant/palette are loaded late by `LateMount` with no error handling, so the failed import crashed React's root and the whole page went blank.
+- Fix: `utils/chunkRecovery.js` recognises stale-file errors (Chrome, Firefox, Safari, Vite preload), retries once, then clears the saved shell/service worker and reloads ONCE (max one automatic reload a minute, so no loop). Installed in `main.jsx` (also for `vite:preloadError` and unhandled rejections).
+- `LateMount` now has a `SilentBoundary`: if the assistant or palette cannot load, it just does not appear. All page chunks and the sign-in page use the same retry. The whole app is wrapped in a root error boundary.
+- Service worker cache renamed `ff-shell-v3`, so every old saved shell is deleted on the next visit.
+- Tests: client 200 pass (+3 in `utils/chunkRecovery.test.js`). NOT run: Vite build, a real browser (no node_modules/network here). The phone is unchanged.
+
 # v63.3 - HOTFIX: blank Home page ("Cannot access 'ee' before initialization") (web)
 - Cause: v63.2 moved the declaration of `T` in `components/home/HomeDashboard.jsx` below `bal`, but the next line (`const e = T?.energy`) still read it first. That is a use-before-declaration error, thrown as soon as Home renders (minified in production as `'ee'`), so the whole app showed a blank page. Fixed: it reads `T0?.energy` (the same object, declared above).
 - New `src/home.render.test.js` renders the real Home screen (esbuild + react-dom/server) and checks its macro gauges use the budget-sized targets. It FAILS with the exact production error on the v63.2 code and passes now. Nothing in the old test suite rendered Home, which is why it was missed.

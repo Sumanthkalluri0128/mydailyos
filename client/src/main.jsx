@@ -19,6 +19,10 @@ import Companions from "./motion/Companions";
 import { installTapMarker } from "./motion/tapMarker";
 import { setTelemetry } from "./offline/offlineApi";
 import { report } from "./utils/telemetryClient";
+import ErrorBoundary from "./components/ErrorBoundary";
+import { installChunkRecovery } from "./utils/chunkRecovery";
+
+installChunkRecovery(); // an old tab after a new deploy reloads itself once instead of going blank
 
 setTelemetry(report); // lets the offline layer say when a sync failed or a change had to be dropped
 
@@ -53,9 +57,11 @@ ReactDOM.createRoot(document.getElementById("root")).render(
     <ConfirmHost />
     <ServerWakeBanner />
     <OfflineBanner />
-    <AuthGate>
-      <App />
-    </AuthGate>
+    <ErrorBoundary scope="tab" name="root">
+      <AuthGate>
+        <App />
+      </AuthGate>
+    </ErrorBoundary>
   </React.StrictMode>
 );
 
