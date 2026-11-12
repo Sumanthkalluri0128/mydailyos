@@ -28,3 +28,6 @@ Tests: phone `npx jest src/utils/__tests__/gymMath.test.ts`; web `npm test`.
 
 ## Exercise catalogue
 `gymCatalog` has ~200 common gym lifts (barbell/dumbbell/cable/machine/bodyweight/cardio/full-body). It is merged into the picker after the app's own library, by name, so nothing appears twice. It does not feed the workout plans or exercise photos. Add lines to `RAW` in `gymCatalog.ts` (phone) and regenerate the web copy.
+
+## Treadmill / run pace
+For minute-timed cardio (Treadmill, Running, Walking...) each set also takes an optional **average pace per km** (`GymSet.pace`, typed as `6:30` or `6.5`, accepted 2:00-30:00). With a pace, time x pace gives the distance, and calories come from the speed (ACSM equations, level ground: VO2 = 0.1 x speed m/min + 3.5 walking, 0.2 x speed + 3.5 running, MET = VO2 / 3.5; 6-8 km/h is blended so there is no jump). Without a pace the old per-exercise MET is used. Distance shows in the day list and as `pace_min_per_km` / `distance_km` in the workouts CSV. The synced Exercise row keeps the pace and km in its note. Helpers: `parsePace`, `fmtPace`, `speedKph`, `metForPace`, `setKm`, `entryKm` in `gymMath`.

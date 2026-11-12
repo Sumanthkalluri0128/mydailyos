@@ -52,3 +52,14 @@ test("exercise catalogue is large, unique and merges without duplicates", () => 
   assert.equal(new Set(GYM_CATALOG.map((c) => c.id)).size, GYM_CATALOG.length);
   assert.equal(mergeCatalog([{ name: "Plank", id: "p" }]).filter((m) => m.name === "Plank").length, 1);
 });
+
+test("treadmill pace: parsing, distance and speed-based calories", () => {
+  const run = (sets) => ({ id: "r1", date: "2026-11-12", exId: "tm", name: "Treadmill", cat: "Cardio", unit: "min", sets, at: 1 });
+  assert.equal(G.parsePace("6:30"), 6.5); assert.equal(G.parsePace("6,5"), 6.5); assert.equal(G.parsePace("6:75"), null); assert.equal(G.parsePace("1:30"), null);
+  const e = run([{ kg: 0, reps: 30, pace: 6.5 }]);
+  assert.equal(G.entryKm(e), 4.62); assert.equal(G.setsLine(e), "30 min @ 6:30/km");
+  assert.equal(G.entryKcal(e, 70), 360);
+  assert.ok(G.entryKcal(run([{ kg: 0, reps: 30, pace: 12 }]), 70) < G.entryKcal(e, 70));
+  assert.equal(G.entryKcal(run([{ kg: 0, reps: 30 }]), 70), 221);
+  assert.equal(sane({ entries: [{ id: "a", date: "2026-11-12", exId: "tm", unit: "min", sets: [{ kg: 0, reps: 30, pace: 6.5 }, { kg: 0, reps: 5, pace: 99 }] }] }).entries[0].sets[1].pace, undefined);
+});

@@ -71,8 +71,8 @@ export function setsLine(e, fmtKg = (k) => `${k} kg`) {
     if (!v.length)
         return 'No sets';
     const u = e.unit === 'sec' ? 's' : e.unit === 'min' ? ' min' : '';
-    const same = v.every((s) => s.kg === v[0].kg && s.reps === v[0].reps);
-    const one = (s) => `${s.reps}${u}${s.kg > 0 && !isTimed(e.unit) ? ` @ ${fmtKg(s.kg)}` : ''}`;
+    const same = v.every((s) => s.kg === v[0].kg && s.reps === v[0].reps && s.pace === v[0].pace);
+    const one = (s) => `${s.reps}${u}${s.kg > 0 && !isTimed(e.unit) ? ` @ ${fmtKg(s.kg)}` : ''}${e.unit === 'min' && s.pace ? ` @ ${fmtPace(s.pace)}/km` : ''}`;
     if (same && v.length > 1)
         return `${v.length} × ${one(v[0])}`;
     return v.map(one).join(', ');
@@ -335,6 +335,57 @@ export function metFor(cat, name, unit) {
         return 3.5;
     return 5; // compound lifts: squat, deadlift, presses, rows, pull-ups, dips
 }
+// ------------------------------------------------------------------------------------------------ treadmill pace
+// For minute-timed cardio the person can add an average pace (min per km). Calories then come from the actual speed instead of a flat guess:
+// ACSM metabolic equations on level ground, VO2 (ml/kg/min) = 0.1 x speed (m/min) + 3.5 walking, 0.2 x speed + 3.5 running; MET = VO2 / 3.5.
+// Between 6 and 8 km/h the two are blended, so there is no jump when you go from a brisk walk to a jog. No pace = the old per-exercise MET.
+export const PACE_MIN = 2, PACE_MAX = 30; // min per km that we accept (30 km/h .. 2 km/h)
+export const speedKph = (pace) => (pace > 0 ? round1(60 / pace) : 0);
+export function metForPace(pace) {
+    const v = 60 / pace, m = (v * 1000) / 60; // km/h and m/min
+    const walk = 1 + (0.1 * m) / 3.5, run = 1 + (0.2 * m) / 3.5;
+    if (v <= 6)
+        return walk;
+    if (v >= 8)
+        return run;
+    return walk + ((run - walk) * (v - 6)) / 2;
+}
+/** A pace typed by the person: "6:30" (min:sec per km) or "6.5" / "6,5" (decimal minutes). null when blank or outside 2:00 - 30:00. */
+export function parsePace(text) {
+    if (text === undefined)
+        return null;
+    const t = String(text).trim().replace(',', '.');
+    if (!t)
+        return null;
+    let p;
+    const c = t.match(/^(\d{1,2}):(\d{1,2})$/);
+    if (c) {
+        const sec = Number(c[2]);
+        if (sec >= 60)
+            return null;
+        p = Number(c[1]) + sec / 60;
+    }
+    else {
+        p = Number(t);
+        if (!Number.isFinite(p))
+            return null;
+    }
+    return p >= PACE_MIN && p <= PACE_MAX ? Math.round(p * 1000) / 1000 : null;
+}
+/** 6.5 -> "6:30" */
+export function fmtPace(pace) {
+    let m = Math.floor(pace), s = Math.round((pace - m) * 60);
+    if (s === 60) {
+        m += 1;
+        s = 0;
+    }
+    return `${m}:${String(s).padStart(2, '0')}`;
+}
+/** Distance covered by one minute-timed set with a pace, in km (0 when there is no pace). */
+export const setKm = (e, s) => (e.unit === 'min' && s.pace && s.pace > 0 ? Math.round((s.reps / s.pace) * 100) / 100 : 0);
+export const entryKm = (e) => Math.round(validSets(e).reduce((n, s) => n + setKm(e, s), 0) * 100) / 100;
+/** MET for one set: from the pace when there is one, otherwise from what the exercise is. */
+export const setMet = (e, s) => (e.unit === 'min' && s.pace && s.pace >= PACE_MIN ? metForPace(s.pace) : metFor(e.cat, e.name, e.unit));
 export function setMinutes(unit, s) {
     if (unit === 'min')
         return Math.max(0, s.reps);
@@ -346,12 +397,12 @@ export function entryMinutes(e) { return validSets(e).reduce((n, s) => n + setMi
 /** Estimated kcal for one logged exercise at a given body weight. */
 export function entryKcal(e, bodyKg = DEFAULT_BODY_KG) {
     const kg = bodyKg > 0 ? bodyKg : DEFAULT_BODY_KG;
-    return Math.round(metFor(e.cat, e.name, e.unit) * 3.5 * kg / 200 * entryMinutes(e));
+    return Math.round(validSets(e).reduce((n, s) => n + setMet(e, s) * 3.5 * kg / 200 * setMinutes(e.unit, s), 0));
 }
 /** Kcal for a single set (used in the CSV). Includes that set's share of rest. */
 export function setKcal(e, s, bodyKg = DEFAULT_BODY_KG) {
     const kg = bodyKg > 0 ? bodyKg : DEFAULT_BODY_KG;
-    return Math.round(metFor(e.cat, e.name, e.unit) * 3.5 * kg / 200 * setMinutes(e.unit, s) * 10) / 10;
+    return Math.round(setMet(e, s) * 3.5 * kg / 200 * setMinutes(e.unit, s) * 10) / 10;
 }
 /** The person's logged body weight for a date: the latest reading on or before it, else the earliest after it, else null. */
 export function bodyKgOn(body, date) {

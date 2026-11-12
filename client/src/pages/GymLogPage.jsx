@@ -131,9 +131,9 @@ function LogTab() {
   const choose = (p) => {
     const last = G.lastFor(entries, p.id, date);
     setPick(p); setNote(""); setEditId(null);
-    setDraft(last ? last.sets.map((s) => ({ kg: inputStr(s.kg, unit), reps: String(s.reps) })) : [{ kg: "", reps: "" }, { kg: "", reps: "" }, { kg: "", reps: "" }]);
+    setDraft(last ? last.sets.map((s) => ({ kg: inputStr(s.kg, unit), reps: String(s.reps), pace: s.pace ? G.fmtPace(s.pace) : "" })) : p.unit === "min" ? [{ kg: "", reps: "", pace: "" }] : [{ kg: "", reps: "" }, { kg: "", reps: "" }, { kg: "", reps: "" }]);
   };
-  const edit = (e) => { setPick({ id: e.exId, name: e.name, cat: e.cat, unit: e.unit }); setDraft(e.sets.map((s) => ({ kg: inputStr(s.kg, unit), reps: String(s.reps) }))); setNote(e.note || ""); setEditId(e.id); };
+  const edit = (e) => { setPick({ id: e.exId, name: e.name, cat: e.cat, unit: e.unit }); setDraft(e.sets.map((s) => ({ kg: inputStr(s.kg, unit), reps: String(s.reps), pace: s.pace ? G.fmtPace(s.pace) : "" }))); setNote(e.note || ""); setEditId(e.id); };
   const cancel = () => { setPick(null); setDraft([]); setNote(""); setEditId(null); };
   const setRow = (i, patch) => setDraft((d) => d.map((r, j) => (j === i ? { ...r, ...patch } : r)));
   const timed = pick ? G.isTimed(pick.unit) : false;
@@ -146,7 +146,13 @@ function LogTab() {
       if (!reps) continue;
       const kg = timed || !r.kg.trim() ? 0 : parseW(r.kg, unit);
       if (kg === null) { notify("A weight must be a number, or leave it blank for bodyweight.", "error"); return; }
-      sets.push({ kg, reps: Math.round(reps * 10) / 10 });
+      const set = { kg, reps: Math.round(reps * 10) / 10 };
+      if (pick.unit === "min" && (r.pace || "").trim()) {
+        const pace = G.parsePace(r.pace);
+        if (pace === null) { notify("Type the average pace per km like 6:30 (6 min 30 s). It must be between 2:00 and 30:00.", "error"); return; }
+        set.pace = pace;
+      }
+      sets.push(set);
     }
     if (!sets.length) { notify(`Fill in at least one set with ${unitWord(pick.unit).toLowerCase()}.`, "error"); return; }
     const entry = { id: editId || gymId("e"), date, exId: pick.id, name: pick.name, cat: pick.cat, unit: pick.unit, sets, note: note.trim() || undefined, at: editId ? entries.find((x) => x.id === editId)?.at || Date.now() : Date.now() };
@@ -161,27 +167,32 @@ function LogTab() {
   const ds = G.dayStats(entries, date);
   const wKnown = G.bodyKgOn(body, date), bodyKg = wKnown || G.DEFAULT_BODY_KG;
   const dayKcal = dayList.reduce((n, e) => n + G.entryKcal(e, bodyKg), 0);
-  const draftSets = pick ? draft.map((r) => ({ kg: 0, reps: G.parseNum(r.reps, 1, 5000) || 0 })).filter((x) => x.reps > 0) : [];
-  const draftKcal = pick && draftSets.length ? G.entryKcal({ id: "x", date, exId: pick.id, name: pick.name, cat: pick.cat, unit: pick.unit, sets: draftSets, at: 0 }, bodyKg) : 0;
+  const isRun = pick?.unit === "min";
+  const draftSets = pick ? draft.map((r) => ({ kg: 0, reps: G.parseNum(r.reps, 1, 5000) || 0, ...(isRun && G.parsePace(r.pace) ? { pace: G.parsePace(r.pace) } : {}) })).filter((x) => x.reps > 0) : [];
+  const draftEntry = pick ? { id: "x", date, exId: pick.id, name: pick.name, cat: pick.cat, unit: pick.unit, sets: draftSets, at: 0 } : null;
+  const draftKcal = pick && draftSets.length ? G.entryKcal(draftEntry, bodyKg) : 0;
+  const draftKm = isRun && draftSets.length ? G.entryKm(draftEntry) : 0;
 
   if (pick) {
     return (
       <Card title={pick.name} sub={`${catLabel(pick.cat)}${editId ? " · editing" : ""}`} right={<Btn onClick={cancel}>Cancel</Btn>}>
         {last && !editId && <p className="gl-muted">Last time ({prettyDate(last.date)}): {G.setsLine(last, fmtKg)}</p>}
         <div className="gl-sets">
-          <div className="gl-sethead"><span>Set</span>{!timed && <span>{unit}</span>}<span>{unitWord(pick.unit)}</span><span /></div>
+          <div className="gl-sethead"><span>Set</span>{!timed && <span>{unit}</span>}<span>{unitWord(pick.unit)}</span>{isRun && <span>Pace /km</span>}<span /></div>
           {draft.map((r, i) => (
             <div className="gl-setrow" key={i}>
               <b>{i + 1}</b>
               {!timed && <input aria-label={`Set ${i + 1} weight`} inputMode="decimal" value={r.kg} placeholder={unit} onChange={(e) => setRow(i, { kg: e.target.value })} />}
               <input aria-label={`Set ${i + 1} ${unitWord(pick.unit)}`} inputMode="decimal" value={r.reps} placeholder={pick.unit === "reps" ? "reps" : pick.unit} onChange={(e) => setRow(i, { reps: e.target.value })} />
+              {isRun && <input aria-label={`Set ${i + 1} average pace per km`} inputMode="text" value={r.pace || ""} placeholder="6:30" onChange={(e) => setRow(i, { pace: e.target.value })} />}
               <Btn kind="danger" label={`Remove set ${i + 1}`} onClick={() => setDraft((d) => (d.length > 1 ? d.filter((_, j) => j !== i) : d))}>✕</Btn>
             </div>
           ))}
         </div>
         <div className="gl-row">
-          <Btn onClick={() => setDraft((d) => [...d, d.length ? { ...d[d.length - 1] } : { kg: "", reps: "" }])}>＋ Add set (copy last)</Btn>
+          <Btn onClick={() => setDraft((d) => [...d, d.length ? { ...d[d.length - 1] } : { kg: "", reps: "", pace: "" }])}>＋ Add set (copy last)</Btn>
         </div>
+        {isRun && <p className="gl-muted">Treadmill: enter your time (minutes) and average pace per km, like 6:30. Calories are worked out from your speed.{draftKm > 0 ? ` ≈ ${draftKm} km.` : ""}</p>}
         {draftKcal > 0 && <p className="gl-muted">≈ {draftKcal} kcal burned{wKnown ? "" : ` (assuming ${G.DEFAULT_BODY_KG} kg: log your weight in Body for a closer number)`}</p>}
         <Field label="Note (optional)" value={note} onChange={setNote} placeholder="Felt strong, slow tempo…" inputMode="text" />
         <Btn kind="primary" onClick={save}>{editId ? "Save changes" : "Save exercise"}</Btn>
@@ -196,7 +207,7 @@ function LogTab() {
         <Card title={date === getLocalDate() ? "Today’s workout" : "Workout"} sub={`${ds.exercises} exercise${ds.exercises === 1 ? "" : "s"} · ${ds.sets} sets${ds.volumeKg ? ` · ${fmtW(ds.volumeKg, unit)} lifted` : ""} · ≈ ${dayKcal} kcal burned${wKnown ? "" : ` (at ${G.DEFAULT_BODY_KG} kg)`}`}>
           {dayList.map((e) => (
             <div className="gl-li" key={e.id}>
-              <button type="button" className="gl-li-main" onClick={() => edit(e)} aria-label={`Edit ${e.name}`}><b>{e.name}</b><span className="gl-muted">{G.setsLine(e, fmtKg)} · ≈ {G.entryKcal(e, bodyKg)} kcal{e.note ? ` · ${e.note}` : ""}</span></button>
+              <button type="button" className="gl-li-main" onClick={() => edit(e)} aria-label={`Edit ${e.name}`}><b>{e.name}</b><span className="gl-muted">{G.setsLine(e, fmtKg)}{G.entryKm(e) > 0 ? ` · ${G.entryKm(e)} km` : ""} · ≈ {G.entryKcal(e, bodyKg)} kcal{e.note ? ` · ${e.note}` : ""}</span></button>
               <Btn kind="danger" label={`Delete ${e.name}`} onClick={() => del(e)}>🗑</Btn>
             </div>
           ))}

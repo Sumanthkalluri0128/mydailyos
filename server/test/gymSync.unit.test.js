@@ -36,3 +36,10 @@ test('a sync request keeps only valid entries and ids', () => {
   assert.strictEqual(p.entries.length, 1); assert.deepStrictEqual(p.removeIds, ['gym-e-1', 'gym-5']);
   assert.deepStrictEqual(planSync(null), { entries: [], removeIds: [] });
 });
+
+test('a treadmill set keeps its pace and distance in the note, and ignores a silly pace', () => {
+  const run = normalizeEntry(entry({ name: 'Treadmill', cat: 'cardio', unit: 'min', sets: [{ kg: 0, reps: 30, pace: 6.5 }] }));
+  assert.deepStrictEqual(run.sets, []); assert.match(run.notes, /30 min @ 6:30\/km \(4\.62 km\)/);
+  const bad = normalizeEntry(entry({ name: 'Treadmill', cat: 'cardio', unit: 'min', sets: [{ kg: 0, reps: 20, pace: 0.5 }] }));
+  assert.match(bad.notes, /^20 min/); assert.doesNotMatch(bad.notes, /km/);
+});

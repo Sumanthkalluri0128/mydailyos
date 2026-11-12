@@ -11,6 +11,8 @@ export function cleanSet(s) {
     const out = { kg, reps };
     if (Number(s.rpe) >= 1 && Number(s.rpe) <= 10)
         out.rpe = Number(s.rpe);
+    if (Number(s.pace) >= 2 && Number(s.pace) <= 30)
+        out.pace = Math.round(Number(s.pace) * 1000) / 1000;
     return out;
 }
 export function cleanEntry(e) {

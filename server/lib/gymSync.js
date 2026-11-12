@@ -28,7 +28,7 @@ function normalizeEntry(raw) {
   if (!ID_RE.test(id) || !DATE_RE.test(String(raw.date || ''))) return null;
   const unit = raw.unit === 'sec' || raw.unit === 'min' ? raw.unit : 'reps';
   const sets = (Array.isArray(raw.sets) ? raw.sets : []).slice(0, 40)
-    .map((s) => ({ reps: Math.round(num(s?.reps) * 10) / 10, weightKg: clamp(num(s?.kg ?? s?.weightKg), 0, 1000) }))
+    .map((s) => ({ reps: Math.round(num(s?.reps) * 10) / 10, weightKg: clamp(num(s?.kg ?? s?.weightKg), 0, 1000), pace: unit === 'min' && num(s?.pace) >= 2 && num(s?.pace) <= 30 ? Math.round(num(s.pace) * 1000) / 1000 : 0 }))
     .filter((s) => s.reps > 0 && s.reps <= 5000);
   if (!sets.length) return null;
   const minutes = clamp(Math.round(num(raw.minutes)) || Math.round((sets.length * 90) / 60), 1, 1440);
@@ -41,8 +41,16 @@ function normalizeEntry(raw) {
     durationMinutes: minutes, caloriesBurned: kcal, weightKg: clamp(num(raw.bodyKg), 0, 700),
     // Rep sets feed personal records and volume. Holds and cardio minutes are not reps x weight, so they stay out of those maths.
     sets: unit === 'reps' ? sets.map((s) => ({ reps: Math.max(1, Math.min(1000, Math.round(s.reps))), weightKg: s.weightKg })) : [],
-    notes: [unit === 'reps' ? '' : `${sets.map((s) => s.reps).join(' / ')} ${unit}`, String(raw.note || '').trim().slice(0, 200)].filter(Boolean).join(' · ') || 'Gym log',
+    notes: [unit === 'reps' ? '' : setsNote(unit, sets), String(raw.note || '').trim().slice(0, 200)].filter(Boolean).join(' · ') || 'Gym log',
   };
+}
+
+/** "30 min @ 6:30/km (4.6 km)" for a treadmill set; plain "45 / 60 sec" for holds. */
+function fmtPace(p) { let m = Math.floor(p), s = Math.round((p - m) * 60); if (s === 60) { m += 1; s = 0; } return `${m}:${String(s).padStart(2, '0')}`; }
+function setsNote(unit, sets) {
+  if (unit !== 'min' || !sets.some((s) => s.pace)) return `${sets.map((s) => s.reps).join(' / ')} ${unit}`;
+  const km = Math.round(sets.reduce((n, s) => n + (s.pace ? s.reps / s.pace : 0), 0) * 100) / 100;
+  return `${sets.map((s) => `${s.reps} min${s.pace ? ` @ ${fmtPace(s.pace)}/km` : ''}`).join(' / ')} (${km} km)`;
 }
 
 /** Cleans a whole sync request: which entries to write, which ids to remove. */
