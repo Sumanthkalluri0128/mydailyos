@@ -2,8 +2,8 @@ import { resolveTargets, rangeStatus } from "../utils/energy";
 import GoalBar from "./GoalBar";
 
 /** Protein / carbs / fat against targets that add up to the calorie target. Protein is shown here and nowhere else. */
-export default function MacroCard({ profile, summary }) {
-  const T = resolveTargets(profile);
+export default function MacroCard({ profile, summary, budget }) {
+  const T = resolveTargets(profile, { budget }); // `budget` = today's real budget (Home ring); omitted -> the base target
   const m = T.macros;
   const rg = T.ranges;
   const STATUS = { low: "▼ below the minimum", ok: "✓ in range", high: "▲ above the maximum" };

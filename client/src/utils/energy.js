@@ -230,7 +230,7 @@ const BODY_LABELS = { lean: 'Lean & toned', athletic: 'Athletic, V-shape', muscu
  *   ready          false when weight, height or age is missing (calories then come from the saved number, macros from the calories)
  *   proteinSource  'custom' when the person typed their own protein, otherwise 'auto' (follows weight and body goal)
  */
-function resolveTargets(profile) {
+function resolveTargets(profile, opts = {}) {
   const p = profile || {}; // still loading / signed out: behave like an empty profile (saved-calorie split), never null
   const g = p.goals || {};
   const e = expectedEnergy(p);
@@ -241,12 +241,18 @@ function resolveTargets(profile) {
   const custom = n(g.proteinTarget) > 0;
   // Known weight: protein by body weight and body goal. Unknown weight: 25 % of the saved calories (never a made-up fixed number).
   const protein = kg > 0 ? g.proteinTarget : (custom ? g.proteinTarget : Math.round((calories * 0.25) / 4));
-  const macros = macroTargets(calories, kg, direction, protein, bodyType);
-  const ranges = macroRanges(calories, kg, direction, protein, bodyType);
+  const baseMacros = macroTargets(calories, kg, direction, protein, bodyType);
+  // TODAY's targets: when a day's real budget (target + credited activity + event room) is bigger than the base target, macros, ranges and limits
+  // are sized to it, so the Macros card, Home gauges and quests all judge the day by the same number. The protein GOAL stays the plan's.
+  const budget = n(opts && opts.budget);
+  const sized = !!e && budget > calories;
+  const sizeCal = sized ? budget : calories;
+  const macros = sized ? macroTargets(sizeCal, kg, direction, baseMacros.protein, bodyType) : baseMacros;
+  const ranges = macroRanges(sizeCal, kg, direction, sized ? baseMacros.protein : protein, bodyType);
   return {
     ready: !!e, energy: e, direction, bodyType, bodyLabel: BODY_LABELS[bodyType] || '',
     calories, calorieMode: e ? e.mode : (g.calorieMode === 'manual' ? 'manual' : 'auto'),
-    macros, ranges, limits: limitTargets(calories),
+    macros, ranges, limits: limitTargets(sizeCal), budget: sized ? budget : calories, baseMacros,
     proteinSource: custom ? 'custom' : 'auto',
     waterMl: waterTargetMl(kg) ?? (n(g.waterTargetMl) || 3000),
     steps: n(g.stepsTarget) || 10000,
