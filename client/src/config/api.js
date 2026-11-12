@@ -8,6 +8,7 @@ export function clearSession() {
   // The saved dashboard copy belongs to the person who just left. Their queued offline changes stay (tagged with their
   // email) so they are still sent if the same person signs back in.
   localStorage.removeItem("mydailyos_dash_v1");
+  localStorage.removeItem("flexfit_gymsync_v1"); // what was sent from the gym log belongs to that account
 }
 
 /** Sign-out on purpose: nothing of this person stays in the browser. */

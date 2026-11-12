@@ -114,6 +114,13 @@ function ExercisePage({ onBack }) {
     fetchHistory();
   }, [historyDays]);
 
+  // A gym log exercise just reached the server (utils/gymSyncRunner.js): show it here with its calories.
+  useEffect(() => {
+    const reload = () => { fetchLogs(); fetchHistory(); };
+    window.addEventListener("ff:refresh", reload);
+    return () => window.removeEventListener("ff:refresh", reload);
+  }, [historyDays]);
+
   // ============================================================
   // LOG ACTIVITY
   // ============================================================

@@ -1,7 +1,7 @@
 // GENERATED from MyDailyOSMobile/src/utils/gymMath.ts (the typed source of truth). Edit that file, then re-run the generator; do not edit this copy.
 // Pure maths for the Gym log (no React, no storage, no network), so it can be unit-tested and reused by the export.
 // Everything is stored in kg and cm; screens convert to the person's unit at the edges (utils/units.ts).
-// This data never leaves the phone: nothing in here (or in gymStore / gymShare) calls the API.
+// Nothing in here (or in gymStore / gymShare) calls the API. The only automatic upload is utils/gymSyncRunner.ts: each exercise's name, sets, minutes and kcal.
 /** Tape-measure sites, in the order they are shown. `better` says which direction usually means progress (used for the colour of a change). */
 export const SITES = [
     { key: 'neck', label: 'Neck', hint: 'Just below the larynx' },

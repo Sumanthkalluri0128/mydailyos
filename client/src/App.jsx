@@ -44,6 +44,7 @@ import { currentBoost } from "./utils/weatherStore";
 
 import { getLocalDate } from "./utils/date";
 import { apiFetch } from "./config/api";
+import { startGymSync } from "./utils/gymSyncRunner";
 import { API_URL } from "./config";
 
 
@@ -102,6 +103,7 @@ function App() {
     return () => { alive = false; };
   }, [syncTick]);
   useEffect(() => { const f = () => setSyncTick((n) => n + 1); window.addEventListener("ff:refresh", f); return () => window.removeEventListener("ff:refresh", f); }, []);
+  useEffect(() => { startGymSync(); }, []); // gym log exercises -> calories burned and exercise minutes on Exercise and Home
 
   useEffect(() => {
     const go = (e) => {

@@ -1,6 +1,7 @@
-// Local-only storage for the Gym log on the web app: exercises (sets x reps x weight), body weight, tape measurements and the body goal.
-// Everything lives in this browser's localStorage. There is deliberately NO API call anywhere in the gym log: it is not uploaded,
-// not synced and not part of the server backup. Data leaves the browser only when the person clicks a download button (gymDownload.js).
+// Storage for the Gym log on the web app: exercises (sets x reps x weight), body weight, tape measurements and the body goal.
+// The log itself lives in this browser's localStorage and this file makes no API calls. The ONLY thing that leaves the browser
+// automatically is each logged exercise's minutes and estimated calories (utils/gymSyncRunner.js), so the Exercise page and Home
+// count them. Body measurements and goals are never sent. Otherwise data leaves only when the person clicks a download button (gymDownload.js).
 import { useSyncExternalStore } from "react";
 import { cleanBody, cleanEntry, sane } from "./gymClean";
 
@@ -27,6 +28,11 @@ function set(patch) {
 if (typeof window !== "undefined") window.addEventListener("storage", (e) => { if (e.key === KEY) { state = read(); emit(); } });
 
 export const getGym = () => state;
+/** Lets the calorie sync hear about every change (it never writes to this store). Returns an unsubscribe function. */
+export function subscribeGym(fn) { listeners.add(fn); return () => listeners.delete(fn); }
+// Set when the person clears or restores the whole log on purpose, so the sync may remove many server rows at once.
+let bulkChange = false;
+export function consumeBulkChange() { const b = bulkChange; bulkChange = false; return b; }
 export function useGymStore() {
   return useSyncExternalStore((cb) => { listeners.add(cb); return () => listeners.delete(cb); }, () => state, () => EMPTY);
 }
@@ -50,6 +56,6 @@ export function saveBody(b) {
 export const removeBody = (id) => set((s) => ({ body: s.body.filter((x) => x.id !== id) }));
 export const saveGoal = (g) => set({ goal: g });
 export const saveProfile = (p) => set((s) => ({ profile: { ...s.profile, ...p } }));
-export function clearGym() { return set((s) => ({ ...EMPTY, profile: s.profile })); }
+export function clearGym() { bulkChange = true; return set((s) => ({ ...EMPTY, profile: s.profile })); }
 /** Replace the whole log (used by "Restore from backup"). Cleaned first, so a bad file can't break the page. */
-export function replaceGym(raw) { return set(sane(raw)); }
+export function replaceGym(raw) { bulkChange = true; return set(sane(raw)); }

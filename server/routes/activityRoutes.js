@@ -9,6 +9,7 @@ const v = require('../lib/validate');
 const { stepCalories, stepDistanceKm, stepsByDate, profileWeight } = require('../lib/steps');
 const { computeRecords } = require('../lib/records');
 const { planImport, FALLBACK } = require('../lib/hcImport');
+const { planSync } = require('../lib/gymSync');
 
 const mongoose = require('mongoose');
 const { parseCursor, applyCursor, pageSize, finishPage } = require('../lib/paginate');
@@ -130,6 +131,34 @@ router.post('/import', body(s.object({ sessions: s.array(s.object({}, { passthro
     if (duplicate) skipped.push({ clientId: f.clientId, reason: 'already-imported' }); else logs.push(doc);
   }
   res.status(201).json({ success: true, imported: logs.length, skipped, logs });
+}));
+
+// Gym log -> Exercise log. The Gym log keeps sets x reps x weight on the device; this puts each logged exercise (with the minutes and
+// calories the device worked out) into the day's activity, so Exercise and Home count it. Safe to repeat: one row per gym entry,
+// updated in place when the entry is edited, removed when it is deleted.
+router.post('/gym-sync', wrap(async (req, res) => {
+  const { entries, removeIds } = planSync(req.body);
+  if (!entries.length && !removeIds.length) return res.json({ success: true, synced: [], removed: 0 });
+  const profileKg = Number((await Profile.findOne({ userId: req.user.id }).select('currentWeightKg').lean())?.currentWeightKg) || 70;
+  const names = [...new Set(entries.map((e) => e.catalogueName))];
+  const acts = await Activity.find({ name: { $in: names } }).lean();
+  const byName = new Map(acts.map((a) => [a.name, a]));
+  const synced = [];
+  for (const e of entries) {
+    const a = byName.get(e.catalogueName) || byName.get(FALLBACK);
+    if (!a) continue;
+    const fields = {
+      activityId: a._id, date: e.date, activityName: e.activityName, category: e.category, durationMinutes: e.durationMinutes,
+      weightKg: e.weightKg || profileKg, met: a.met, caloriesBurned: e.caloriesBurned, caloriesSource: 'estimated',
+      sets: e.sets, source: 'gymlog', notes: e.notes,
+    };
+    const write = () => ActivityLog.findOneAndUpdate({ userId: req.user.id, clientId: e.clientId }, { $set: fields }, { upsert: true, new: true, setDefaultsOnInsert: true });
+    try { await write(); } catch (err) { if (err && err.code === 11000) await write(); else throw err; } // two syncs racing: the second just updates
+    synced.push(e.clientId.slice(4));
+  }
+  let removed = 0;
+  if (removeIds.length) removed = (await ActivityLog.deleteMany({ userId: req.user.id, source: 'gymlog', clientId: { $in: removeIds } })).deletedCount || 0;
+  res.json({ success: true, synced, removed });
 }));
 
 router.delete('/logs/:id', wrap(async (req, res) => {

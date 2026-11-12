@@ -1,5 +1,5 @@
 // Gym log (web): log exercises (sets x reps x weight), body weight and tape measurements, set a body goal and watch progress.
-// Everything is stored in this browser only (utils/gymStore.js). Nothing is uploaded; data leaves only through the
+// The log is stored in this browser (utils/gymStore.js). Only each exercise (name, sets, minutes, estimated kcal) is also sent, by utils/gymSyncRunner.js, so Exercise and Home count the calories; other data leaves only through the
 // Export tab, which downloads CSV / JSON files to your computer. Same maths as the phone app (utils/gymMath.js).
 import { useEffect, useMemo, useState } from "react";
 import "./gymlog.css";
@@ -92,7 +92,7 @@ export default function GymLogPage({ onBack }) {
     <div className="gl-page">
       {onBack && <button type="button" className="gl-back" onClick={onBack}>‹ Back</button>}
       <h2 className="gl-title">Gym log</h2>
-      <p className="gl-muted gl-private">🔒 Private: saved in this browser only. Nothing is uploaded.</p>
+      <p className="gl-muted gl-private">🔒 Body measurements and goals stay in this browser. Each exercise you log (name, sets, minutes, calories) is also sent so Exercise and Home can count it.</p>
       <div className="gl-tabs" role="tablist">
         {TABS.map(([k, l]) => <button key={k} type="button" role="tab" aria-selected={tab === k} className={`gl-tab ${tab === k ? "is-on" : ""}`} onClick={() => setTab(k)}>{l}</button>)}
       </div>

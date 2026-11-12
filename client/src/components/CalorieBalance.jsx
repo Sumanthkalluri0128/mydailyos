@@ -10,6 +10,9 @@ import GoalBar from "./GoalBar";
 // Fetches its own data; change `refreshKey` after logging food, exercise or steps to reload it.
 export default function CalorieBalance({ refreshKey = 0, collapsible = false, showProgress = true, compact = false }) {
   const [state, setState] = useState({ loading: true, profile: null, eaten: 0, workout: 0, stepKcal: 0 });
+  const [pulse, setPulse] = useState(0);
+  // Gym log exercises reach the server a moment after they are saved (utils/gymSyncRunner.js): reload when they do.
+  useEffect(() => { const f = () => setPulse((n) => n + 1); window.addEventListener("ff:refresh", f); return () => window.removeEventListener("ff:refresh", f); }, []);
 
   useEffect(() => {
     let alive = true;
@@ -31,7 +34,7 @@ export default function CalorieBalance({ refreshKey = 0, collapsible = false, sh
       }
     })();
     return () => { alive = false; };
-  }, [refreshKey]);
+  }, [refreshKey, pulse]);
 
   if (state.loading) return null;
   const e = expectedEnergy(state.profile);
