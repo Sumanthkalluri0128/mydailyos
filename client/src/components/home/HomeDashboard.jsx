@@ -122,7 +122,7 @@ export default function HomeDashboard({ profile, summary, activity, water, water
 
   // ---- one shared energy model (same numbers as mobile + server)
   const T0 = resolveTargets(profile); // ONE place that turns the chosen body goal into calories, macros, water and steps
-  const e = T?.energy ?? null;
+  const e = T0?.energy ?? null;
   const bal = dayBalance(profile, { eaten: summary?.calories, workout: Number(activity?.workoutCalories ?? 0), steps: Number(activity?.stepCalories || 0), extra: Number(summary?.eventExtra || 0) });
   const T = bal.budget > T0.calories ? resolveTargets(profile, { budget: bal.budget }) : T0; // macros and limits sized to today's budget, same as the ring
   const macros = T.macros;
