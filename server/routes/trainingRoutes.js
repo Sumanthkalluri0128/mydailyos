@@ -16,6 +16,8 @@ const { suggestWorkout } = require('../lib/workoutSuggest');
 const { buildLogs } = require('../lib/workoutBuild');
 const { recordsBroken } = require('../lib/trainingData');
 const { computeRecords } = require('../lib/records');
+const { parseWorkoutText } = require('../lib/setText');
+const { LIB } = require('../lib/exerciseLibrary');
 
 const router = express.Router();
 router.use(requireAuth);
@@ -70,6 +72,19 @@ router.get('/last-sets', wrap(async (req, res) => {
     out[name] = last ? { date: last.date, sets: last.sets.map((x) => ({ reps: x.reps, weightKg: x.weightKg })), beat: S.beatLastTime(last.sets), recentBestKg: recent.reduce((m, l) => Math.max(m, ...l.sets.map((x) => x.weightKg || 0)), 0) } : null;
   }));
   res.json({ success: true, lastSets: out, maxJumpPct: S.MAX_JUMP_PCT, safety: S.SAFETY_NOTE });
+}));
+
+// Typed gym notes -> sets, each matched to a known exercise ("bench 3x10 @ 60kg, squats 4x8 @ 80"). Nothing is saved here: the screen shows the
+// matches (and asks where it is unsure), then logs through /workout/log or the Body plan session as usual.
+router.post('/parse-sets', wrap(async (req, res) => {
+  const text = v.string(req.body.text, 'text', { max: 2000 });
+  if (!text) throw new HttpError(400, 'Type what you did, for example: bench press 3x10 @ 60kg');
+  const acts = await Activity.find({}).select('name category').lean();
+  const candidates = [
+    ...acts.map((a) => ({ id: String(a._id), name: a.name, activityName: a.name, category: a.category, source: 'activity' })),
+    ...LIB.map((e) => ({ id: e.id, name: e.name, source: 'plan' })),
+  ];
+  res.json({ success: true, entries: parseWorkoutText(text, candidates).slice(0, 30) });
 }));
 
 // Today's suggested workout, with reasons.

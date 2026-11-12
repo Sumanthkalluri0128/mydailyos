@@ -85,3 +85,21 @@ test('buildJourney ties it together', () => {
   assert.equal(j.weightJourney.pct, 20);
   assert.equal(j.week.done, 4);
 });
+
+test('a training day is judged against its real budget (base target + credited activity), not the smaller base target', () => {
+  // Home showed: eaten 1770, budget 2029 (base 1274 + activity credit), 259 left. Protein 130 g with a base range of 100-111 g.
+  const t = { calories: 1274, direction: 'lose', protein: 110, proteinMin: 100, proteinMax: 111, waterMl: 2700, steps: 10000, exerciseMinutes: 30 };
+  const d = day('2026-11-12', { calories: 1770, protein: 130, waterMl: 3000 });
+  const before = J.dailyQuests(d, t).quests;
+  assert.equal(before.find((q) => q.id === 'calories').done, false); // old behaviour: judged against 1274
+  assert.equal(before.find((q) => q.id === 'protein').done, false);
+  const tt = { ...t, budgetByDate: { '2026-11-12': 2029 }, proteinMaxByDate: { '2026-11-12': 160 } };
+  const after = J.dailyQuests(d, tt).quests;
+  assert.equal(after.find((q) => q.id === 'calories').done, true);
+  assert.match(after.find((q) => q.id === 'calories').hint, /259 kcal left/);
+  assert.equal(after.find((q) => q.id === 'protein').done, true);
+  assert.equal(after.find((q) => q.id === 'water').done, true);
+  // genuinely over the real budget still fails; and other dates keep the base target
+  assert.equal(J.dayHits(day('2026-11-12', { calories: 2300, protein: 130 }), tt).calories, false);
+  assert.equal(J.dayHits(day('2026-11-11', { calories: 1770 }), tt).calories, false);
+});

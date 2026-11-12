@@ -1,3 +1,8 @@
+# v63.1 - quests judged against the day's real budget; typed set parsing (server)
+- Bug: the calorie and protein quests (and XP, weekly missions, goal progress) used the BASE calorie target, while Home shows the day's budget (base + credited activity + festival/trip room). On a training day you could be under budget on Home and still "over" in the quest; the protein ceiling (35% of calories) also shrank with the base. Now `journeyData.attachDayBudgets` gives each day its `dayBalance` budget and a protein ceiling from `energy.proteinRangeAt`; `eventExtraPure.calorieTargetFor` / `proteinMaxFor` read them. Phone needs no change.
+- New `lib/setText.js` and `POST /api/training/parse-sets`: typed notes ("bench 3x10 @ 60kg, squats 4x8 @ 80") -> sets matched to the Body plan library and the Activity list; unsure matches come back as options, unknown names unmatched. Nothing is saved by it.
+- Tests: server unit 627 pass (+9: journey regression with the real numbers, 8 for setText); the 6 that fail need express/mongoose/jsonwebtoken, absent here (same 6 fail on the untouched upload). NOT run: the app, mongo-backed tests.
+
 # v62 - one version, CI, security headers, streak forgiveness, phone Workout tab finished (web + server + phone)
 - ONE version: `version.json` (62.0.0). `node tools/syncVersion.mjs` writes it into every package.json and the phone's app.json; `--check` runs in CI. Sentry release name is NOT wired yet.
 - Docs: the loose `.md` files moved into `web/docs/`; this is the single changelog (the phone's `CHANGES.md` keeps its older history and points here).

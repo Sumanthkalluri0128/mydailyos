@@ -230,6 +230,17 @@ const BODY_LABELS = { lean: 'Lean & toned', athletic: 'Athletic, V-shape', muscu
  *   ready          false when weight, height or age is missing (calories then come from the saved number, macros from the calories)
  *   proteinSource  'custom' when the person typed their own protein, otherwise 'auto' (follows weight and body goal)
  */
+/** The protein range if the day's calories were `budget` (a training day's bigger budget lifts the 35%-of-calories cap). Same inputs as resolveTargets. */
+function proteinRangeAt(profile, budget) {
+  const p = profile || {}, g = p.goals || {}, e = expectedEnergy(p);
+  const bodyType = BODY_TYPES[g.bodyType] ? g.bodyType : '';
+  const kg = e ? e.weightKg : n(p.currentWeightKg);
+  const direction = e ? e.direction : 'maintain';
+  if (!(kg > 0) || !(budget > 0)) return null;
+  const goal = macroTargets(e ? e.calorieTarget : dailyTarget(p), kg, direction, g.proteinTarget, bodyType).protein; // the goal itself stays the plan's
+  return macroRanges(budget, kg, direction, goal, bodyType).protein;
+}
+
 function resolveTargets(profile) {
   const p = profile || {}; // still loading / signed out: behave like an empty profile (saved-calorie split), never null
   const g = p.goals || {};
@@ -282,6 +293,7 @@ function weightProgress({ startKg, currentKg, targetKg, paceKgPerWeek = 0.5 } = 
 }
 
 module.exports = {
+  proteinRangeAt,
   activityLevelOf, calorieFloorOf,
   EXERCISE_CREDIT, ACTIVITY_MULTIPLIER, KCAL_PER_KG, KCAL_PER_STEP_PER_KG, DEFAULT_TARGET,
   bmr, goalDirection, expectedEnergy, dailyTarget, dayBalance,

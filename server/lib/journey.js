@@ -19,21 +19,22 @@ function caloriesOnTrack(calories, target, direction) {
  * Protein counts as done when the day lands IN RANGE (the same min..max range the Targets screen shows).
  * With no range known (old payloads) it falls back to the old rule: at least 90% of the goal.
  */
-function proteinInRange(protein, t = {}) {
+function proteinInRange(protein, t = {}, date) {
   const p = Number(protein) || 0;
   if (!(t.protein > 0)) return false;
-  if (t.proteinMin > 0) return p >= t.proteinMin && (!(t.proteinMax > 0) || p <= t.proteinMax);
+  const max = proteinMaxFor(t, date);
+  if (t.proteinMin > 0) return p >= t.proteinMin && (!(max > 0) || p <= max);
   return p >= t.protein * 0.9;
 }
 
 /** Which of the day's targets were met. `t` = { calories, direction, protein, waterMl, steps, exerciseMinutes }. */
-const { calorieTargetFor } = require('./eventExtraPure');
+const { calorieTargetFor, proteinMaxFor } = require('./eventExtraPure');
 function dayHits(day, t = {}) {
   const d = day || {};
   return {
     log: (d.calories > 0) || (d.waterMl > 0) || (d.exerciseMinutes > 0) || (d.tasksCompleted > 0) || (d.habitsCompleted > 0) || !!d.weighIn,
     calories: caloriesOnTrack(d.calories, calorieTargetFor(t, d.date), t.direction), // a festival / trip / diet-break day is judged against its widened budget
-    protein: proteinInRange(d.protein, t),
+    protein: proteinInRange(d.protein, t, d.date),
     water: t.waterMl > 0 && d.waterMl >= t.waterMl,
     move: t.exerciseMinutes > 0 && d.exerciseMinutes >= t.exerciseMinutes,
     steps: t.steps > 0 && d.steps >= t.steps,
@@ -89,7 +90,7 @@ function dailyQuests(day, t, steps) {
       eaten === 0 ? 'Log your first meal to start this quest.' : t.direction === 'gain' ? `${Math.max(0, Math.round(cal * 0.92 - eaten))} kcal to go.` : eaten > cal * 1.08 ? 'Over budget today — a lighter next meal and a walk bring it back.' : `${Math.max(0, Math.round(cal - eaten))} kcal left.`);
   }
   if (t.protein > 0) {
-    const eaten = d.protein || 0, lo = t.proteinMin > 0 ? t.proteinMin : Math.round(t.protein * 0.9), hi = t.proteinMax > 0 ? t.proteinMax : null;
+    const eaten = d.protein || 0, lo = t.proteinMin > 0 ? t.proteinMin : Math.round(t.protein * 0.9), hiMax = proteinMaxFor(t, d.date), hi = hiMax > 0 ? hiMax : null;
     const range = hi ? `${lo} to ${hi} g` : `${lo} g or more`;
     add('protein', '🥚', 'Land your protein in range', eaten, t.protein, 'g', h.protein,
       h.protein ? `In range (${range}).` : hi && eaten > hi ? `A little above the ${range} range. Tomorrow, ease back slightly.` : `${Math.max(0, Math.round(lo - eaten))} g more to be in range (${range}). Your target is ${Math.round(t.protein)} g.`);
