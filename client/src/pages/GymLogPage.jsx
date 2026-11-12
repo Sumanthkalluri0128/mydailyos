@@ -116,7 +116,7 @@ function LogTab() {
   const [customUnit, setCustomUnit] = useState("reps");
 
   // The app's own library first, then the wider catalogue of common gym lifts, with no name listed twice.
-  const lib = useMemo(() => mergeCatalog(libraryList().map((it) => ({ id: it.id, name: it.name, cat: it.cat, unit: it.unit === "min" ? "min" : it.timed || it.unit === "sec" ? "sec" : "reps" })))
+  const lib = useMemo(() => mergeCatalog(libraryList().map((it) => ({ id: it.id, name: it.name, cat: it.cat, unit: it.unit === "min" ? "min" : it.timed || it.unit === "sec" ? "sec" : String(it.cat).toLowerCase() === "cardio" ? "min" : "reps" })))
     .map((e) => ({ id: e.id, name: e.name, cat: String(e.cat).toLowerCase(), unit: e.unit, gear: e.gear || "" })), []);
   const used = useMemo(() => G.exercisesUsed(entries), [entries]);
   const fmtKg = (kg) => fmtW(kg, unit);
