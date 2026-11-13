@@ -196,7 +196,14 @@ function Routines({ activities, onStart, onLogged }) {
     exercises: t.items.map((i) => ({ name: i.activityName, sets: i.targetSets || 3, reps: i.targetReps || "", weightKg: i.targetWeightKg ?? 0, restSec: i.restSec, type: /plank|hold/i.test(i.activityName) ? "hold" : "reps" })),
     template: t,
   });
-  const shown = activities.filter((a) => !q.trim() || `${a.name} ${a.category}`.toLowerCase().includes(q.trim().toLowerCase())).slice(0, 8);
+  const [pcat, setPcat] = useState("Strength");
+  const [more, setMore] = useState(false);
+  const FIRST = ["Strength", "Cardio", "HIIT", "Walking", "Running", "Cycling", "Swimming", "Mind & Mobility", "Cult.fit", "Sports", "Outdoor"];
+  const cats = [...new Set(activities.map((a) => a.category || "Other"))].sort((a, b) => (FIRST.indexOf(a) < 0 ? 99 : FIRST.indexOf(a)) - (FIRST.indexOf(b) < 0 ? 99 : FIRST.indexOf(b)) || a.localeCompare(b));
+  const needle = q.trim().toLowerCase();
+  // browse by group right away (before, nothing showed until you typed, and only 8 matches ever); typing searches every group
+  const matches = activities.filter((a) => (needle ? `${a.name} ${a.category}`.toLowerCase().includes(needle) : (a.category || "Other") === pcat)).sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true }));
+  const shown = more || needle ? matches.slice(0, 60) : matches.slice(0, 12);
   const setItem = (i, patch) => setForm((f) => ({ ...f, items: f.items.map((x, j) => (j === i ? { ...x, ...patch } : x)) }));
 
   return (
@@ -231,7 +238,10 @@ function Routines({ activities, onStart, onLogged }) {
             </fieldset>
           ))}
           <label>Add exercise<input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search, e.g. squat" /></label>
-          {q.trim() && <ul className="tr-pick">{shown.map((a) => <li key={a._id}><button type="button" className="chip" onClick={() => { setForm({ ...form, items: [...form.items, { activityId: a._id, activityName: a.name, durationMinutes: 10, targetSets: 3, targetReps: 10, targetWeightKg: "" }] }); setQ(""); }}>{a.name}</button></li>)}</ul>}
+          {!needle && <div className="serving-chips" role="group" aria-label="Exercise group">{cats.map((c) => <button key={c} type="button" className={pcat === c ? "chip active" : "chip"} aria-pressed={pcat === c} onClick={() => { setPcat(c); setMore(false); }}>{c}</button>)}</div>}
+          <ul className="tr-pick">{shown.map((a) => <li key={a._id}><button type="button" className="chip" onClick={() => { setForm({ ...form, items: [...form.items, { activityId: a._id, activityName: a.name, durationMinutes: 10, targetSets: 3, targetReps: 10, targetWeightKg: "" }] }); setQ(""); }}>＋ {a.name}</button></li>)}</ul>
+          {!needle && !more && matches.length > 12 && <button type="button" className="chip" onClick={() => setMore(true)}>Show all {matches.length}</button>}
+          {!matches.length && <p className="md-sub">No exercise found{needle ? ` for “${q.trim()}”` : " in this group"}.</p>}
           <p className="md-sub">Sets, reps and kg are optional. Leave them empty for a simple timed routine.</p>
           <div className="md-actions"><button className="primary-button" onClick={save}>Save routine</button><button className="secondary-button" onClick={() => setForm(null)}>Cancel</button></div>
         </div>

@@ -111,7 +111,7 @@ export const trainingDays = (plan) => (plan ? plan.days.filter((d) => d.items.le
 const MUSCLES = ["chest", "back", "shoulders", "arms", "core", "legs", "glutes"];
 
 /**
- * `lookup(id)` returns the library exercise (with its photo, steps and alternatives) or null for an exercise the library does not know.
+ * `lookup(id, item)` returns the library exercise (with its photo, steps and alternatives) or null for an exercise the library does not know.
  * A day with no exercise is a rest day, so the week strip, the streak and Today keep working.
  */
 export function customToDays(plan, lookup = () => null) {
@@ -129,14 +129,15 @@ export function customToDays(plan, lookup = () => null) {
     }
     const targets = new Set();
     const items = d.items.map((it) => {
-      const lib = lookup(it.id) || {};
+      const lib = lookup(it.id, it) || {};
       const r = parseReps(it.reps);
       const t = (lib.targets && lib.targets.length ? lib.targets : ["core"]).slice();
       t.forEach((x) => targets.add(x));
       return {
         id: it.id, name: it.name, sets: it.sets, reps: r.label, repsMin: r.lo, repsMax: r.hi, rest: lib.rest || 75,
         targets: t, helpers: lib.helpers || [], kind: lib.kind || "", fig: lib.fig || (lib.id || ""), slot: lib.slot || "",
-        main: false, // never "+1 set from week 5": a personal plan keeps exactly the sets you chose bw: !!lib.bw, timed: !!lib.timed, perSide: !!lib.perSide, unit: lib.unit || "",
+        main: false, // never "+1 set from week 5": a personal plan keeps exactly the sets you chose
+        bw: !!lib.bw, timed: !!lib.timed, perSide: !!lib.perSide, unit: lib.unit || "", // (these four were swallowed by the comment above: plank ran as reps, bodyweight moves asked for kg)
         steps: lib.steps || [], avoid: lib.avoid || "", optional: false, alts: (lib.alts || []).map((a) => ({ ...a })),
       };
     });

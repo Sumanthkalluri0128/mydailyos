@@ -17,11 +17,11 @@ const num = (x) => { const v = Number(x); return Number.isFinite(v) ? v : 0; };
 const TYPES = {
   lean: {
     label: 'Lean & toned', blurb: 'Slim waist, visible shape, strong but not bulky.',
-    bf: { male: [12, 16], female: [20, 25] }, waistToHeight: 0.45, maxLossPctPerWeek: 0.0075, strengthDays: 3, steps: 9000,
+    bf: { male: [12, 16], female: [20, 25] }, waistToHeight: 0.47, maxLossPctPerWeek: 0.0075, strengthDays: 3, steps: 9000,
   },
   athletic: {
     label: 'Athletic', blurb: 'Broad shoulders, small waist, strong and fast.',
-    bf: { male: [10, 14], female: [18, 23] }, waistToHeight: 0.45, maxLossPctPerWeek: 0.0075, strengthDays: 4, steps: 9000,
+    bf: { male: [10, 14], female: [18, 23] }, waistToHeight: 0.47, maxLossPctPerWeek: 0.0075, strengthDays: 4, steps: 9000,
   },
   muscular: {
     label: 'Strong & muscular', blurb: 'More muscle first. Fat comes down slowly so strength is kept.',

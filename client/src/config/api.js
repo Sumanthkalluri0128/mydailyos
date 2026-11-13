@@ -1,5 +1,6 @@
 import { API_URL } from "../config";
 import { getToken, isSignedIn, endSession, requestExtras } from "../auth/session";
+import { beginRequest, endRequest } from "../utils/netActivity";
 import { enqueue, flushQueue, isQueueable, saveGet, savedGet, refreshPending, purgeOthers, wipeAll } from "../offline/offlineApi";
 
 export function clearSession() {
@@ -32,7 +33,7 @@ function buildRequest(input, options) {
   return { url, init: { ...options, headers, ...(extras.credentials ? { credentials: extras.credentials } : {}) }, token };
 }
 
-export async function apiFetch(input, options = {}) {
+async function apiFetchInner(input, options = {}) {
   const method = String(options.method || "GET").toUpperCase();
   const { url, init, token } = buildRequest(input, options);
   const isApi = typeof url === "string" && url.startsWith(API_URL);
@@ -45,23 +46,31 @@ export async function apiFetch(input, options = {}) {
     } catch { /* not JSON: leave as is */ }
   }
 
-  let response;
+  // Never wait forever: a request that gets no answer is stopped (writes after 20 s, reads after 45 s, which covers a sleeping free-tier server).
+  // A stopped write is kept on this device and sent again later (every entry has a clientId, so a late answer can never create a duplicate).
+  let response; let timedOut = false; let timer = null;
+  if (isApi && !init.signal && typeof AbortController !== "undefined") {
+    const ctl = new AbortController(); init.signal = ctl.signal;
+    timer = setTimeout(() => { timedOut = true; ctl.abort(); }, method === "GET" ? 45000 : 20000);
+  }
   try {
     response = await fetch(url, init);
   } catch (networkError) {
     if (!isApi || !token) throw networkError;
-    // ---- no connection ----
+    // ---- no connection (or no answer in time) ----
     if (method === "GET") {
       const saved = await savedGet(url);
       if (saved) return json(saved.data, 200, { "X-FlexFit-Offline": "1", "X-FlexFit-Saved-At": String(saved.at) });
       return json({ success: false, message: "You're offline and this hasn't been opened before, so there is nothing saved to show yet." }, 503, { "X-FlexFit-Offline": "1" });
     }
     if (isQueueable(method, url) && (await enqueue({ method, url, body: init.body, meta: options.meta }))) {
-      window.dispatchEvent(new CustomEvent("mydailyos:toast", { detail: { message: "You're offline — saved on this device and will sync automatically.", type: "info", duration: 4000 } }));
+      window.dispatchEvent(new CustomEvent("mydailyos:toast", { detail: { message: timedOut ? "The server is slow — saved on this device and will sync automatically." : "You're offline — saved on this device and will sync automatically.", type: "info", duration: 4000 } }));
       try { window.dispatchEvent(new CustomEvent("flexfit:api-write", { detail: { method, url } })); } catch { /* ignore */ }
       return json({ success: true, queued: true, offline: true }, 202, { "X-FlexFit-Offline": "1" });
     }
-    return json({ success: false, message: "You're offline. This change needs a connection — please try again when you're back online." }, 503, { "X-FlexFit-Offline": "1" });
+    return json({ success: false, message: timedOut ? "The server took too long to answer. Please try again." : "You're offline. This change needs a connection — please try again when you're back online." }, 503, { "X-FlexFit-Offline": "1" });
+  } finally {
+    if (timer) clearTimeout(timer);
   }
 
   if (response.status === 401 && token) {
@@ -76,6 +85,13 @@ export async function apiFetch(input, options = {}) {
     try { window.dispatchEvent(new CustomEvent("flexfit:api-write", { detail: { method, url } })); } catch { /* ignore */ }
   }
   return response;
+}
+
+/** Every request goes through here, so the screen can always show "Saving..." / "Loading..." (components/NetworkActivity.jsx). */
+export async function apiFetch(input, options = {}) {
+  const method = String(options.method || "GET").toUpperCase();
+  const id = beginRequest({ write: method !== "GET" });
+  try { return await apiFetchInner(input, options); } finally { endRequest(id); }
 }
 
 /** Sends one queued change (used by the replay loop). Returns { ok, status }. */

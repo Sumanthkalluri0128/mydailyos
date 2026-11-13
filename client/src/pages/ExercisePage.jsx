@@ -259,6 +259,15 @@ function ExercisePage({ onBack }) {
     0
   );
 
+  // Dropdown order: everyday movement and gym first, then classes and sports, A-Z inside each group (was one long A-Z list).
+  const CAT_FIRST = ["Strength", "Walking", "Running", "Cycling", "Cardio", "HIIT", "Swimming", "Mind & Mobility", "Cult.fit", "Sports", "Outdoor"];
+  const groupedActivities = (() => {
+    const m = new Map();
+    for (const a of activities) { const c = a.category || "Other"; if (!m.has(c)) m.set(c, []); m.get(c).push(a); }
+    const rank = (c) => { const i = CAT_FIRST.indexOf(c); return i < 0 ? 99 : i; };
+    return [...m.entries()].sort((a, b) => rank(a[0]) - rank(b[0]) || a[0].localeCompare(b[0]))
+      .map(([c, l]) => [c, [...l].sort((x, y) => x.name.localeCompare(y.name, undefined, { numeric: true }))]);
+  })();
   const chosen = activities.find((a) => a._id === selectedActivity);
   const estimate =
     chosen && Number(duration) > 0
@@ -299,7 +308,6 @@ function ExercisePage({ onBack }) {
       </div>
 
 
-      <Training activities={activities} onLogged={fetchLogs} />
 
       {/* ======================================================
           TODAY SUMMARY
@@ -364,6 +372,8 @@ function ExercisePage({ onBack }) {
         <LogTab />
       </div>
 
+      <Training activities={activities} onLogged={fetchLogs} />
+
       <details className="large-card exercise-time-only">
         <summary><strong>Log by time only</strong> <span className="md-sub">yoga, sports, anything without sets</span></summary>
         <div>
@@ -407,16 +417,13 @@ function ExercisePage({ onBack }) {
                 Select an activity
               </option>
 
-              {activities.map(
-                (activity) => (
-                  <option
-                    key={activity._id}
-                    value={activity._id}
-                  >
-                    {activity.name}
-                  </option>
-                )
-              )}
+              {groupedActivities.map(([category, list]) => (
+                <optgroup key={category} label={category}>
+                  {list.map((activity) => (
+                    <option key={activity._id} value={activity._id}>{activity.name}</option>
+                  ))}
+                </optgroup>
+              ))}
 
             </select>
 

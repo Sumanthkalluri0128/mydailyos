@@ -34,6 +34,7 @@ const { buildDietDay, adoptFood } = require('../lib/healthyDiet');
 const { oilKcal } = require('../lib/oil');
 const { computeStreaks } = require('../lib/streaks');
 const { startBreak, endBreak, breakExpired } = require('../lib/planState');
+const CoachState = require('../models/CoachState');
 
 const { s, body } = require('../lib/schema');
 const router = express.Router();
@@ -61,6 +62,11 @@ router.get('/', wrap(async (req, res) => {
   const today = todayOf(req); const uid = req.user.id;
   let profile = await ensureProfile(uid);
   if (breakExpired(profile, today)) { await Profile.updateOne({ userId: uid }, { $set: endBreak(profile, today) }); profile = await ensureProfile(uid); }
+  // One mechanism: the coach's break window is the truth. A mirror left behind (break undone in the coach) is cleared.
+  if (profile.plan?.breakUntil && !(profile.plan.breakPrev && profile.plan.breakPrev.mode)) {
+    const cs = await CoachState.findOne({ userId: uid }).select('dietBreak').lean();
+    if (!(cs && cs.dietBreak && cs.dietBreak.to && cs.dietBreak.from <= today && cs.dietBreak.to >= today)) { await Profile.updateOne({ userId: uid }, { $set: endBreak(profile, today) }); profile = await ensureProfile(uid); }
+  }
   const core = await loadCore(uid, today);
   const plan = profile.plan || {};
   const { series } = trendInputs(core);
@@ -163,18 +169,21 @@ router.delete('/events/:id', wrap(async (req, res) => {
 }));
 
 // ---- maintenance break
-router.post('/break', body(s.object({ action: s.string({ max: 10, oneOf: ['start', 'end'] }), today: s.date() })), wrap(async (req, res) => {
+router.post('/break', body(s.object({ action: s.string({ max: 10, oneOf: ['start', 'end'] }), days: s.number({ min: 1, max: 14 }), today: s.date() })), wrap(async (req, res) => {
   const today = todayOf(req); const uid = req.user.id;
   const profile = await ensureProfile(uid);
+  const state = async () => (await CoachState.findOne({ userId: uid })) || new CoachState({ userId: uid });
   if (req.body?.action === 'end') {
     const set = endBreak(profile, today);
     if (set) await Profile.updateOne({ userId: uid }, { $set: set });
+    const st = await state(); st.dietBreak = { kind: '', from: '', to: '' }; await st.save(); // the same window the coach reads
     return res.json({ success: true, ended: !!set });
   }
-  const r = startBreak(profile, today, 14);
+  const r = startBreak(profile, today, req.body?.days);
   if (!r.ok) throw new HttpError(400, r.reason);
   if (r.set) await Profile.updateOne({ userId: uid }, { $set: r.set });
-  res.json({ success: true, until: r.until, maintenance: r.maintenance });
+  if (r.window) { const st = await state(); st.dietBreak = r.window; await st.save(); }
+  res.json({ success: true, until: r.until, maintenance: r.maintenance, measured: !!r.measured });
 }));
 
 router.patch('/safety', wrap(async (req, res) => {

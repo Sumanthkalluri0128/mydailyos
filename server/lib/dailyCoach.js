@@ -126,7 +126,7 @@ function suggestActivityLevel({ profile, days = [], strengthDates = null, today 
 
   const hist = days.filter((d) => d.date <= today).slice(-35);
   const e = E.expectedEnergy(profile);
-  const ad = e ? adaptiveMaintenance(hist.map((d) => ({ date: d.date, calories: d.calories, weightKg: d.weighIn ? d.weightKg : null })), e.tdee) : null;
+  const ad = e ? adaptiveMaintenance(hist.map((d) => ({ date: d.date, calories: d.calories, weightKg: d.weighIn ? d.weightKg : null })), e.formulaTdee, { target: e.calorieTarget }) : null;
   let sLevel = null;
   if (ad && e) {
     const pal = ad.estimate / e.bmr;

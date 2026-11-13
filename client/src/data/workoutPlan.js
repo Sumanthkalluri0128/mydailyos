@@ -8,6 +8,7 @@
 //   * `alts` are the "pick ONE" alternatives from the sheets. They inherit sets / reps / targets from the original.
 
 import { EXTRAS } from "./libraryExtra.js";
+import { sortExercises } from "../utils/exerciseDetail.js";
 
 export const PLAN_ID = "lean-toned-7";
 export const SMART_ID = "smart"; // the server-built program (utils/unifiedPlan.js)
@@ -327,7 +328,7 @@ export function libraryList() {
   }
   // exercises that are in the sheets but not in the 7-day plan
   for (const e of EXTRAS) { const key = slug(e.name); if (!seen.has(key)) seen.set(key, { ...e }); }
-  return [...seen.values()].sort((a, b) => a.name.localeCompare(b.name));
+  return sortExercises([...seen.values()], { groupFirst: true }); // muscle group order (chest, back, shoulders, arms, legs...), then A-Z
 }
 export const dayById = (id) => DAYS.find((d) => d.id === id) || null;
 export const dayForDow = (dow) => DAYS.find((d) => d.dow === dow) || DAYS[0];

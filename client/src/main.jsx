@@ -5,6 +5,7 @@ import AuthGate from "./auth/AuthGate";
 import ToastHost from "./components/ToastHost";
 import ConfirmHost from "./components/ConfirmHost";
 import OfflineBanner from "./components/OfflineBanner";
+import NetworkActivity from "./components/NetworkActivity";
 import ServerWakeBanner from "./components/ServerWakeBanner";
 import "./index.css";
 import "./styles/redesign.css"; // refines App.css without replacing it
@@ -57,6 +58,7 @@ ReactDOM.createRoot(document.getElementById("root")).render(
     <ConfirmHost />
     <ServerWakeBanner />
     <OfflineBanner />
+    <NetworkActivity />
     <ErrorBoundary scope="tab" name="root">
       <AuthGate>
         <App />

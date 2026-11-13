@@ -88,50 +88,41 @@ function WaterPage({ onBack }) {
   // ADD WATER
   // ============================================================
 
+  // The glass shows up the moment you tap (and the total moves), the server confirms in the background, and if it fails the glass
+  // is taken back with a message. Nothing is disabled while it saves, so you can keep tapping.
   const addWater = async (amountMl) => {
-    if (!amountMl || Number(amountMl) <= 0) {
+    const amt = Number(amountMl);
+    if (!amt || amt <= 0) {
       notify("Enter a valid amount.", "error");
       return;
     }
 
-    try {
-      setLoading(true);
+    const tempId = `tmp-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`;
+    setLogs((cur) => [...cur, { _id: tempId, amountMl: amt, createdAt: new Date().toISOString(), pending: true }]);
+    setTotalMl((t) => t + amt);
+    const takeBack = () => { setLogs((cur) => cur.filter((x) => x._id !== tempId)); setTotalMl((t) => Math.max(0, t - amt)); };
 
+    try {
       const response = await apiFetch(
         `${API_URL}/api/water`,
         {
           method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            date: today,
-            amountMl: Number(amountMl),
-          }),
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ date: today, amountMl: amt }),
         }
       );
-
       const data = await response.json();
 
       if (data.success) {
-        await fetchWater();
+        await fetchWater(); // swaps the pending glass for the saved one (also covers a change queued while offline)
       } else {
-        notify(
-          data.message ||
-            "Failed to add water."
-        , "error");
+        takeBack();
+        notify(data.message || "Failed to add water.", "error");
       }
     } catch (error) {
-      console.error(
-        "Failed to add water:",
-        error
-      );
-
-      notify(
-        "Could not connect to the backend."
-      , "error");
-    } finally {
-      setLoading(false);
+      console.error("Failed to add water:", error);
+      takeBack();
+      notify("Could not connect to the backend.", "error");
     }
   };
 
@@ -331,6 +322,8 @@ function WaterPage({ onBack }) {
               <div
                 className="water-log"
                 key={log._id}
+                style={log.pending ? { opacity: 0.6 } : undefined}
+                aria-busy={log.pending ? "true" : undefined}
               >
 
                 <div>
@@ -356,6 +349,7 @@ function WaterPage({ onBack }) {
                 <button
                   className="delete-log-button"
                   aria-label="Delete water entry"
+                  disabled={!!log.pending}
                   onClick={() =>
                     deleteWater(log._id)
                   }

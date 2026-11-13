@@ -4,6 +4,7 @@ const { requireAuth } = require('../middleware/auth');
 const { wrap } = require('../lib/http');
 const v = require('../lib/validate');
 const { refreshStoredTarget } = require('../lib/profileEnergy');
+const { refreshMeasuredTdee } = require('../lib/measuredMaintenance');
 const { refreshAutoActivity } = require('../lib/dailyCoachData');
 const CoachState = require('../models/CoachState');
 const { markDailyDirty } = require('../lib/coachDirty');
@@ -65,6 +66,10 @@ router.get('/', wrap(async (req, res) => {
   if (breakExpired(profile, todayUtc())) profile = (await Profile.findOneAndUpdate({ userId: req.user.id }, { $set: endBreak(profile, todayUtc()) }, { new: true })) || profile;
   // Automatic activity: yesterday's steps and training keep the calorie target's level current (once a day, never on one lazy day).
   try { const t = req.query?.today && /^\d{4}-\d{2}-\d{2}$/.test(String(req.query.today)) ? String(req.query.today) : todayUtc(); profile = (await refreshAutoActivity(req.user.id, t)) || profile; } catch (_) { /* the profile still loads */ }
+  // Measured maintenance (food log + weight trend) steers the target; refreshed once a day. Never blocks the profile.
+  try { const t = req.query?.today && /^\d{4}-\d{2}-\d{2}$/.test(String(req.query.today)) ? String(req.query.today) : todayUtc(); profile = (await refreshMeasuredTdee(req.user.id, t)) || profile; profile = (await refreshStoredTarget(Profile, profile)) || profile; } catch (_) { /* the profile still loads */ }
+  // Older profiles: start counting the age from today so it advances every year from now on (never guesses a past date).
+  if (profile.age > 0 && !profile.ageSetAt) profile = (await Profile.findOneAndUpdate({ userId: req.user.id }, { $set: { ageSetAt: todayUtc() } }, { new: true })) || profile;
   res.json({ success: true, profile: profileWithViews(profile, await recentWeights(req.user.id)) });
 }));
 
@@ -85,6 +90,7 @@ router.patch('/', wrap(async (req, res) => {
       if (T.ready && Math.abs(T.macros.protein - set['goals.proteinTarget']) <= 1) set['goals.proteinTarget'] = null;
     } catch (_) { /* keep the number as typed */ }
   }
+  if (set.age !== undefined) set.ageSetAt = todayUtc(); // the age advances by itself from the day it was saved
   const update = { $set: set };
   if (history.length) update.$push = { targetHistory: { $each: history, $slice: -50 } };
   const profile = await Profile.findOneAndUpdate(

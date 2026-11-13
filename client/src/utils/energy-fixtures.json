@@ -1,5 +1,5 @@
 {
-  "_readme": "Shared by server, web and mobile tests. Every implementation of the energy model must reproduce these numbers exactly. Expected values for A-D were calculated by hand (Mifflin-St Jeor), not generated.",
+  "_readme": "Shared by server, web and mobile tests. Every implementation of the energy model must reproduce these numbers exactly. Expected values for A-D were calculated by hand (Mifflin-St Jeor), not generated. Balances use EXERCISE_CREDIT = 0.7: wearables and step formulas over-count, so only 70% of activity above the plan's baseline is given back as food.",
   "plans": [
     {
       "name": "A: man, 30y 175cm 80kg moderate, wants 72kg at default pace",
@@ -68,8 +68,8 @@
         "bmr": 1452,
         "tdee": 1742,
         "direction": "lose",
-        "pace": 1,
-        "gap": 1100,
+        "pace": 0.9,
+        "gap": 990,
         "autoTarget": 1200,
         "calorieTarget": 1200,
         "mode": "auto",
@@ -143,7 +143,7 @@
       }
     },
     {
-      "name": "E: man, 70y 160cm 52kg sedentary, wants 48kg \u2014 safety floor (1500) is above maintenance (1410), so a 'lose' goal must not exceed maintenance",
+      "name": "E: man, 70y 160cm 52kg sedentary, wants 48kg — safety floor (1500) is above maintenance (1410), so a 'lose' goal must not exceed maintenance",
       "profile": {
         "age": 70,
         "sex": "male",
@@ -252,7 +252,7 @@
       }
     },
     {
-      "name": "K: your own safe minimum (1,700) holds an aggressive pace",
+      "name": "K: 1 kg/wk on 80 kg is capped at the safe 0.8 kg/wk (1% of body weight), above the own floor of 1,700",
       "profile": {
         "age": 30,
         "sex": "male",
@@ -269,17 +269,17 @@
         "bmr": 1749,
         "tdee": 2711,
         "direction": "lose",
-        "pace": 1,
-        "gap": 1100,
-        "autoTarget": 1700,
-        "calorieTarget": 1700,
+        "pace": 0.8,
+        "gap": 880,
+        "autoTarget": 1830,
+        "calorieTarget": 1830,
         "mode": "auto",
-        "atFloor": true,
+        "atFloor": false,
         "baselineActivityKcal": 612
       }
     },
     {
-      "name": "L: no own floor = the default 1,500 for men",
+      "name": "L: no own floor: 1 kg/wk on 80 kg is capped at the safe 0.8 kg/wk, so the 1,500 default is not reached",
       "profile": {
         "age": 30,
         "sex": "male",
@@ -295,13 +295,90 @@
         "bmr": 1749,
         "tdee": 2711,
         "direction": "lose",
-        "pace": 1,
-        "gap": 1100,
-        "autoTarget": 1610,
-        "calorieTarget": 1610,
+        "pace": 0.8,
+        "gap": 880,
+        "autoTarget": 1830,
+        "calorieTarget": 1830,
         "mode": "auto",
         "atFloor": false,
         "baselineActivityKcal": 612
+      }
+    },
+    {
+      "name": "M: own floor of 1,900 beats the capped pace (target held at the floor)",
+      "profile": {
+        "age": 30,
+        "sex": "male",
+        "heightCm": 175,
+        "currentWeightKg": 80,
+        "activityLevel": "moderate",
+        "goals": {
+          "targetWeightKg": 60,
+          "weeklyPaceKg": 1,
+          "calorieFloor": 1900
+        }
+      },
+      "expect": {
+        "pace": 0.8,
+        "gap": 880,
+        "autoTarget": 1900,
+        "calorieTarget": 1900,
+        "atFloor": true,
+        "tdee": 2711
+      }
+    },
+    {
+      "name": "N: measured maintenance 10 % under the formula (high confidence) lowers maintenance",
+      "profile": {
+        "age": 30,
+        "sex": "male",
+        "heightCm": 175,
+        "currentWeightKg": 80,
+        "activityLevel": "moderate",
+        "goals": {
+          "targetWeightKg": 60,
+          "weeklyPaceKg": 1,
+          "calorieFloor": 1700
+        },
+        "measuredTdee": {
+          "ratio": 0.9,
+          "confidence": "high"
+        }
+      },
+      "expect": {
+        "pace": 0.8,
+        "gap": 880,
+        "autoTarget": 1700,
+        "calorieTarget": 1700,
+        "atFloor": true,
+        "tdee": 2548
+      }
+    },
+    {
+      "name": "O: low-confidence measured maintenance is ignored",
+      "profile": {
+        "age": 30,
+        "sex": "male",
+        "heightCm": 175,
+        "currentWeightKg": 80,
+        "activityLevel": "moderate",
+        "goals": {
+          "targetWeightKg": 60,
+          "weeklyPaceKg": 1,
+          "calorieFloor": 1700
+        },
+        "measuredTdee": {
+          "ratio": 0.9,
+          "confidence": "low"
+        }
+      },
+      "expect": {
+        "pace": 0.8,
+        "gap": 880,
+        "autoTarget": 1830,
+        "calorieTarget": 1830,
+        "atFloor": false,
+        "tdee": 2711
       }
     }
   ],
@@ -347,7 +424,7 @@
       }
     },
     {
-      "name": "A, very active day -> only the excess earns food",
+      "name": "A, very active day -> 70% of the excess earns food",
       "plan": 0,
       "day": {
         "eaten": 2000,
@@ -357,10 +434,10 @@
       "expect": {
         "target": 2160,
         "burned": 1200,
-        "bonus": 588,
-        "budget": 2748,
-        "remaining": 748,
-        "net": 1299,
+        "bonus": 412,
+        "budget": 2572,
+        "remaining": 572,
+        "net": 1123,
         "isDeficit": true
       }
     },
@@ -383,7 +460,7 @@
       }
     },
     {
-      "name": "C (sedentary baseline 0) -> every burned kcal counts",
+      "name": "C (sedentary baseline 0) -> 70% of burned kcal counts",
       "plan": 2,
       "day": {
         "eaten": 1000,
@@ -393,10 +470,10 @@
       "expect": {
         "target": 1200,
         "burned": 300,
-        "bonus": 300,
-        "budget": 1500,
-        "remaining": 500,
-        "net": 1042,
+        "bonus": 210,
+        "budget": 1410,
+        "remaining": 410,
+        "net": 952,
         "isDeficit": true
       }
     }
@@ -476,9 +553,9 @@
       "direction": "lose",
       "expect": {
         "protein": 158,
-        "fat": 54,
-        "carbs": 171,
-        "fiber": 25
+        "fat": 72,
+        "carbs": 130,
+        "fiber": 28
       }
     },
     {
@@ -490,7 +567,7 @@
         "protein": 112,
         "fat": 54,
         "carbs": 217,
-        "fiber": 25
+        "fiber": 28
       }
     },
     {
@@ -515,6 +592,30 @@
         "protein": 150,
         "fat": 60,
         "carbs": 215,
+        "fiber": 28
+      }
+    },
+    {
+      "name": "fat never under 0.6 g/kg: 100 kg at 1800 kcal (27% would be 54 g)",
+      "calories": 1800,
+      "weightKg": 100,
+      "direction": "lose",
+      "expect": {
+        "protein": 158,
+        "fat": 60,
+        "carbs": 157,
+        "fiber": 28
+      }
+    },
+    {
+      "name": "fibre floor: 1500 kcal still gets the daily floor, not 21 g",
+      "calories": 1500,
+      "weightKg": 60,
+      "direction": "lose",
+      "expect": {
+        "protein": 96,
+        "fat": 45,
+        "carbs": 178,
         "fiber": 28
       }
     }

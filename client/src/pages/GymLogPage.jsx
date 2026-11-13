@@ -2,6 +2,7 @@
 // The log is stored in this browser (utils/gymStore.js). Only each exercise (name, sets, minutes, estimated kcal) is also sent, by utils/gymSyncRunner.js, so Exercise and Home count the calories; other data leaves only through the
 // Export tab, which downloads CSV / JSON files to your computer. Same maths as the phone app (utils/gymMath.js).
 import { useEffect, useMemo, useState } from "react";
+import { sortExercises } from "../utils/exerciseDetail";
 import "./gymlog.css";
 import { libraryList, MUSCLE_LABEL, FILTERS } from "../data/workoutPlan";
 import { getLocalDate } from "../utils/date";
@@ -122,9 +123,8 @@ export function LogTab() {
   const fmtKg = (kg) => fmtW(kg, unit);
   const list = useMemo(() => {
     const s = q.trim().toLowerCase();
-    const rank = new Map(used.map((u, i) => [u.exId, i]));
-    return lib.filter((e) => (cat === "all" || e.cat === cat) && (!s || e.name.toLowerCase().includes(s)))
-      .sort((a, b) => (rank.get(a.id) ?? 999) - (rank.get(b.id) ?? 999) || a.name.localeCompare(b.name));
+    // your recent exercises first, then muscle group (chest, back, shoulders, arms, legs...), then A-Z
+    return sortExercises(lib.filter((e) => (cat === "all" || e.cat === cat) && (!s || e.name.toLowerCase().includes(s))), { boost: used.map((u) => u.exId) });
   }, [lib, q, cat, used]);
   const exact = list.some((e) => e.name.toLowerCase() === q.trim().toLowerCase());
 

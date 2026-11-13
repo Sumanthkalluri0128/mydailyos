@@ -29,7 +29,7 @@ function calorieChange(e, target, floor, delta) {
   if (want < floor || (delta < 0 && want > e.tdee - 150)) return null;
   if (e.mode === 'manual') return { type: 'calorie', calorieTarget: want, from: target };
   const pace = Math.round((((e.tdee - want) * 7) / E.KCAL_PER_KG) * 20) / 20;
-  if (pace < 0.1 || pace > 1) return null;
+  if (pace < 0.1 || pace > E.maxSafeWeeklyLossKg(e.weightKg) + 1e-9) return null; // never a pace above the safe limit (1 % of body weight a week)
   return { type: 'pace', weeklyPaceKg: pace, from: e.pace, calorieTarget: want };
 }
 

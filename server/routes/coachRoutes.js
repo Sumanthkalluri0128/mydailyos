@@ -299,16 +299,18 @@ router.delete('/event', wrap(async (req, res) => {
   const st = await getState(req.user.id); st.event = { kind: '', from: '', to: '', label: '' }; await st.save();
   res.json({ success: true });
 }));
-router.post('/diet-break', body(s.object({ days: s.number({ min: 1, max: 7 }), kind: s.string({ max: 30 }), today: TODAY })), wrap(async (req, res) => {
+router.post('/diet-break', body(s.object({ days: s.number({ min: 1, max: 14 }), kind: s.string({ max: 30 }), today: TODAY })), wrap(async (req, res) => {
   const today = todayOf(req);
-  const days = Math.min(7, Math.max(1, Math.round(Number(req.body?.days) || 7)));
+  const days = Math.min(14, Math.max(1, Math.round(Number(req.body?.days) || 7)));
   const st = await getState(req.user.id);
   st.dietBreak = { kind: String(req.body?.kind || 'maintenance-week').slice(0, 30), from: today, to: addDays(today, days - 1) };
   await st.save();
+  await Profile.updateOne({ userId: req.user.id }, { $set: { 'plan.breakUntil': st.dietBreak.to } }); // mirror for the plan screens
   res.json({ success: true, dietBreak: plain(st).dietBreak });
 }));
 router.delete('/diet-break', wrap(async (req, res) => {
   const st = await getState(req.user.id); st.dietBreak = { kind: '', from: '', to: '' }; await st.save();
+  await Profile.updateOne({ userId: req.user.id, 'plan.breakUntil': { $ne: '' } }, { $set: { 'plan.breakUntil': '', 'plan.lastBreakEnd': todayOf(req) } });
   res.json({ success: true });
 }));
 /** The cycle's water-window hint for the plateau text, or null. One small read, and only asked for when the scale already looks flat. */
@@ -413,7 +415,7 @@ async function applyChange({ uid, st, today, dec, auto = false, keepDecision = f
   if (a.type === 'steps') set = { 'goals.stepsTarget': Math.min(12000, Math.round(Number(a.stepsTarget))) };
   else if (a.type === 'pace') { if (Number(a.calorieTarget) < floor) throw new HttpError(409, 'That would go below your safe minimum'); set = { 'goals.weeklyPaceKg': Number(a.weeklyPaceKg) }; }
   else if (a.type === 'calorie') { if (Number(a.calorieTarget) < floor) throw new HttpError(409, 'That would go below your safe minimum'); set = { 'goals.calorieMode': 'manual', 'goals.calorieTarget': Math.round(Number(a.calorieTarget)) }; }
-  else if (a.type === 'dietBreak') { st.dietBreak = { kind: 'weekly-coach', from: today, to: addDays(today, Math.min(7, Math.max(1, Number(a.days) || 7)) - 1) }; }
+  else if (a.type === 'dietBreak') { st.dietBreak = { kind: 'weekly-coach', from: today, to: addDays(today, Math.min(14, Math.max(1, Number(a.days) || 7)) - 1) }; set = { 'plan.breakUntil': st.dietBreak.to }; }
   else if (a.type === 'targetDate') {
     if (!planOn) throw new HttpError(409, 'Set a goal plan first, then the coach can move its date');
     if (!/^\d{4}-\d{2}-\d{2}$/.test(String(a.byDate)) || String(a.byDate) <= today) throw new HttpError(409, 'That date is not in the future');

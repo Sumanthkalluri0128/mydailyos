@@ -1,7 +1,7 @@
 // Home, My Plan and the phone must show the SAME calories and macros for the same person.
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { expectedEnergy, macroTargets } = require('../lib/energy');
+const { expectedEnergy, resolveTargets } = require('../lib/energy');
 const { bodyPlan } = require('../lib/bodyPlan');
 
 const base = { sex: 'male', age: 30, heightCm: 175, currentWeightKg: 88, activityLevel: 'moderate' };
@@ -9,7 +9,7 @@ const base = { sex: 'male', age: 30, heightCm: 175, currentWeightKg: 88, activit
 // What Home computes from the SAVED profile (HomeDashboard.jsx / mobile index.tsx).
 function homeView(profile) {
   const e = expectedEnergy(profile);
-  return { calories: e.calorieTarget, ...macroTargets(e.calorieTarget, e.weightKg, e.direction, profile.goals?.proteinTarget, profile.goals?.bodyType) };
+  return { calories: e.calorieTarget, ...resolveTargets(profile).macros }; // Home reads resolveTargets (goal weight and sex included)
 }
 
 for (const type of ['lean', 'athletic', 'muscular', 'balanced']) {
@@ -34,7 +34,7 @@ test('a pinned protein number (the old 140 default) is the cause of Home and My 
 });
 
 test('body types change protein and fat as documented', () => {
-  const m = (t) => macroTargets(2000, 80, 'maintain', null, t);
+  const m = (t) => require('../lib/energy').macroTargets(2000, 80, 'maintain', null, t);
   assert.equal(m('balanced').protein, 128);  // 1.6 g/kg
   assert.equal(m('lean').protein, 144);      // 1.8 g/kg
   assert.equal(m('athletic').protein, 160);  // 2.0 g/kg

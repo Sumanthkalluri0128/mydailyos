@@ -328,3 +328,13 @@
 .pp-pick-list button { width: 100%; display: flex; justify-content: space-between; gap: 8px; text-align: left; padding: 12px; min-height: 44px; border: 1px solid var(--border, #e5e7eb); border-radius: 12px; background: var(--card, #fff); font: inherit; cursor: pointer; }
 .pp-pick-list button:disabled { opacity: .5; cursor: default; }
 .pp-pick-list small { color: var(--muted, #6b7280); }
+
+/* plan picker rows: picture + name (tap for steps) and a separate add button */
+.pp-pick-row { border: 1px solid var(--border, #e5e7eb); border-radius: 12px; background: var(--card, #fff); overflow: hidden; }
+.pp-pick-row.on { opacity: .7; }
+.pp-pick-main { display: flex; align-items: stretch; }
+.pp-pick-list .pp-pick-main button { border: 0; border-radius: 0; background: transparent; }
+.pp-pick-info { flex: 1; align-items: center; justify-content: flex-start !important; gap: 10px !important; }
+.pp-pick-add { width: 52px !important; flex: none; justify-content: center !important; font-size: 1.25rem; border-left: 1px solid var(--border, #e5e7eb) !important; }
+.pp-steps { margin: 0; padding: 4px 16px 12px 34px; font-size: .9rem; display: grid; gap: 4px; }
+.pp-steps .avoid { color: var(--muted, #6b7280); list-style: none; margin-left: -18px; }

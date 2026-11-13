@@ -1,0 +1,12 @@
+/* Thin moving bar at the very top + a small pill above the bottom navigation. Never blocks a tap (pointer-events: none). */
+.net-activity { pointer-events: none; }
+.net-activity-bar { position: fixed; left: 0; right: 0; top: 0; z-index: 9000; height: 3px; overflow: hidden; background: var(--primary-soft, rgba(37, 135, 217, 0.18)); }
+.net-activity-bar::after { content: ""; position: absolute; inset: 0 auto 0 0; width: 35%; background: var(--primary-solid, var(--primary, #2587d9)); border-radius: 3px; animation: net-activity-slide 1.1s ease-in-out infinite; }
+.net-activity.slow .net-activity-bar::after, .net-activity.waking .net-activity-bar::after { background: #e0961b; }
+.net-activity-pill { position: fixed; left: 0; right: 0; margin: 0 auto; width: fit-content; z-index: 9000; bottom: calc(env(safe-area-inset-bottom, 0px) + 84px); max-width: min(calc(100vw - 24px), 420px); display: flex; align-items: center; gap: 8px; padding: 8px 14px; border-radius: 999px; font-size: 13px; font-weight: 600; line-height: 1.3; background: var(--surface, #fff); color: var(--text, #1b2733); border: 1px solid var(--border, rgba(0, 0, 0, 0.12)); box-shadow: 0 8px 24px var(--shadow, rgba(0, 0, 0, 0.18)); }
+.net-activity-spin { width: 14px; height: 14px; flex: none; border-radius: 50%; border: 2px solid var(--border, rgba(0, 0, 0, 0.18)); border-top-color: var(--primary-solid, var(--primary, #2587d9)); animation: net-activity-turn 0.8s linear infinite; }
+@keyframes net-activity-slide { 0% { transform: translateX(-100%); } 100% { transform: translateX(300%); } }
+@keyframes net-activity-turn { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) {
+  .net-activity-bar::after, .net-activity-spin { animation-duration: 3s; }
+}

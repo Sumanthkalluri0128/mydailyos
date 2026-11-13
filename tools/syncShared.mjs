@@ -18,6 +18,7 @@ const read = (p) => fs.readFileSync(p, 'utf8').replace(/\r\n/g, '\n');
 const FILES = [
   ['exerciseFigure.js', 'utils/exerciseFigure.js', 'utils/exerciseFigure.ts', NOCHECK],
   ['energy.js', 'utils/energy.js', 'utils/energy.ts', NOCHECK + BANNER + '__TYPES__', BANNER, 'lib/energy.js'],
+  ['netActivity.js', 'utils/netActivity.js', 'utils/netActivity.ts', NOCHECK],
   ['training.js', 'utils/training.js', 'utils/training.js', ''],
   ['coneGeometry.js', 'utils/coneGeometry.js', 'utils/coneGeometry.ts', NOCHECK],
   ...['en', 'hi', 'ta', 'te'].map((l) => [`i18n/${l}.json`, `i18n/${l}.json`, `i18n/${l}.json`, '']),

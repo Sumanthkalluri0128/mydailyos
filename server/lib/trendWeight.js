@@ -6,12 +6,7 @@ const { diffDays, addDays } = require('./dates');
 const r1 = (x) => Math.round(x * 10) / 10;
 const r2 = (x) => Math.round(x * 100) / 100;
 
-/** The fastest loss we encourage: about 1% of body weight a week (and never above 1 kg). */
-function maxSafeWeeklyLossKg(weightKg) {
-  const w = Number(weightKg);
-  if (!(w > 0)) return 1;
-  return Math.min(1, r2(w * 0.01));
-}
+const { maxSafeWeeklyLossKg } = require('./energy'); // ONE definition, shared with the plan (1 % of body weight a week, never above 1 kg)
 
 /**
  * Time-aware exponential moving average. A weigh-in after a long gap pulls the line further than one the next day.

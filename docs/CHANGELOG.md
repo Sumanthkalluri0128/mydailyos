@@ -1,3 +1,31 @@
+# v70.1 - No more frozen screens: instant water entries, a live "Saving..." indicator, request timeouts (web + phone)
+- Cause: adding water waited for the server (and on the phone for up to ~21 s of silent cold-start retries) plus a refetch before anything changed, and nothing said a request was running.
+- Water: the glass and the total appear the moment you tap, the server confirms in the background, a failed save takes the glass back with a message, and nothing is disabled meanwhile (web `pages/WaterPage.jsx`, phone `app/water.tsx`).
+- `packages/shared/src/netActivity.js` (synced to web and phone): one store that every request reports to. Under 0.7 s nothing shows; then a thin moving bar and a pill ("Saving..." / "Loading..."); after 5 s "still saving, your entry is safe"; while the server is waking, "Waking the server up". It never blocks a tap. Components: `NetworkActivity.jsx` (mounted in `main.jsx`) and `NetworkActivity.tsx` (mounted in `app/_layout.tsx`).
+- Web `apiFetch` now stops a request that gets no answer (writes after 20 s, reads after 45 s). A stopped write is kept on the device and sent again later (the clientId stops duplicates); a stopped read falls back to the saved copy.
+- Phone `request()` reports retries to the indicator. Tests: client `utils/netActivity.test.js` (+1). NOT run: vite build, phone typecheck/jest, a device.
+
+# v70 - Targets follow your real progress; safer macros and pace; one diet break (server, web, phone)
+- Shared model: `proteinRangeAt` and the day-budget option of `resolveTargets` now live in `packages/shared/src/energy.js`, the three copies are regenerated, and the energy fixture is one identical file in server, web and phone (the web copy was stale: it still expected a 100 % exercise credit). The translation files had 265 keys in the web and phone copies that the shared source lacked: they were merged into the source (web and phone were identical) so `syncShared --check` can pass.
+- Fat: never under 0.6 g/kg (percentage still applies when higher); the fat range minimum follows.
+- Pace: a loss pace is capped at 1 % of body weight a week when the target is worked out (`pace`, `paceAsked`, `paceCapped`). The weekly coach no longer proposes a pace above it. One `maxSafeWeeklyLossKg` for the whole app.
+- Measured maintenance now feeds the target: `profile.measuredTdee` {ratio, confidence} is refreshed once a day (`lib/measuredMaintenance.js`) and blended into maintenance (`energy.blendTdee`: 60 % high, 35 % medium, low ignored, ratio clamped to +-20 %). The coach, diet break and day budget all read the same maintenance.
+- Adaptive maintenance: a day counts as logged only above 35 % of the target (same rule as the weekly decision), and weigh-ins go through the outlier filter, so skipped meals and one salty reading no longer bias it low.
+- One diet break: the plan screen now starts and ends the coach's break window (7 days by default, up to 14) instead of switching the calorie goal to a manual maintenance number. A break started by an older version is still handed back.
+- Fibre: 14 g per 1,000 kcal but never under 30 g (men), 25 g (women).
+- Minor: age advances by itself (`ageSetAt`); water can add ~15 ml per exercise minute (`resolveTargets(profile, { exerciseMinutes })`); protein for a large gap to the goal weight counts on an adjusted body weight; the lean and athletic waist goal is 0.47 of height (was 0.45); `docs/CALCULATIONS.md` brought up to date.
+- Not done on purpose: a refeed day (optional, and a diet break plus the flex meal already cover it for this goal).
+- Tests: server unit 646 pass (+16, new `test/gapFixes.unit.test.js`); the 6 failures need mongoose/express and are identical on the untouched upload. NOT run: client tests, vite build, phone typecheck/jest (no node_modules here).
+
+# v69 - Exercise lists sorted properly; My plans picker has every exercise, with steps and pictures (web + phone)
+- Sorting: one rule everywhere (`utils/exerciseDetail.js` `sortExercises`): your recent exercises, then muscle group (chest, back, shoulders, arms, legs, glutes, core, full body, cardio, mobility), then A-Z. Used by the Library, the Gym log picker, the My plans picker and (phone) the gym log. Exercise page order is now: Today summary, Log an exercise, Training hub, Log by time, History. The "Log by time" dropdown is grouped (Strength, Walking, Running... Cult.fit, Sports) instead of one long A-Z list.
+- My plans picker: now offers the built-in library plus the whole gym catalogue (about 250 exercises, was 43), with a picture, tap-for-steps, sensible default sets x reps (compound 3x8-12, isolation 3x10-15, core 3x12-15, holds in seconds, cardio in minutes), "Show more" paging, and "Add my own exercise".
+- BUG: in `customToDays` a comment swallowed `bw`, `timed`, `perSide` and `unit`, so a plank in your own plan ran as reps and bodyweight moves asked for kg. Fixed.
+- Anything added to a plan opens with steps, avoid-tips, muscles and a picture (`utils/exerciseLookup.js`, `detailFor`), also catalogue and typed exercises.
+- Routines builder (Training): the exercise list showed nothing until you typed, and only 8 matches. Now it lists by group at once (Strength first), with search across all groups.
+- Phone: routine template builder gets search + group chips + taller list; gym log sorted by muscle group.
+- Tests: client 215 (+5). NOT run: vite build, phone typecheck/jest (no node_modules), a device.
+
 # v67 - HOTFIX: blank page "Failed to fetch dynamically imported module ... AssistantPanel-*.js 404" (web)
 - Cause: every deploy renames the built files. A tab or saved page from before the deploy asked for `AssistantPanel-<old hash>.js`, which no longer exists. The assistant/palette are loaded late by `LateMount` with no error handling, so the failed import crashed React's root and the whole page went blank.
 - Fix: `utils/chunkRecovery.js` recognises stale-file errors (Chrome, Firefox, Safari, Vite preload), retries once, then clears the saved shell/service worker and reloads ONCE (max one automatic reload a minute, so no loop). Installed in `main.jsx` (also for `vite:preloadError` and unhandled rejections).

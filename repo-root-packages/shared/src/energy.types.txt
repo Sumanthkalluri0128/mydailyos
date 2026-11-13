@@ -7,13 +7,17 @@ export type EnergyProfile = {
   activityLevel?: string | null;
   activityMode?: string | null;                                   // 'auto' = level from recent days, 'manual' = the level you chose
   autoActivity?: { targetLevel?: string | null } | null;
+  measuredTdee?: { ratio?: number | null; confidence?: string | null } | null; // measured / formula maintenance (server refreshes it daily)
+  ageSetAt?: string | null;                                       // the day `age` was saved: age then advances by itself
   goals?: { calorieFloor?: number | null; targetWeightKg?: number | null; weeklyPaceKg?: number | null; calorieMode?: string | null; calorieTarget?: number | null; proteinTarget?: number | null; bodyType?: string | null; waterTargetMl?: number | null; stepsTarget?: number | null; exerciseMinutesTarget?: number | null } | null;
 };
 
 export type ExpectedEnergy = {
   weightKg: number;
   bmr: number;
-  tdee: number;             // maintenance calories (what you burn on a normal day at this weight)
+  tdee: number;             // maintenance calories (formula, moved toward the measured maintenance once there is enough data)
+  formulaTdee: number; measuredTdee: boolean; measuredWeight: number; measuredRatio: number | null;
+  paceAsked: number; paceCapped: boolean; // the pace requested, and whether the safe limit (1 % of body weight a week) lowered it
   direction: GoalDirection;
   pace: number;             // kg per week
   gap: number;              // daily deficit / surplus implied by the pace
@@ -33,7 +37,7 @@ export type Macros = { protein: number; fat: number; carbs: number; fiber: numbe
 export type MacroRange = { min: number; max: number; goal: number };
 export type Targets = {
   ready: boolean; energy: ExpectedEnergy | null; direction: GoalDirection; bodyType: string; bodyLabel: string;
-  calories: number; calorieMode: 'auto' | 'manual'; macros: Macros;
+  calories: number; calorieMode: 'auto' | 'manual'; macros: Macros; baseMacros: Macros; budget: number;
   ranges: { protein: MacroRange; fat: MacroRange; carbs: MacroRange; fiber: MacroRange };
   limits: { sodiumMg: number; sugar: number }; proteinSource: 'auto' | 'custom';
   waterMl: number; steps: number; exerciseMinutes: number; goalWeightKg: number | null; paceKgPerWeek: number | null; weeksToGoal: number | null;

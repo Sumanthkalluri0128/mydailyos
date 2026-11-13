@@ -17,6 +17,11 @@ const schema = new mongoose.Schema(
     // agree). 'manual': always the level you chose above. `autoActivity` is the stored automatic reading, refreshed once a day.
     activityMode: { type: String, enum: ['auto', 'manual'], default: 'auto' },
     autoActivity: { type: mongoose.Schema.Types.Mixed, default: null },
+    // What the food log and the weight trend say you really burn: { ratio (measured / formula), kcal, confidence, asOf, loggedDays, weighIns }.
+    // Refreshed daily by lib/measuredMaintenance.js; energy.expectedEnergy blends it into maintenance. null = not enough data yet.
+    measuredTdee: { type: mongoose.Schema.Types.Mixed, default: null },
+    // The day `age` was saved (YYYY-MM-DD). Age then advances by itself every year (energy.ageNow).
+    ageSetAt: { type: String, default: '' },
     goals: {
       calorieTarget: { type: Number, min: 1, default: 1800 },
       // 'auto' = calculated from body, goal and pace (the saved calorieTarget just mirrors it); 'manual' = the number the person typed.

@@ -112,7 +112,7 @@ router.get('/coach', cacheGet(), wrap(async (req, res) => {
   let microInsights = [];
   try { microInsights = (await microForWeeks(uid, today)).insights.slice(0, 2); } catch { /* optional */ }
   const cs = await CoachState.findOne({ userId: uid }).lean();
-  const coach = buildCoach({ days: history.days, meals, foods, targets, today, expectedTdee: e?.tdee || null, learn: cs?.learn || {} });
+  const coach = buildCoach({ days: history.days, meals, foods, targets, today, expectedTdee: e?.formulaTdee || e?.tdee || null, targetKcal: e?.calorieTarget || null, learn: cs?.learn || {} });
   const tv = coachG.treatView({ treat: cs?.treat, today });
   // Festival / trip window and diet break widen the week; the per-day figure never drops below the calorie floor. Tone changes the review wording.
   const tdee = e?.tdee || null; const monday = coachG.mondayOf(today);

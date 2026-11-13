@@ -15,7 +15,7 @@ const isWeekend = (d) => [0, 6].includes(weekday(d));
  * @param meals    [{date, mealType, calories}] food entries of the last 7 days
  * @param targets  {calories, protein, waterMl, exerciseMinutes, steps}
  */
-function buildCoach({ days, meals = [], foods = [], targets = {}, today, expectedTdee = null, learn = {} }) {
+function buildCoach({ days, meals = [], foods = [], targets = {}, today, expectedTdee = null, targetKcal = null, learn = {} }) {
   const week = days.filter((d) => d.date > addDays(today, -7) && d.date <= today);
   const logged = week.filter((d) => d.calories > 0);
   const tips = [];
@@ -92,7 +92,7 @@ function buildCoach({ days, meals = [], foods = [], targets = {}, today, expecte
     const perDay = Math.round((budget - used) / daysLeft);
     weekBudget = { budget: r(budget), usedBeforeToday: r(used), daysLeft, perDayLeft: perDay, dailyTarget: r(targets.calories), diffPerDay: perDay - r(targets.calories) };
   }
-  const maintenance = adaptiveMaintenance(days, expectedTdee);
+  const maintenance = adaptiveMaintenance(days, expectedTdee, { target: targetKcal || targets.calories });
   return { tips: tips.slice(0, 2), tipIds: tips.map((t) => t.id), challenge, review, weekBudget, maintenance };
 }
 

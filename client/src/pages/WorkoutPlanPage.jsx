@@ -24,6 +24,7 @@ import AdaptCard from "../components/workout/AdaptCard";
 import BodyPlanPage from "./BodyPlanPage";
 import PersonalPlans from "../components/workout/PersonalPlans";
 import { customIdOf, customToDays, sourceFor } from "../utils/customPlans";
+import { lookupExercise } from "../utils/exerciseLookup";
 import { ActiveDays, Progress, Safety } from "./TrainingSections";
 import "../components/workout/workoutplan.css";
 
@@ -108,8 +109,7 @@ export default function WorkoutPlanPage({ startView, profile }) {
       };
     }
     if (customPlan) {
-      const lib = libraryList();
-      const days = customToDays(customPlan, (id) => lib.find((x) => x.id === id) || null);
+      const days = customToDays(customPlan, lookupExercise); // library, wide catalogue and typed exercises all open with steps + picture
       const week = weekNumber(st.startDate, today);
       const strip = weekStrip(st.sessions, today, days);
       return {

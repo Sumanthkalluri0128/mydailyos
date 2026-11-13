@@ -3,12 +3,15 @@
 // All the rules live in utils/customPlans.js (pure and unit-tested); this file is only the screen.
 import { useMemo, useState } from "react";
 import { DAYS, FILTERS, MUSCLE_LABEL, libraryList } from "../../data/workoutPlan";
+import { GYM_CATALOG } from "../../utils/gymCatalog";
+import { pickerList, sortExercises } from "../../utils/exerciseDetail";
+import { lookupExercise } from "../../utils/exerciseLookup";
+import { FigThumb } from "./bits";
 import { confirmAction } from "../../utils/confirm";
 import { notify } from "../../utils/notify";
 import { MAX_ITEMS, MAX_PLANS, addItem, addPlan, clearDay, moveItem, newPlan, planFromDays, removeItem, removePlan, renamePlan, setDayTitle, sourceFor, trainingDays, updateItem } from "../../utils/customPlans";
 
 const SHORT = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
-const catOf = (e) => (e.blockType === "sets" ? (e.targets && e.targets[0]) || "core" : e.cat || (e.targets && e.targets[0]) || "core");
 
 export default function PersonalPlans({ st, setSt, activeId, onUse }) {
   const plans = st.plans || [];
@@ -106,24 +109,51 @@ function Editor({ plan, setPlans, onDone, onUse, active }) {
   );
 }
 
+const PAGE = 30;
+const PICK_CATS = ["all", ...FILTERS.filter((c) => c !== "all"), "full body"];
+const catName = (c) => (c === "all" ? "All" : c === "full body" ? "Full body" : MUSCLE_LABEL[c] || c);
+const slugOf = (s) => String(s).toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 40);
+let PICK_ALL = null; // built once: ~250 exercises (built-in library + wide gym catalogue), sorted by muscle group
+const allPickable = () => PICK_ALL || (PICK_ALL = sortExercises(pickerList(libraryList(), GYM_CATALOG), {}));
+
 function Picker({ have, onAdd, onClose }) {
   const [q, setQ] = useState("");
   const [cat, setCat] = useState("all");
-  const all = useMemo(() => libraryList().filter((e) => e.blockType === "sets" || e.blockType === "extra").map((e) => ({ id: e.id, name: e.name, cat: catOf(e), sets: e.sets || 3, reps: e.reps || "10-12" })), []);
+  const [open, setOpen] = useState(null);   // id of the row whose steps are showing
+  const [pages, setPages] = useState(1);
+  const all = useMemo(allPickable, []);
   const taken = new Set(have.map((x) => x.id));
-  const list = all.filter((e) => (cat === "all" || e.cat === cat) && (!q.trim() || e.name.toLowerCase().includes(q.trim().toLowerCase())));
+  const needle = q.trim().toLowerCase();
+  const list = useMemo(() => all.filter((e) => (cat === "all" || e.cat === cat) && (!needle || e.name.toLowerCase().includes(needle))), [all, cat, needle]);
+  const shown = list.slice(0, PAGE * pages);
+  const exact = list.some((e) => e.name.toLowerCase() === needle);
+  const add = (e) => { onAdd({ id: e.id, name: e.name, cat: e.cat, sets: e.sets, reps: e.reps }); notify(`${e.name} added. Steps and picture come with it.`, "success"); };
+  const addOwn = () => { const name = q.trim().slice(0, 60); add({ id: `custom:${slugOf(name)}`, name, cat: cat === "all" ? "other" : cat, sets: 3, reps: "10-12" }); setQ(""); };
   return (
     <div className="pp-pick">
-      <div className="pp-head"><button type="button" className="secondary-button" onClick={onClose}>‹ Back to the day</button></div>
-      <label className="pp-field"><span>Search exercises</span><input value={q} placeholder="Squat, row, plank…" onChange={(e) => setQ(e.target.value)} /></label>
-      <div className="pp-chips">{FILTERS.map((c) => <button key={c} type="button" className={`chip${cat === c ? " active" : ""}`} aria-pressed={cat === c} onClick={() => setCat(c)}>{c === "all" ? "All" : MUSCLE_LABEL[c] || c}</button>)}</div>
+      <div className="pp-head"><button type="button" className="secondary-button" onClick={onClose}>‹ Back to the day</button><span className="wp-muted wp-small">{all.length} exercises</span></div>
+      <label className="pp-field"><span>Search exercises</span><input value={q} placeholder="Squat, row, plank…" onChange={(e) => { setQ(e.target.value); setPages(1); }} /></label>
+      <div className="pp-chips">{PICK_CATS.map((c) => <button key={c} type="button" className={`chip${cat === c ? " active" : ""}`} aria-pressed={cat === c} onClick={() => { setCat(c); setPages(1); }}>{catName(c)}</button>)}</div>
       <ul className="pp-pick-list">
-        {list.slice(0, 60).map((e) => (
-          <li key={e.id}><button type="button" disabled={taken.has(e.id)} onClick={() => { onAdd(e); notify(`${e.name} added`, "success"); }}><span><b>{e.name}</b><small> {MUSCLE_LABEL[e.cat] || e.cat} · {e.sets} × {e.reps}</small></span><span aria-hidden="true">{taken.has(e.id) ? "✓" : "＋"}</span></button></li>
-        ))}
+        {shown.map((e) => {
+          const on = taken.has(e.id), d = open === e.id ? lookupExercise(e.id, e) : null;
+          return (
+            <li key={e.id} className={`pp-pick-row${on ? " on" : ""}`}>
+              <div className="pp-pick-main">
+                <button type="button" className="pp-pick-info" aria-expanded={open === e.id} onClick={() => setOpen(open === e.id ? null : e.id)}>
+                  <FigThumb ex={lookupExercise(e.id, e) || e} size={52} />
+                  <span><b>{e.name}</b><small> {catName(e.cat)} · {e.unit === "min" ? `${e.reps} min` : e.unit === "sec" ? `${e.sets} × ${e.reps}s` : `${e.sets} × ${e.reps}`}{e.gear ? ` · ${e.gear}` : ""}</small></span>
+                </button>
+                <button type="button" className="pp-pick-add" disabled={on} aria-label={on ? `${e.name} is already on this day` : `Add ${e.name}`} onClick={() => add(e)}>{on ? "✓" : "＋"}</button>
+              </div>
+              {d && <ol className="pp-steps">{(d.steps || []).map((t, i) => <li key={i}>{t}</li>)}{d.avoid ? <li className="avoid">Avoid: {d.avoid}</li> : null}</ol>}
+            </li>
+          );
+        })}
       </ul>
-      {list.length > 60 && <p className="wp-muted wp-small">Showing 60 of {list.length}. Type to narrow it down.</p>}
-      {!list.length && <p className="wp-muted">No exercise matches.</p>}
+      {list.length > shown.length && <button type="button" className="secondary-button" onClick={() => setPages((n) => n + 1)}>Show {Math.min(PAGE, list.length - shown.length)} more ({list.length - shown.length} left)</button>}
+      {!list.length && <p className="wp-muted">No exercise matches “{q}”.</p>}
+      {needle && !exact && <button type="button" className="primary-button" onClick={addOwn}>＋ Add “{q.trim()}” as my own exercise</button>}
     </div>
   );
 }
