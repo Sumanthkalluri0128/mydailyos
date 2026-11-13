@@ -36,3 +36,12 @@ For minute-timed cardio (Treadmill, Running, Walking...) each set also takes an 
 The Exercise page no longer has its own minutes-only form as the main way to log. It shows the same logger as the Gym log (`LogTab`, exported from `GymLogPage.jsx` / `gym-log.tsx`): the form follows the exercise you pick (lifts: sets x reps x weight, holds: seconds, cardio: minutes + pace). The old minutes form is folded under "Log by time only" for yoga, sports and anything without sets.
 Server rows with `source: "gymlog"` are the mirror of a Gym log entry, so the Exercise page's "Today's activities" list hides them (the logger already shows them with edit / delete). Totals still count each entry once.
 The Gym log's fallback body weight (used when you have not logged a weight in Body) now follows your profile weight (`setDefaultBodyKg` in `gymMath`) instead of a fixed 70 kg, so calories match the Exercise form.
+
+## Body weight sets (v74)
+Leave the weight blank on a rep-counted exercise and the set is a **body weight** set (push-ups, pull-ups, bodyweight squats, dips). It is still stored as `kg: 0`, so every entry you logged before this change is covered with no migration. Nothing stores the body weight itself: it is looked up when the number is shown (`bodyKgFn(body)` = your latest logged weight on or before that day, else your profile weight), so volume, "lifted", weekly volume and exercise progress recalculate whenever you log or correct a weight.
+- Shown as `3 × 12 @ BW`; the weight box says "empty = body weight" and shows `BW` as its placeholder.
+- Volume = typed weight, or body weight for a blank set, x reps. Timed sets (holds, cardio) have no volume. A typed weight is treated as the load itself (a +10 kg weighted pull-up logs 10; it does not add body weight on top).
+- Records for body weight sets stay rep-based (a heavier you is not a "record"); e1RM is still only for weighted sets.
+- Calories already used your body weight per minute, so they are unchanged.
+- Workouts CSV: new last column `weight_type` (`weight` / `bodyweight`), and `set_volume_kg` is filled for body weight sets. `weight_kg` stays blank for them.
+- Helpers in `gymMath`: `isBodyweightSet`, `setLoadKg`, `bodyKgFn`, `entryVolume(e, bodyKg)`; `dayStats`, `rangeStats`, `weeklyDays`, `exerciseSeries` take an optional `bwOf`. Without it they behave as before.

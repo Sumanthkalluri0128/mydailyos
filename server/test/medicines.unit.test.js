@@ -31,3 +31,12 @@ test('reminders skip taken and past doses', () => {
   assert.deepEqual(r, []);
   assert.equal(M.planReminders({ meds: [med()], date: '2026-10-25', nowHm: '09:00' }).length, 1);
 });
+
+test('two doses of one medicine pushed onto the same minute by quiet hours give ONE reminder covering both', () => {
+  const m = med({ times: ['06:00', '06:30'] });
+  const r = M.planReminders({ meds: [m], date: '2026-10-25', quiet: { start: '22:00', end: '07:00' }, nowHm: '00:00' });
+  assert.equal(r.length, 1);
+  assert.deepEqual(r[0].doseTimes, ['06:00', '06:30']);
+  const taken = M.planReminders({ meds: [m], date: '2026-10-25', quiet: { start: '22:00', end: '07:00' }, nowHm: '00:00', takenKeys: new Set(['m1|06:00']) });
+  assert.deepEqual(taken[0].doseTimes, ['06:30']);
+});

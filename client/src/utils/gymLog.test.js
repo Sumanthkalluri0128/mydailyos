@@ -75,3 +75,19 @@ test("the Gym log's fallback body weight can follow the profile weight (calories
   assert.equal(G2.DEFAULT_BODY_KG, 82, "bad values are ignored");
   G2.setDefaultBodyKg(70);
 });
+
+test("a blank weight is body weight: volume, day/week stats and progress follow the weight you had that day", () => {
+  const body = [{ id: "b1", date: "2026-10-01", weightKg: 80, sites: {}, at: 1 }, { id: "b2", date: "2026-11-01", weightKg: 78, sites: {}, at: 2 }];
+  const pull = (id, date, reps) => ({ id, date, exId: "pullup", name: "Pull-up", cat: "Back", unit: "reps", sets: reps.map((r) => ({ kg: 0, reps: r })), at: 1 });
+  const a = pull("a", "2026-10-15", [10, 8]), b = pull("b", "2026-11-05", [10]);
+  const bw = G.bodyKgFn(body);
+  assert.equal(G.entryVolume(a), 0);                       // no body weight given = the old behaviour
+  assert.equal(G.entryVolume(a, 80), 1440);
+  assert.equal(G.dayStats([a, b], "2026-11-05", bw).volumeKg, 780);
+  assert.equal(G.rangeStats([a, b], "2026-10-01", "2026-11-30", bw).volumeKg, 1440 + 780);
+  assert.deepEqual(G.exerciseSeries([a, b], "pullup", bw).map((p) => p.volumeKg), [1440, 780]);
+  assert.equal(G.setsLine(b), "10 @ BW");
+  assert.equal(G.isBodyweightSet({ unit: "sec" }, { kg: 0, reps: 40 }), false);
+  const csv = workoutsCsv([b], body).split("\r\n")[1].split(",");
+  assert.equal(csv[9], "780"); assert.equal(csv[csv.length - 1], "bodyweight");
+});

@@ -73,7 +73,8 @@ export default function ExerciseLogger({ timeForm = null }) {
   // ---- body weight for calories
   const wKnown = G.bodyKgOn(body, date), bodyKg = wKnown || G.DEFAULT_BODY_KG;
   const dayList = entries.filter((e) => e.date === date).sort((a, b) => a.at - b.at);
-  const ds = G.dayStats(entries, date);
+  const bwOf = useMemo(() => G.bodyKgFn(body), [body]); // a set with no weight = body weight, taken from the weight you logged on or before that day (so old entries recalculate too)
+  const ds = G.dayStats(entries, date, bwOf);
   const dayKcal = dayList.reduce((n, e) => n + G.entryKcal(e, bodyKg), 0);
   const dayMin = Math.round(dayList.reduce((n, e) => n + G.entryMinutes(e), 0));
 
@@ -112,7 +113,8 @@ export default function ExerciseLogger({ timeForm = null }) {
   const draftSets = pick ? draft.map((r) => ({ kg: timed ? 0 : G.parseNum(r.kg, 0, 2000) ? fromDisp(G.parseNum(r.kg, 0, 2000), unit) : 0, reps: G.parseNum(r.reps, 1, 5000) || 0, ...(isRun && G.parsePace(r.pace) ? { pace: G.parsePace(r.pace) } : {}) })).filter((x) => x.reps > 0) : [];
   const draftEntry = pick ? { id: "x", date, exId: pick.id, name: pick.name, cat: pick.cat, unit: pick.unit, sets: draftSets, at: 0 } : null;
   const draftKcal = pick && draftSets.length ? G.entryKcal(draftEntry, bodyKg) : 0;
-  const draftVol = pick && !timed && draftSets.length ? Math.round(draftSets.reduce((n, s) => n + s.kg * s.reps, 0)) : 0;
+  const draftVol = pick && !timed && draftSets.length ? G.entryVolume(draftEntry, bodyKg) : 0;
+  const draftHasBw = pick && !timed && draftSets.some((s) => !(s.kg > 0));
   const draftKm = isRun && draftSets.length ? G.entryKm(draftEntry) : 0;
 
   const finish = (entry, pr) => {
@@ -179,9 +181,9 @@ export default function ExerciseLogger({ timeForm = null }) {
               <div className="xl-set" key={i}>
                 <span className="xl-set-n">{i + 1}</span>
                 {!timed && (
-                  <div className="xl-num"><span>{unit}</span>
+                  <div className="xl-num"><span>{unit} <small>· empty = body weight</small></span>
                     <div><button type="button" aria-label={`Set ${i + 1}: less weight`} onClick={() => bump(i, "kg", -1)}>−</button>
-                      <input aria-label={`Set ${i + 1} weight`} inputMode="decimal" value={r.kg} placeholder="0" onChange={(e) => setRow(i, { kg: e.target.value })} />
+                      <input aria-label={`Set ${i + 1} weight`} inputMode="decimal" value={r.kg} placeholder="BW" onChange={(e) => setRow(i, { kg: e.target.value })} />
                       <button type="button" aria-label={`Set ${i + 1}: more weight`} onClick={() => bump(i, "kg", 1)}>＋</button></div>
                   </div>
                 )}
@@ -205,6 +207,7 @@ export default function ExerciseLogger({ timeForm = null }) {
             {draftVol > 0 && <span><b>{fmtW(draftVol, unit)}</b> lifted</span>}
             <span><b>≈ {draftKcal}</b> kcal</span>
           </div>
+          {draftHasBw && draftVol > 0 && <p className="xl-muted">Sets with no weight count as body weight ({fmtW(bodyKg, unit)}{wKnown ? "" : ", your profile weight"}), so they add to what you lifted.</p>}
           {!wKnown && draftKcal > 0 && <p className="xl-muted">Calories assume {G.DEFAULT_BODY_KG} kg. Log your weight in Body for a closer number.</p>}
           <div className="xl-save"><button type="button" className="xl-btn ghost" onClick={cancel}>Cancel</button><button type="button" className="xl-btn" onClick={save}>{editId ? "Save changes" : "Save exercise"}</button></div>
         </section>
@@ -287,7 +290,7 @@ export default function ExerciseLogger({ timeForm = null }) {
                 <FigThumb ex={l && l.id ? l : { id: e.exId, name: e.name, cat: e.cat }} size={52} />
                 <div>
                   <b>{e.name}</b>
-                  <div className="xl-sets-line">{e.sets.filter((s) => s.reps > 0).map((s, i) => <span key={i}>{e.unit === "reps" ? `${s.reps}${s.kg ? ` × ${toDisp(s.kg, unit)}${unit}` : ""}` : `${s.reps}${e.unit === "sec" ? "s" : " min"}${s.pace ? ` @ ${G.fmtPace(s.pace)}/km` : ""}`}</span>)}</div>
+                  <div className="xl-sets-line">{e.sets.filter((s) => s.reps > 0).map((s, i) => <span key={i}>{e.unit === "reps" ? `${s.reps} × ${s.kg ? `${toDisp(s.kg, unit)}${unit}` : "BW"}` : `${s.reps}${e.unit === "sec" ? "s" : " min"}${s.pace ? ` @ ${G.fmtPace(s.pace)}/km` : ""}`}</span>)}</div>
                   <small>{G.entryKm(e) > 0 ? `${G.entryKm(e)} km · ` : ""}≈ {G.entryKcal(e, bodyKg)} kcal{e.note ? ` · ${e.note}` : ""}</small>
                 </div>
               </button>

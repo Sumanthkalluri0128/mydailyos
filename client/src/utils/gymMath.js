@@ -46,11 +46,19 @@ export function e1rm(kg, reps) {
 }
 export const isTimed = (unit) => unit === 'sec' || unit === 'min';
 export const validSets = (e) => e.sets.filter((s) => s.reps > 0);
-export function entryVolume(e) {
+/** A rep-counted set with no weight typed: it is a BODY WEIGHT set (push-ups, pull-ups, bodyweight squats...). Stored as kg 0, so every entry logged before this rule is covered too. */
+export const isBodyweightSet = (e, s) => !isTimed(e.unit) && s.reps > 0 && !(s.kg > 0);
+export const bodyKgFn = (body) => (date) => bodyKgOn(body, date) || DEFAULT_BODY_KG;
+/** The load that moved in one set: the typed weight, or your body weight when the weight was left blank. 0 for timed sets. */
+export const setLoadKg = (e, s, bodyKg = 0) => (isTimed(e.unit) || !(s.reps > 0) ? 0 : s.kg > 0 ? s.kg : bodyKg > 0 ? bodyKg : 0);
+/** Volume = load x reps. A blank weight counts as body weight when `bodyKg` is given (without it only typed weights count, as before). */
+export function entryVolume(e, bodyKg = 0) {
     if (isTimed(e.unit))
         return 0;
-    return Math.round(validSets(e).reduce((n, s) => n + (s.kg > 0 ? s.kg * s.reps : 0), 0));
+    return Math.round(validSets(e).reduce((n, s) => n + setLoadKg(e, s, bodyKg) * s.reps, 0));
 }
+/** True when at least one set of the entry is a body weight set. */
+export const hasBodyweightSets = (e) => validSets(e).some((s) => isBodyweightSet(e, s));
 export const entrySetCount = (e) => validSets(e).length;
 export function entryTotalReps(e) { return validSets(e).reduce((n, s) => n + s.reps, 0); }
 export function topSet(e) {
@@ -65,14 +73,14 @@ export function topSet(e) {
     });
 }
 export const entryBestE1rm = (e) => (isTimed(e.unit) ? 0 : validSets(e).reduce((m, s) => Math.max(m, e1rm(s.kg, s.reps)), 0));
-/** Compact "3 × 10 @ 40 kg" style line. `fmtKg` converts kg for display. */
+/** Compact "3 × 10 @ 40 kg" style line ("3 × 12 @ BW" when no weight was typed: body weight). `fmtKg` converts kg for display. */
 export function setsLine(e, fmtKg = (k) => `${k} kg`) {
     const v = validSets(e);
     if (!v.length)
         return 'No sets';
     const u = e.unit === 'sec' ? 's' : e.unit === 'min' ? ' min' : '';
     const same = v.every((s) => s.kg === v[0].kg && s.reps === v[0].reps && s.pace === v[0].pace);
-    const one = (s) => `${s.reps}${u}${s.kg > 0 && !isTimed(e.unit) ? ` @ ${fmtKg(s.kg)}` : ''}${e.unit === 'min' && s.pace ? ` @ ${fmtPace(s.pace)}/km` : ''}`;
+    const one = (s) => `${s.reps}${u}${!isTimed(e.unit) ? (s.kg > 0 ? ` @ ${fmtKg(s.kg)}` : ' @ BW') : ''}${e.unit === 'min' && s.pace ? ` @ ${fmtPace(s.pace)}/km` : ''}`;
     if (same && v.length > 1)
         return `${v.length} × ${one(v[0])}`;
     return v.map(one).join(', ');
@@ -110,21 +118,21 @@ export function detectPRs(entries, entry) {
     }
     return out;
 }
-export function dayStats(entries, date) {
+export function dayStats(entries, date, bwOf) {
     const list = entries.filter((e) => e.date === date);
-    return { exercises: list.length, sets: list.reduce((n, e) => n + entrySetCount(e), 0), volumeKg: list.reduce((n, e) => n + entryVolume(e), 0) };
+    return { exercises: list.length, sets: list.reduce((n, e) => n + entrySetCount(e), 0), volumeKg: list.reduce((n, e) => n + entryVolume(e, bwOf ? bwOf(e.date) : 0), 0) };
 }
-export function rangeStats(entries, from, to) {
+export function rangeStats(entries, from, to, bwOf) {
     const list = entries.filter((e) => e.date >= from && e.date <= to);
-    return { days: new Set(list.map((e) => e.date)).size, exercises: list.length, sets: list.reduce((n, e) => n + entrySetCount(e), 0), volumeKg: list.reduce((n, e) => n + entryVolume(e), 0) };
+    return { days: new Set(list.map((e) => e.date)).size, exercises: list.length, sets: list.reduce((n, e) => n + entrySetCount(e), 0), volumeKg: list.reduce((n, e) => n + entryVolume(e, bwOf ? bwOf(e.date) : 0), 0) };
 }
 /** Training days per week, oldest first, for the last `weeks` weeks (including the one `endDate` is in). */
-export function weeklyDays(entries, endDate, weeks = 8) {
+export function weeklyDays(entries, endDate, weeks = 8, bwOf) {
     const out = [];
     const last = weekStart(endDate);
     for (let i = weeks - 1; i >= 0; i--) {
         const start = shiftDate(last, -7 * i), end = shiftDate(start, 6);
-        const r = rangeStats(entries, start, end);
+        const r = rangeStats(entries, start, end, bwOf);
         out.push({ start, days: r.days, volumeKg: r.volumeKg });
     }
     return out;
@@ -140,7 +148,7 @@ export function loggingStreak(entries, today) {
     return n;
 }
 /** One point per training day for an exercise (best set of the day), oldest first. */
-export function exerciseSeries(entries, exId) {
+export function exerciseSeries(entries, exId, bwOf) {
     const by = new Map();
     for (const e of entries.filter((x) => x.exId === exId).sort(byTime)) {
         const cur = by.get(e.date) || { date: e.date, e1rm: 0, topKg: 0, topReps: 0, volumeKg: 0 };
@@ -149,7 +157,7 @@ export function exerciseSeries(entries, exId) {
             cur.topReps = Math.max(cur.topReps, s.reps);
         }
         cur.e1rm = Math.max(cur.e1rm, entryBestE1rm(e));
-        cur.volumeKg += entryVolume(e);
+        cur.volumeKg += entryVolume(e, bwOf ? bwOf(e.date) : 0);
         by.set(e.date, cur);
     }
     return [...by.values()].sort((a, b) => (a.date < b.date ? -1 : 1));

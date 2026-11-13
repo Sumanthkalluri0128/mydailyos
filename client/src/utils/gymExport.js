@@ -1,7 +1,7 @@
 // GENERATED from MyDailyOSMobile/src/utils/gymExport.ts (the typed source of truth). Edit that file, then re-run the generator; do not edit this copy.
 // Builds the downloadable files for the Gym log (CSV for Excel / Google Sheets, JSON for a full backup).
 // Pure text-in, text-out so it is unit-tested; utils/gymShare.ts writes the text to a file and opens the share sheet.
-import { SITES, bodyKgOn, DEFAULT_BODY_KG, e1rm, isTimed, navyBodyFat, round1, setKcal, setKm } from './gymMath';
+import { SITES, bodyKgOn, DEFAULT_BODY_KG, e1rm, isBodyweightSet, isTimed, navyBodyFat, round1, setKcal, setKm } from './gymMath';
 const KG_PER_LB = 0.45359237;
 /** One CSV cell. Quotes anything with a comma / quote / newline, and defuses spreadsheet formulas ("=1+1", "@SUM") in free text. */
 export function csvCell(v) {
@@ -17,9 +17,10 @@ export const csvRow = (cells) => cells.map(csvCell).join(',');
 export const toCsv = (rows) => '\uFEFF' + rows.map(csvRow).join('\r\n') + '\r\n';
 const lb = (kg) => round1(kg / KG_PER_LB);
 const byDate = (a, b) => (a.date === b.date ? a.at - b.at : a.date < b.date ? -1 : 1);
-/** One row per SET, so it pivots nicely: date, exercise, set number, weight, reps, estimated 1RM, volume, estimated kcal (at your logged body weight, else 70 kg). */
+/** One row per SET, so it pivots nicely: date, exercise, set number, weight, reps, estimated 1RM, volume, estimated kcal (at your logged body weight, else 70 kg).
+ * A set with no weight is a body weight set: weight_kg stays blank, weight_type says "bodyweight", and set_volume_kg = your body weight on that day x reps. */
 export function workoutsCsv(entries, body = []) {
-    const rows = [['date', 'exercise', 'category', 'set', 'weight_kg', 'weight_lb', 'count', 'count_unit', 'est_1rm_kg', 'set_volume_kg', 'est_kcal', 'rpe', 'pace_min_per_km', 'distance_km', 'note']];
+    const rows = [['date', 'exercise', 'category', 'set', 'weight_kg', 'weight_lb', 'count', 'count_unit', 'est_1rm_kg', 'set_volume_kg', 'est_kcal', 'rpe', 'pace_min_per_km', 'distance_km', 'note', 'weight_type']];
     for (const e of [...entries].sort(byDate)) {
         let n = 0;
         const bodyKg = bodyKgOn(body, e.date) || DEFAULT_BODY_KG;
@@ -27,8 +28,8 @@ export function workoutsCsv(entries, body = []) {
             if (!(s.reps > 0))
                 continue;
             n++;
-            const timed = isTimed(e.unit), loaded = s.kg > 0 && !timed;
-            rows.push([e.date, e.name, e.cat, n, loaded ? s.kg : '', loaded ? lb(s.kg) : '', s.reps, e.unit === 'sec' ? 'seconds' : e.unit === 'min' ? 'minutes' : 'reps', loaded ? e1rm(s.kg, s.reps) : '', loaded ? Math.round(s.kg * s.reps) : '', setKcal(e, s, bodyKg), s.rpe ?? '', e.unit === 'min' && s.pace ? s.pace : '', setKm(e, s) || '', n === 1 ? e.note || '' : '']);
+            const timed = isTimed(e.unit), loaded = s.kg > 0 && !timed, bw = isBodyweightSet(e, s);
+            rows.push([e.date, e.name, e.cat, n, loaded ? s.kg : '', loaded ? lb(s.kg) : '', s.reps, e.unit === 'sec' ? 'seconds' : e.unit === 'min' ? 'minutes' : 'reps', loaded ? e1rm(s.kg, s.reps) : '', loaded ? Math.round(s.kg * s.reps) : bw ? Math.round(bodyKg * s.reps) : '', setKcal(e, s, bodyKg), s.rpe ?? '', e.unit === 'min' && s.pace ? s.pace : '', setKm(e, s) || '', n === 1 ? e.note || '' : '', bw ? 'bodyweight' : loaded ? 'weight' : '']);
         }
     }
     return toCsv(rows);

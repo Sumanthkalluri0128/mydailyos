@@ -221,11 +221,12 @@ function ProgressTab() {
   const trendD = raw.length > 2 ? G.trendOf(raw).map((p) => ({ ...p, value: conv(p.value) })) : undefined;
   const mGoal = m ? targetOf(m) : undefined;
 
-  const week = G.weekStart(t), thisWeek = G.rangeStats(entries, week, G.shiftDate(week, 6)), lastWeek = G.rangeStats(entries, G.shiftDate(week, -7), G.shiftDate(week, -1));
+  const bwOf = G.bodyKgFn(body); // a blank weight = body weight on that day, so past entries recalculate too
+  const week = G.weekStart(t), thisWeek = G.rangeStats(entries, week, G.shiftDate(week, 6), bwOf), lastWeek = G.rangeStats(entries, G.shiftDate(week, -7), G.shiftDate(week, -1), bwOf);
   const kcalWeek = G.kcalIn(entries, body, week, G.shiftDate(week, 6)), kcalLast = G.kcalIn(entries, body, G.shiftDate(week, -7), G.shiftDate(week, -1));
-  const weeks = G.weeklyDays(entries, t, 8), maxDays = Math.max(1, ...weeks.map((x) => x.days)), streak = G.loggingStreak(entries, t);
+  const weeks = G.weeklyDays(entries, t, 8, bwOf), maxDays = Math.max(1, ...weeks.map((x) => x.days)), streak = G.loggingStreak(entries, t);
   const used = G.exercisesUsed(entries), exSel = exId && used.find((u) => u.exId === exId) ? exId : used[0]?.exId;
-  const ser = exSel ? G.exerciseSeries(entries, exSel) : [], exInfo = used.find((u) => u.exId === exSel), exTimed = exInfo ? G.isTimed(exInfo.unit) : false, weighted = ser.some((p) => p.topKg > 0);
+  const ser = exSel ? G.exerciseSeries(entries, exSel, bwOf) : [], exInfo = used.find((u) => u.exId === exSel), exTimed = exInfo ? G.isTimed(exInfo.unit) : false, weighted = ser.some((p) => p.topKg > 0);
   const exPts = ser.map((p) => ({ date: p.date, value: exTimed ? p.topReps : weighted ? toDisp(p.e1rm || p.topKg, unit) : p.topReps }));
   const bestE = Math.max(0, ...ser.map((p) => p.e1rm)), bestKg = Math.max(0, ...ser.map((p) => p.topKg)), bestReps = Math.max(0, ...ser.map((p) => p.topReps)), totalVol = ser.reduce((n, p) => n + p.volumeKg, 0);
   return (

@@ -18,3 +18,8 @@
 ## v73
 - Plan builder: 7 ready-made plans + Blank + Classic copy; every day = warm-up + main + cool-down with live kcal/minutes (utils/planKit.js).
 - Exercise logger redesigned on web and mobile: week strip, search-first picker with pictures, +/- steppers, live kcal, quick-add ("bench 3x10 60").
+
+## v74
+- Gym log / Exercise logger: a blank weight is now a body weight set. Shown as "@ BW", counted in volume at your body weight on that day, and recalculated for old entries too (see docs/GYM_LOG.md). Records for these sets stay rep-based. CSV gained `weight_type`.
+- Medicines: reminders for one medicine with several times no longer ring twice (phone: the reminder scheduler could run twice at once and leave the first set ringing; it now runs one at a time and clears leftovers. Quiet hours that pushed two doses onto the same minute now give one reminder). Web reminder timers have the same overlap guard.
+- Phone: the medicine notification has a "✓ Taken" button that ticks the dose(s) without opening the app and cancels its remaining reminder.

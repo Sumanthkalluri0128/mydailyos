@@ -9,16 +9,17 @@ import { NOTIFY_KEY } from "./Medicines";
 
 export default function MedReminderHost() {
   useEffect(() => {
-    let timers = []; let alive = true;
+    let timers = []; let alive = true; let run = 0;   // run: only the newest plan() may set timers (a slower, older fetch used to add its timers after a newer one, so a dose you had just ticked still rang, or rang twice)
     const clear = () => { timers.forEach(clearTimeout); timers = []; };
     const plan = async () => {
+      const mine = ++run;
       clear();
       let on = false; try { on = localStorage.getItem(NOTIFY_KEY) === "1" && typeof Notification !== "undefined" && Notification.permission === "granted"; } catch { /* ignore */ }
       if (!on) return;
       const d = new Date(); const now = `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
       try {
         const r = await apiFetch(`${API_URL}/api/meds/reminders?date=${getLocalDate()}&now=${now}`); const j = await r.json();
-        if (!alive || !j.success) return;
+        if (!alive || mine !== run || !j.success) return;
         for (const x of j.reminders.filter((q) => !q.nextDay)) {
           const [h, m] = x.at.split(":").map(Number); const ms = new Date(d.getFullYear(), d.getMonth(), d.getDate(), h, m).getTime() - Date.now();
           if (ms <= 0 || ms > 12 * 3600e3) continue;

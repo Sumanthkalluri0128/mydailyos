@@ -38,8 +38,15 @@ function planReminders({ meds = [], date, quiet = { start: '22:00', end: '07:00'
     let at = toMin(d.time), shifted = false, nextDay = false;
     if (inQuiet(at)) { nextDay = qs > qe && at >= qs; at = qe; shifted = true; }   // late-evening doses wait for tomorrow morning
     if (!nextDay && toHm(at) <= nowHm) continue;           // already past for today
-    out.push({ medId: d.medId, name: d.name, dose: d.dose, doseTime: d.time, at: toHm(at), shifted, nextDay });
+    out.push({ medId: d.medId, name: d.name, dose: d.dose, doseTime: d.time, doseTimes: [d.time], at: toHm(at), shifted, nextDay });
   }
-  return out.sort((a, b) => a.at.localeCompare(b.at));
+  // One reminder per medicine and moment: quiet hours can pile two doses of the same medicine onto the same minute (06:00 and 06:30 both wait for 07:00), which used to ring twice.
+  const merged = new Map();
+  for (const r of out) {
+    const k = `${r.medId}|${r.at}|${r.nextDay}`, cur = merged.get(k);
+    if (!cur) merged.set(k, { ...r, doseTimes: [...r.doseTimes] });
+    else cur.doseTimes.push(...r.doseTimes);
+  }
+  return [...merged.values()].sort((a, b) => a.at.localeCompare(b.at));
 }
 module.exports = { NOTE, HM, cleanMed, dosesFor, checklist, planReminders, toMin, toHm };
