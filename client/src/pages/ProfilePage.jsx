@@ -35,6 +35,9 @@ function ProfilePage({ onBack }) {
     targetWeightKg: "",
   });
 
+  // The saved profile as the server holds it: activity mode, the 7-day activity reading, measured maintenance, your calorie floor.
+  // The preview below must use them, or it shows a number the app is not actually using.
+  const [live, setLive] = useState(null);
   const [loading, setLoading] = useState(false);
   const [loadingProfile, setLoadingProfile] =
     useState(true);
@@ -50,7 +53,12 @@ function ProfilePage({ onBack }) {
     heightCm: form.heightCm,
     currentWeightKg: form.currentWeightKg,
     activityLevel: form.activityLevel,
+    activityMode: live ? live.activityMode : undefined,
+    autoActivity: live ? live.autoActivity : undefined,
+    measuredTdee: live ? live.measuredTdee : undefined,
+    ageSetAt: live ? live.ageSetAt : undefined,
     goals: {
+      calorieFloor: live ? live.calorieFloor : undefined,
       targetWeightKg: form.targetWeightKg === "" ? null : Number(form.targetWeightKg),
       weeklyPaceKg: form.weeklyPaceKg,
       calorieMode: form.calorieMode,
@@ -100,6 +108,7 @@ function ProfilePage({ onBack }) {
 
       if (data.success) {
         const profile = data.profile;
+        setLive({ activityMode: profile.activityMode, autoActivity: profile.autoActivity, measuredTdee: profile.measuredTdee, ageSetAt: profile.ageSetAt, calorieFloor: profile.goals?.calorieFloor });
 
         setForm({
           name: profile.name || "",

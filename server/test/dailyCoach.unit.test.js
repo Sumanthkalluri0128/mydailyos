@@ -75,13 +75,13 @@ test('day after a cheat day: recovery with no fasting, steps +2,000, never a cut
   assert.ok(g.recovery.floor >= 1700);
 });
 
-test('missed training and a no-activity day change nothing in the calories, and say so', () => {
+test('missed training and a no-activity day barely move the calories (no cut, no punishment), and say so', () => {
   const ds = days(15, (i) => (i === 14 ? { steps: 3000, exerciseMinutes: 0 } : {}));   // Mon 19 Jan = planned gym day, lazy
   const g = D.dayGuide({ profile: P(), days: ds, today: TODAY, target: 1750, floor: 1500 });
   assert.equal(g.yesterday.missedWorkout, true);
   assert.equal(g.maintenance.label, 'no_activity');
   assert.ok(g.notes.some((n) => /missed yesterday/i.test(n) && /no calorie cut/i.test(n)));
-  assert.ok(g.notes.some((n) => /changes nothing in your calories/.test(n)));
+  assert.ok(g.notes.some((n) => /moves it only a little/.test(n)));
   assert.equal(g.recovery, null);
 });
 
@@ -139,4 +139,56 @@ test('entry check: no-activity day and a missed session are explained, never pun
   assert.match(t, /No-activity day/);
   assert.match(t, /no penalty/);
   assert.ok(!/fast|skip dinner|burn it off/i.test(t.replace(/no fasting/gi, '')));
+});
+
+// ---------------------------------------------------------------------------------------------- 7-day activity average (auto mode)
+const day = (d, steps, min) => ({ row: { date: d, steps, exerciseMinutes: min }, trained: min >= 30 });
+const week = (...days) => days;
+
+test('auto: the target follows a 7-day average, so two quiet days inside a good week only dip it a little', () => {
+  // The real week 6-12 Nov: five good days, two quiet days (2,891 and 1,244 steps), no workout on those.
+  const w = week(day('d12', 6649, 68), day('d11', 1244, 0), day('d10', 2891, 0), day('d9', 10990, 0), day('d8', 20264, 0), day('d7', 15552, 0), day('d6', 12009, 50));
+  const pr = P({ sex: 'male', age: 26, heightCm: 173, currentWeightKg: 77.3, activityMode: 'auto', goals: { targetWeightKg: 71, weeklyPaceKg: 0.75 } });
+  const a = D.nextAutoActivity(null, pr, w[0], w[1], 'd13', w);
+  assert.equal(a.windowDays, 7);
+  assert.equal(a.multiplier, 1.45);                       // (5 x 1.55 + 2 x 1.2) / 7
+  const e = E.expectedEnergy({ ...pr, autoActivity: a });
+  assert.ok(Math.abs(e.tdee - 1729 * 1.45) < 5);          // ~2,507: what the weight trend measured (~2,510)
+  assert.ok(e.calorieTarget > 1600, `target ${e.calorieTarget} must not fall to the floor on a mostly good week`);
+});
+
+test('auto: a whole quiet week does lower the target, and a good week brings it back', () => {
+  const pr = P({ activityMode: 'auto' });
+  const quiet = Array.from({ length: 7 }, (_, i) => day(`q${i}`, 3000, 0));
+  const aq = D.nextAutoActivity(null, pr, quiet[0], quiet[1], 'x', quiet);
+  assert.equal(aq.multiplier, 1.2);
+  assert.equal(aq.targetLevel, 'sedentary');
+  const busy = Array.from({ length: 7 }, (_, i) => day(`b${i}`, 10000, i % 2 ? 60 : 0));
+  const ab = D.nextAutoActivity(aq, pr, busy[0], busy[1], 'y', busy);
+  assert.equal(ab.multiplier, 1.55);
+});
+
+test('auto: days with no data are skipped (never counted as lazy); too little data keeps the previous reading', () => {
+  const pr = P({ activityMode: 'auto' });
+  const prev = { multiplier: 1.5, targetLevel: 'moderate' };
+  const sparse = [day('a', 0, 0), day('b', 0, 0), day('c', 9000, 0), day('d', 0, 0), day('e', 0, 0), day('f', 0, 0), day('g', 0, 0)];
+  const a = D.nextAutoActivity(prev, pr, sparse[0], sparse[1], 'z', sparse);
+  assert.equal(a.windowDays, 1);
+  assert.equal(a.multiplier, 1.5);
+  const some = [day('a', 0, 0), day('b', 0, 0), day('c', 9000, 0), day('d', 8000, 0), day('e', 12000, 0), day('f', 0, 0), day('g', 0, 0)];
+  assert.equal(D.nextAutoActivity(prev, pr, some[0], some[1], 'z', some).windowDays, 3);
+});
+
+test('auto multiplier is ignored in manual mode and when out of range', () => {
+  const m = P({ activityMode: 'manual', activityLevel: 'light', autoActivity: { multiplier: 1.2, targetLevel: 'sedentary' } });
+  assert.equal(E.autoMultiplierOf(m), null);
+  assert.equal(E.expectedEnergy(m).tdee, E.expectedEnergy(P({ activityMode: 'manual', activityLevel: 'light' })).tdee);
+  assert.equal(E.autoMultiplierOf(P({ activityMode: 'auto', autoActivity: { multiplier: 5 } })), null);
+});
+
+test('maintenance in auto mode uses the 7-day average when there is one', () => {
+  const pr = P({ activityMode: 'auto', autoActivity: { multiplier: 1.45, windowDays: 7, targetLevel: 'light' } });
+  const m = D.selectMaintenance(pr, { date: 'y', steps: 1000, exerciseMinutes: 0 }, false);
+  assert.equal(m.source, 'average');
+  assert.equal(m.tdee, E.expectedEnergy(pr).tdee);
 });

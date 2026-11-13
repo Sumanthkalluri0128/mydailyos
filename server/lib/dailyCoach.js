@@ -21,7 +21,9 @@ const CFG = {
   unloggedBelow: 0.35,       // under 35 % of target = not really logged: unknown, never judged
   noActivitySteps: 5000,     // under this AND no training = a no-activity day (same line as the PDF's Plan B)
   trainedMinutes: 30,        // logged exercise of this length (or any logged sets) counts as a training day
-  streakForTarget: 2,        // days in a row that agree before the calorie target level moves
+  streakForTarget: 2,        // days in a row that agree before the calorie target level moves (legacy reading, used until a 7-day average exists)
+  windowDays: 7,             // AUTO mode averages the last 7 days of activity (steps + training), so the target follows your real week
+  windowMinDays: 3,          // days with usable data needed before the average is trusted; fewer = keep the previous reading
   noActivityMaxPal: 1.27, activeMinPal: 1.5, gymDayPal: 0.21,
   floorTrained: 1700, floorNoActivity: 1600,   // the PDF's floors: used for warnings and the recovery guarantee
   recoverySteps: 2000, closeOfDayHour: 21, gapDays: 4,
@@ -83,6 +85,12 @@ function selectMaintenance(profile, yRow, yTrained) {
     const level = profile?.activityLevel || 'moderate';
     return { mode: 'manual', source: 'manual', level, label: level === 'sedentary' ? 'no_activity' : 'moderate', tdee: tdeeAt(profile, level), basis: `you chose "${level.replace('_', ' ')}"` };
   }
+  const avg = E.autoMultiplierOf(profile);
+  if (avg) {
+    const e = E.expectedEnergy(profile);
+    const level = levelNearest(avg);
+    return { mode: 'auto', source: 'average', level, label: level === 'sedentary' ? 'no_activity' : 'moderate', tdee: e ? e.tdee : null, basis: `your last ${profile.autoActivity.windowDays || 7} days of steps and training (${avg}x resting)` };
+  }
   const label = yRow ? activityLabel(yRow, yTrained) : null;
   if (!label) {
     const level = effectiveLevel(profile);
@@ -93,17 +101,27 @@ function selectMaintenance(profile, yRow, yTrained) {
   return { mode: 'auto', source: 'yesterday', level, label, tdee: tdeeAt(profile, level), basis: `yesterday (${yRow.date}): ${what}` };
 }
 
+/** The app level whose multiplier is closest to an average multiplier (used for labels; the average itself drives the calories). */
+function levelNearest(m) { return m < 1.2875 ? 'sedentary' : m < 1.4625 ? 'light' : 'moderate'; }
+
 /**
  * The stored auto state, refreshed each day. The TARGET level only moves when the last STREAK days agree, so one lazy day
  * (or one big day) never changes what you eat. y1 = yesterday, y2 = the day before: [{date, row, trained}].
  */
-function nextAutoActivity(prev, profile, y1, y2, today) {
+function nextAutoActivity(prev, profile, y1, y2, today, window = null) {
   const keep = (prev && prev.targetLevel) || profile?.activityLevel || 'moderate';
   const l1 = y1 ? appLevelFor(activityLabel(y1.row, y1.trained), y1.row, y1.trained) : null;
   const l2 = y2 ? appLevelFor(activityLabel(y2.row, y2.trained), y2.row, y2.trained) : null;
   const streak = l1 && l1 === l2 ? CFG.streakForTarget : l1 ? 1 : 0;
   const targetLevel = streak >= CFG.streakForTarget ? l1 : keep;
-  return { asOf: today, yesterday: y1 ? { date: y1.row.date, label: activityLabel(y1.row, y1.trained), level: l1 } : null, streak, targetLevel };
+  const base = { asOf: today, yesterday: y1 ? { date: y1.row.date, label: activityLabel(y1.row, y1.trained), level: l1 } : null, streak, targetLevel };
+  if (!Array.isArray(window)) return base;
+  // The 7-day reading: every day with data gets its own multiplier (no activity 1.2, light 1.375, moderate 1.55); maintenance uses their average.
+  // Days with nothing to judge by (steps not synced, nothing trained) are skipped, never counted as lazy.
+  const mults = window.map((w) => (w ? appLevelFor(activityLabel(w.row, w.trained), w.row, w.trained) : null)).filter(Boolean).map((l) => E.ACTIVITY_MULTIPLIER[l]);
+  if (mults.length < CFG.windowMinDays) return { ...base, multiplier: prev && Number(prev.multiplier) > 0 ? prev.multiplier : null, windowDays: mults.length };
+  const multiplier = Math.round((mults.reduce((s, x) => s + x, 0) / mults.length) * 1000) / 1000;
+  return { ...base, multiplier, windowDays: mults.length, targetLevel: levelNearest(multiplier) };
 }
 
 // ------------------------------------------------------------------------------------------------ what am I?
@@ -199,8 +217,9 @@ function dayGuide({ profile, days = [], today, strengthDates = null, target = 0,
   const usual = effectiveLevel(profile);
 
   if (maint.tdee) notes.push(`Maintenance today is about ${r10(maint.tdee).toLocaleString('en-US')} kcal (${maint.label.replace('_', ' ')}; ${maint.basis}).`);
-  if (maint.mode === 'auto' && noAct && usual !== 'sedentary') notes.push(`Yesterday was a no-activity day: that one day changes nothing in your calories (no cut, no punishment). Hit today's steps${gymToday ? ' and training' : ''}. ${CFG.streakForTarget} such days in a row lower the calorie target to match.`);
-  if (maint.mode === 'auto' && usual === 'sedentary' && profile?.autoActivity?.streak >= CFG.streakForTarget) notes.push('Two no-activity days in a row: your calorie target now uses the no-activity level (never below your safe floor). 20 minutes of walking is the fastest way back.');
+  if (maint.mode === 'auto' && noAct && usual !== 'sedentary') notes.push(`Yesterday was a no-activity day: your target follows your last ${CFG.windowDays} days, so one day moves it only a little (no cut, no punishment). Hit today's steps${gymToday ? ' and training' : ''}.`);
+  if (maint.mode === 'auto' && E.autoMultiplierOf(profile) && profile.autoActivity.windowDays) notes.push(`Your calorie target follows your last ${profile.autoActivity.windowDays} days of steps and training (about ${profile.autoActivity.multiplier}x your resting burn). More active days raise it, quiet days lower it, never below your safe floor.`);
+  else if (maint.mode === 'auto' && usual === 'sedentary' && profile?.autoActivity?.streak >= CFG.streakForTarget) notes.push('Two no-activity days in a row: your calorie target now uses the no-activity level (never below your safe floor). 20 minutes of walking is the fastest way back.');
   if (missed) notes.push("You missed yesterday's planned training: no calorie cut, no doubling up, no punishment cardio. Continue the plan.");
   if (yKind === 'under') notes.push(`Yesterday was below your safe floor (${safeFloor} kcal): eat today's plan in full, smaller more frequent meals, protein first.`);
   else if (yKind === 'low') notes.push('Yesterday was under plan: do not bank it. Eat today as planned, protein first.');

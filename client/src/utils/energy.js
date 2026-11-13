@@ -67,12 +67,22 @@ function goalDirection(current, target) {
 
 /**
  * The activity level the calorie target uses. "manual" (or no automatic reading yet) = the level the person chose.
- * "auto" = the level worked out from recent days (lib/dailyCoach.js): it only moves after 2 days in a row agree, so one lazy day
- * never changes what you eat. Identical in the server, web and mobile copies.
+ * "auto" = the level worked out from recent days (lib/dailyCoach.js): it only moves after 2 days in a row agree (and, with a 7-day reading, `autoActivity.multiplier` replaces it: see autoMultiplierOf). Identical in the server, web and mobile copies.
  */
 function activityLevelOf(p) {
   const a = p && p.autoActivity;
   return p && p.activityMode === 'auto' && a && ACTIVITY_MULTIPLIER[a.targetLevel] ? a.targetLevel : (p && p.activityLevel);
+}
+
+/**
+ * AUTO mode, the number that matters: the average of the last days' own activity multipliers (server: lib/dailyCoach.js nextAutoActivity,
+ * refreshed once a day from steps + training). A quiet day or two moves maintenance only a little; a whole quiet week moves it a lot.
+ * null in manual mode, or before there are enough days to average: the chosen level is used then. Identical in the server, web and phone copies.
+ */
+function autoMultiplierOf(p) {
+  const a = p && p.autoActivity;
+  const m = Number(a && a.multiplier);
+  return p && p.activityMode === 'auto' && Number.isFinite(m) && m >= 1.2 && m <= 1.9 ? m : null;
 }
 
 /**
@@ -100,7 +110,7 @@ function expectedEnergy(p) {
   const b = bmr({ weightKg, heightCm, ageYears: age, sex: p.sex });
   if (b === null) return null;
 
-  const mult = ACTIVITY_MULTIPLIER[activityLevelOf(p)] || ACTIVITY_MULTIPLIER.moderate;
+  const mult = autoMultiplierOf(p) || ACTIVITY_MULTIPLIER[activityLevelOf(p)] || ACTIVITY_MULTIPLIER.moderate;
   const blend = blendTdee(b * mult, p.measuredTdee); // formula maintenance, moved toward what your body measurably burns once there is enough data
   const tdee = blend.tdee;
   const goals = p.goals || {};
@@ -366,7 +376,7 @@ function weightProgress({ startKg, currentKg, targetKg, paceKgPerWeek = 0.5 } = 
 
 export {
   proteinRangeAt, maxSafeWeeklyLossKg, blendTdee, ageNow, proteinBasisKg, FAT_MIN_G_PER_KG, FIBRE_FLOOR_G, MEASURED,
-  activityLevelOf, calorieFloorOf,
+  activityLevelOf, autoMultiplierOf, calorieFloorOf,
   EXERCISE_CREDIT, ACTIVITY_MULTIPLIER, KCAL_PER_KG, KCAL_PER_STEP_PER_KG, DEFAULT_TARGET,
   bmr, goalDirection, expectedEnergy, dailyTarget, dayBalance,
   stepCalories, stepDistanceKm, waterTargetMl, macroTargets, BODY_TYPES, BODY_LABELS, macroRanges, rangeStatus, limitTargets, weeksToGoal, estimateBurn, calorieBalance,

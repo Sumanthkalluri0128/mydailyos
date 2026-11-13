@@ -68,6 +68,7 @@ export function BodyProfileCard(props) {
           Extra Active
         </option>
       </select>
+      <p className="muted">Your calorie target in Automatic mode follows your last 7 days of steps and training. This level is the starting point, and the level used if you choose it yourself on Today.</p>
 
     </div>
     </>
