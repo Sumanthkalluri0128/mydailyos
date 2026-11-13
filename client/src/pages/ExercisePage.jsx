@@ -10,7 +10,7 @@ import { estimateBurn } from "../utils/energy";
 import Training from "../components/Training";
 // ONE logger for everything you do: the same screen as the Gym log (sets x reps x weight for lifts, seconds for holds, minutes + pace for cardio).
 // What you log here lands in the Gym log and is counted once in Exercise and Home (utils/gymSyncRunner.js), so nothing is entered twice.
-import { LogTab } from "./GymLogPage";
+import ExerciseLogger from "../components/exercise/ExerciseLogger";
 
 function ExercisePage({ onBack }) {
   const [activities, setActivities] = useState([]);
@@ -281,117 +281,10 @@ function ExercisePage({ onBack }) {
   const historyDates = Object.keys(byDay).sort().reverse();
   const historyCalories = history.reduce((t, l) => t + Number(l.caloriesBurned || 0), 0);
 
-  return (
-    <div className="exercise-page">
-
-      {/* ======================================================
-          HEADER
-      ====================================================== */}
-
-      <div className="page-header">
-
-        <div>
-          <div className="bd-head"><h1>Exercise</h1><Buddy who="goku" scene="lift" size={76} says="Let's lift!" /></div>
-
-          <p>
-            Track your activities and calories burned.
-          </p>
-        </div>
-
-        <button
-          className="secondary-button"
-          onClick={onBack}
-        >
-          ← Dashboard
-        </button>
-
-      </div>
-
-
-
-      {/* ======================================================
-          TODAY SUMMARY
-      ====================================================== */}
-
-      <div className="exercise-summary-grid">
-
-        <div className="card">
-          <span className="card-icon">
-            🔥
-          </span>
-
-          <p>Calories Burned</p>
-
-          <h3>
-            {Math.round(totalCalories)}
-            <small> kcal</small>
-          </h3>
-        </div>
-
-
-        <div className="card">
-          <span className="card-icon">
-            ⏱️
-          </span>
-
-          <p>Exercise Time</p>
-
-          <h3>
-            {totalMinutes}
-            <small> min</small>
-          </h3>
-        </div>
-
-
-        <div className="card">
-          <span className="card-icon">
-            🏃
-          </span>
-
-          <p>Activities</p>
-
-          <h3>
-            {logs.length}
-          </h3>
-        </div>
-
-      </div>
-
-
-      {/* ======================================================
-          LOG AN EXERCISE (the same logger as the Gym log: the form follows the exercise you pick)
-      ====================================================== */}
-
-      <div className="large-card">
-        <div className="section-header">
-          <div>
-            <h2>Log an exercise</h2>
-            <p>Lifts take sets, reps and weight. Holds take seconds. Cardio takes minutes and pace. Pick one and the form changes to match.</p>
-          </div>
-        </div>
-        <LogTab />
-      </div>
-
-      <Training activities={activities} onLogged={fetchLogs} />
-
-      <details className="large-card exercise-time-only">
-        <summary><strong>Log by time only</strong> <span className="md-sub">yoga, sports, anything without sets</span></summary>
-        <div>
-
-        <div className="section-header">
-
-          <div>
-            <h2>Add by time</h2>
-
-            <p>
-              Enter how long you did it.
-            </p>
-          </div>
-
-        </div>
-
-
-        <form
+  const timeForm = (
+    <div className="xl-timeform">
+      <p className="xl-muted">Pick the activity and how long you did it. Calories are estimated from the activity, your weight and the time, or type your own number.</p>
+<form
           className="exercise-form"
           onSubmit={handleAddActivity}
         >
@@ -565,11 +458,103 @@ function ExercisePage({ onBack }) {
           </button>
 
         </form>
+    </div>
+  );
+
+  return (
+    <div className="exercise-page">
+
+      {/* ======================================================
+          HEADER
+      ====================================================== */}
+
+      <div className="page-header">
+
+        <div>
+          <div className="bd-head"><h1>Exercise</h1><Buddy who="goku" scene="lift" size={76} says="Let's lift!" /></div>
+
+          <p>
+            Track your activities and calories burned.
+          </p>
+        </div>
+
+        <button
+          className="secondary-button"
+          onClick={onBack}
+        >
+          ← Dashboard
+        </button>
 
       </div>
 
 
-      </details>
+
+      {/* ======================================================
+          TODAY SUMMARY
+      ====================================================== */}
+
+      <div className="exercise-summary-grid">
+
+        <div className="card">
+          <span className="card-icon">
+            🔥
+          </span>
+
+          <p>Calories Burned</p>
+
+          <h3>
+            {Math.round(totalCalories)}
+            <small> kcal</small>
+          </h3>
+        </div>
+
+
+        <div className="card">
+          <span className="card-icon">
+            ⏱️
+          </span>
+
+          <p>Exercise Time</p>
+
+          <h3>
+            {totalMinutes}
+            <small> min</small>
+          </h3>
+        </div>
+
+
+        <div className="card">
+          <span className="card-icon">
+            🏃
+          </span>
+
+          <p>Activities</p>
+
+          <h3>
+            {logs.length}
+          </h3>
+        </div>
+
+      </div>
+
+
+      {/* ======================================================
+          LOG AN EXERCISE (the same logger as the Gym log: the form follows the exercise you pick)
+      ====================================================== */}
+
+      <div className="large-card">
+        <div className="section-header">
+          <div>
+            <h2>Log an exercise</h2>
+            <p>Search, tap, fill the sets, save. Yoga, sports and anything without sets go under “By time”.</p>
+          </div>
+        </div>
+        <ExerciseLogger timeForm={timeForm} />
+      </div>
+
+      <Training activities={activities} onLogged={fetchLogs} />
+
+
 
       {/* ======================================================
           TODAY'S ACTIVITIES

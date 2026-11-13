@@ -14,3 +14,7 @@
 - Day guide notes and maintenance basis reworded to match. New tests in test/dailyCoach.unit.test.js.
 - scripts/diagnoseCalories.js: read-only report that explains a user target.
 - v71 sync audit: coach "no-activity day" note now compares against the live (7-day) maintenance; day guide shows "7-day average" as its basis; client/src/utils/calories.js uses the shared multiplier table; the daily refresh never recomputes for an earlier date (no web/phone flip-flop); shared fixtures (server, web, phone) and the web-vs-server parity test now cover the 7-day average.
+
+## v73
+- Plan builder: 7 ready-made plans + Blank + Classic copy; every day = warm-up + main + cool-down with live kcal/minutes (utils/planKit.js).
+- Exercise logger redesigned on web and mobile: week strip, search-first picker with pictures, +/- steppers, live kcal, quick-add ("bench 3x10 60").

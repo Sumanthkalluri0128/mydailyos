@@ -54,7 +54,7 @@ test("add, edit, move, remove exercises; no duplicates in a day", () => {
   plans = setDayTitle(plans, p.id, 1, "Push day");
   assert.equal(plans[0].days[0].title, "Push day");
   plans = clearDay(plans, p.id, 1);
-  assert.deepEqual(plans[0].days[0], { dow: 1, title: "", items: [] });
+  assert.deepEqual(plans[0].days[0], { dow: 1, title: "", items: [], warm: [], cool: [] });
   // the original was never mutated
   assert.equal(p.days[0].items.length, 0);
   let big = [p];
@@ -69,7 +69,7 @@ test("cleanPlans survives bad data", () => {
   assert.equal(out.length, 1);
   assert.equal(out[0].name, "My plan");
   assert.equal(out[0].days.length, 7);
-  assert.deepEqual(out[0].days[1].items, [{ id: "a", name: "A", sets: 3, reps: "7" }]);
+  assert.deepEqual(out[0].days[1].items, [{ id: "a", name: "A", cat: "", unit: "reps", sets: 3, reps: "7" }]);
 });
 
 test("customToDays: rest days, training days, shape the page expects", () => {
@@ -114,4 +114,62 @@ test("a session on a personal day is saved with the plan's own id and keeps its 
   assert.equal(rec.exercises.length, 1);
   // next time the usual rule steps it up
   assert.ok(suggestNext({ ...day.blocks[0].items[0] }, [rec]).r >= 20);
+});
+
+// ---- warm-up, main workout, cool-down and the calorie estimate
+import { TEMPLATES, WARM, COOL, dayEstimate, doseMinutes, suggestWarmCool, templateDays } from "./planKit.js";
+import { GYM_CATALOG } from "./gymCatalog.js";
+import { addKit, copyDay, planFromTemplate, removeKit, setWarmCool, trainingDays, updateKit } from "./customPlans.js";
+
+test("every template exercise exists in the catalogue, and every training day has warm-up, main and cool-down", () => {
+  const names = new Set(GYM_CATALOG.map((c) => c.name));
+  for (const t of TEMPLATES) {
+    const days = templateDays(t);
+    assert.ok(days.length >= 2, t.id);
+    for (const d of days) {
+      assert.ok(d.items.length >= 1 && d.warm.length >= 2 && d.cool.length >= 2, `${t.id} ${d.title}`);
+      for (const it of d.items) assert.ok(names.has(it.name), `${t.id}: ${it.name} is not in the catalogue`);
+    }
+  }
+});
+
+test("planFromTemplate fills the week, and the day shape feeds Today with warm-up and cool-down blocks", () => {
+  const p = planFromTemplate("t-legs", "My leg plan");
+  assert.equal(p.name, "My leg plan");
+  assert.equal(trainingDays(p).length, 2);
+  const days = customToDays(p, () => null, 77);
+  const mon = days.find((d) => d.dow === 1);
+  assert.deepEqual(mon.blocks.map((b) => b.id), ["warm", "main", "cool"]);
+  assert.ok(mon.kcal > 100 && Number(mon.minutes) > 20);
+  assert.equal(days.find((d) => d.dow === 2).kind, "rest");
+});
+
+test("kit edits: add, change the dose, remove, auto-fill, copy a day", () => {
+  let plans = [newPlan("X")];
+  const id = plans[0].id;
+  plans = addItem(plans, id, 1, { id: "a", name: "Back Squat", cat: "legs", sets: 3, reps: "8-10" });
+  plans = addKit(plans, id, 1, "warm", { id: WARM[0].id, name: WARM[0].name, dose: WARM[0].dose });
+  plans = addKit(plans, id, 1, "warm", { id: WARM[0].id, name: "dup", dose: "1 min" });
+  assert.equal(plans[0].days[0].warm.length, 1);
+  plans = updateKit(plans, id, 1, "warm", WARM[0].id, "5 min");
+  assert.equal(plans[0].days[0].warm[0].dose, "5 min");
+  plans = removeKit(plans, id, 1, "warm", WARM[0].id);
+  assert.equal(plans[0].days[0].warm.length, 0);
+  plans = setWarmCool(plans, id, 1, suggestWarmCool(plans[0].days[0].items));
+  assert.ok(plans[0].days[0].warm.length >= 2 && plans[0].days[0].cool.length >= 2);
+  plans = copyDay(plans, id, 1, 3);
+  assert.deepEqual(plans[0].days[2].items.map((x) => x.id), ["a"]);
+  assert.equal(plans[0].days[2].warm.length, plans[0].days[0].warm.length);
+});
+
+test("calorie estimate follows sets, reps and body weight", () => {
+  const day = { items: [{ id: "a", name: "Back Squat", cat: "legs", unit: "reps", sets: 3, reps: "10" }], warm: [], cool: [] };
+  const base = dayEstimate(day, 70).mainKcal;
+  assert.ok(base > 0);
+  assert.ok(dayEstimate({ ...day, items: [{ ...day.items[0], sets: 6 }] }, 70).mainKcal > base * 1.9);   // twice the sets, about twice the burn
+  assert.ok(dayEstimate({ ...day, items: [{ ...day.items[0], reps: "20" }] }, 70).mainKcal > base);       // more reps, more time under tension
+  assert.ok(dayEstimate(day, 90).mainKcal > base);                                                          // heavier body, more burn
+  assert.equal(doseMinutes("3 min"), 3);
+  assert.equal(doseMinutes("30 sec / side"), 1);
+  assert.ok(COOL.every((c) => c.id.startsWith("cd-")) && WARM.every((w) => w.id.startsWith("wu-")));
 });

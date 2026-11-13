@@ -109,7 +109,7 @@ export default function WorkoutPlanPage({ startView, profile }) {
       };
     }
     if (customPlan) {
-      const days = customToDays(customPlan, lookupExercise); // library, wide catalogue and typed exercises all open with steps + picture
+      const days = customToDays(customPlan, lookupExercise, weightKg); // library, wide catalogue and typed exercises all open with steps + picture
       const week = weekNumber(st.startDate, today);
       const strip = weekStrip(st.sessions, today, days);
       return {
@@ -528,7 +528,7 @@ function PlanView({ plan, smart, smartOn, st, setSt, today, onOpen, onSource, cu
           <p className="wp-muted wp-small">{smartOn ? "Made from your body, goal and the workouts you log. Weights and days adjust every week by themselves." : customPlan ? `You are using your own plan “${customPlan.name}”. Add or delete exercises in My plans below.` : canSmart ? "The fixed 7-day beginner plan. Switch to Smart for a plan that adjusts to your progress, or build your own under My plans." : whyNot}</p>
         </section>
 
-        {(showMine || customPlan) && <PersonalPlans st={st} setSt={setSt} activeId={customPlan ? customPlan.id : ""} onUse={(id) => { setShowMine(true); onSource(sourceFor(id)); }} />}
+        {(showMine || customPlan) && <PersonalPlans st={st} setSt={setSt} weightKg={weightKg} activeId={customPlan ? customPlan.id : ""} onUse={(id) => { setShowMine(true); onSource(sourceFor(id)); }} />}
 
         {customPlan ? (
           <article className="wp-hero plan">

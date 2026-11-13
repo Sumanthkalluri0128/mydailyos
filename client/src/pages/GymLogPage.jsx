@@ -1,15 +1,13 @@
 // Gym log (web): log exercises (sets x reps x weight), body weight and tape measurements, set a body goal and watch progress.
 // The log is stored in this browser (utils/gymStore.js). Only each exercise (name, sets, minutes, estimated kcal) is also sent, by utils/gymSyncRunner.js, so Exercise and Home count the calories; other data leaves only through the
 // Export tab, which downloads CSV / JSON files to your computer. Same maths as the phone app (utils/gymMath.js).
-import { useEffect, useMemo, useState } from "react";
-import { sortExercises } from "../utils/exerciseDetail";
+import { useEffect, useState } from "react";
 import "./gymlog.css";
-import { libraryList, MUSCLE_LABEL, FILTERS } from "../data/workoutPlan";
+import ExerciseLogger from "../components/exercise/ExerciseLogger";
 import { getLocalDate } from "../utils/date";
 import { notify } from "../utils/notify";
 import { confirmAction } from "../utils/confirm";
 import * as G from "../utils/gymMath";
-import { mergeCatalog } from "../utils/gymCatalog";
 import { backupJson, bodyCsv, parseBackup, workoutsCsv } from "../utils/gymExport";
 import { clearGym, gymId, removeBody, removeEntry, replaceGym, saveBody, saveEntry, saveGoal, saveProfile, useGymStore } from "../utils/gymStore";
 import { downloadText, gymFileName, gymMime } from "../utils/gymDownload";
@@ -20,8 +18,6 @@ const fmtW = (kg, unit) => (kg === null || kg === undefined || !Number.isFinite(
 const parseW = (text, unit) => { const n = G.parseNum(text, 0.1, 2000); return n === null ? null : Math.round((unit === "lb" ? n * KG_PER_LB : n) * 100) / 100; };
 const inputStr = (kg, unit) => (kg > 0 ? String(Math.round(toDisp(kg, unit) * 100) / 100) : "");
 const prettyDate = (d) => { const [y, m, day] = d.split("-").map(Number); return new Date(y, m - 1, day).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" }); };
-const catLabel = (c) => MUSCLE_LABEL[c] || String(c).replace(/^./, (x) => x.toUpperCase());
-const unitWord = (u) => (u === "sec" ? "Seconds" : u === "min" ? "Minutes" : "Reps");
 
 function Card({ title, sub, right, children }) {
   return (
@@ -103,142 +99,8 @@ export default function GymLogPage({ onBack }) {
 }
 
 // ------------------------------------------------------------------------------------------------ LOG
-export function LogTab() {
-  const { entries, body, profile } = useGymStore();
-  const unit = profile.unit;
-  const [date, setDate] = useState(getLocalDate());
-  const [q, setQ] = useState("");
-  const [cat, setCat] = useState("all");
-  const [more, setMore] = useState(false);
-  const [pick, setPick] = useState(null);
-  const [draft, setDraft] = useState([]);
-  const [note, setNote] = useState("");
-  const [editId, setEditId] = useState(null);
-  const [customUnit, setCustomUnit] = useState("reps");
-
-  // The app's own library first, then the wider catalogue of common gym lifts, with no name listed twice.
-  const lib = useMemo(() => mergeCatalog(libraryList().map((it) => ({ id: it.id, name: it.name, cat: it.cat, unit: it.unit === "min" ? "min" : it.timed || it.unit === "sec" ? "sec" : String(it.cat).toLowerCase() === "cardio" ? "min" : "reps" })))
-    .map((e) => ({ id: e.id, name: e.name, cat: String(e.cat).toLowerCase(), unit: e.unit, gear: e.gear || "" })), []);
-  const used = useMemo(() => G.exercisesUsed(entries), [entries]);
-  const fmtKg = (kg) => fmtW(kg, unit);
-  const list = useMemo(() => {
-    const s = q.trim().toLowerCase();
-    // your recent exercises first, then muscle group (chest, back, shoulders, arms, legs...), then A-Z
-    return sortExercises(lib.filter((e) => (cat === "all" || e.cat === cat) && (!s || e.name.toLowerCase().includes(s))), { boost: used.map((u) => u.exId) });
-  }, [lib, q, cat, used]);
-  const exact = list.some((e) => e.name.toLowerCase() === q.trim().toLowerCase());
-
-  const choose = (p) => {
-    const last = G.lastFor(entries, p.id, date);
-    setPick(p); setNote(""); setEditId(null);
-    setDraft(last ? last.sets.map((s) => ({ kg: inputStr(s.kg, unit), reps: String(s.reps), pace: s.pace ? G.fmtPace(s.pace) : "" })) : p.unit === "min" ? [{ kg: "", reps: "", pace: "" }] : [{ kg: "", reps: "" }, { kg: "", reps: "" }, { kg: "", reps: "" }]);
-  };
-  const edit = (e) => { setPick({ id: e.exId, name: e.name, cat: e.cat, unit: e.unit }); setDraft(e.sets.map((s) => ({ kg: inputStr(s.kg, unit), reps: String(s.reps), pace: s.pace ? G.fmtPace(s.pace) : "" }))); setNote(e.note || ""); setEditId(e.id); };
-  const cancel = () => { setPick(null); setDraft([]); setNote(""); setEditId(null); };
-  const setRow = (i, patch) => setDraft((d) => d.map((r, j) => (j === i ? { ...r, ...patch } : r)));
-  const timed = pick ? G.isTimed(pick.unit) : false;
-  const last = pick ? G.lastFor(entries, pick.id, date, editId || undefined) : null;
-
-  const save = () => {
-    const sets = [];
-    for (const r of draft) {
-      const reps = G.parseNum(r.reps, 1, 5000);
-      if (!reps) continue;
-      const kg = timed || !r.kg.trim() ? 0 : parseW(r.kg, unit);
-      if (kg === null) { notify("A weight must be a number, or leave it blank for bodyweight.", "error"); return; }
-      const set = { kg, reps: Math.round(reps * 10) / 10 };
-      if (pick.unit === "min" && (r.pace || "").trim()) {
-        const pace = G.parsePace(r.pace);
-        if (pace === null) { notify("Type the average pace per km like 6:30 (6 min 30 s). It must be between 2:00 and 30:00.", "error"); return; }
-        set.pace = pace;
-      }
-      sets.push(set);
-    }
-    if (!sets.length) { notify(`Fill in at least one set with ${unitWord(pick.unit).toLowerCase()}.`, "error"); return; }
-    const entry = { id: editId || gymId("e"), date, exId: pick.id, name: pick.name, cat: pick.cat, unit: pick.unit, sets, note: note.trim() || undefined, at: editId ? entries.find((x) => x.id === editId)?.at || Date.now() : Date.now() };
-    const pr = editId ? null : G.detectPRs(entries, entry)[0];
-    if (!saveEntry(entry)) notify("Your browser would not save this (private mode or storage full). Download a backup.", "error");
-    else notify(pr ? `New record on ${pick.name}: ${pr.kind === "weight" ? `${fmtKg(pr.value)} (was ${fmtKg(pr.prev)})` : pr.kind === "e1rm" ? `est. 1RM ${fmtKg(pr.value)}` : `${pr.value} ${pick.unit === "reps" ? "reps" : pick.unit}`}` : `${pick.name}: ${G.setsLine(entry, fmtKg)}`, "success");
-    cancel();
-  };
-  const del = async (e) => { if (await confirmAction(`${e.name}: ${G.setsLine(e, fmtKg)}`, { title: "Delete this exercise?", confirmText: "Delete" })) removeEntry(e.id); };
-
-  const dayList = entries.filter((e) => e.date === date).sort((a, b) => a.at - b.at);
-  const ds = G.dayStats(entries, date);
-  const wKnown = G.bodyKgOn(body, date), bodyKg = wKnown || G.DEFAULT_BODY_KG;
-  const dayKcal = dayList.reduce((n, e) => n + G.entryKcal(e, bodyKg), 0);
-  const isRun = pick?.unit === "min";
-  const draftSets = pick ? draft.map((r) => ({ kg: 0, reps: G.parseNum(r.reps, 1, 5000) || 0, ...(isRun && G.parsePace(r.pace) ? { pace: G.parsePace(r.pace) } : {}) })).filter((x) => x.reps > 0) : [];
-  const draftEntry = pick ? { id: "x", date, exId: pick.id, name: pick.name, cat: pick.cat, unit: pick.unit, sets: draftSets, at: 0 } : null;
-  const draftKcal = pick && draftSets.length ? G.entryKcal(draftEntry, bodyKg) : 0;
-  const draftKm = isRun && draftSets.length ? G.entryKm(draftEntry) : 0;
-
-  if (pick) {
-    return (
-      <Card title={pick.name} sub={`${catLabel(pick.cat)}${editId ? " · editing" : ""}`} right={<Btn onClick={cancel}>Cancel</Btn>}>
-        {last && !editId && <p className="gl-muted">Last time ({prettyDate(last.date)}): {G.setsLine(last, fmtKg)}</p>}
-        <div className="gl-sets">
-          <div className="gl-sethead"><span>Set</span>{!timed && <span>{unit}</span>}<span>{unitWord(pick.unit)}</span>{isRun && <span>Pace /km</span>}<span /></div>
-          {draft.map((r, i) => (
-            <div className="gl-setrow" key={i}>
-              <b>{i + 1}</b>
-              {!timed && <input aria-label={`Set ${i + 1} weight`} inputMode="decimal" value={r.kg} placeholder={unit} onChange={(e) => setRow(i, { kg: e.target.value })} />}
-              <input aria-label={`Set ${i + 1} ${unitWord(pick.unit)}`} inputMode="decimal" value={r.reps} placeholder={pick.unit === "reps" ? "reps" : pick.unit} onChange={(e) => setRow(i, { reps: e.target.value })} />
-              {isRun && <input aria-label={`Set ${i + 1} average pace per km`} inputMode="text" value={r.pace || ""} placeholder="6:30" onChange={(e) => setRow(i, { pace: e.target.value })} />}
-              <Btn kind="danger" label={`Remove set ${i + 1}`} onClick={() => setDraft((d) => (d.length > 1 ? d.filter((_, j) => j !== i) : d))}>✕</Btn>
-            </div>
-          ))}
-        </div>
-        <div className="gl-row">
-          <Btn onClick={() => setDraft((d) => [...d, d.length ? { ...d[d.length - 1] } : { kg: "", reps: "", pace: "" }])}>＋ Add set (copy last)</Btn>
-        </div>
-        {isRun && <p className="gl-muted">Treadmill: enter your time (minutes) and average pace per km, like 6:30. Calories are worked out from your speed.{draftKm > 0 ? ` ≈ ${draftKm} km.` : ""}</p>}
-        {draftKcal > 0 && <p className="gl-muted">≈ {draftKcal} kcal burned{wKnown ? "" : ` (assuming ${G.DEFAULT_BODY_KG} kg: log your weight in Body for a closer number)`}</p>}
-        <Field label="Note (optional)" value={note} onChange={setNote} placeholder="Felt strong, slow tempo…" inputMode="text" />
-        <Btn kind="primary" onClick={save}>{editId ? "Save changes" : "Save exercise"}</Btn>
-      </Card>
-    );
-  }
-  const SHOW = 30, shown = more ? list : list.slice(0, SHOW);
-  return (
-    <>
-      <DateBar date={date} onChange={setDate} />
-      {dayList.length > 0 && (
-        <Card title={date === getLocalDate() ? "Today’s workout" : "Workout"} sub={`${ds.exercises} exercise${ds.exercises === 1 ? "" : "s"} · ${ds.sets} sets${ds.volumeKg ? ` · ${fmtW(ds.volumeKg, unit)} lifted` : ""} · ≈ ${dayKcal} kcal burned${wKnown ? "" : ` (at ${G.DEFAULT_BODY_KG} kg)`}`}>
-          {dayList.map((e) => (
-            <div className="gl-li" key={e.id}>
-              <button type="button" className="gl-li-main" onClick={() => edit(e)} aria-label={`Edit ${e.name}`}><b>{e.name}</b><span className="gl-muted">{G.setsLine(e, fmtKg)}{G.entryKm(e) > 0 ? ` · ${G.entryKm(e)} km` : ""} · ≈ {G.entryKcal(e, bodyKg)} kcal{e.note ? ` · ${e.note}` : ""}</span></button>
-              <Btn kind="danger" label={`Delete ${e.name}`} onClick={() => del(e)}>🗑</Btn>
-            </div>
-          ))}
-        </Card>
-      )}
-      <Card title="Add an exercise" sub="Pick from the list. Your last numbers are filled in for you.">
-        {used.length > 0 && !q && (
-          <div className="gl-chips"><span className="gl-label">Recent</span>
-            {used.slice(0, 8).map((u) => <Chip key={u.exId} onClick={() => choose(lib.find((x) => x.id === u.exId) || { id: u.exId, name: u.name, cat: u.cat, unit: u.unit })}>{u.name}</Chip>)}
-          </div>
-        )}
-        <Field label="Search" value={q} onChange={(t) => { setQ(t); setMore(false); }} placeholder="Squat, plank, push-up…" inputMode="text" />
-        <div className="gl-chips">{[...FILTERS, "full body"].map((c) => <Chip key={c} active={cat === c} onClick={() => { setCat(c); setMore(false); }}>{c === "all" ? "All" : catLabel(c)}</Chip>)}</div>
-        {shown.map((e) => (
-          <button key={e.id} type="button" className="gl-pickrow" onClick={() => choose(e)} aria-label={`Log ${e.name}`}>
-            <span><b>{e.name}</b><span className="gl-muted"> {catLabel(e.cat)}{e.gear ? ` · ${e.gear}` : ""}</span></span><span className="gl-plus">＋</span>
-          </button>
-        ))}
-        {list.length > SHOW && !more && <Btn onClick={() => setMore(true)}>Show all {list.length}</Btn>}
-        {!list.length && <p className="gl-muted">No exercise matches “{q}”.</p>}
-        {!!q.trim() && !exact && (
-          <div className="gl-custom">
-            <span className="gl-label">Not in the list? Add “{q.trim()}” as your own exercise</span>
-            <div className="gl-chips">{[["reps", "Counted in reps"], ["sec", "Timed (seconds)"], ["min", "Timed (minutes)"]].map(([u, l]) => <Chip key={u} active={customUnit === u} onClick={() => setCustomUnit(u)}>{l}</Chip>)}</div>
-            <Btn kind="primary" onClick={() => choose({ id: `custom:${q.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").slice(0, 40)}`, name: q.trim().slice(0, 60), cat: cat === "all" ? "other" : cat, unit: customUnit })}>Use “{q.trim()}”</Btn>
-          </div>
-        )}
-      </Card>
-    </>
-  );
-}
+// The logger is its own component (components/exercise/ExerciseLogger.jsx): the Exercise page uses the same one.
+export function LogTab() { return <ExerciseLogger />; }
 
 // ------------------------------------------------------------------------------------------------ BODY
 function BodyTab() {

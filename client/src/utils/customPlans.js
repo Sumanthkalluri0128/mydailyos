@@ -1,14 +1,18 @@
 // Personal workout plans: plans YOU make, edit and delete (the "Smart program" stays the one the server builds from your progress).
 // Pure (no React, no network, no storage), so it is unit-tested with plain `node --test` (customPlans.test.js).
-// A stored plan is small: { id, name, createdAt, days: [{ dow: 1..7, title, items: [{ id, name, sets, reps }] }] }.
+// A stored plan is small: { id, name, createdAt, days: [{ dow: 1..7, title, items: [{ id, name, cat, unit, sets, reps }], warm: [{ id, name, dose }], cool: [{ id, name, dose }] }] }.
+// `items` is the MAIN workout; `warm` and `cool` are the warm-up and cool-down moves (utils/planKit.js holds the library and the calorie maths).
 // customToDays() turns it into the same day shape the fixed plan uses (data/workoutPlan.js), so Today, My plan, the live
 // workout, History and the exercise sheet run on it unchanged. Weights step up by the same rule as the classic plan
 // (hit the top of the rep range on every set -> a little heavier), because suggestNext() reads your logged history.
+
+import { dayEstimate, kitById, templateById, templateDays } from "./planKit.js";
 
 export const CUSTOM_PREFIX = "custom:";
 export const CUSTOM_SOURCE = "custom"; // day.source for days built from a personal plan
 export const MAX_PLANS = 12;
 export const MAX_ITEMS = 20;
+export const MAX_KIT = 8; // warm-up or cool-down moves per day
 const SHORT = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
 const clampInt = (n, lo, hi, d) => { const v = Math.round(Number(n)); return Number.isFinite(v) ? Math.min(hi, Math.max(lo, v)) : d; };
@@ -31,7 +35,17 @@ export function parseReps(raw) {
   return { lo, hi, label: lo === hi ? String(lo) : `${lo}-${hi}` };
 }
 
-export const emptyDays = () => SHORT.map((_, i) => ({ dow: i + 1, title: "", items: [] }));
+export const emptyDays = () => SHORT.map((_, i) => ({ dow: i + 1, title: "", items: [], warm: [], cool: [] }));
+const unitOf = (u) => (u === "min" || u === "sec" ? u : "reps");
+const cleanKit = (list) => {
+  const out = [], seen = new Set();
+  for (const x of Array.isArray(list) ? list : []) {
+    const id = text(x && x.id, 80), name = text(x && x.name, 60), dose = text(x && x.dose, 24);
+    if (!id || !name || seen.has(id) || out.length >= MAX_KIT) continue;
+    seen.add(id); out.push({ id, name, dose: dose || (kitById(id) ? kitById(id).dose : "1 min") });
+  }
+  return out;
+};
 
 export function newPlan(name, now = Date.now()) {
   return { id: planId(now), name: text(name, 40) || "My plan", createdAt: now, days: emptyDays() };
@@ -46,8 +60,10 @@ export function planFromDays(name, days, now = Date.now()) {
     const items = [];
     for (const b of d.blocks || []) {
       if (b.type !== "sets") continue;
-      for (const it of b.items || []) if (items.length < MAX_ITEMS && !items.some((x) => x.id === it.id)) items.push({ id: it.id, name: it.name, sets: clampInt(it.sets, 1, 10, 3), reps: it.reps || "8-12" });
+      for (const it of b.items || []) if (items.length < MAX_ITEMS && !items.some((x) => x.id === it.id)) items.push({ id: it.id, name: it.name, cat: (it.targets && it.targets[0]) || "", unit: unitOf(it.unit), sets: clampInt(it.sets, 1, 10, 3), reps: it.reps || "8-12" });
     }
+    const kit = (id) => cleanKit(((d.blocks || []).find((b) => b.id === id && b.type === "check") || { items: [] }).items.map((x) => ({ id: x.id, name: x.name, dose: x.dose })));
+    if (items.length) { slot.warm = kit("warm"); slot.cool = kit("cool"); }
     slot.items = items;
     slot.title = items.length ? text(d.title, 30) : "";
   }
@@ -71,8 +87,9 @@ export function cleanPlans(raw) {
         const id = text(it && it.id, 80), name = text(it && it.name, 60);
         if (!id || !name || ids.has(id) || slot.items.length >= MAX_ITEMS) continue;
         ids.add(id);
-        slot.items.push({ id, name, sets: clampInt(it.sets, 1, 10, 3), reps: parseReps(it.reps).label });
+        slot.items.push({ id, name, cat: text(it.cat, 20).toLowerCase(), unit: unitOf(it.unit), sets: clampInt(it.sets, 1, 10, 3), reps: parseReps(it.reps).label });
       }
+      slot.warm = cleanKit(d.warm); slot.cool = cleanKit(d.cool);
     }
     out.push({ id: p.id, name: text(p.name, 40) || "My plan", createdAt: Number(p.createdAt) || 0, days });
     if (out.length >= MAX_PLANS) break;
@@ -90,7 +107,7 @@ export const setDayTitle = (plans, id, dow, title) => editPlan(plans, id, (d) =>
 /** Adds an exercise to a day. A day never holds the same exercise twice (its sets are tracked by exercise id). */
 export const addItem = (plans, id, dow, item) => editPlan(plans, id, (d) => {
   if (d.dow !== dow || d.items.length >= MAX_ITEMS || d.items.some((x) => x.id === item.id)) return d;
-  return { ...d, items: [...d.items, { id: text(item.id, 80), name: text(item.name, 60), sets: clampInt(item.sets, 1, 10, 3), reps: parseReps(item.reps).label }] };
+  return { ...d, items: [...d.items, { id: text(item.id, 80), name: text(item.name, 60), cat: text(item.cat, 20).toLowerCase(), unit: unitOf(item.unit), sets: clampInt(item.sets, 1, 10, 3), reps: parseReps(item.reps).label }] };
 });
 export const updateItem = (plans, id, dow, itemId, patch) => editPlan(plans, id, (d) => (d.dow !== dow ? d : {
   ...d, items: d.items.map((x) => (x.id !== itemId ? x : { ...x, ...(patch.sets !== undefined ? { sets: clampInt(patch.sets, 1, 10, x.sets) } : {}), ...(patch.reps !== undefined ? { reps: parseReps(patch.reps).label } : {}) })),
@@ -103,7 +120,39 @@ export const moveItem = (plans, id, dow, itemId, dir) => editPlan(plans, id, (d)
   const items = d.items.slice(); [items[i], items[j]] = [items[j], items[i]];
   return { ...d, items };
 });
-export const clearDay = (plans, id, dow) => editPlan(plans, id, (d) => (d.dow === dow ? { ...d, title: "", items: [] } : d));
+export const clearDay = (plans, id, dow) => editPlan(plans, id, (d) => (d.dow === dow ? { ...d, title: "", items: [], warm: [], cool: [] } : d));
+
+// ---- warm-up and cool-down moves. `section` is "warm" or "cool".
+const sect = (s) => (s === "cool" ? "cool" : "warm");
+export const addKit = (plans, id, dow, section, item) => editPlan(plans, id, (d) => {
+  const key = sect(section), list = d[key] || [];
+  if (d.dow !== dow || list.length >= MAX_KIT || list.some((x) => x.id === item.id)) return d;
+  return { ...d, [key]: [...list, ...cleanKit([item])] };
+});
+export const updateKit = (plans, id, dow, section, itemId, dose) => editPlan(plans, id, (d) => (d.dow !== dow ? d : { ...d, [sect(section)]: (d[sect(section)] || []).map((x) => (x.id === itemId ? { ...x, dose: text(dose, 24) || x.dose } : x)) }));
+export const removeKit = (plans, id, dow, section, itemId) => editPlan(plans, id, (d) => (d.dow !== dow ? d : { ...d, [sect(section)]: (d[sect(section)] || []).filter((x) => x.id !== itemId) }));
+export const setWarmCool = (plans, id, dow, { warm, cool }) => editPlan(plans, id, (d) => (d.dow !== dow ? d : { ...d, warm: cleanKit(warm), cool: cleanKit(cool) }));
+/** Copies one day (name, main workout, warm-up, cool-down) onto another day of the same plan. */
+export const copyDay = (plans, id, from, to) => plans.map((p) => {
+  if (p.id !== id || from === to) return p;
+  const src = p.days.find((d) => d.dow === from);
+  if (!src) return p;
+  return { ...p, days: p.days.map((d) => (d.dow === to ? { ...d, title: src.title, items: src.items.map((x) => ({ ...x })), warm: src.warm.map((x) => ({ ...x })), cool: src.cool.map((x) => ({ ...x })) } : d)) };
+});
+
+/** A new plan from a ready-made template (utils/planKit.js TEMPLATES): every training day already has a warm-up, a main workout and a cool-down. */
+export function planFromTemplate(templateId, name, lookup = () => null, now = Date.now()) {
+  const t = templateById(templateId);
+  const p = newPlan(name || (t && t.name) || "My plan", now);
+  for (const d of templateDays(t, lookup)) {
+    const slot = p.days.find((x) => x.dow === d.dow);
+    if (!slot) continue;
+    slot.title = text(d.title, 30);
+    slot.items = d.items.slice(0, MAX_ITEMS).map((it) => ({ id: it.id, name: it.name, cat: it.cat, unit: unitOf(it.unit), sets: clampInt(it.sets, 1, 10, 3), reps: parseReps(it.reps).label }));
+    slot.warm = cleanKit(d.warm); slot.cool = cleanKit(d.cool);
+  }
+  return p;
+}
 
 export const trainingDays = (plan) => (plan ? plan.days.filter((d) => d.items.length) : []);
 
@@ -114,7 +163,7 @@ const MUSCLES = ["chest", "back", "shoulders", "arms", "core", "legs", "glutes"]
  * `lookup(id, item)` returns the library exercise (with its photo, steps and alternatives) or null for an exercise the library does not know.
  * A day with no exercise is a rest day, so the week strip, the streak and Today keep working.
  */
-export function customToDays(plan, lookup = () => null) {
+export function customToDays(plan, lookup = () => null, bodyKg = 70) {
   if (!plan) return [];
   return plan.days.map((d) => {
     const base = { n: d.dow, dow: d.dow, short: SHORT[d.dow - 1], id: `${plan.id}-d${d.dow}`, source: CUSTOM_SOURCE, planId: plan.id, level: "Your plan" };
@@ -142,10 +191,17 @@ export function customToDays(plan, lookup = () => null) {
       };
     });
     const muscles = MUSCLES.filter((m) => targets.has(m));
+    const est = dayEstimate(d, bodyKg, lookup);
+    // warm-up and cool-down are tick-off blocks (the same shape the classic plan uses), so Today and the live workout show them with steps
+    const checks = (list, prefix) => list.map((k) => { const lib = kitById(k.id) || {}; return { id: `${plan.id}-${prefix}-${k.id}`, name: k.name, dose: k.dose, targets: ["mobility"], fig: "", slot: "", steps: lib.steps || [], avoid: "", alts: [], kind: "" }; });
+    const blocks = [];
+    if (d.warm.length) blocks.push({ id: "warm", type: "check", title: "Warm-up", minutes: `${Math.max(1, est.warmMin)} min`, items: checks(d.warm, "w") });
+    blocks.push({ id: "main", type: "sets", title: "Main workout", items });
+    if (d.cool.length) blocks.push({ id: "cool", type: "check", title: "Cool-down", minutes: `${Math.max(1, est.coolMin)} min`, items: checks(d.cool, "c") });
     return {
-      ...base, title: d.title || `Day ${d.dow}`, kind: "strength", minutes: `${Math.max(20, d.items.length * 7 + 10)}`, kcal: Math.round(d.items.length * 40 + 60),
+      ...base, title: d.title || `Day ${d.dow}`, kind: "strength", minutes: `${Math.max(10, est.totalMin)}`, kcal: est.totalKcal,
       focus: muscles.length ? muscles.map((m) => m[0].toUpperCase() + m.slice(1)).join(", ") : "Full body", muscles: muscles.length ? muscles : ["core"],
-      blocks: [{ id: "main", type: "sets", title: "Main workout", items }],
+      blocks,
     };
   });
 }
