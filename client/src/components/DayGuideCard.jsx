@@ -7,7 +7,7 @@ import { getLocalDate } from "../utils/date";
 import { notify } from "../utils/notify";
 
 const LEVELS = [["sedentary", "No activity"], ["light", "Light"], ["moderate", "Moderate"], ["very_active", "Very active"]];
-const LABEL = { no_activity: "No activity", moderate: "Moderate", active: "Active" };
+const LABEL = { no_activity: "No activity", moderate: "Moderate", active: "Active", average: "7-day average" };
 const fmt = (n) => Math.round(Number(n) || 0).toLocaleString();
 
 export default function DayGuideCard() {

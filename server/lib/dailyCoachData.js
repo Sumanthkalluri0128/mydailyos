@@ -18,7 +18,7 @@ async function strengthDatesIn(uid, from, to) {
 async function refreshAutoActivity(uid, today, { force = false } = {}) {
   let profile = await Profile.findOne({ userId: uid });
   if (!profile || profile.activityMode !== 'auto') return profile;
-  if (!force && profile.autoActivity && profile.autoActivity.asOf === today && profile.autoActivity.windowDays != null) return profile; // an older reading (no 7-day average yet) is recomputed at once
+  if (!force && profile.autoActivity && profile.autoActivity.asOf >= today && profile.autoActivity.windowDays != null) return profile; // never recompute for an earlier date (UTC vs local day), so web and phone read the same stored reading; // an older reading (no 7-day average yet) is recomputed at once
   const [hist, strength] = await Promise.all([buildHistory(uid, addDays(today, -CFG.windowDays), addDays(today, -1)), strengthDatesIn(uid, addDays(today, -CFG.windowDays), addDays(today, -1))]);
   const pick = (date) => { const row = hist.days.find((d) => d.date === date); return row ? { row, trained: isTrained(row, strength) } : null; };
   const next = nextAutoActivity(profile.autoActivity, profile.toObject(), pick(addDays(today, -1)), pick(addDays(today, -2)), today, Array.from({ length: CFG.windowDays }, (_, i) => pick(addDays(today, -(i + 1)))));

@@ -274,6 +274,21 @@ function limitTargets(calorieTarget) {
   return { sodiumMg: 2000, sugar: Math.round((n(calorieTarget) * 0.1) / 4) };
 }
 
+/**
+ * Do a food's calories agree with its own macros (protein 4, carbs 4, fat 9 kcal per g)? Label rounding and fibre explain a few percent,
+ * so only a gap of 15 %+ (and 40 kcal+) counts. Needs at least two macros to judge: calories with no macros is "unknown", not wrong.
+ * ONE rule for the server, the web and the phone, so the day's calories and the day's macros can be trusted to describe the same food.
+ */
+function kcalFromMacros(protein, carbs, fat) { return Math.round(4 * Math.max(0, n(protein)) + 4 * Math.max(0, n(carbs)) + 9 * Math.max(0, n(fat))); }
+function macroMismatch(food) {
+  const f = food || {};
+  const kcal = n(f.calories), known = [f.protein, f.carbs ?? f.carbohydrates, f.fat].filter((x) => n(x) > 0).length;
+  if (!(kcal > 30) || known < 2) return { mismatch: false, kcal, macroKcal: null, gap: 0, pct: 0 };
+  const macroKcal = kcalFromMacros(f.protein, f.carbs ?? f.carbohydrates, f.fat);
+  const gap = macroKcal - kcal;
+  return { mismatch: Math.abs(gap) >= 40 && Math.abs(gap) / kcal > 0.15, kcal, macroKcal, gap, pct: Math.round((gap / kcal) * 100) };
+}
+
 /** Weeks to reach the goal weight at the chosen pace (null when there's nothing to lose or gain). */
 function weeksToGoal(currentKg, targetKg, pace = 0.5) {
   const c = n(currentKg), t = n(targetKg);
@@ -327,6 +342,8 @@ function resolveTargets(profile, opts = {}) {
     ready: !!e, energy: e, direction, bodyType, bodyLabel: BODY_LABELS[bodyType] || '',
     calories, calorieMode: e ? e.mode : (g.calorieMode === 'manual' ? 'manual' : 'auto'),
     macros, ranges, limits: limitTargets(sizeCal), budget: sized ? budget : calories, baseMacros,
+    // Which calorie number the macros above are sized to, in words every screen can show (Home sizes to today's budget, My Plan to the base).
+    macroBasis: sized ? 'today' : 'plan', macroBasisKcal: sizeCal, macroBasisNote: sized ? `Sized to today's ${Math.round(budget)} kcal budget (plan ${Math.round(calories)} kcal + earned activity). Protein stays at the plan's goal.` : `Sized to the plan's ${Math.round(calories)} kcal. Earned activity raises carbs and fat on the day.`,
     proteinSource: custom ? 'custom' : 'auto',
     waterMl: waterTargetMl(kg, opts && opts.exerciseMinutes) ?? (n(g.waterTargetMl) || 3000),
     steps: n(g.stepsTarget) || 10000,
@@ -379,5 +396,5 @@ export {
   EXERCISE_CREDIT, ACTIVITY_MULTIPLIER, KCAL_PER_KG, KCAL_PER_STEP_PER_KG, DEFAULT_TARGET,
   bmr, goalDirection, expectedEnergy, dailyTarget, dayBalance,
   stepCalories, stepDistanceKm, waterTargetMl, macroTargets, BODY_TYPES, BODY_LABELS, macroRanges, rangeStatus, limitTargets, weeksToGoal, estimateBurn, calorieBalance,
-  resolveTargets, weightProgress,
+  resolveTargets, weightProgress, kcalFromMacros, macroMismatch,
 };

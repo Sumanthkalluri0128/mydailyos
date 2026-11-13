@@ -380,6 +380,107 @@
         "atFloor": false,
         "tdee": 2711
       }
+    },
+    {
+      "name": "N: auto mode follows the 7-day average multiplier (1.45), not a level name",
+      "profile": {
+        "age": 26,
+        "sex": "male",
+        "heightCm": 173,
+        "currentWeightKg": 77.3,
+        "activityLevel": "moderate",
+        "activityMode": "auto",
+        "goals": {
+          "targetWeightKg": 71,
+          "weeklyPaceKg": 0.75
+        },
+        "autoActivity": {
+          "targetLevel": "sedentary",
+          "multiplier": 1.45,
+          "windowDays": 7
+        }
+      },
+      "expect": {
+        "pace": 0.75,
+        "gap": 825,
+        "tdee": 2507,
+        "autoTarget": 1680,
+        "calorieTarget": 1680,
+        "atFloor": false
+      }
+    },
+    {
+      "name": "O: a whole quiet week (1.2) goes to the safety floor, never below it",
+      "profile": {
+        "age": 26,
+        "sex": "male",
+        "heightCm": 173,
+        "currentWeightKg": 77.3,
+        "activityLevel": "moderate",
+        "activityMode": "auto",
+        "goals": {
+          "targetWeightKg": 71,
+          "weeklyPaceKg": 0.75
+        },
+        "autoActivity": {
+          "targetLevel": "sedentary",
+          "multiplier": 1.2,
+          "windowDays": 7
+        }
+      },
+      "expect": {
+        "tdee": 2075,
+        "autoTarget": 1500,
+        "calorieTarget": 1500,
+        "atFloor": true
+      }
+    },
+    {
+      "name": "P: manual mode ignores the stored auto average and uses the chosen level",
+      "profile": {
+        "age": 26,
+        "sex": "male",
+        "heightCm": 173,
+        "currentWeightKg": 77.3,
+        "activityLevel": "light",
+        "activityMode": "manual",
+        "goals": {
+          "targetWeightKg": 71,
+          "weeklyPaceKg": 0.75
+        },
+        "autoActivity": {
+          "targetLevel": "sedentary",
+          "multiplier": 1.2,
+          "windowDays": 7
+        }
+      },
+      "expect": {
+        "tdee": 2378,
+        "autoTarget": 1550,
+        "calorieTarget": 1550
+      }
+    },
+    {
+      "name": "Q: an out-of-range stored multiplier is ignored",
+      "profile": {
+        "age": 26,
+        "sex": "male",
+        "heightCm": 173,
+        "currentWeightKg": 77.3,
+        "activityLevel": "moderate",
+        "activityMode": "auto",
+        "goals": {
+          "targetWeightKg": 71,
+          "weeklyPaceKg": 0.75
+        },
+        "autoActivity": {
+          "targetLevel": "moderate",
+          "multiplier": 5
+        }
+      },
+      "expect": {
+        "tdee": 2680
+      }
     }
   ],
   "targets": [

@@ -18,6 +18,8 @@ test('web client energy model == server energy model (fixtures + 3000 random peo
     const w = 40 + rnd() * 100;
     const p = { age: 16 + Math.floor(rnd() * 60), sex: sexes[Math.floor(rnd() * 4)], heightCm: 140 + Math.floor(rnd() * 60), currentWeightKg: Math.round(w * 10) / 10, activityLevel: acts[Math.floor(rnd() * 5)],
       goals: { targetWeightKg: rnd() < 0.2 ? null : Math.round((w + (rnd() - 0.5) * 40) * 10) / 10, weeklyPaceKg: [0.25, 0.5, 0.75, 1, undefined][Math.floor(rnd() * 5)], calorieMode: rnd() < 0.3 ? 'manual' : 'auto', calorieTarget: 1000 + Math.floor(rnd() * 2500) } };
+    // the 7-day activity average (auto mode) must change the numbers identically on the web and the server
+    if (rnd() < 0.6) { p.activityMode = rnd() < 0.7 ? 'auto' : 'manual'; p.autoActivity = { targetLevel: 'light', multiplier: rnd() < 0.1 ? 5 : Math.round((1.15 + rnd() * 0.5) * 1000) / 1000, windowDays: 7 }; }
     const day = { eaten: Math.floor(rnd() * 3500), workout: Math.floor(rnd() * 900), steps: Math.floor(rnd() * 600) };
     assert.equal(JSON.stringify([web.expectedEnergy(p), web.dayBalance(p, day), web.dailyTarget(p)]), JSON.stringify([server.expectedEnergy(p), server.dayBalance(p, day), server.dailyTarget(p)]));
   }

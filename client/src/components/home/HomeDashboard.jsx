@@ -320,6 +320,7 @@ export default function HomeDashboard({ profile, summary, activity, water, water
 
         <div className="pn pn-mac">
           <header><span className="pn-ic v">📊</span><div><h2>Macros Today</h2></div><button type="button" className="pn-btn ghost" onClick={() => goTo("progress")}>See Details</button></header>
+          <p className="mac-basis">{T.macroBasisNote}</p>
           <div className="gauges">
             <Gauge label="Protein" icon="🥩" tone="protein" value={summary?.protein} target={macros.protein} onClick={() => goTo("foodLogger")} />
             <Gauge label="Carbs" icon="🌾" tone="carbs" value={summary?.carbohydrates} target={macros.carbs} onClick={() => goTo("foodLogger")} />

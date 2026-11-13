@@ -17,6 +17,7 @@ import EatingOut from "../components/EatingOut";
 import IntakeBanner from "../components/IntakeBanner";
 import EntryCheck from "../components/EntryCheck";
 import FoodTrust from "../components/FoodTrust";
+import FoodMismatchNote from "../components/FoodMismatchNote";
 import ChaiCounter from "../components/ChaiCounter";
 import CookIdeas from "../components/CookIdeas";
 import TiffinPlanner from "../components/TiffinPlanner";
@@ -489,6 +490,7 @@ function FoodLogger({ date, onBack, goTo }) {
 
       </div>
 
+      {!tone.gentle && <FoodMismatchNote logs={foodLogs} />}
       {!tone.gentle && <CalorieBalance compact refreshKey={`${foodLogs.length}|${foodLogs.reduce((t, l) => t + Number(l.nutritionTotal?.calories || 0), 0)}`} />}
 
       {/* Which meal? Chosen once — everything below logs to it. */}

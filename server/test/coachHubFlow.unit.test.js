@@ -62,7 +62,7 @@ const routes = require('../routes/coachRoutes');
 
 const START = '2026-01-05', TODAY = addDays(START, 34);
 const mkProfile = (auto) => ({ _id: 'p1', age: 26, sex: 'male', heightCm: 173, currentWeightKg: 79, activityLevel: 'moderate', activityMode: 'manual', training: { weekdays: [0, 1, 2, 4, 5] },
-  goals: { targetWeightKg: 69, weeklyPaceKg: 0.65, stepsTarget: 10000, calorieMode: 'auto', calorieTarget: 1800, coachAuto: auto } });
+  goals: { targetWeightKg: 69, weeklyPaceKg: 0.65, stepsTarget: 10000, calorieMode: 'auto', calorieTarget: 1800, coachAuto: auto, coachAutoChosen: true } });
 const flatDays = (p) => { const t = E.expectedEnergy(p).calorieTarget; return Array.from({ length: 35 }, (_, i) => ({ date: addDays(START, i), calories: t, protein: 140, steps: 10000, exerciseMinutes: 60, caloriesBurned: 350, weightKg: 79, weighIn: true })); };
 const fresh = (auto) => { DB.profile = mkProfile(auto); DB.days = flatDays(DB.profile); DB.state = null; };
 

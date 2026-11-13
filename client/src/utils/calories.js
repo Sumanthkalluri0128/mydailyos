@@ -1,3 +1,5 @@
+import { ACTIVITY_MULTIPLIER } from "./energy";
+
 export function calculateBMR({
   weightKg,
   heightCm,
@@ -41,16 +43,10 @@ export function calculateTDEE({
     return null;
   }
 
-  const activityMultipliers = {
-    sedentary: 1.2,
-    light: 1.375,
-    moderate: 1.55,
-    very_active: 1.725,
-    extra_active: 1.9,
-  };
+  // The ONE multiplier table (shared energy model), so this helper can never drift from the app's target.
 
   const multiplier =
-    activityMultipliers[activityLevel];
+    ACTIVITY_MULTIPLIER[activityLevel];
 
   if (!multiplier) {
     return null;

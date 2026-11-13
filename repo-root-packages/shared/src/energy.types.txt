@@ -6,7 +6,7 @@ export type EnergyProfile = {
   age?: number | null; sex?: string | null; heightCm?: number | null; currentWeightKg?: number | null;
   activityLevel?: string | null;
   activityMode?: string | null;                                   // 'auto' = level from recent days, 'manual' = the level you chose
-  autoActivity?: { targetLevel?: string | null } | null;
+  autoActivity?: { targetLevel?: string | null; multiplier?: number | null } | null;
   measuredTdee?: { ratio?: number | null; confidence?: string | null } | null; // measured / formula maintenance (server refreshes it daily)
   ageSetAt?: string | null;                                       // the day `age` was saved: age then advances by itself
   goals?: { calorieFloor?: number | null; targetWeightKg?: number | null; weeklyPaceKg?: number | null; calorieMode?: string | null; calorieTarget?: number | null; proteinTarget?: number | null; bodyType?: string | null; waterTargetMl?: number | null; stepsTarget?: number | null; exerciseMinutesTarget?: number | null } | null;

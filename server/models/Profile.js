@@ -40,8 +40,10 @@ const schema = new mongoose.Schema(
       // The day the person first saved a Body plan (YYYY-MM-DD). The adaptive plan counts weeks from here, so days before it are never "not done".
       bodyPlanStartedOn: { type: String, default: '' },
       weeklyPaceKg: { type: Number, min: 0.1, max: 1, default: 0.5 },
-      // 'off' = every weekly change needs a tap (default). 'safe' = small changes inside the safe limits are applied for you, with a one-tap undo.
-      coachAuto: { type: String, enum: ['off', 'safe'], default: 'off' },
+      // 'safe' (default, autopilot) = small changes inside the safe limits are applied for you, with a one-tap undo. 'off' = every weekly change needs a tap.
+      coachAuto: { type: String, enum: ['off', 'safe'], default: 'safe' },
+      // true once the person has touched the auto-adjust switch themselves. Until then autopilot is ON (lib/coachHub.effectiveAuto).
+      coachAutoChosen: { type: Boolean, default: false },
     },
     // How the person trains (asked on the Body plan screen). Drives the weekly program: where, level, days, time, home equipment,
     // anything that hurts, and muscles to bring up. Empty = not chosen yet, the plan uses sensible defaults and says so.

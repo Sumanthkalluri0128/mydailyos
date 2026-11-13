@@ -152,6 +152,7 @@ export default function BodyPlanPage({ onBack, onSaved, embedded = false, seed =
                   <Stat l={`Fat (${Math.round(plan.fatShare * 100)}% of calories)`} v={`${plan.macros.fat} g`} />
                   <Stat l="Fibre" v={`${plan.fiberG} g`} />
                 </div>
+                <p className="bp-muted">These are your base numbers. On Home they are resized to each day: earned activity adds carbs and fat, and protein stays the same.</p>
                 <p className="bp-muted">Drink about {(plan.waterMl / 1000).toFixed(1)} L of water. Spread protein over 3 or 4 meals so it protects your muscle.</p>
               </div>
               <div className="bp-card">

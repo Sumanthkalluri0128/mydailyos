@@ -89,7 +89,7 @@ function selectMaintenance(profile, yRow, yTrained) {
   if (avg) {
     const e = E.expectedEnergy(profile);
     const level = levelNearest(avg);
-    return { mode: 'auto', source: 'average', level, label: level === 'sedentary' ? 'no_activity' : 'moderate', tdee: e ? e.tdee : null, basis: `your last ${profile.autoActivity.windowDays || 7} days of steps and training (${avg}x resting)` };
+    return { mode: 'auto', source: 'average', level, label: 'average', tdee: e ? e.tdee : null, basis: `your last ${profile.autoActivity.windowDays || 7} days of steps and training (${avg}x resting)` };
   }
   const label = yRow ? activityLabel(yRow, yTrained) : null;
   if (!label) {
@@ -312,7 +312,7 @@ function entryCheck({ profile, today, row = {}, target = 0, floor = 0, proteinTa
   else if (trained && !plannedGym) m.push('Extra session on a rest day: fine, but calories stay as planned (no extra food, no cut).');
   if (closing && steps > 0 && steps < CFG.noActivitySteps && !trained) {
     const noActTdee = tdeeAt(profile, 'sedentary');
-    const mc = tdeeAt(profile, effectiveLevel(profile));
+    const mc = (E.expectedEnergy(profile) || {}).tdee || tdeeAt(profile, effectiveLevel(profile)); // the live maintenance (7-day average in auto mode)
     if (noActTdee && mc) m.push(`No-activity day: your maintenance today is only about ${r10(noActTdee).toLocaleString('en-US')} kcal (not ${r10(mc).toLocaleString('en-US')}), so today's deficit was about ${Math.max(0, Math.round(noActTdee - eaten))} kcal. One day changes nothing in the plan; a second in a row lowers the target level.`);
   }
   if (closing && bal.net !== null) out.dayEffect = { net: Math.round(bal.net), fatKg: Math.round((-bal.net / E.KCAL_PER_KG) * 100) / 100 };

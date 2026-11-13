@@ -8,6 +8,7 @@ const Task = require('../models/Task');
 const HabitLog = require('../models/HabitLog');
 const { enumerate } = require('./dates');
 const { stepCalories, stepsByDate, profileWeight } = require('./steps');
+const { macroMismatch } = require('./energy');
 
 const VISIBLE_TASK = { skipped: { $ne: true } };
 
@@ -146,6 +147,9 @@ async function getDayDetails(userId, date) {
     tasks,
     habits,
     summary: {
+      // Entries whose calories disagree with their own macros (4/4/9, gap 15 %+): the day's calories and macros then describe different food.
+      // Calories are what the day counts; this only points at the entries worth a second look.
+      mismatches: food.map((x) => ({ id: String(x._id), name: x.foodName, mealType: x.mealType, ...macroMismatch({ calories: x.nutritionTotal?.calories, protein: x.nutritionTotal?.protein, carbs: x.nutritionTotal?.carbohydrates, fat: x.nutritionTotal?.fat }) })).filter((m) => m.mismatch).map(({ id, name, mealType, kcal, macroKcal, gap, pct }) => ({ id, name, mealType, kcal, macroKcal, gap, pct })),
       calories: sum(food, (x) => x.nutritionTotal?.calories),
       protein: sum(food, (x) => x.nutritionTotal?.protein),
       carbohydrates: sum(food, (x) => x.nutritionTotal?.carbohydrates),

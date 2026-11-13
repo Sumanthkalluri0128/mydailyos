@@ -45,7 +45,7 @@ const { compositionChange, measurePrompts } = require('../lib/bodySignals');
 const { retentionFlags } = require('../lib/retention');
 const { replanRestOfDay } = require('../lib/replanDay');
 const { mealProteinGap } = require('../lib/mealGap');
-const { autoSafe, snapshotGoals, restoreSet, logEntry, pushLog, changelogView, undoView, undoneRecently } = require('../lib/coachHub');
+const { effectiveAuto, autoSafe, snapshotGoals, restoreSet, logEntry, pushLog, changelogView, undoView, undoneRecently } = require('../lib/coachHub');
 const { diffDays } = require('../lib/dates');
 const { refreshStoredTarget } = require('../lib/profileEnergy');
 const { calorieFloorOf, KCAL_PER_KG } = require('../lib/energy');
@@ -551,7 +551,7 @@ async function computeWeekly(uid, today, st, refresh) {
   st.weekly = { ...dec.state, ...(refresh && w ? { lastReview: w.lastReview } : {}), decision: view, inputState: cleanState(stateIn) || {}, sig, dirty: false, sigCheckedOn: today, refreshedOn: refresh ? today : '' };
   st.markModified('weekly');
   const e = expectedEnergy(d.profile);
-  const auto = d.profile.goals && d.profile.goals.coachAuto === 'safe' && !undoneRecently(w, today) && autoSafe(dec.apply, { target: e ? e.calorieTarget : null, floor: calorieFloorOf(d.profile) });
+  const auto = effectiveAuto(d.profile.goals) === 'safe' && !undoneRecently(w, today) && autoSafe(dec.apply, { target: e ? e.calorieTarget : null, floor: calorieFloorOf(d.profile) });
   if (auto) { try { await applyDecision({ uid, st, today, auto: true }); } catch (err) { /* a refused automatic change simply stays a suggestion */ } }
   await st.save();
   return { st, decision: st.weekly.decision, cached: false };
@@ -691,7 +691,7 @@ async function buildHub(uid, today, hour) {
   const hubOffer = offerFor({ profile: d.profile, st, decision, today, recovery: x.recovery, strength: x.strengthTrend });
   return { success: true, date: today, nextAction: action, readiness: { today: todayEntry, adjust, week: x.recovery }, dayPlan: plan, restOfDay, prompts, composition: decision ? decision.composition || null : null, weekly: decision, forecast: decision ? decision.forecast : null,
     strength: x.strengthTrend, advisories, gym: adapt ? { phase: adapt.phase, todayPlan: adapt.todayPlan, tier: adapt.tier, status: adapt.status } : null,
-    changelog: changelogView(st.changelog, { today, rateNow: rate, direction: e ? e.direction : 'lose' }), undo: undoView(st.autoUndo, today), auto: (d.profile.goals && d.profile.goals.coachAuto) || 'off',
+    changelog: changelogView(st.changelog, { today, rateNow: rate, direction: e ? e.direction : 'lose' }), undo: undoView(st.autoUndo, today), auto: effectiveAuto(d.profile.goals),
     offer: hubOffer, taper: hubOffer ? null : taperFor({ profile: d.profile, st, decision, today }), cycle: cycleSummary(st, today), showCycle: d.profile.sex !== 'male' };
 }
 

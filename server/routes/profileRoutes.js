@@ -43,7 +43,7 @@ function parseUpdate(body = {}) {
     if (g.stepsTarget !== undefined) set['goals.stepsTarget'] = v.number(g.stepsTarget, 'stepsTarget', { min: 1, max: 200000 });
     if (g.exerciseMinutesTarget !== undefined) set['goals.exerciseMinutesTarget'] = v.number(g.exerciseMinutesTarget, 'exerciseMinutesTarget', { min: 1, max: 1440 });
     if (g.bodyType !== undefined) set['goals.bodyType'] = v.oneOf(g.bodyType, 'bodyType', ['', 'lean', 'athletic', 'muscular', 'balanced'], '');
-    if (g.coachAuto !== undefined) set['goals.coachAuto'] = v.oneOf(g.coachAuto, 'coachAuto', ['off', 'safe'], 'off');
+    if (g.coachAuto !== undefined) { set['goals.coachAuto'] = v.oneOf(g.coachAuto, 'coachAuto', ['off', 'safe'], 'safe'); set['goals.coachAutoChosen'] = true; } // the switch was touched: from now on it means what it says
     if (g.weeklyPaceKg !== undefined) set['goals.weeklyPaceKg'] = v.number(g.weeklyPaceKg, 'weeklyPaceKg', { min: 0.1, max: 1 });
     if (g.targetWeightKg !== undefined) set['goals.targetWeightKg'] = v.nullableNumber(g.targetWeightKg, 'targetWeightKg', { min: 1, max: 700 });
   }

@@ -10,6 +10,15 @@ const { diffDays } = require('./dates');
 
 const AUTO = { maxKcal: 150, stepsMax: 12000, undoDays: 14, keep: 30, judgeAfterDays: 10 };
 
+/**
+ * Autopilot: 'safe' unless the person has switched auto-adjust off themselves. Profiles saved before autopilot existed carry the old
+ * stored 'off' they never chose, so only an explicit choice (coachAutoChosen) can keep it off.
+ */
+function effectiveAuto(goals) {
+  const g = goals || {};
+  return g.coachAutoChosen === true ? (g.coachAuto === 'safe' ? 'safe' : 'off') : 'safe';
+}
+
 /** @param apply decision.apply   @param ctx {target, floor} the plan's current calorie target and the safe floor */
 function autoSafe(apply, { target, floor } = {}) {
   if (!apply || typeof apply !== 'object') return false;
@@ -88,4 +97,4 @@ function undoView(autoUndo, today) {
 /** Auto-apply is skipped for 14 days after an undo, so the coach never fights the person. */
 const undoneRecently = (weekly, today) => !!(weekly && weekly.undoneOn && diffDays(weekly.undoneOn, today) < AUTO.undoDays);
 
-module.exports = { AUTO, autoSafe, describeChange, snapshotGoals, restoreSet, logEntry, pushLog, changelogView, undoView, undoneRecently };
+module.exports = { AUTO, effectiveAuto, autoSafe, describeChange, snapshotGoals, restoreSet, logEntry, pushLog, changelogView, undoView, undoneRecently };
