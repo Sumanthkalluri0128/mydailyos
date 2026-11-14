@@ -3,6 +3,7 @@ const express = require('express');
 const CoachState = require('../models/CoachState');
 const Profile = require('../models/Profile');
 const WeightLog = require('../models/WeightLog');
+const { weightPoints } = require('../lib/weightData');
 const HealthLog = require('../models/HealthLog');
 const FoodLog = require('../models/FoodLog');
 const Food = require('../models/Food');
@@ -71,7 +72,7 @@ async function context(uid, today) {
     buildHistory(uid, addDays(today, -34), today),
     HealthLog.find({ userId: uid, type: 'sleep', date: { $gte: addDays(today, -60), $lte: today } }).select('date value').lean(),
     FoodLog.find({ userId: uid, date: { $gte: addDays(today, -21), $lte: today }, mealType: { $in: ['breakfast', 'snacks'] } }).select('date mealType nutritionTotal').lean(),
-    WeightLog.find({ userId: uid, date: { $gte: addDays(today, -60), $lte: today } }).select('date weightKg').lean(),
+    weightPoints(uid, { date: { $gte: addDays(today, -60), $lte: today } }),
   ]);
   const target = dailyTarget(profile); const e = expectedEnergy(profile);
   const macros = resolveTargets(profile).macros;
@@ -468,7 +469,7 @@ async function quickSignals(uid, today, strengthStatus = null) {
     WeightLog.distinct('date', { userId: uid, date: { $gt: addDays(today, -14), $lte: today } }),
     FoodLog.distinct('date', { userId: uid, date: { $gt: addDays(today, -14), $lte: today } }),
     BodyPlanSession.find({ userId: uid, date: { $gte: addDays(today, -14), $lte: today } }).select('date updatedAt').limit(60).lean(),
-    WeightLog.find({ userId: uid, date: { $gt: addDays(today, -35), $lte: today } }).sort({ date: 1, createdAt: 1 }).select('date weightKg').lean(),
+    weightPoints(uid, { date: { $gt: addDays(today, -35), $lte: today } }),
     Profile.findOne({ userId: uid }).lean(),
   ]);
   const stamps = (sess || []).map((r) => (r.updatedAt ? new Date(r.updatedAt).toISOString() : r.date)).sort();

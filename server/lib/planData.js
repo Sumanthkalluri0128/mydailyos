@@ -1,6 +1,6 @@
 // Loads what the plan / fat-loss endpoints share: profile, daily history, weigh-ins, sleep, strength days and targets.
 const Profile = require('../models/Profile');
-const WeightLog = require('../models/WeightLog');
+const { weightPoints } = require('./weightData');
 const HealthLog = require('../models/HealthLog');
 const ActivityLog = require('../models/ActivityLog');
 const { buildHistory } = require('./progress');
@@ -14,7 +14,7 @@ async function loadCore(uid, today, { historyDays = 60 } = {}) {
   const [profile, history, weightRows, sleepRows, strengthRows] = await Promise.all([
     Profile.findOne({ userId: uid }).lean(),
     buildHistory(uid, from, today),
-    WeightLog.find({ userId: uid }).sort({ date: 1, createdAt: 1 }).select('date weightKg').lean(),
+    weightPoints(uid),
     HealthLog.find({ userId: uid, type: 'sleep', date: { $gte: from, $lte: today } }).select('date value').lean(),
     ActivityLog.find({ userId: uid, date: { $gte: from, $lte: today }, 'sets.0': { $exists: true } }).select('date').lean(),
   ]);

@@ -6,7 +6,7 @@ const { wrap, HttpError } = require('../lib/http');
 const { createOnce } = require('../lib/idempotent');
 const { stepCalories, stepDistanceKm, profileWeight } = require('../lib/steps');
 const v = require('../lib/validate');
-const WeightLog = require('../models/WeightLog');
+const { weightPoints } = require('../lib/weightData');
 const { measureTrends, TYPES: BODY_TYPES } = require('../lib/measurements');
 const { addDays, todayUtc } = require('../lib/dates');
 const CoachState = require('../models/CoachState');
@@ -40,7 +40,7 @@ router.get('/measure-trends', wrap(async (req, res) => {
   const to = req.query.today ? v.date(req.query.today, 'today') : todayUtc(); const from = addDays(to, -days);
   const [logs, weights] = await Promise.all([
     HealthLog.find({ userId: req.user.id, type: { $in: BODY_TYPES }, date: { $gte: from, $lte: to } }).select('type date value createdAt').lean(),
-    WeightLog.find({ userId: req.user.id, date: { $gte: from, $lte: to } }).select('date weightKg').lean(),
+    weightPoints(req.user.id, { date: { $gte: from, $lte: to } }),
   ]);
   res.json({ success: true, from, to, ...measureTrends({ weights, logs: logs.map((l) => ({ ...l, at: l.createdAt && new Date(l.createdAt).toISOString() })) }) });
 }));

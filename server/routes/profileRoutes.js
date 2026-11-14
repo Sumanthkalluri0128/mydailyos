@@ -13,9 +13,9 @@ const { todayUtc } = require('../lib/dates');
 const { diffTargets } = require('../lib/simpleGoals');
 const { resolveTargets } = require('../lib/energy');
 const { profileWithViews } = require('../lib/progressView');
-const WeightLog = require('../models/WeightLog');
+const { weightPoints } = require('../lib/weightData');
 const { addDays } = require('../lib/dates');
-const recentWeights = (uid) => WeightLog.find({ userId: uid, date: { $gte: addDays(todayUtc(), -400) } }).select('date weightKg').sort({ date: 1 }).lean();
+const recentWeights = (uid) => weightPoints(uid, { date: { $gte: addDays(todayUtc(), -400) } });
 
 const router = express.Router();
 router.use(requireAuth);

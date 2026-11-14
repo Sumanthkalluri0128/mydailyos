@@ -6,7 +6,7 @@ const CoachState = require('../models/CoachState');
 const { markCoachDirty } = require('../lib/coachDirty');
 const Profile = require('../models/Profile');
 const HealthLog = require('../models/HealthLog');
-const WeightLog = require('../models/WeightLog');
+const { weightPoints } = require('../lib/weightData');
 const ActivityLog = require('../models/ActivityLog');
 const Activity = require('../models/Activity');
 const BodyPlanSession = require('../models/BodyPlanSession');
@@ -51,7 +51,7 @@ async function history(userId, today) {
   const [sessions, activity, weights, waists, readiness] = await Promise.all([
     BodyPlanSession.find({ userId, date: { $gte: from, $lte: today } }).sort({ date: 1, createdAt: 1 }).limit(500).lean(),
     ActivityLog.find({ userId, date: { $gte: from, $lte: today } }).select('date category activityName durationMinutes sets clientId').limit(1500).lean(),
-    WeightLog.find({ userId, date: { $gte: fromW, $lte: today } }).select('date weightKg').sort({ date: 1 }).limit(200).lean(),
+    weightPoints(userId, { date: { $gte: fromW, $lte: today } }),
     HealthLog.find({ userId, type: 'waist', date: { $gte: fromW, $lte: today } }).select('date value').sort({ date: 1 }).limit(60).lean(),
     Readiness.find({ userId, date: { $gte: addDays(today, -14), $lte: today } }).select('date sleepHours energy soreness stress').sort({ date: 1 }).lean(),
   ]);

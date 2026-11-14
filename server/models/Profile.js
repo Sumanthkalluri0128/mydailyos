@@ -57,6 +57,20 @@ const schema = new mongoose.Schema(
       limits: { type: [{ type: String, enum: ['knee', 'back', 'shoulder', 'wrist', 'elbow', 'heart'] }], default: [] },
       focus: { type: [{ type: String, enum: ['glutes', 'shoulders', 'arms', 'chest', 'back', 'legs', 'core'] }], default: [] },
     },
+    // Weighing scales ("machines"). A weigh-in keeps what its scale showed; analysis uses reading - offsetKg (lib/weightScales.js).
+    // offsetKg = how much higher this scale reads than the reference scale. mode 'auto' learns it from same-day pairs (learnedKg, samples), 'manual' = typed.
+    weightScales: {
+      type: [new mongoose.Schema({
+        id: { type: String, required: true, maxlength: 40 },
+        name: { type: String, default: 'Scale', trim: true, maxlength: 40 },
+        mode: { type: String, enum: ['auto', 'manual'], default: 'auto' },
+        offsetKg: { type: Number, default: 0, min: -50, max: 50 },
+        learnedKg: { type: Number, default: null },
+        samples: { type: Number, default: 0 },
+      }, { _id: false })],
+      default: [],
+    },
+    referenceScaleId: { type: String, default: '', maxlength: 40 },
     // Display preferences only — every value is stored metric.
     units: {
       weight: { type: String, enum: ['kg', 'lb'], default: 'kg' },

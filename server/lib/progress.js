@@ -1,9 +1,10 @@
 // Data-access helpers shared by /progress, /account/export and the achievements/weekly endpoints.
 const mongoose = require('mongoose');
+const WeightLog = require('../models/WeightLog');
 const FoodLog = require('../models/FoodLog');
 const ActivityLog = require('../models/ActivityLog');
 const WaterLog = require('../models/WaterLog');
-const WeightLog = require('../models/WeightLog');
+const { weightPoints, weightEntries } = require('./weightData');
 const Task = require('../models/Task');
 const HabitLog = require('../models/HabitLog');
 const { enumerate } = require('./dates');
@@ -42,8 +43,8 @@ async function buildHistory(userId, from, to) {
     FoodLog.find({ userId, date: range }).select('date nutritionTotal').lean(),
     ActivityLog.find({ userId, date: range }).select('date durationMinutes caloriesBurned').lean(),
     WaterLog.find({ userId, date: range }).select('date amountMl').lean(),
-    WeightLog.find({ userId, date: range }).sort({ date: 1, createdAt: 1 }).select('date weightKg').lean(),
-    WeightLog.findOne({ userId, date: { $lt: from } }).sort({ date: -1, createdAt: -1 }).select('weightKg').lean(),
+    weightPoints(userId, { date: range }),
+    weightPoints(userId, { date: { $lt: from } }, { sort: -1, limit: 4 }).then((p) => (p.length ? p[p.length - 1] : null)),
     Task.find({ userId, date: range, ...VISIBLE_TASK }).select('date completed').lean(),
     HabitLog.find({ userId, date: range }).select('date completed').lean(),
   ]);
@@ -130,7 +131,7 @@ async function getDayDetails(userId, date) {
     FoodLog.find({ userId, date }).sort({ createdAt: -1 }).lean(),
     ActivityLog.find({ userId, date }).sort({ createdAt: -1 }).lean(),
     WaterLog.find({ userId, date }).sort({ createdAt: -1 }).lean(),
-    WeightLog.find({ userId, date }).sort({ createdAt: -1 }).lean(),
+    weightEntries(userId, { date }),
     Task.find({ userId, date, ...VISIBLE_TASK }).sort({ completed: 1, time: 1, createdAt: 1 }).lean(),
     HabitLog.find({ userId, date }).sort({ createdAt: -1 }).lean(),
   ]);

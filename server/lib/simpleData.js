@@ -1,6 +1,6 @@
 // Loads what the one-goal / one-focus / one-level / one-shelf screen needs and builds it with lib/simpleGoals.js.
 const Profile = require('../models/Profile');
-const WeightLog = require('../models/WeightLog');
+const { weightPoints } = require('./weightData');
 const FoodLog = require('../models/FoodLog');
 const HealthLog = require('../models/HealthLog');
 const ActivityLog = require('../models/ActivityLog');
@@ -21,7 +21,7 @@ async function loadSimple(uid, today) {
   const [profile, totals, weightRows, foodDates, tape, sleepRows, strengthRows] = await Promise.all([
     Profile.findOne({ userId: uid }).lean(),
     lifetimeTotals(uid),
-    WeightLog.find({ userId: uid }).sort({ date: 1, createdAt: 1 }).select('date weightKg').lean(),
+    weightPoints(uid),
     FoodLog.distinct('date', { userId: uid }),
     HealthLog.find({ userId: uid, type: 'waist' }).sort({ date: 1, createdAt: 1 }).select('date value').lean(),
     HealthLog.find({ userId: uid, type: 'sleep', date: { $gte: addDays(today, -13), $lte: today } }).select('date value').lean(),

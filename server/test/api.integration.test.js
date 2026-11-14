@@ -184,6 +184,24 @@ test('water: validation, idempotent replay, totals, isolation', { skip }, async 
   ctx.water = w.log._id;
 });
 
+test('weight scales: a second scale keeps its own entry, is learned from a same-day pair and calibrates the profile', { skip }, async () => {
+  const sc = await call('POST', '/api/weight/scales', { token: ctx.alice, body: { name: 'Gym scale' } });
+  assert.equal(sc.status, 201);
+  const gym = sc.scale.id;
+  const main = (await call('GET', '/api/weight/scales', { token: ctx.alice })).referenceId;
+  const d = plus(-1);
+  await call('POST', '/api/weight', { token: ctx.alice, body: { date: d, weightKg: 80, scaleId: main } });
+  const g = await call('POST', '/api/weight', { token: ctx.alice, body: { date: d, weightKg: 81, scaleId: gym } });
+  assert.equal(g.status, 201, 'same day, other scale = a new entry, not an update');
+  const list = await call('GET', '/api/weight', { token: ctx.alice });
+  const gl = list.logs.find((l) => l.scaleId === gym);
+  assert.equal(gl.rawKg, 81); assert.equal(gl.weightKg, 80, 'calibrated with the learned +1.0 kg');
+  await call('POST', '/api/weight', { token: ctx.alice, body: { date: today(), weightKg: 80.6, scaleId: gym } });
+  assert.equal((await call('GET', '/api/profile', { token: ctx.alice })).profile.currentWeightKg, 79.6, 'profile weight is on the main scale');
+  assert.equal((await call('DELETE', `/api/weight/scales/${main}`, { token: ctx.alice })).status, 400, 'the main scale cannot be deleted');
+  assert.equal((await call('DELETE', `/api/weight/scales/${gym}`, { token: ctx.alice })).status, 200);
+});
+
 test('weight: one entry per day (update), profile sync, delete resyncs', { skip }, async () => {
   const a = await call('POST', '/api/weight', { token: ctx.alice, body: { date: today(), weightKg: 70.5 } });
   assert.equal(a.status, 201);

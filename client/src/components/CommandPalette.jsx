@@ -18,7 +18,7 @@ async function run(cmd, go, t) {
   const post = (path, body) => apiFetch(`${API_URL}${path}`, { method: "POST", body: JSON.stringify(body) }).then(async (r) => { const j = await r.json().catch(() => ({})); if (!r.ok || j.success === false) throw new Error(j.message || "Could not save that"); return j; });
   try {
     if (cmd.kind === "water") { await post("/api/water", { date: today, amountMl: cmd.ml }); notify(t("palette.done.water", { n: cmd.ml }), "success"); window.dispatchEvent(new Event("ff:refresh")); }
-    else if (cmd.kind === "weight") { await post("/api/weight", { date: today, weightKg: cmd.kg }); notify(t("palette.done.weight", { n: cmd.kg }), "success"); window.dispatchEvent(new Event("ff:refresh")); }
+    else if (cmd.kind === "weight") { let scaleId; try { scaleId = localStorage.getItem("ff:lastWeightScale") || undefined; } catch { /* private mode */ } await post("/api/weight", { date: today, weightKg: cmd.kg, ...(scaleId ? { scaleId } : {}) }); notify(t("palette.done.weight", { n: cmd.kg }), "success"); window.dispatchEvent(new Event("ff:refresh")); }
     else if (cmd.kind === "workout") {
       const r = await apiFetch(`${API_URL}/api/activities`); const j = await r.json(); const list = j.activities || [];
       const pick = (cmd.name && list.find((a) => a.name.toLowerCase().includes(cmd.name.toLowerCase()))) || list.find((a) => /walk/i.test(a.name)) || list[0];

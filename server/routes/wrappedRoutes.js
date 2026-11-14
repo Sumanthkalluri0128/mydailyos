@@ -2,7 +2,7 @@
 const express = require('express');
 const FoodLog = require('../models/FoodLog');
 const ActivityLog = require('../models/ActivityLog');
-const WeightLog = require('../models/WeightLog');
+const { weightPoints } = require('../lib/weightData');
 const Collection = require('../models/Collection');
 const { requireAuth } = require('../middleware/auth');
 const { wrap, HttpError } = require('../lib/http');
@@ -22,7 +22,7 @@ router.get('/', cacheGet(), wrap(async (req, res) => {
   const [food, acts, weights, col] = await Promise.all([
     FoodLog.find({ userId: uid, date: range }).select('date foodName nutritionTotal.calories').lean(),
     showHealth ? ActivityLog.find({ userId: uid, date: range }).select('date').lean() : [],
-    showHealth ? WeightLog.find({ userId: uid, date: range }).select('date weightKg').lean() : [],
+    showHealth ? weightPoints(uid, { date: range }) : [],
     Collection.findOne({ userId: uid }).lean(),
   ]);
   res.json({ success: true, wrapped: buildWrapped({ month, foodLogs: food.map((l) => ({ date: l.date, foodName: l.foodName, calories: l.nutritionTotal?.calories })), activityDates: acts.map((a) => a.date), owned: col?.owned || [], weights, showHealth }) });

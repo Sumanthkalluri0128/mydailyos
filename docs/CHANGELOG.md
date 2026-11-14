@@ -316,3 +316,13 @@
 - Vitamins & minerals are collapsed under the macros (tap to open), with the nutrients that run short while eating less listed first.
 - Safe intake: components/SafeIntakeCard.tsx + utils/intakeSafety.ts show effects and what to do when intake is too low or too heavy; Profile warns on unsafe typed calories and pace.
 - Not run here: phone TypeScript check, jest, web build, DB-backed server tests (no npm access). Run them before release.
+
+## v75 - Weighing scales: a different scale no longer looks like weight gained or lost
+- New "My scales" (Weight screen -> "Using a different scale? Add it"). Name your scales (Home, Gym, Office...), pick one when you log; the app remembers the last one you used on that device. Quick weigh-ins (command palette, phone check-in) use that scale too.
+- A weigh-in is stored exactly as the scale showed it (`weightKg`) with its `scaleId`. Every analysis now reads CALIBRATED weights: reading - the scale's offset, in "main scale" terms. One module does it (`server/lib/weightScales.js` maths, `server/lib/weightData.js` database access); trend/coach/daily + weekly decision, calorie plan, measured maintenance, plateau, weight estimate, progress charts, day view, share page, wrapped, weekly email and profile numbers all go through it.
+- Offsets are learned automatically from days you weighed on both scales (median of up to 10 same-day differences) or typed by hand ("Use learned" switches back). Weighing on two scales the same day keeps both entries (one entry per day PER scale); analysis uses that day's calibrated mean.
+- "Make main" re-expresses every offset against another scale (nothing is rewritten). Deleting a scale keeps its weigh-ins: they move to the main scale at their calibrated value (a same-day main reading wins), so no trend changes. The main scale cannot be deleted.
+- Existing entries (no scale) belong to the main scale, so nothing changes until a second scale is added. `Profile.currentWeightKg` is now the newest calibrated weight.
+- API: `GET /api/weight` returns `weightKg` (calibrated), `rawKg`, `scaleId`, `scaleName`, plus `scales` and `referenceId`. `POST /api/weight` takes `scaleId` (unknown = main). New `PATCH /api/weight/:id` (fix scale/reading/note), `GET|POST /api/weight/scales`, `PATCH|DELETE /api/weight/scales/:id`, `POST /api/weight/scales/:id/reference`.
+- CSV import compares with / writes to the main scale only; CSV export puts the scale name in `details` for weight rows.
+- Tests: `test/weightScales.unit.test.js` (7, pass), a scales case in `test/api.integration.test.js` (needs Mongo). NOT run: the full server and client suites, the apps (no node_modules / no network here); changed JSX/TSX files were syntax-checked with esbuild only.

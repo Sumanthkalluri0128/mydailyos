@@ -8,7 +8,7 @@ const ShareLink = require('../models/ShareLink');
 const FoodLog = require('../models/FoodLog');
 const ActivityLog = require('../models/ActivityLog');
 const WaterLog = require('../models/WaterLog');
-const WeightLog = require('../models/WeightLog');
+const { weightPoints } = require('../lib/weightData');
 const HealthLog = require('../models/HealthLog');
 const { requireAuth } = require('../middleware/auth');
 const { rateLimit } = require('../middleware/rateLimit');
@@ -25,7 +25,7 @@ async function weeklyStats(uid, to) {
     FoodLog.find({ userId: uid, date: range }).select('date nutritionTotal.calories').lean(),
     ActivityLog.find({ userId: uid, date: range }).select('date durationMinutes').lean(),
     WaterLog.find({ userId: uid, date: range }).select('date amountMl').lean(),
-    WeightLog.find({ userId: uid, date: range }).select('date weightKg').sort({ date: 1 }).lean(),
+    weightPoints(uid, { date: range }),
     HealthLog.find({ userId: uid, type: 'steps', date: range }).select('value').lean(),
   ]);
   const byDay = (rows, f) => { const m = new Map(); for (const r of rows) m.set(r.date, (m.get(r.date) || 0) + (Number(f(r)) || 0)); return [...m.values()]; };

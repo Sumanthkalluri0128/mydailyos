@@ -1,7 +1,7 @@
 // Loads everything the journey needs for one person (profile, goals, logs, weights) and builds it. Shared by the goals and album routes.
 const Goal = require('../models/Goal');
 const Profile = require('../models/Profile');
-const WeightLog = require('../models/WeightLog');
+const { weightPoints } = require('./weightData');
 const { buildHistory, lifetimeTotals } = require('./progress');
 const { resolveTargets, dayBalance, proteinRangeAt } = require('./energy');
 const { buildJourney } = require('./journey');
@@ -35,7 +35,7 @@ async function loadJourney(uid, today) {
     Profile.findOne({ userId: uid }).lean(),
     Goal.find({ userId: uid }).sort({ done: 1, deadline: 1, createdAt: -1 }).limit(60).lean(),
     lifetimeTotals(uid),
-    WeightLog.find({ userId: uid }).sort({ date: 1, createdAt: 1 }).select('date weightKg').lean(),
+    weightPoints(uid),
   ]);
   const oldest = goals.reduce((m, g) => (g.startDate && g.startDate < m ? g.startDate : m), addDays(today, -400));
   const from = oldest < addDays(today, -799) ? addDays(today, -799) : oldest;

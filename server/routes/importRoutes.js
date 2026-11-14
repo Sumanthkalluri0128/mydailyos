@@ -33,7 +33,9 @@ function readBody(req) {
 async function build(uid, b) {
   if (b.kind === 'weight') {
     if (b.mapping.date === undefined || b.mapping.weight === undefined) return { built: null, need: ['date', 'weight'].filter((f) => b.mapping[f] === undefined) };
-    const existing = await WeightLog.find({ userId: uid }).select('date weightKg').lean();
+    const { scalesOf } = require('../lib/weightData'); const W = require('../lib/weightScales');
+    const cur = await scalesOf(uid);
+    const existing = (await WeightLog.find({ userId: uid }).select('date weightKg scaleId').lean()).filter((l) => W.scaleIdOf(l) === cur.referenceId); // an import is compared with the main scale only
     return { built: I.buildWeight(b.data, b.mapping, { order: b.order, existing, headers: b.headers }) };
   }
   if (b.kind === 'food') {
@@ -72,13 +74,16 @@ router.post('/commit', wrap(async (req, res) => {
     for (let i = 0; i < docs.length; i += 500) saved += (await FoodLog.insertMany(docs.slice(i, i + 500))).length;
   }
   if (b.kind === 'weight' && built.rows.length) {
+    const { scalesOf, latestWeightKg, relearn } = require('../lib/weightData'); const W = require('../lib/weightScales');
+    const cur = await scalesOf(uid);
+    const sid = cur.referenceId; // imported readings count as main-scale readings
     for (const r of built.rows) {
-      const old = await WeightLog.findOne({ userId: uid, date: r.date });
-      if (old) { old.weightKg = r.weightKg; await old.save(); } else await WeightLog.create({ userId: uid, date: r.date, weightKg: r.weightKg, notes: 'Imported from CSV' });
+      const old = await WeightLog.findOne({ userId: uid, date: r.date, scaleId: sid === W.MAIN_ID ? { $in: ['', W.MAIN_ID, null] } : sid });
+      if (old) { old.weightKg = r.weightKg; await old.save(); } else await WeightLog.create({ userId: uid, date: r.date, weightKg: r.weightKg, scaleId: sid, notes: 'Imported from CSV' });
       saved += 1;
     }
-    const latest = await WeightLog.findOne({ userId: uid }).sort({ date: -1, createdAt: -1 }).lean();
-    const profile = await Profile.findOneAndUpdate({ userId: uid }, { $set: { currentWeightKg: latest ? latest.weightKg : null } }, { upsert: true, new: true });
+    await relearn(uid);
+    const profile = await Profile.findOneAndUpdate({ userId: uid }, { $set: { currentWeightKg: await latestWeightKg(uid) } }, { upsert: true, new: true });
     await refreshStoredTarget(Profile, profile);
   }
   res.status(201).json({ success: true, saved, skippedDuplicates: built.duplicates.length, skippedProblems: built.problems.length });

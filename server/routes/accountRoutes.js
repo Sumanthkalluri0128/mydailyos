@@ -97,7 +97,8 @@ function toCsvRows(d) {
   const medName = new Map((d.medicines || []).map((m) => [String(m._id), m]));
   for (const l of d.medLogs || []) { const m = medName.get(String(l.medId)); rows.push(r({ type: 'medicine', date: l.date, name: m ? m.name : 'Medicine', details: `taken at ${l.time}`, notes: m && m.dose ? m.dose : '' })); }
   for (const l of d.waterLogs) rows.push(r({ type: 'water', date: l.date, name: 'Water', quantity: l.amountMl, unit: 'ml', notes: l.notes }));
-  for (const l of d.weightLogs) rows.push(r({ type: 'weight', date: l.date, name: 'Weight', quantity: l.weightKg, unit: 'kg', notes: l.notes }));
+  const scaleName = new Map(((d.profile && d.profile.weightScales) || []).map((s) => [s.id, s.name]));
+  for (const l of d.weightLogs) rows.push(r({ type: 'weight', date: l.date, name: 'Weight', quantity: l.weightKg, unit: 'kg', details: scaleName.get(l.scaleId || 'main') || '', notes: l.notes })); // details = the scale it was read on
   for (const t of d.tasks) {
     if (t.skipped) continue;
     rows.push(r({ type: 'task', date: t.date, name: t.title, details: `${t.completed ? 'done' : 'open'}${t.time ? ` @ ${t.time}` : ''}; ${t.priority}; ${t.recurrence}`, notes: t.notes }));

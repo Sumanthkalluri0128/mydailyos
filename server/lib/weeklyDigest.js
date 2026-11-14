@@ -1,7 +1,7 @@
 // Weekly progress email: summary + nutrient averages + weight-trend note, as plain text.
 const Profile = require('../models/Profile');
 const User = require('../models/User');
-const WeightLog = require('../models/WeightLog');
+const { weightPoints } = require('./weightData');
 const { buildHistory } = require('./progress');
 const { buildWeeklySummary, weekContaining } = require('./weekly');
 const { weeklyNutrients } = require('./nutrients');
@@ -33,7 +33,7 @@ async function weeklyBundle(userId, end, profile) {
 }
 
 async function plateauFor(userId, today, profile, target) {
-  const weights = await WeightLog.find({ userId, date: { $gte: addDays(today, -30), $lte: today } }).select('date weightKg').lean();
+  const weights = await weightPoints(userId, { date: { $gte: addDays(today, -30), $lte: today } });
   // What the food log implies since the last weigh-in (analysis only; the slope and the charts still use real weigh-ins).
   let estimate = null;
   try {

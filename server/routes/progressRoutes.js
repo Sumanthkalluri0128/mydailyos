@@ -2,7 +2,7 @@ const express = require('express');
 const { microForDay, microForWeeks } = require('../lib/microData');
 const Profile = require('../models/Profile');
 const Habit = require('../models/Habit');
-const WeightLog = require('../models/WeightLog');
+const { weightEntries } = require('../lib/weightData');
 const FoodLog = require('../models/FoodLog');
 const { computeStreaks } = require('../lib/streaks');
 const { requireAuth } = require('../middleware/auth');
@@ -62,7 +62,7 @@ const dayHandler = (dateOf) => wrap(async (req, res) => {
     getDayDetails(uid, date),
     include.has('profile') ? Profile.findOne({ userId: uid }).lean() : null,
     include.has('habits') ? Habit.find({ userId: uid, isActive: true }).sort({ createdAt: 1 }).lean() : null,
-    include.has('weights') ? WeightLog.find({ userId: uid }).sort({ date: -1, createdAt: -1 }).limit(400).lean() : null,
+    include.has('weights') ? weightEntries(uid, {}, { limit: 400 }) : null,
   ]);
   const profForRoom = include.has('profile') ? profile : await Profile.findOne({ userId: uid }).lean();
   const eventExtra = (await eventExtraMap(uid, [date], profForRoom))[date] || 0;
