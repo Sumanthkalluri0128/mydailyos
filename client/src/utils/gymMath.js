@@ -79,8 +79,8 @@ export function setsLine(e, fmtKg = (k) => `${k} kg`) {
     if (!v.length)
         return 'No sets';
     const u = e.unit === 'sec' ? 's' : e.unit === 'min' ? ' min' : '';
-    const same = v.every((s) => s.kg === v[0].kg && s.reps === v[0].reps && s.pace === v[0].pace);
-    const one = (s) => `${s.reps}${u}${!isTimed(e.unit) ? (s.kg > 0 ? ` @ ${fmtKg(s.kg)}` : ' @ BW') : ''}${e.unit === 'min' && s.pace ? ` @ ${fmtPace(s.pace)}/km` : ''}`;
+    const same = v.every((s) => s.kg === v[0].kg && s.reps === v[0].reps && s.pace === v[0].pace && (s.incline || 0) === (v[0].incline || 0));
+    const one = (s) => `${s.reps}${u}${!isTimed(e.unit) ? (s.kg > 0 ? ` @ ${fmtKg(s.kg)}` : ' @ BW') : ''}${e.unit === 'min' && s.pace ? ` @ ${fmtPace(s.pace)}/km` : ''}${e.unit === 'min' && s.pace && s.incline > 0 ? ` ↑${s.incline}%` : ''}`;
     if (same && v.length > 1)
         return `${v.length} × ${one(v[0])}`;
     return v.map(one).join(', ');
@@ -355,9 +355,13 @@ export function metFor(cat, name, unit) {
 // Between 6 and 8 km/h the two are blended, so there is no jump when you go from a brisk walk to a jog. No pace = the old per-exercise MET.
 export const PACE_MIN = 2, PACE_MAX = 30; // min per km that we accept (30 km/h .. 2 km/h)
 export const speedKph = (pace) => (pace > 0 ? round1(60 / pace) : 0);
-export function metForPace(pace) {
+/** Incline in percent grade, capped 0-40. ACSM adds a grade term to VO2 (ml/kg/min): walking 1.8 x speed x grade, running 0.9 x speed x grade. */
+export const INCLINE_MAX = 40;
+export const cleanIncline = (g) => { const n = Number(g); return Number.isFinite(n) && n > 0 ? Math.min(INCLINE_MAX, Math.round(n * 10) / 10) : 0; };
+export function metForPace(pace, incline = 0) {
     const v = 60 / pace, m = (v * 1000) / 60; // km/h and m/min
-    const walk = 1 + (0.1 * m) / 3.5, run = 1 + (0.2 * m) / 3.5;
+    const g = cleanIncline(incline) / 100;
+    const walk = 1 + (0.1 * m + 1.8 * m * g) / 3.5, run = 1 + (0.2 * m + 0.9 * m * g) / 3.5;
     if (v <= 6)
         return walk;
     if (v >= 8)
@@ -399,7 +403,7 @@ export function fmtPace(pace) {
 export const setKm = (e, s) => (e.unit === 'min' && s.pace && s.pace > 0 ? Math.round((s.reps / s.pace) * 100) / 100 : 0);
 export const entryKm = (e) => Math.round(validSets(e).reduce((n, s) => n + setKm(e, s), 0) * 100) / 100;
 /** MET for one set: from the pace when there is one, otherwise from what the exercise is. */
-export const setMet = (e, s) => (e.unit === 'min' && s.pace && s.pace >= PACE_MIN ? metForPace(s.pace) : metFor(e.cat, e.name, e.unit));
+export const setMet = (e, s) => (e.unit === 'min' && s.pace && s.pace >= PACE_MIN ? metForPace(s.pace, s.incline) : metFor(e.cat, e.name, e.unit));
 export function setMinutes(unit, s) {
     if (unit === 'min')
         return Math.max(0, s.reps);

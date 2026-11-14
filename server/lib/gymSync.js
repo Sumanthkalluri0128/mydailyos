@@ -28,7 +28,7 @@ function normalizeEntry(raw) {
   if (!ID_RE.test(id) || !DATE_RE.test(String(raw.date || ''))) return null;
   const unit = raw.unit === 'sec' || raw.unit === 'min' ? raw.unit : 'reps';
   const sets = (Array.isArray(raw.sets) ? raw.sets : []).slice(0, 40)
-    .map((s) => ({ reps: Math.round(num(s?.reps) * 10) / 10, weightKg: clamp(num(s?.kg ?? s?.weightKg), 0, 1000), pace: unit === 'min' && num(s?.pace) >= 2 && num(s?.pace) <= 30 ? Math.round(num(s.pace) * 1000) / 1000 : 0 }))
+    .map((s) => ({ reps: Math.round(num(s?.reps) * 10) / 10, weightKg: clamp(num(s?.kg ?? s?.weightKg), 0, 1000), pace: unit === 'min' && num(s?.pace) >= 2 && num(s?.pace) <= 30 ? Math.round(num(s.pace) * 1000) / 1000 : 0, incline: unit === 'min' && num(s?.pace) >= 2 && num(s?.incline) > 0 ? clamp(Math.round(num(s.incline) * 10) / 10, 0, 40) : 0 }))
     .filter((s) => s.reps > 0 && s.reps <= 5000);
   if (!sets.length) return null;
   const minutes = clamp(Math.round(num(raw.minutes)) || Math.round((sets.length * 90) / 60), 1, 1440);
@@ -50,7 +50,7 @@ function fmtPace(p) { let m = Math.floor(p), s = Math.round((p - m) * 60); if (s
 function setsNote(unit, sets) {
   if (unit !== 'min' || !sets.some((s) => s.pace)) return `${sets.map((s) => s.reps).join(' / ')} ${unit}`;
   const km = Math.round(sets.reduce((n, s) => n + (s.pace ? s.reps / s.pace : 0), 0) * 100) / 100;
-  return `${sets.map((s) => `${s.reps} min${s.pace ? ` @ ${fmtPace(s.pace)}/km` : ''}`).join(' / ')} (${km} km)`;
+  return `${sets.map((s) => `${s.reps} min${s.pace ? ` @ ${fmtPace(s.pace)}/km` : ''}${s.pace && s.incline > 0 ? ` ↑${s.incline}%` : ''}`).join(' / ')} (${km} km)`;
 }
 
 /** Cleans a whole sync request: which entries to write, which ids to remove. */

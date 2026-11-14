@@ -13,6 +13,8 @@ export function cleanSet(s) {
         out.rpe = Number(s.rpe);
     if (Number(s.pace) >= 2 && Number(s.pace) <= 30)
         out.pace = Math.round(Number(s.pace) * 1000) / 1000;
+    if (out.pace && Number(s.incline) > 0)
+        out.incline = Math.min(40, Math.round(Number(s.incline) * 10) / 10);
     return out;
 }
 export function cleanEntry(e) {

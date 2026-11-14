@@ -89,10 +89,10 @@ export default function ExerciseLogger({ timeForm = null }) {
   // ---- the sheet
   const open = (p, e) => {
     const last = G.lastFor(entries, p.id, date, e ? e.id : undefined);
-    const blank = p.unit === "min" ? [{ kg: "", reps: "", pace: "" }] : [{ kg: "", reps: "" }, { kg: "", reps: "" }, { kg: "", reps: "" }];
+    const blank = p.unit === "min" ? [{ kg: "", reps: "", pace: "", incline: "" }] : [{ kg: "", reps: "" }, { kg: "", reps: "" }, { kg: "", reps: "" }];
     setPick(p); setEditId(e ? e.id : null); setNote(e ? e.note || "" : ""); setShowNote(!!(e && e.note));
     const src = e || last;
-    setDraft(src ? src.sets.map((s) => ({ kg: inputStr(s.kg, unit), reps: String(s.reps), pace: s.pace ? G.fmtPace(s.pace) : "" })) : blank);
+    setDraft(src ? src.sets.map((s) => ({ kg: inputStr(s.kg, unit), reps: String(s.reps), pace: s.pace ? G.fmtPace(s.pace) : "", incline: s.incline ? String(s.incline) : "" })) : blank);
     setQ(""); setCat(""); setMore(false);
     requestAnimationFrame(() => sheetRef.current && sheetRef.current.scrollIntoView({ block: "start", behavior: "smooth" }));
   };
@@ -110,7 +110,7 @@ export default function ExerciseLogger({ timeForm = null }) {
   const last = pick ? G.lastFor(entries, pick.id, date, editId || undefined) : null;
   const lib0 = pick ? lookupExercise(pick.id, pick) : null;
 
-  const draftSets = pick ? draft.map((r) => ({ kg: timed ? 0 : G.parseNum(r.kg, 0, 2000) ? fromDisp(G.parseNum(r.kg, 0, 2000), unit) : 0, reps: G.parseNum(r.reps, 1, 5000) || 0, ...(isRun && G.parsePace(r.pace) ? { pace: G.parsePace(r.pace) } : {}) })).filter((x) => x.reps > 0) : [];
+  const draftSets = pick ? draft.map((r) => ({ kg: timed ? 0 : G.parseNum(r.kg, 0, 2000) ? fromDisp(G.parseNum(r.kg, 0, 2000), unit) : 0, reps: G.parseNum(r.reps, 1, 5000) || 0, ...(isRun && G.parsePace(r.pace) ? { pace: G.parsePace(r.pace), ...(G.parseNum(r.incline, 0.1, 40) ? { incline: G.parseNum(r.incline, 0.1, 40) } : {}) } : {}) })).filter((x) => x.reps > 0) : [];
   const draftEntry = pick ? { id: "x", date, exId: pick.id, name: pick.name, cat: pick.cat, unit: pick.unit, sets: draftSets, at: 0 } : null;
   const draftKcal = pick && draftSets.length ? G.entryKcal(draftEntry, bodyKg) : 0;
   const draftVol = pick && !timed && draftSets.length ? G.entryVolume(draftEntry, bodyKg) : 0;
@@ -133,6 +133,11 @@ export default function ExerciseLogger({ timeForm = null }) {
         const pace = G.parsePace(r.pace);
         if (pace === null) { notify("Type the average pace per km like 6:30 (6 min 30 s). It must be between 2:00 and 30:00.", "error"); return; }
         set.pace = pace;
+        if ((r.incline || "").trim()) {
+          const inc = G.parseNum(r.incline, 0, 40);
+          if (inc === null) { notify("Incline is a percent between 0 and 40, like 3. Leave it blank for flat.", "error"); return; }
+          if (inc > 0) set.incline = Math.round(inc * 10) / 10;
+        }
       }
       sets.push(set);
     }
@@ -172,7 +177,7 @@ export default function ExerciseLogger({ timeForm = null }) {
             <button type="button" className="xl-x" onClick={cancel} aria-label="Cancel">✕</button>
           </header>
           {last && !editId && (
-            <button type="button" className="xl-last" onClick={() => setDraft(last.sets.map((s) => ({ kg: inputStr(s.kg, unit), reps: String(s.reps), pace: s.pace ? G.fmtPace(s.pace) : "" })))}>
+            <button type="button" className="xl-last" onClick={() => setDraft(last.sets.map((s) => ({ kg: inputStr(s.kg, unit), reps: String(s.reps), pace: s.pace ? G.fmtPace(s.pace) : "", incline: s.incline ? String(s.incline) : "" })))}>
               <span>Last time · {G.setsLine(last, (k) => fmtW(k, unit))}</span><b>Use these</b>
             </button>
           )}
@@ -193,12 +198,13 @@ export default function ExerciseLogger({ timeForm = null }) {
                     <button type="button" aria-label={`Set ${i + 1}: more`} onClick={() => bump(i, "reps", 1)}>＋</button></div>
                 </div>
                 {isRun && <div className="xl-num"><span>pace /km</span><div><input aria-label={`Set ${i + 1} average pace per km`} className="xl-pace" inputMode="text" value={r.pace || ""} placeholder="6:30" onChange={(e) => setRow(i, { pace: e.target.value })} /></div></div>}
+                {isRun && <div className="xl-num"><span>incline %</span><div><input aria-label={`Set ${i + 1} treadmill incline percent`} className="xl-pace" inputMode="decimal" value={r.incline || ""} placeholder="0" onChange={(e) => setRow(i, { incline: e.target.value })} /></div></div>}
                 <button type="button" className="xl-del" aria-label={`Remove set ${i + 1}`} disabled={draft.length < 2} onClick={() => setDraft((d) => (d.length > 1 ? d.filter((_, j) => j !== i) : d))}>✕</button>
               </div>
             ))}
           </div>
-          <button type="button" className="xl-addset" onClick={() => setDraft((d) => [...d, d.length ? { ...d[d.length - 1] } : { kg: "", reps: "", pace: "" }])}>＋ Add set <small>(copies the last one)</small></button>
-          {isRun && <p className="xl-muted">Treadmill: enter minutes and average pace per km (like 6:30). Calories come from your speed.{draftKm > 0 ? ` About ${draftKm} km.` : ""}</p>}
+          <button type="button" className="xl-addset" onClick={() => setDraft((d) => [...d, d.length ? { ...d[d.length - 1] } : { kg: "", reps: "", pace: "", incline: "" }])}>＋ Add set <small>(copies the last one)</small></button>
+          {isRun && <p className="xl-muted">Treadmill: enter minutes and average pace per km (like 6:30). Add the incline % if you use one. Calories come from your speed and incline.{draftKm > 0 ? ` About ${draftKm} km.` : ""}</p>}
           {showNote
             ? <label className="xl-note"><span>Note</span><input value={note} maxLength={120} onChange={(e) => setNote(e.target.value)} placeholder="Felt strong, slow tempo…" /></label>
             : <button type="button" className="xl-link" onClick={() => setShowNote(true)}>＋ Add a note</button>}
@@ -290,7 +296,7 @@ export default function ExerciseLogger({ timeForm = null }) {
                 <FigThumb ex={l && l.id ? l : { id: e.exId, name: e.name, cat: e.cat }} size={52} />
                 <div>
                   <b>{e.name}</b>
-                  <div className="xl-sets-line">{e.sets.filter((s) => s.reps > 0).map((s, i) => <span key={i}>{e.unit === "reps" ? `${s.reps} × ${s.kg ? `${toDisp(s.kg, unit)}${unit}` : "BW"}` : `${s.reps}${e.unit === "sec" ? "s" : " min"}${s.pace ? ` @ ${G.fmtPace(s.pace)}/km` : ""}`}</span>)}</div>
+                  <div className="xl-sets-line">{e.sets.filter((s) => s.reps > 0).map((s, i) => <span key={i}>{e.unit === "reps" ? `${s.reps} × ${s.kg ? `${toDisp(s.kg, unit)}${unit}` : "BW"}` : `${s.reps}${e.unit === "sec" ? "s" : " min"}${s.pace ? ` @ ${G.fmtPace(s.pace)}/km` : ""}${s.pace && s.incline > 0 ? ` ↑${s.incline}%` : ""}`}</span>)}</div>
                   <small>{G.entryKm(e) > 0 ? `${G.entryKm(e)} km · ` : ""}≈ {G.entryKcal(e, bodyKg)} kcal{e.note ? ` · ${e.note}` : ""}</small>
                 </div>
               </button>

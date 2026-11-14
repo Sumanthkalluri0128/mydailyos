@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import * as G from "./gymMath";
 import { backupJson, bodyCsv, csvCell, parseBackup, workoutsCsv } from "./gymExport";
-import { sane } from "./gymClean";
+import { sane, cleanSet } from "./gymClean";
 import { GYM_CATALOG, mergeCatalog } from "./gymCatalog";
 
 const E = (id, date, exId, sets, o = {}) => ({ id, date, exId, name: exId, cat: "chest", unit: "reps", sets: sets.map(([kg, reps]) => ({ kg, reps })), at: Number(id.replace(/\D/g, "")) || 0, ...o });
@@ -90,4 +90,15 @@ test("a blank weight is body weight: volume, day/week stats and progress follow 
   assert.equal(G.isBodyweightSet({ unit: "sec" }, { kg: 0, reps: 40 }), false);
   const csv = workoutsCsv([b], body).split("\r\n")[1].split(",");
   assert.equal(csv[9], "780"); assert.equal(csv[csv.length - 1], "bodyweight");
+});
+
+test("treadmill incline raises calories, is kept when a set is cleaned, and blank incline changes nothing", () => {
+  const T = (sets) => ({ id: "t", date: "2026-01-01", exId: "tm", name: "Incline Treadmill Walk", cat: "cardio", unit: "min", sets, at: 0 });
+  const flat = G.entryKcal(T([{ kg: 0, reps: 25, pace: 4.5 }]), 77);
+  assert.equal(flat, 461);                                              // no incline = same as before
+  assert.equal(G.entryKcal(T([{ kg: 0, reps: 25, pace: 4.5, incline: 0 }]), 77), flat);
+  assert.ok(G.entryKcal(T([{ kg: 0, reps: 25, pace: 4.5, incline: 3 }]), 77) > flat);
+  assert.ok(G.metForPace(12, 10) > G.metForPace(12) * 2);              // 5 km/h walk at 10% is much harder than flat
+  assert.equal(cleanSet({ kg: 0, reps: 5, pace: 4.5, incline: 3 }).incline, 3);
+  assert.equal(cleanSet({ kg: 0, reps: 5, incline: 3 }).incline, undefined); // incline means nothing without a pace
 });

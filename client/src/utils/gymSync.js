@@ -13,7 +13,7 @@ export const EMPTY_MEMORY = { synced: {} };
 /** The body of one gym entry as the server wants it. */
 export function toPayload(e, body) {
     const kg = bodyKgOn(body, e.date);
-    const sets = validSets(e).map((s) => ({ kg: s.kg, reps: s.reps, ...(e.unit === 'min' && s.pace ? { pace: s.pace } : {}) }));
+    const sets = validSets(e).map((s) => ({ kg: s.kg, reps: s.reps, ...(e.unit === 'min' && s.pace ? { pace: s.pace, ...(s.incline > 0 ? { incline: s.incline } : {}) } : {}) }));
     return {
         id: e.id, date: e.date, name: e.name, cat: e.cat, unit: e.unit, sets, note: e.note,
         minutes: Math.max(1, Math.round(entryMinutes(e))), kcal: entryKcal(e, kg || DEFAULT_BODY_KG), ...(kg ? { bodyKg: kg } : {}),
