@@ -156,6 +156,7 @@ Core|Bodyweight|Sit-Up
 Core|Bodyweight|Decline Sit-Up
 Core|Bodyweight|V-Up
 Core|Bodyweight|Bicycle Crunch
+Core|Bodyweight|Reverse Crunch
 Core|Bodyweight|Lying Leg Raise
 Core|Bodyweight|Hanging Leg Raise
 Core|Bodyweight|Hanging Knee Raise
