@@ -53,6 +53,8 @@ export const bodyKgFn = (body) => (date) => bodyKgOn(body, date) || DEFAULT_BODY
 export const setLoadKg = (e, s, bodyKg = 0) => (isTimed(e.unit) || !(s.reps > 0) ? 0 : s.kg > 0 ? s.kg : bodyKg > 0 ? bodyKg : 0);
 /** Volume = load x reps. A blank weight counts as body weight when `bodyKg` is given (without it only typed weights count, as before). */
 export function entryVolume(e, bodyKg = 0) {
+    // Loaded carries are not conventional lifting volume; steps × body weight was a misleading number.
+    if (/farmer.?s (carry|walk)/i.test(e.name || '')) return 0;
     if (isTimed(e.unit))
         return 0;
     return Math.round(validSets(e).reduce((n, s) => n + setLoadKg(e, s, bodyKg) * s.reps, 0));
@@ -60,6 +62,8 @@ export function entryVolume(e, bodyKg = 0) {
 /** True when at least one set of the entry is a body weight set. */
 export const hasBodyweightSets = (e) => validSets(e).some((s) => isBodyweightSet(e, s));
 export const entrySetCount = (e) => validSets(e).length;
+/** Highest combined left + right hand load used in any Farmer's Walk set (not multiplied by steps). */
+export const entryCarryLoadKg = (e) => /farmer.?s (carry|walk)/i.test(e.name || '') ? Math.max(0, ...validSets(e).map((s) => (Number(s.leftKg) || 0) + (Number(s.rightKg) || 0))) : 0;
 export function entryTotalReps(e) { return validSets(e).reduce((n, s) => n + s.reps, 0); }
 export function topSet(e) {
     const v = validSets(e);
@@ -406,6 +410,8 @@ export const entryKm = (e) => Math.round(validSets(e).reduce((n, s) => n + setKm
 /** MET for one set: from the pace when there is one, otherwise from what the exercise is. */
 export const setMet = (e, s) => {
     const n = e.name.toLowerCase();
+    // Loaded farmer carries: conservative MET bands by perceived effort. Duration is counted per set.
+    if (/farmer.?s (carry|walk)/i.test(n)) return s.effort === 'easy' ? 4.5 : s.effort === 'hard' ? 8 : 6.5;
     if (e.unit === 'min' && s.speedKph && /treadmill|incline.*walk|walk/.test(n)) return metForPace(60 / s.speedKph, s.incline);
     if (e.unit === 'min' && s.pace && s.pace >= PACE_MIN) return metForPace(s.pace, s.incline);
     if (s.effort) { const base = metFor(e.cat, e.name, e.unit); return s.effort === 'easy' ? Math.min(base, 3.5) : s.effort === 'hard' ? Math.max(base, 8) : Math.max(base, 5.5); }

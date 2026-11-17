@@ -102,3 +102,15 @@ test("treadmill incline raises calories, is kept when a set is cleaned, and blan
   assert.equal(cleanSet({ kg: 0, reps: 5, pace: 4.5, incline: 3 }).incline, 3);
   assert.equal(cleanSet({ kg: 0, reps: 5, incline: 3 }).incline, undefined); // incline means nothing without a pace
 });
+
+
+test("Farmer's Walk estimates calories from set duration and effort, not steps as lifted bodyweight", () => {
+  const carry = { id: "fw", date: "2026-11-17", exId: "farmer-walk", name: "Farmer's Walk", cat: "Full body", unit: "reps", at: 1, sets: [
+    { kg: 0, reps: 70, steps: 70, leftKg: 15, rightKg: 15, durationMin: 1.5, effort: "moderate" },
+    { kg: 0, reps: 70, steps: 70, leftKg: 17.5, rightKg: 17.5, durationMin: 1.5, effort: "moderate" },
+  ] };
+  assert.equal(G.entryKcal(carry, 78), Math.round(6.5 * 3.5 * 78 / 200 * 3));
+  assert.equal(G.entryVolume(carry, 78), 0);
+  assert.equal(G.entryCarryLoadKg(carry), 35);
+  assert.ok(G.entryKcal({ ...carry, sets: carry.sets.map(s => ({ ...s, effort: "hard" })) }, 78) > G.entryKcal(carry, 78));
+});

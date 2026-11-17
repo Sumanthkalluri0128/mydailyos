@@ -42,3 +42,5 @@
 - Rowing Machine fields (average pace, average strokes/min, and interval time) are now entered independently for every set.
 - Cross-trainer and stationary-cycle metrics and effort are also stored per set rather than in one shared first-set panel.
 - Save logic now maps each draft row to its matching saved set by row index, avoiding collisions when two sets have the same reps or step count.
+
+- Farmer's Walk calorie estimates now use each set's duration and effort (easy 4.5 MET, moderate 6.5 MET, hard 8 MET). Steps are no longer mistaken for bodyweight reps. Farmer's Walk is excluded from conventional lifted-volume totals and shows the highest combined hand load separately.

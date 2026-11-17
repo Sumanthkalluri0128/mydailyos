@@ -11,3 +11,5 @@ The web and mobile source changes are kept in sync for the shared gym maths and 
 
 ## v78 per-set correction
 All special exercise metrics now appear within each individual set row for Farmer's Walk, Rowing Machine, Cross Trainer, and Stationary Cycle. Each row saves its own data independently; identical rep/step values no longer cause one set's metrics to be copied onto another.
+
+- Farmer's Walk calories use per-set duration and effort-based loaded-carry MET estimates (easy 4.5, moderate 6.5, hard 8). Steps are not treated as bodyweight reps. Loaded carries are excluded from conventional lifting-volume totals; the logger displays the highest combined hand load separately.
