@@ -33,3 +33,12 @@
 - Gym log / Exercise logger: a blank weight is now a body weight set. Shown as "@ BW", counted in volume at your body weight on that day, and recalculated for old entries too (see docs/GYM_LOG.md). Records for these sets stay rep-based. CSV gained `weight_type`.
 - Medicines: reminders for one medicine with several times no longer ring twice (phone: the reminder scheduler could run twice at once and leave the first set ringing; it now runs one at a time and clears leftovers. Quiet hours that pushed two doses onto the same minute now give one reminder). Web reminder timers have the same overlap guard.
 - Phone: the medicine notification has a "✓ Taken" button that ticks the dose(s) without opening the app and cancels its remaining reminder.
+
+## v77 – rowing console fields
+- Rowing logger now asks for average pace (/500 m, mm:ss), average strokes/min, and total time (mm:ss); distance is no longer required. Duration and effort drive the calorie estimate.
+
+### v78 workout set-entry fix
+- Farmer's Walk fields (steps, left-hand load, right-hand load, optional duration) are now entered independently inside each set row.
+- Rowing Machine fields (average pace, average strokes/min, and interval time) are now entered independently for every set.
+- Cross-trainer and stationary-cycle metrics and effort are also stored per set rather than in one shared first-set panel.
+- Save logic now maps each draft row to its matching saved set by row index, avoiding collisions when two sets have the same reps or step count.

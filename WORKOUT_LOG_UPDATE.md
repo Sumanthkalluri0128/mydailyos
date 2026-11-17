@@ -8,3 +8,6 @@
 - Machine calorie estimates use effort bands (easy / moderate / hard); treadmill estimates use speed and incline. Calories remain estimates, not device-grade measurements.
 
 The web and mobile source changes are kept in sync for the shared gym maths and exercise catalogue.
+
+## v78 per-set correction
+All special exercise metrics now appear within each individual set row for Farmer's Walk, Rowing Machine, Cross Trainer, and Stationary Cycle. Each row saves its own data independently; identical rep/step values no longer cause one set's metrics to be copied onto another.
