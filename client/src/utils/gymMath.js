@@ -80,7 +80,7 @@ export function setsLine(e, fmtKg = (k) => `${k} kg`) {
         return 'No sets';
     const u = e.unit === 'sec' ? 's' : e.unit === 'min' ? ' min' : '';
     const same = v.every((s) => s.kg === v[0].kg && s.reps === v[0].reps && s.pace === v[0].pace && (s.incline || 0) === (v[0].incline || 0));
-    const one = (s) => `${s.reps}${u}${!isTimed(e.unit) ? (s.kg > 0 ? ` @ ${fmtKg(s.kg)}` : ' @ BW') : ''}${e.unit === 'min' && s.pace ? ` @ ${fmtPace(s.pace)}/km` : ''}${e.unit === 'min' && s.pace && s.incline > 0 ? ` ↑${s.incline}%` : ''}`;
+    const one = (s) => `${s.steps ? `${s.steps} steps` : `${s.reps}${u}`}${!isTimed(e.unit) ? (s.leftKg || s.rightKg ? ` · L ${fmtKg(s.leftKg || 0)} / R ${fmtKg(s.rightKg || 0)}` : s.kg > 0 ? ` @ ${fmtKg(s.kg)}` : '') : ''}${e.unit === 'min' && s.speedKph ? ` @ ${s.speedKph} km/h` : e.unit === 'min' && s.pace ? ` @ ${fmtPace(s.pace)}/km` : ''}${e.unit === 'min' && s.pace && s.incline > 0 ? ` ↑${s.incline}%` : ''}${s.distanceM ? ` · ${s.distanceM} m` : s.distanceKm ? ` · ${s.distanceKm} km` : ''}`;
     if (same && v.length > 1)
         return `${v.length} × ${one(v[0])}`;
     return v.map(one).join(', ');
@@ -318,7 +318,8 @@ const ISOLATION = /curl|extension|raise|fly|kickback|pushdown|shrug|crunch|twist
 /** MET (energy intensity) for an exercise, by what it is. Compendium-style values, rounded. */
 export function metFor(cat, name, unit) {
     const c = String(cat || '').toLowerCase(), n = String(name || '').toLowerCase();
-    if (c === 'cardio' || unit === 'min') {
+    if (c === 'mobility') return 2.5;
+  if (c === 'cardio' || unit === 'min') {
         if (/burpee|sprint|hiit|battle|boxing|bag|assault|jump rope|sled/.test(n))
             return 9;
         if (/run/.test(n))
@@ -403,8 +404,15 @@ export function fmtPace(pace) {
 export const setKm = (e, s) => (e.unit === 'min' && s.pace && s.pace > 0 ? Math.round((s.reps / s.pace) * 100) / 100 : 0);
 export const entryKm = (e) => Math.round(validSets(e).reduce((n, s) => n + setKm(e, s), 0) * 100) / 100;
 /** MET for one set: from the pace when there is one, otherwise from what the exercise is. */
-export const setMet = (e, s) => (e.unit === 'min' && s.pace && s.pace >= PACE_MIN ? metForPace(s.pace, s.incline) : metFor(e.cat, e.name, e.unit));
+export const setMet = (e, s) => {
+    const n = e.name.toLowerCase();
+    if (e.unit === 'min' && s.speedKph && /treadmill|incline.*walk|walk/.test(n)) return metForPace(60 / s.speedKph, s.incline);
+    if (e.unit === 'min' && s.pace && s.pace >= PACE_MIN) return metForPace(s.pace, s.incline);
+    if (s.effort) { const base = metFor(e.cat, e.name, e.unit); return s.effort === 'easy' ? Math.min(base, 3.5) : s.effort === 'hard' ? Math.max(base, 8) : Math.max(base, 5.5); }
+    return metFor(e.cat, e.name, e.unit);
+};
 export function setMinutes(unit, s) {
+    if (s.durationMin && s.durationMin > 0) return s.durationMin;
     if (unit === 'min')
         return Math.max(0, s.reps);
     if (unit === 'sec')

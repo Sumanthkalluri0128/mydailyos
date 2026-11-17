@@ -89,10 +89,10 @@ export default function ExerciseLogger({ timeForm = null }) {
   // ---- the sheet
   const open = (p, e) => {
     const last = G.lastFor(entries, p.id, date, e ? e.id : undefined);
-    const blank = p.unit === "min" ? [{ kg: "", reps: "", pace: "", incline: "" }] : [{ kg: "", reps: "" }, { kg: "", reps: "" }, { kg: "", reps: "" }];
+    const blank = /farmer.?s (carry|walk)/i.test(p.name) ? [{ kg: "", reps: "", steps: "", leftKg: "", rightKg: "", duration: "" }] : p.unit === "min" ? [{ kg: "", reps: "", pace: "", incline: "", speed: "", distance: "", resistance: "", cadence: "", watts: "", strokeRate: "", split500: "", effort: "moderate" }] : [{ kg: "", reps: "" }, { kg: "", reps: "" }, { kg: "", reps: "" }];
     setPick(p); setEditId(e ? e.id : null); setNote(e ? e.note || "" : ""); setShowNote(!!(e && e.note));
     const src = e || last;
-    setDraft(src ? src.sets.map((s) => ({ kg: inputStr(s.kg, unit), reps: String(s.reps), pace: s.pace ? G.fmtPace(s.pace) : "", incline: s.incline ? String(s.incline) : "" })) : blank);
+    setDraft(src ? src.sets.map((s) => ({ kg: inputStr(s.kg, unit), reps: String(s.reps), pace: s.pace ? G.fmtPace(s.pace) : "", incline: s.incline ? String(s.incline) : "", speed: s.speedKph ? String(s.speedKph) : "", distance: s.distanceM ? String(s.distanceM) : s.distanceKm ? String(s.distanceKm) : "", resistance: s.resistance ? String(s.resistance) : "", cadence: s.cadence ? String(s.cadence) : "", watts: s.watts ? String(s.watts) : "", strokeRate: s.strokeRate ? String(s.strokeRate) : "", split500: s.split500 ? String(s.split500) : "", steps: s.steps ? String(s.steps) : "", leftKg: s.leftKg ? inputStr(s.leftKg, unit) : "", rightKg: s.rightKg ? inputStr(s.rightKg, unit) : "", duration: s.durationMin ? String(s.durationMin) : "", effort: s.effort || "moderate" })) : blank);
     setQ(""); setCat(""); setMore(false);
     requestAnimationFrame(() => sheetRef.current && sheetRef.current.scrollIntoView({ block: "start", behavior: "smooth" }));
   };
@@ -110,7 +110,7 @@ export default function ExerciseLogger({ timeForm = null }) {
   const last = pick ? G.lastFor(entries, pick.id, date, editId || undefined) : null;
   const lib0 = pick ? lookupExercise(pick.id, pick) : null;
 
-  const draftSets = pick ? draft.map((r) => ({ kg: timed ? 0 : G.parseNum(r.kg, 0, 2000) ? fromDisp(G.parseNum(r.kg, 0, 2000), unit) : 0, reps: G.parseNum(r.reps, 1, 5000) || 0, ...(isRun && G.parsePace(r.pace) ? { pace: G.parsePace(r.pace), ...(G.parseNum(r.incline, 0.1, 40) ? { incline: G.parseNum(r.incline, 0.1, 40) } : {}) } : {}) })).filter((x) => x.reps > 0) : [];
+  const draftSets = pick ? draft.map((r) => ({ kg: timed ? 0 : G.parseNum(r.kg, 0, 2000) ? fromDisp(G.parseNum(r.kg, 0, 2000), unit) : 0, reps: G.parseNum(r.reps, 1, 5000) || 0, ...(isRun && G.parseNum(r.speed, 0.5, 30) ? { speedKph: G.parseNum(r.speed, 0.5, 30), pace: 60 / G.parseNum(r.speed, 0.5, 30), ...(G.parseNum(r.incline, 0, 40) ? { incline: G.parseNum(r.incline, 0, 40) } : {}) } : {}), ...(/rowing machine/i.test(pick?.name || "") && G.parseNum(r.distance, 1, 100000) ? { distanceM: G.parseNum(r.distance, 1, 100000) } : G.parseNum(r.distance, 0.01, 500) ? { distanceKm: G.parseNum(r.distance, 0.01, 500) } : {}), ...(G.parseNum(r.resistance, 1, 100) ? { resistance: G.parseNum(r.resistance, 1, 100) } : {}), ...(G.parseNum(r.cadence, 1, 250) ? { cadence: G.parseNum(r.cadence, 1, 250) } : {}), ...(G.parseNum(r.watts, 1, 3000) ? { watts: G.parseNum(r.watts, 1, 3000) } : {}), ...(G.parseNum(r.strokeRate, 1, 100) ? { strokeRate: G.parseNum(r.strokeRate, 1, 100) } : {}), ...(G.parseNum(r.split500, 30, 600) ? { split500: G.parseNum(r.split500, 30, 600) } : {}), ...(G.parseNum(r.steps, 1, 100000) ? { steps: G.parseNum(r.steps, 1, 100000) } : {}), ...(G.parseNum(r.leftKg, 0.1, 500) ? { leftKg: fromDisp(G.parseNum(r.leftKg, 0.1, 500), unit) } : {}), ...(G.parseNum(r.rightKg, 0.1, 500) ? { rightKg: fromDisp(G.parseNum(r.rightKg, 0.1, 500), unit) } : {}), ...(G.parseNum(r.duration, 0.1, 600) ? { durationMin: G.parseNum(r.duration, 0.1, 600) } : /farmer.?s (carry|walk)/i.test(pick?.name || "") && G.parseNum(r.steps || r.reps, 1, 100000) ? { durationMin: Math.max(0.2, G.parseNum(r.steps || r.reps, 1, 100000) * 0.6 / 60) } : {}), ...(r.effort ? { effort: r.effort } : {}) })).filter((x) => x.reps > 0) : [];
   const draftEntry = pick ? { id: "x", date, exId: pick.id, name: pick.name, cat: pick.cat, unit: pick.unit, sets: draftSets, at: 0 } : null;
   const draftKcal = pick && draftSets.length ? G.entryKcal(draftEntry, bodyKg) : 0;
   const draftVol = pick && !timed && draftSets.length ? G.entryVolume(draftEntry, bodyKg) : 0;
@@ -129,16 +129,20 @@ export default function ExerciseLogger({ timeForm = null }) {
       let kg = 0;
       if (!timed && r.kg.trim()) { const n = G.parseNum(r.kg, 0.1, 2000); if (n === null) { notify("A weight must be a number, or leave it blank for bodyweight.", "error"); return; } kg = fromDisp(n, unit); }
       const set = { kg, reps: Math.round(reps * 10) / 10 };
-      if (isRun && (r.pace || "").trim()) {
-        const pace = G.parsePace(r.pace);
-        if (pace === null) { notify("Type the average pace per km like 6:30 (6 min 30 s). It must be between 2:00 and 30:00.", "error"); return; }
-        set.pace = pace;
+      if (isRun && (r.speed || "").trim()) {
+        const speed = G.parseNum(r.speed, 0.5, 30);
+        if (speed === null) { notify("Enter treadmill speed in km/h, between 0.5 and 30.", "error"); return; }
+        set.speedKph = speed;
         if ((r.incline || "").trim()) {
           const inc = G.parseNum(r.incline, 0, 40);
           if (inc === null) { notify("Incline is a percent between 0 and 40, like 3. Leave it blank for flat.", "error"); return; }
           if (inc > 0) set.incline = Math.round(inc * 10) / 10;
         }
       }
+      const extra = draftSets.find((x) => x.reps === set.reps) || {};
+      for (const k of ["distanceKm", "distanceM", "resistance", "cadence", "watts", "strokeRate", "split500", "steps", "leftKg", "rightKg", "durationMin", "effort"]) if (extra[k] !== undefined) set[k] = extra[k];
+      if (/farmer.?s (carry|walk)/i.test(pick.name) && set.steps && !set.durationMin) set.durationMin = Math.max(0.2, set.steps * 0.6 / 60);
+      if (isRun && set.speedKph) set.pace = 60 / set.speedKph;
       sets.push(set);
     }
     if (!sets.length) { notify(`Fill in at least one set with ${unitWord(pick.unit)}.`, "error"); return; }
@@ -177,7 +181,7 @@ export default function ExerciseLogger({ timeForm = null }) {
             <button type="button" className="xl-x" onClick={cancel} aria-label="Cancel">✕</button>
           </header>
           {last && !editId && (
-            <button type="button" className="xl-last" onClick={() => setDraft(last.sets.map((s) => ({ kg: inputStr(s.kg, unit), reps: String(s.reps), pace: s.pace ? G.fmtPace(s.pace) : "", incline: s.incline ? String(s.incline) : "" })))}>
+            <button type="button" className="xl-last" onClick={() => setDraft(last.sets.map((s) => ({ kg: inputStr(s.kg, unit), reps: String(s.reps), pace: s.pace ? G.fmtPace(s.pace) : "", incline: s.incline ? String(s.incline) : "", speed: s.speedKph ? String(s.speedKph) : "", distance: s.distanceM ? String(s.distanceM) : s.distanceKm ? String(s.distanceKm) : "", resistance: s.resistance ? String(s.resistance) : "", cadence: s.cadence ? String(s.cadence) : "", watts: s.watts ? String(s.watts) : "", strokeRate: s.strokeRate ? String(s.strokeRate) : "", split500: s.split500 ? String(s.split500) : "", steps: s.steps ? String(s.steps) : "", leftKg: s.leftKg ? inputStr(s.leftKg, unit) : "", rightKg: s.rightKg ? inputStr(s.rightKg, unit) : "", duration: s.durationMin ? String(s.durationMin) : "", effort: s.effort || "moderate" })))}>
               <span>Last time · {G.setsLine(last, (k) => fmtW(k, unit))}</span><b>Use these</b>
             </button>
           )}
@@ -185,26 +189,30 @@ export default function ExerciseLogger({ timeForm = null }) {
             {draft.map((r, i) => (
               <div className="xl-set" key={i}>
                 <span className="xl-set-n">{i + 1}</span>
-                {!timed && (
+                {!timed && !/farmer.?s (carry|walk)/i.test(pick.name) && (
                   <div className="xl-num"><span>{unit} <small>· empty = body weight</small></span>
                     <div><button type="button" aria-label={`Set ${i + 1}: less weight`} onClick={() => bump(i, "kg", -1)}>−</button>
                       <input aria-label={`Set ${i + 1} weight`} inputMode="decimal" value={r.kg} placeholder="BW" onChange={(e) => setRow(i, { kg: e.target.value })} />
                       <button type="button" aria-label={`Set ${i + 1}: more weight`} onClick={() => bump(i, "kg", 1)}>＋</button></div>
                   </div>
                 )}
-                <div className="xl-num"><span>{pick.unit === "reps" ? "reps" : unitWord(pick.unit)}</span>
+                <div className="xl-num"><span>{/farmer.?s (carry|walk)/i.test(pick.name) ? "steps" : pick.unit === "reps" ? "reps" : unitWord(pick.unit)}</span>
                   <div><button type="button" aria-label={`Set ${i + 1}: fewer`} onClick={() => bump(i, "reps", -1)}>−</button>
                     <input aria-label={`Set ${i + 1} ${unitWord(pick.unit)}`} inputMode="decimal" value={r.reps} placeholder="0" onChange={(e) => setRow(i, { reps: e.target.value })} />
                     <button type="button" aria-label={`Set ${i + 1}: more`} onClick={() => bump(i, "reps", 1)}>＋</button></div>
                 </div>
-                {isRun && <div className="xl-num"><span>pace /km</span><div><input aria-label={`Set ${i + 1} average pace per km`} className="xl-pace" inputMode="text" value={r.pace || ""} placeholder="6:30" onChange={(e) => setRow(i, { pace: e.target.value })} /></div></div>}
-                {isRun && <div className="xl-num"><span>incline %</span><div><input aria-label={`Set ${i + 1} treadmill incline percent`} className="xl-pace" inputMode="decimal" value={r.incline || ""} placeholder="0" onChange={(e) => setRow(i, { incline: e.target.value })} /></div></div>}
+                {isRun && /treadmill/i.test(pick.name) && <div className="xl-num"><span>Speed km/h</span><div><input aria-label={`Set ${i + 1} treadmill speed km per hour`} className="xl-pace" inputMode="decimal" value={r.speed || ""} placeholder="5.0" onChange={(e) => setRow(i, { speed: e.target.value })} /></div></div>}
+                {isRun && /treadmill/i.test(pick.name) && <div className="xl-num"><span>incline %</span><div><input aria-label={`Set ${i + 1} treadmill incline percent`} className="xl-pace" inputMode="decimal" value={r.incline || ""} placeholder="0" onChange={(e) => setRow(i, { incline: e.target.value })} /></div></div>}
                 <button type="button" className="xl-del" aria-label={`Remove set ${i + 1}`} disabled={draft.length < 2} onClick={() => setDraft((d) => (d.length > 1 ? d.filter((_, j) => j !== i) : d))}>✕</button>
               </div>
             ))}
           </div>
           <button type="button" className="xl-addset" onClick={() => setDraft((d) => [...d, d.length ? { ...d[d.length - 1] } : { kg: "", reps: "", pace: "", incline: "" }])}>＋ Add set <small>(copies the last one)</small></button>
-          {isRun && <p className="xl-muted">Treadmill: enter minutes and average pace per km (like 6:30). Add the incline % if you use one. Calories come from your speed and incline.{draftKm > 0 ? ` About ${draftKm} km.` : ""}</p>}
+          {isRun && /treadmill/i.test(pick.name) && <p className="xl-muted">Treadmill: enter duration in minutes, treadmill speed in km/h (for example 4.5), and incline %. Calories are estimated from speed, incline and your body weight.{draftKm > 0 ? ` About ${draftKm} km.` : ""}</p>}
+          {pick && /rowing machine/i.test(pick.name) && <div className="xl-machine"><b>Rowing machine details</b><div className="xl-num"><span>Distance (m)</span><input className="xl-pace" inputMode="decimal" value={draft[0]?.distance || ""} placeholder="2000" onChange={(e) => setRow(0, { distance: e.target.value })} /></div><div className="xl-num"><span>Stroke rate (spm)</span><input className="xl-pace" inputMode="decimal" value={draft[0]?.strokeRate || ""} placeholder="24" onChange={(e) => setRow(0, { strokeRate: e.target.value })} /></div><div className="xl-num"><span>Split / 500 m (seconds)</span><input className="xl-pace" inputMode="decimal" value={draft[0]?.split500 || ""} placeholder="150" onChange={(e) => setRow(0, { split500: e.target.value })} /></div></div>}
+          {pick && /cross trainer|elliptical|stationary bike|exercise bike/i.test(pick.name) && <div className="xl-machine"><b>{/bike/i.test(pick.name) ? "Stationary cycle details" : "Cross trainer details"}</b><div className="xl-num"><span>Distance (km, optional)</span><input className="xl-pace" inputMode="decimal" value={draft[0]?.distance || ""} placeholder="3.0" onChange={(e) => setRow(0, { distance: e.target.value })} /></div><div className="xl-num"><span>Resistance level</span><input className="xl-pace" inputMode="decimal" value={draft[0]?.resistance || ""} placeholder="5" onChange={(e) => setRow(0, { resistance: e.target.value })} /></div><div className="xl-num"><span>Cadence (RPM, optional)</span><input className="xl-pace" inputMode="decimal" value={draft[0]?.cadence || ""} placeholder="70" onChange={(e) => setRow(0, { cadence: e.target.value })} /></div></div>}
+          {pick && /farmer.?s (carry|walk)/i.test(pick.name) && <div className="xl-machine"><b>Farmer's walk details</b><div className="xl-num"><span>Steps</span><input className="xl-pace" inputMode="numeric" value={draft[0]?.steps || ""} placeholder="40" onChange={(e) => setRow(0, { steps: e.target.value, reps: e.target.value })} /></div><div className="xl-num"><span>Left hand ({unit})</span><input className="xl-pace" inputMode="decimal" value={draft[0]?.leftKg || ""} placeholder="20" onChange={(e) => setRow(0, { leftKg: e.target.value })} /></div><div className="xl-num"><span>Right hand ({unit})</span><input className="xl-pace" inputMode="decimal" value={draft[0]?.rightKg || ""} placeholder="20" onChange={(e) => setRow(0, { rightKg: e.target.value })} /></div><div className="xl-num"><span>Duration (minutes, optional)</span><input className="xl-pace" inputMode="decimal" value={draft[0]?.duration || ""} placeholder="1.5" onChange={(e) => setRow(0, { duration: e.target.value })} /></div></div>}
+          {pick && /rowing machine|cross trainer|elliptical|stationary bike|exercise bike/i.test(pick.name) && <label className="xl-note"><span>Effort</span><select value={draft[0]?.effort || "moderate"} onChange={(e) => setRow(0, { effort: e.target.value })}><option value="easy">Easy</option><option value="moderate">Moderate</option><option value="hard">Hard</option></select></label>}
           {showNote
             ? <label className="xl-note"><span>Note</span><input value={note} maxLength={120} onChange={(e) => setNote(e.target.value)} placeholder="Felt strong, slow tempo…" /></label>
             : <button type="button" className="xl-link" onClick={() => setShowNote(true)}>＋ Add a note</button>}

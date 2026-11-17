@@ -105,3 +105,5 @@
   .xl-hero > div b { font-size: 1.7rem; }
   .xl-num { min-width: 130px; }
 }
+
+.xl-machine{display:flex;flex-wrap:wrap;gap:10px;padding:12px;margin:10px 0;border:1px solid var(--line,var(--border));border-radius:14px;background:var(--surface-soft,transparent)}.xl-machine>b{flex-basis:100%}.xl-machine .xl-num{display:flex;flex-direction:column;gap:5px}.xl-machine input,.xl-note select{max-width:140px;min-height:40px;border:1px solid var(--line,var(--border));border-radius:9px;padding:7px;background:var(--surface,var(--card));color:inherit}
