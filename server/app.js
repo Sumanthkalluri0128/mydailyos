@@ -69,6 +69,7 @@ function createApp({ allowedOrigins = [] } = {}) {
   );
   app.use(compression());
   app.use('/api/import', express.json({ limit: '4mb' })); // CSV files are bigger than normal requests
+  app.use('/api/sync', express.json({ limit: '2mb' }));   // up to 500 records at a time
   app.use(express.json({ limit: '100kb' }));
 
   app.get('/api/health', (req, res) => {
@@ -119,6 +120,8 @@ function createApp({ allowedOrigins = [] } = {}) {
   app.use('/api/plan', planRoutes);
   app.use('/api/assistant', assistantRoutes);
   app.use('/api/album', albumRoutes);
+  app.use('/api/sync', require('./routes/syncRoutes'));
+  app.use('/api/workout-plan', require('./routes/workoutPlanRoutes'));
   app.use('/api/progress', progressRoutes);
   app.use('/api/history', progressRoutes); // backward-compatible alias for older builds
 

@@ -13,8 +13,10 @@ const WeightLog = require('../models/WeightLog');
 const ActivityLog = require('../models/ActivityLog');
 const Activity = require('../models/Activity');
 const BodyPlanSession = require('../models/BodyPlanSession');
+const Readiness = require('../models/Readiness');
+const CoachState = require('../models/CoachState');
 
-const store = { profile: null, updates: [], sessions: [], activity: [], weights: [] };
+const store = { profile: null, updates: [], targetWrites: [], sessions: [], activity: [], weights: [] };
 let nextId = 1;
 const chain = (rows) => ({ sort() { return this; }, limit() { return this; }, select() { return this; }, lean: async () => rows });
 BodyPlanSession.find = (q = {}) => chain(store.sessions.filter((s) => (!q.date || ((!q.date.$gte || s.date >= q.date.$gte) && (!q.date.$lte || s.date <= q.date.$lte)))));
@@ -22,12 +24,17 @@ BodyPlanSession.findOne = (q) => ({ lean: async () => store.sessions.find((s) =>
 BodyPlanSession.create = async (d) => { const row = { ...d, _id: String(nextId++).padStart(24, '0') }; store.sessions.push(row); return row; };
 BodyPlanSession.findOneAndDelete = (q) => ({ lean: async () => { const i = store.sessions.findIndex((s) => s._id === q._id); return i < 0 ? null : store.sessions.splice(i, 1)[0]; } });
 WeightLog.find = () => chain(store.weights);
+Readiness.find = () => chain([]);                       // the sleep / energy / soreness check-ins the plan reads (none here)
+CoachState.updateOne = async () => ({});                // markCoachDirty: nothing to keep in this test
 ActivityLog.find = () => chain(store.activity);
 ActivityLog.create = async (d) => { store.activity.push(d); return d; };
 ActivityLog.deleteMany = async (q) => { store.activity = store.activity.filter((a) => a.clientId !== q.clientId); };
 Activity.findOne = () => ({ lean: async () => ({ _id: 'a1', name: 'Strength Training', category: 'Strength', met: 5 }) });
-Profile.findOne = () => ({ select() { return this; }, lean: async () => store.profile });
+// Awaitable (the route's refreshAutoActivity does `await Profile.findOne(...)`) and chainable (`.select().lean()`).
+Profile.findOne = () => { const q = { select() { return q; }, lean: async () => store.profile, then: (res, rej) => Promise.resolve(store.profile).then(res, rej) }; return q; };
 Profile.updateOne = async (q, u) => { store.updates.push(u.$set); };
+// The automatic calorie target is refreshed on read (profileEnergy.refreshStoredTarget): recorded apart from the saves under test.
+Profile.findOneAndUpdate = async (q, u) => { store.targetWrites.push(u.$set); return store.profile; };
 HealthLog.find = () => ({ sort() { return this; }, limit() { return this; }, select() { return this; }, lean: async () => [{ type: 'waist', value: 90, date: '2026-10-01' }, { type: 'neck', value: 38, date: '2026-10-01' }] });
 const router = require('../routes/bodyPlanRoutes');
 
@@ -40,7 +47,7 @@ test.before(async () => {
   url = `http://127.0.0.1:${server.address().port}/api/body-plan`;
 });
 test.after(() => server.close());
-test.beforeEach(() => { store.profile = JSON.parse(JSON.stringify(base)); store.updates = []; store.sessions = []; store.activity = []; store.weights = []; });
+test.beforeEach(() => { store.profile = JSON.parse(JSON.stringify(base)); store.updates = []; store.targetWrites = []; store.sessions = []; store.activity = []; store.weights = []; });
 const get = async (q = '') => (await fetch(`${url}${q}`)).json();
 const post = async (path, body) => { const r = await fetch(`${url}${path}`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) }); return { status: r.status, json: await r.json() }; };
 
@@ -73,7 +80,7 @@ test('apply saves the body goal and the cleaned training setup together', async 
   assert.equal(r.json.applied.training, true);
   const set = store.updates[0];
   assert.equal(set['goals.bodyType'], 'athletic');
-  assert.deepEqual(set.training, { place: 'both', level: 'beginner', days: 3, minutes: 60, equipment: ['bands'], limits: ['back'], focus: ['glutes'] });
+  assert.deepEqual(set.training, { place: 'both', level: 'beginner', days: 3, minutes: 60, equipment: ['bands'], limits: ['back'], focus: ['glutes'], weekdays: [] }); // weekdays: [] = pick the days automatically
   assert.equal(r.json.plan.training.prefs.place, 'both');
   assert.ok(r.json.plan.training.program.sessions.every((s) => s.exercises.every((e) => e.id !== 'bb-row')), 'back limit applied in the returned plan');
 });

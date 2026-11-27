@@ -3,6 +3,9 @@
 // Only load/save at the bottom touch localStorage. Data is per person: the key carries the signed-in email.
 import { PLAN_ID, SMART_ID, DAYS, dowOf } from "../data/workoutPlan.js";
 import { CUSTOM_SOURCE, cleanPlans } from "./customPlans.js";
+import { estimateBurn, sessionMet } from "./energy";
+import { cleanPending } from "./sessionDelete.js";
+import { cleanFailed } from "./syncRun.js";
 
 const round1 = (n) => Math.round(n * 10) / 10;
 
@@ -84,6 +87,12 @@ export function weekStrip(sessions, today, days = DAYS) {
   });
 }
 
+/** Several workouts on one day, added up (what the "Done" chip shows: it used to show only the first one's minutes). */
+export const totalsOfDay = (list) => {
+  const l = Array.isArray(list) ? list : [];
+  return { count: l.length, minutes: Math.round(l.reduce((t, s) => t + (Number(s.minutes) || 0), 0)), kcal: Math.round(l.reduce((t, s) => t + (Number(s.kcal) || 0), 0)) };
+};
+
 /** Training days in a row (rest day and recovery day do not break it). Today not done yet does not break it either.
  *  `days` is the active plan's week and `soft` the day kinds that never break the chain (the fixed plan only forgives Sunday). */
 export function streak(sessions, today, days = DAYS, soft = ["rest"]) {
@@ -104,10 +113,9 @@ export function streak(sessions, today, days = DAYS, soft = ["rest"]) {
 export const volumeOf = (session) => Math.round((session.exercises || []).reduce((t, e) => t + (e.sets || []).reduce((s, x) => s + (x.done ? (Number(x.w) || 0) * (Number(x.r) || 0) : 0), 0), 0));
 export const setsDone = (session) => (session.exercises || []).reduce((t, e) => t + (e.sets || []).filter((x) => x.done).length, 0);
 
-/** Rough burn: ~5 MET for lifting, 3 for recovery, 6 for conditioning (Compendium values), from minutes and body weight. */
+/** Rough burn of a session by its type (energy.sessionMet: lifting 5, conditioning 6, recovery 3.5, rest 2.5) from minutes and body weight; energy.estimateBurn counts only what the exercise burns. Same on the phone. */
 export function estimateKcal(day, minutes, weightKg) {
-  const met = day && day.kind === "conditioning" ? 6 : day && (day.kind === "recovery" || day.kind === "rest") ? 3 : 5;
-  return Math.max(0, Math.round(met * 3.5 * (Number(weightKg) || 70) / 200 * Math.max(0, minutes)));
+  return Math.max(0, Math.round(estimateBurn(sessionMet(day && day.kind), Number(weightKg) || 70, Math.max(0, minutes))));
 }
 
 export function summarize(sessions) {
@@ -186,12 +194,12 @@ export function finishActive(active, day, { swaps, weightKg, feel, notes, now = 
 
 // ---------------------------------------------------------------------------------------------------------------- storage
 const KEY = (owner) => `ff-wp-v1:${owner || "guest"}`;
-export const emptyState = () => ({ startDate: "", swaps: {}, favs: [], sessions: [], active: null, weightKg: 78, unit: "kg", synced: {}, source: "auto", way: {}, plans: [] });
+export const emptyState = () => ({ startDate: "", swaps: {}, favs: [], sessions: [], active: null, weightKg: 78, unit: "kg", synced: {}, source: "auto", way: {}, plans: [], pendingDeletes: [], failed: {} });  // failed: finished workouts the server refused, { id: { reason, at } }, shown in History with a Try again button // pendingDeletes: finished workouts deleted here whose server entry still has to go (see sessionDelete.js)
 
 export function loadState(owner) {
   try {
     const raw = JSON.parse(localStorage.getItem(KEY(owner)) || "null");
-    if (raw && typeof raw === "object") return { ...emptyState(), ...raw, swaps: raw.swaps || {}, favs: raw.favs || [], sessions: Array.isArray(raw.sessions) ? raw.sessions : [], synced: raw.synced || {}, plans: cleanPlans(raw.plans) };
+    if (raw && typeof raw === "object") return { ...emptyState(), ...raw, swaps: raw.swaps || {}, favs: raw.favs || [], sessions: Array.isArray(raw.sessions) ? raw.sessions : [], synced: raw.synced || {}, plans: cleanPlans(raw.plans), pendingDeletes: cleanPending(raw.pendingDeletes), failed: cleanFailed(raw.failed) };
   } catch { /* corrupt or private mode: start fresh */ }
   return emptyState();
 }

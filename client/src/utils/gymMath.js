@@ -2,6 +2,7 @@
 // Pure maths for the Gym log (no React, no storage, no network), so it can be unit-tested and reused by the export.
 // Everything is stored in kg and cm; screens convert to the person's unit at the edges (utils/units.ts).
 // Nothing in here (or in gymStore / gymShare) calls the API. The only automatic upload is utils/gymSyncRunner.ts: each exercise's name, sets, minutes and kcal.
+import { estimateBurn } from './energy';
 /** Tape-measure sites, in the order they are shown. `better` says which direction usually means progress (used for the colour of a change). */
 export const SITES = [
     { key: 'neck', label: 'Neck', hint: 'Just below the larynx' },
@@ -53,8 +54,6 @@ export const bodyKgFn = (body) => (date) => bodyKgOn(body, date) || DEFAULT_BODY
 export const setLoadKg = (e, s, bodyKg = 0) => (isTimed(e.unit) || !(s.reps > 0) ? 0 : s.kg > 0 ? s.kg : bodyKg > 0 ? bodyKg : 0);
 /** Volume = load x reps. A blank weight counts as body weight when `bodyKg` is given (without it only typed weights count, as before). */
 export function entryVolume(e, bodyKg = 0) {
-    // Loaded carries are not conventional lifting volume; steps × body weight was a misleading number.
-    if (/farmer.?s (carry|walk)/i.test(e.name || '')) return 0;
     if (isTimed(e.unit))
         return 0;
     return Math.round(validSets(e).reduce((n, s) => n + setLoadKg(e, s, bodyKg) * s.reps, 0));
@@ -62,8 +61,6 @@ export function entryVolume(e, bodyKg = 0) {
 /** True when at least one set of the entry is a body weight set. */
 export const hasBodyweightSets = (e) => validSets(e).some((s) => isBodyweightSet(e, s));
 export const entrySetCount = (e) => validSets(e).length;
-/** Highest combined left + right hand load used in any Farmer's Walk set (not multiplied by steps). */
-export const entryCarryLoadKg = (e) => /farmer.?s (carry|walk)/i.test(e.name || '') ? Math.max(0, ...validSets(e).map((s) => (Number(s.leftKg) || 0) + (Number(s.rightKg) || 0))) : 0;
 export function entryTotalReps(e) { return validSets(e).reduce((n, s) => n + s.reps, 0); }
 export function topSet(e) {
     const v = validSets(e);
@@ -84,7 +81,7 @@ export function setsLine(e, fmtKg = (k) => `${k} kg`) {
         return 'No sets';
     const u = e.unit === 'sec' ? 's' : e.unit === 'min' ? ' min' : '';
     const same = v.every((s) => s.kg === v[0].kg && s.reps === v[0].reps && s.pace === v[0].pace && (s.incline || 0) === (v[0].incline || 0));
-    const one = (s) => `${s.steps ? `${s.steps} steps` : `${s.reps}${u}`}${!isTimed(e.unit) ? (s.leftKg || s.rightKg ? ` · L ${fmtKg(s.leftKg || 0)} / R ${fmtKg(s.rightKg || 0)}` : s.kg > 0 ? ` @ ${fmtKg(s.kg)}` : '') : ''}${e.unit === 'min' && s.speedKph ? ` @ ${s.speedKph} km/h` : e.unit === 'min' && s.pace ? ` @ ${fmtPace(s.pace)}/km` : ''}${e.unit === 'min' && s.pace && s.incline > 0 ? ` ↑${s.incline}%` : ''}${s.distanceM ? ` · ${s.distanceM} m` : s.distanceKm ? ` · ${s.distanceKm} km` : ''}`;
+    const one = (s) => `${s.reps}${u}${!isTimed(e.unit) ? (s.kg > 0 ? ` @ ${fmtKg(s.kg)}` : ' @ BW') : ''}${e.unit === 'min' && s.pace ? ` @ ${fmtPace(s.pace)}/km` : ''}${e.unit === 'min' && s.pace && (s.incline || 0) > 0 ? ` ↑${s.incline}%` : ''}`;
     if (same && v.length > 1)
         return `${v.length} × ${one(v[0])}`;
     return v.map(one).join(', ');
@@ -307,7 +304,7 @@ export function parseNum(text, min = 0, max = 100000) {
     return Number.isFinite(n) && n > 0 && n >= min && n <= max ? n : null;
 }
 // ------------------------------------------------------------------------------------------------ calories burned (estimate)
-// Same formula as the rest of the app (utils/workoutEngine.estimateKcal): MET x 3.5 x body kg / 200 per minute.
+// Same formula as the rest of the app (energy.estimateBurn): (MET - 1) x 3.5 x body kg / 200 per minute, i.e. only what the exercise itself burns (resting energy is already in your maintenance).
 // Time per set = reps x ~3 s of work + ~60 s rest (holds use their own seconds, cardio uses its minutes). It is an ESTIMATE:
 // real burn depends on effort, rest and fitness, and lifting burns far less than most gym-machine numbers suggest.
 /** Body weight used when no weight is logged in the Gym log. 70 until the app learns the profile weight (setDefaultBodyKg), so calories here match the rest of the app. */
@@ -322,8 +319,7 @@ const ISOLATION = /curl|extension|raise|fly|kickback|pushdown|shrug|crunch|twist
 /** MET (energy intensity) for an exercise, by what it is. Compendium-style values, rounded. */
 export function metFor(cat, name, unit) {
     const c = String(cat || '').toLowerCase(), n = String(name || '').toLowerCase();
-    if (c === 'mobility') return 2.5;
-  if (c === 'cardio' || unit === 'min') {
+    if (c === 'cardio' || unit === 'min') {
         if (/burpee|sprint|hiit|battle|boxing|bag|assault|jump rope|sled/.test(n))
             return 9;
         if (/run/.test(n))
@@ -408,17 +404,8 @@ export function fmtPace(pace) {
 export const setKm = (e, s) => (e.unit === 'min' && s.pace && s.pace > 0 ? Math.round((s.reps / s.pace) * 100) / 100 : 0);
 export const entryKm = (e) => Math.round(validSets(e).reduce((n, s) => n + setKm(e, s), 0) * 100) / 100;
 /** MET for one set: from the pace when there is one, otherwise from what the exercise is. */
-export const setMet = (e, s) => {
-    const n = e.name.toLowerCase();
-    // Loaded farmer carries: conservative MET bands by perceived effort. Duration is counted per set.
-    if (/farmer.?s (carry|walk)/i.test(n)) return s.effort === 'easy' ? 4.5 : s.effort === 'hard' ? 8 : 6.5;
-    if (e.unit === 'min' && s.speedKph && /treadmill|incline.*walk|walk/.test(n)) return metForPace(60 / s.speedKph, s.incline);
-    if (e.unit === 'min' && s.pace && s.pace >= PACE_MIN) return metForPace(s.pace, s.incline);
-    if (s.effort) { const base = metFor(e.cat, e.name, e.unit); return s.effort === 'easy' ? Math.min(base, 3.5) : s.effort === 'hard' ? Math.max(base, 8) : Math.max(base, 5.5); }
-    return metFor(e.cat, e.name, e.unit);
-};
+export const setMet = (e, s) => (e.unit === 'min' && s.pace && s.pace >= PACE_MIN ? metForPace(s.pace, s.incline) : metFor(e.cat, e.name, e.unit));
 export function setMinutes(unit, s) {
-    if (s.durationMin && s.durationMin > 0) return s.durationMin;
     if (unit === 'min')
         return Math.max(0, s.reps);
     if (unit === 'sec')
@@ -429,12 +416,12 @@ export function entryMinutes(e) { return validSets(e).reduce((n, s) => n + setMi
 /** Estimated kcal for one logged exercise at a given body weight. */
 export function entryKcal(e, bodyKg = DEFAULT_BODY_KG) {
     const kg = bodyKg > 0 ? bodyKg : DEFAULT_BODY_KG;
-    return Math.round(validSets(e).reduce((n, s) => n + setMet(e, s) * 3.5 * kg / 200 * setMinutes(e.unit, s), 0));
+    return Math.round(validSets(e).reduce((n, s) => n + estimateBurn(setMet(e, s), kg, setMinutes(e.unit, s)), 0));
 }
 /** Kcal for a single set (used in the CSV). Includes that set's share of rest. */
 export function setKcal(e, s, bodyKg = DEFAULT_BODY_KG) {
     const kg = bodyKg > 0 ? bodyKg : DEFAULT_BODY_KG;
-    return Math.round(setMet(e, s) * 3.5 * kg / 200 * setMinutes(e.unit, s) * 10) / 10;
+    return Math.round(estimateBurn(setMet(e, s), kg, setMinutes(e.unit, s)) * 10) / 10;
 }
 /** The person's logged body weight for a date: the latest reading on or before it, else the earliest after it, else null. */
 export function bodyKgOn(body, date) {

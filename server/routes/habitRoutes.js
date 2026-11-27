@@ -6,6 +6,7 @@ const { wrap, HttpError } = require('../lib/http');
 const { computeStreak } = require('../lib/achievements');
 const { addDays, diffDays, todayUtc, toStr } = require('../lib/dates');
 const v = require('../lib/validate');
+const { createUnlessSame } = require('../lib/idempotent');
 
 const router = express.Router();
 router.use(requireAuth);
@@ -37,8 +38,8 @@ router.get('/', wrap(async (req, res) => {
 
 router.post('/', wrap(async (req, res) => {
   if ((await Habit.countDocuments({ userId: req.user.id, isActive: true })) >= 100) throw new HttpError(400, 'You can track up to 100 habits');
-  const habit = await Habit.create({ userId: req.user.id, ...parseHabit(req.body) });
-  res.status(201).json({ success: true, habit });
+  const { doc: habit, duplicate } = await createUnlessSame(Habit, req.user.id, parseHabit(req.body), 'name');
+  res.status(duplicate ? 200 : 201).json({ success: true, habit, duplicate });
 }));
 
 // ---- logs (declared before /:id routes so "logs" is never mistaken for an id)

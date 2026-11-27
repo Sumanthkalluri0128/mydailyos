@@ -23,6 +23,7 @@ const GoalsPage = lazy(loadWithRetry(() => import("./pages/GoalsPage")));
 const CoachPage = lazy(loadWithRetry(() => import("./pages/CoachPage")));
 const WorkoutPlanPage = lazy(loadWithRetry(() => import("./pages/WorkoutPlanPage")));
 const GymLogPage = lazy(loadWithRetry(() => import("./pages/GymLogPage")));
+const WorkoutPlannerPage = lazy(loadWithRetry(() => import("./pages/WorkoutPlannerPage")));
 const PlannerPage = lazy(loadWithRetry(() => import("./pages/PlannerPage")));
 const RecipesPage = lazy(loadWithRetry(() => import("./pages/RecipesPage")));
 const OnboardingPage = lazy(loadWithRetry(() => import("./pages/OnboardingPage")));
@@ -46,6 +47,7 @@ import { currentBoost } from "./utils/weatherStore";
 import { getLocalDate } from "./utils/date";
 import { apiFetch } from "./config/api";
 import { startGymSync } from "./utils/gymSyncRunner";
+import { startRecordSync } from "./utils/gymRecordRunner";
 import { API_URL } from "./config";
 
 
@@ -104,6 +106,7 @@ function App() {
     return () => { alive = false; };
   }, [syncTick]);
   useEffect(() => { const f = () => setSyncTick((n) => n + 1); window.addEventListener("ff:refresh", f); return () => window.removeEventListener("ff:refresh", f); }, []);
+  useEffect(() => { startRecordSync(); }, []); // the Gym log itself, across devices (only when the person turned it on)
   useEffect(() => { startGymSync(); }, []); // gym log exercises -> calories burned and exercise minutes on Exercise and Home
 
   useEffect(() => {
@@ -635,6 +638,19 @@ function App() {
   }
 
   // Gym log: sets/reps, body weight and measurements. Stored in this browser only (never uploaded).
+  if (currentPage === "wplanner") {
+    return (
+      <div className="app">
+        {shell}
+        <main key="wplanner" className="dashboard fx-page">
+          <TabSuspense tab={currentPage}>
+            <WorkoutPlannerPage onBack={() => setCurrentPage("workouts")} onStart={() => setCurrentPage("exercise")} />
+          </TabSuspense>
+        </main>
+      </div>
+    );
+  }
+
   if (currentPage === "gymlog") {
     return (
       <div className="app">

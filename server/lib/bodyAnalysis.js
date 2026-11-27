@@ -3,6 +3,7 @@
 // data. It never guesses, and it returns ids + numbers: the apps turn them into words in the person's language (utils/coachText.js, coach.body.*).
 const { diffDays, addDays } = require('./dates');
 const { KCAL_PER_KG, stepCalories } = require('./energy');
+const { adaptiveMaintenance, maintenanceNeed } = require('./adaptiveTdee');
 const { maxSafeWeeklyLossKg } = require('./trendWeight');
 
 const r1 = (x) => Math.round(x * 10) / 10;
@@ -49,26 +50,17 @@ function bodyRatios({ heightCm, waistCm, hipCm = null, sex = '' } = {}) {
 }
 
 // ---------------------------------------------------------------- 4-5. calibrated maintenance and the logging gap
-/** Like adaptiveTdee, plus a range from how noisy the weight really was. @param days ascending [{date, calories, weightKg}] */
-function calibratedMaintenance(days, expected = null) {
-  if (!days || !days.length) return { ready: false, need: { weighIns: 8, spanDays: 21, loggedDays: 14 } };
-  const first = days[0].date;
-  const pts = days.filter((d) => Number(d.weightKg) > 0).map((d) => ({ x: diffDays(first, d.date), y: Number(d.weightKg) }));
-  const logged = days.filter((d) => d.calories > 0);
-  const span = pts.length ? pts[pts.length - 1].x - pts[0].x : 0;
-  if (pts.length < 6 || span < 14 || logged.length < 10) return { ready: false, need: { weighIns: Math.max(0, 6 - pts.length), spanDays: Math.max(0, 14 - span), loggedDays: Math.max(0, 10 - logged.length) } };
-  const n = pts.length, mx = avg(pts.map((p) => p.x)), my = avg(pts.map((p) => p.y));
-  const sxx = pts.reduce((s, p) => s + (p.x - mx) ** 2, 0), sxy = pts.reduce((s, p) => s + (p.x - mx) * (p.y - my), 0);
-  const slope = sxx ? sxy / sxx : 0;
-  const rss = pts.reduce((s, p) => s + (p.y - (my + slope * (p.x - mx))) ** 2, 0);
-  const se = n > 2 && sxx ? Math.sqrt(rss / (n - 2) / sxx) : 0.05;                         // kg per day
-  const intake = avg(logged.map((d) => d.calories));
-  const estimate = Math.round((intake - slope * KCAL_PER_KG) / 10) * 10;
-  const half = Math.max(100, Math.round((1.64 * se * KCAL_PER_KG + 0.05 * intake) / 10) * 10);   // weight noise + ~5% food-logging error
-  const share = logged.length / days.length;
-  const confidence = share >= 0.8 && n >= 10 && span >= 28 && half <= 250 ? 'high' : share >= 0.6 && span >= 21 ? 'medium' : 'low';
-  return { ready: true, estimate, low: estimate - half, high: estimate + half, expected: expected ? Math.round(expected) : null,
-    diff: expected ? Math.round((estimate - expected) / 10) * 10 : null, avgIntake: Math.round(intake), kgPerWeek: r2(slope * 7), loggedShare: r2(share), confidence };
+/**
+ * The body view's reading of maintenance. It is the SAME estimator that steers the calorie target and feeds the coaches
+ * (adaptiveTdee.adaptiveMaintenance), shaped for this card: { ready, need } or { ready, estimate, low, high, ... }.
+ * There is deliberately no second copy of the maths here: two copies once disagreed by several hundred kcal on the same data.
+ * @param days ascending [{date, calories, weightKg, weighIn?}]   @param o { target, today } as for adaptiveMaintenance
+ */
+function calibratedMaintenance(days, expected = null, o = {}) {
+  const ad = adaptiveMaintenance(days, expected, o);
+  if (!ad) return { ready: false, need: maintenanceNeed(days, expected, o) };
+  return { ready: true, estimate: ad.estimate, low: ad.low, high: ad.high, expected: ad.expected, diff: ad.diff, avgIntake: ad.avgIntake,
+    kgPerWeek: ad.kgPerWeek, loggedShare: ad.loggedShare, confidence: ad.confidence };
 }
 
 /** Weight moves slower than the logged food predicts: the usual cause is food that never got logged. Says how big the gap is and where it usually hides. */

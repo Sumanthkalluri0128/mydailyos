@@ -106,4 +106,21 @@
   .xl-num { min-width: 130px; }
 }
 
-.xl-machine{display:flex;flex-wrap:wrap;gap:10px;padding:12px;margin:10px 0;border:1px solid var(--line,var(--border));border-radius:14px;background:var(--surface-soft,transparent)}.xl-machine>b{flex-basis:100%}.xl-machine .xl-num{display:flex;flex-direction:column;gap:5px}.xl-machine input,.xl-note select{max-width:140px;min-height:40px;border:1px solid var(--line,var(--border));border-radius:9px;padding:7px;background:var(--surface,var(--card));color:inherit}
+/* a planned workout started from the planner: the exercises to do, one after another */
+.xl-plan { margin: 0 0 14px; padding: 14px; border-radius: 18px; background: color-mix(in srgb, var(--accent, #6c5ce7) 10%, var(--surface)); border: 1px solid color-mix(in srgb, var(--accent, #6c5ce7) 35%, var(--border)); }
+.xl-plan header { display: flex; align-items: center; gap: 10px; }
+.xl-plan header > div { flex: 1; display: flex; flex-direction: column; }
+.xl-plan header small { color: var(--muted); font-size: .75rem; text-transform: uppercase; letter-spacing: .04em; }
+.xl-plan-n { font-weight: 800; font-size: .85rem; }
+.xl-plan-x { background: none; border: 0; font-size: 1rem; min-width: 40px; min-height: 40px; color: var(--muted); }
+.xl-plan-steps { list-style: none; margin: 10px 0; padding: 0; display: grid; gap: 6px; }
+.xl-plan-steps li { display: flex; align-items: baseline; gap: 8px; font-size: .92rem; }
+.xl-plan-steps li small { color: var(--muted); margin-left: auto; }
+.xl-plan-steps li .xl-plan-own { margin-left: 0; font-style: italic; }
+.xl-plan-steps li.done { color: var(--muted); text-decoration: line-through; }
+.xl-plan-steps li.skipped { color: var(--muted); }
+.xl-plan-steps li.next { font-weight: 800; }
+.xl-plan-actions { display: flex; gap: 8px; align-items: center; }
+.xl-plan-go { flex: 1; min-height: 46px; border: 0; border-radius: 14px; font-weight: 800; background: var(--accent, #6c5ce7); color: #fff; }
+.xl-plan-go:disabled { opacity: .5; }
+.xl-plan-skip { background: none; border: 0; min-height: 46px; padding: 0 10px; font-weight: 700; color: var(--muted); }

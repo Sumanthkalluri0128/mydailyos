@@ -3,7 +3,7 @@ const mongoose = require('mongoose');
 const Task = require('../models/Task');
 const { requireAuth } = require('../middleware/auth');
 const { wrap, HttpError } = require('../lib/http');
-const { createOnce } = require('../lib/idempotent');
+const { createOnce, findSame } = require('../lib/idempotent');
 const { materializeRecurring, materializeRange } = require('../lib/taskSeries');
 const { addDays, todayUtc } = require('../lib/dates');
 const v = require('../lib/validate');
@@ -65,6 +65,9 @@ router.post('/', wrap(async (req, res) => {
   const fields = parseTaskFields(req.body || {});
   fields.date = v.date(req.body?.date);
   const clientId = v.clientId(req.body?.clientId);
+  // The same task added again within seconds is a second tap, not a second task (an identical one made later, say after finishing the first, is new).
+  const justNow = await findSame(Task, req.user.id, fields, 'title', { withinMs: 15000 });
+  if (justNow) return res.status(200).json({ success: true, task: justNow, duplicate: true });
   const seriesId = fields.recurrence !== 'none' ? new mongoose.Types.ObjectId().toHexString() : '';
   const { doc, duplicate } = await createOnce(Task, req.user.id, clientId, { ...fields, seriesId });
   res.status(duplicate ? 200 : 201).json({ success: true, task: doc, duplicate });

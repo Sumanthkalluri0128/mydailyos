@@ -25,7 +25,15 @@ router.post('/start', wrap(async (req, res) => {
     startedAt = new Date(req.body.startedAt);
     if (Number.isNaN(+startedAt) || startedAt > new Date() || new Date() - startedAt > 72 * 3600000) throw new HttpError(400, 'startedAt must be within the last 72 hours');
   }
-  res.status(201).json({ success: true, fast: await Fast.create({ userId: req.user.id, startedAt, targetHours }) });
+  const fast = await Fast.create({ userId: req.user.id, startedAt, targetHours });
+  // Two requests at the same moment (a double tap) can both pass the check above. Both look again; the one created first keeps the fast, the other removes
+  // itself and answers 409, so there is never more than one fast in progress. (No unique index: it could not be built for anyone who already has two open.)
+  const open = await Fast.find({ userId: req.user.id, endedAt: null }).sort({ _id: 1 }).select('_id').lean();
+  if (open.length > 1 && String(open[0]._id) !== String(fast._id)) {
+    await Fast.deleteOne({ _id: fast._id });
+    throw new HttpError(409, 'You already have a fast in progress');
+  }
+  res.status(201).json({ success: true, fast });
 }));
 
 router.post('/end', wrap(async (req, res) => {

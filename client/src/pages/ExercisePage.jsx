@@ -7,6 +7,7 @@ import { useEffect, useState } from "react";
 import { API_URL } from "../config";
 import { getLocalDate } from "../utils/date";
 import { estimateBurn } from "../utils/energy";
+import { editRequest } from "../utils/logEdit";
 import Training from "../components/Training";
 // ONE logger for everything you do: the same screen as the Gym log (sets x reps x weight for lifts, seconds for holds, minutes + pace for cardio).
 // What you log here lands in the Gym log and is counted once in Exercise and Home (utils/gymSyncRunner.js), so nothing is entered twice.
@@ -200,6 +201,26 @@ function ExercisePage({ onBack }) {
     } finally {
       setLoading(false);
     }
+  };
+
+  // ============================================================
+  // FIX A LOGGED WORKOUT (minutes, calories, day, note)
+  // ============================================================
+
+  const [editLog, setEditLog] = useState(null);   // { id, minutes, kcal, notes, date, kcalTouched }
+  const startEdit = (log) => setEditLog({ id: log._id, minutes: String(log.durationMinutes), kcal: String(Math.round(log.caloriesBurned)), notes: log.notes || "", date: log.date, kcalTouched: false, orig: { durationMinutes: log.durationMinutes, caloriesBurned: log.caloriesBurned, notes: log.notes || "", date: log.date } });
+  const saveEdit = async () => {
+    const e = editLog;
+    const r = editRequest(e.orig, e, dayOffset(1));   // only what changed is sent, so a note-only edit cannot reset calories typed by hand
+    if (!r.ok) { notify(r.error, "error"); return; }
+    if (!r.changed) { setEditLog(null); return; }
+    try {
+      const response = await apiFetch(`${API_URL}/api/activities/logs/${e.id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(r.body) });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.message || "Could not save the change.");
+      notify("Workout updated.", "success");
+      setEditLog(null); fetchLogs(); fetchHistory();
+    } catch (err) { notify(err.message || "Could not save the change.", "error"); }
   };
 
   // ============================================================
@@ -594,7 +615,7 @@ function ExercisePage({ onBack }) {
             {otherLogs.map((log) => (
 
               <div
-                className="activity-row"
+                className={`activity-row${editLog && editLog.id === log._id ? " is-editing" : ""}`}
                 key={log._id}
               >
 
@@ -626,6 +647,10 @@ function ExercisePage({ onBack }) {
                     )} kcal
                   </strong>
 
+                  {log.source !== "gymlog" && (
+                    <button className="delete-button" aria-label="Edit workout log" title="Fix minutes, calories, day or note" onClick={() => startEdit(log)}>✏️</button>
+                  )}
+
                   <button
                     className="delete-button"
                     aria-label="Delete workout log"
@@ -639,6 +664,17 @@ function ExercisePage({ onBack }) {
                   </button>
 
                 </div>
+
+                {editLog && editLog.id === log._id && (
+                  <div className="activity-edit" style={{ flexBasis: "100%", display: "grid", gap: 8, marginTop: 10 }}>
+                    <label>Minutes <input type="number" min="1" max="1440" inputMode="numeric" value={editLog.minutes} onChange={(ev) => setEditLog({ ...editLog, minutes: ev.target.value })} /></label>
+                    <label>Calories burned <input type="number" min="0" max="20000" inputMode="numeric" value={editLog.kcal} onChange={(ev) => setEditLog({ ...editLog, kcal: ev.target.value, kcalTouched: true })} />
+                      <small>{editLog.kcalTouched ? "Your number is kept." : "Leave it and the calories follow the new minutes."}</small></label>
+                    <label>Day <input type="date" max={today} value={editLog.date} onChange={(ev) => setEditLog({ ...editLog, date: ev.target.value })} /></label>
+                    <label>Note <input value={editLog.notes} maxLength={300} onChange={(ev) => setEditLog({ ...editLog, notes: ev.target.value })} /></label>
+                    <div style={{ display: "flex", gap: 8 }}><button type="button" className="primary-button" onClick={saveEdit}>Save changes</button><button type="button" className="secondary-button" onClick={() => setEditLog(null)}>Cancel</button></div>
+                  </div>
+                )}
 
               </div>
 

@@ -79,4 +79,4 @@ test('works with no profile (target only) and across a month boundary', () => {
   assert.notEqual(r.level, 'none'); assert.equal(r.startDate, '2026-11-06');
   assert.equal(targetForDate(r, r.startDate, 1800), 1800 - r.perDay);
 });
-test('walkKcal scales with weight', () => { assert.equal(walkKcal(80), 75); assert.ok(walkKcal(55) < walkKcal(80)); assert.ok(walkKcal(null) > 0); });
+test('walkKcal scales with weight', () => { assert.equal(walkKcal(80), 55); /* 15 min at MET 3.5, beyond resting: 2.5 x 3.5 x 80 / 200 x 15 = 52.5 -> 55 */ assert.ok(walkKcal(55) < walkKcal(80)); assert.ok(walkKcal(null) > 0); });

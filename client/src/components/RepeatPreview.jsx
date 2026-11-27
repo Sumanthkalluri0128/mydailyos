@@ -28,7 +28,9 @@ export default function RepeatPreview({ date, meal, mode, onClose, onDone }) {
       const res = await apiFetch(`${API_URL}/api/food-logs/copy`, { method: "POST", body: JSON.stringify({ fromDate: d.date, toDate: date, mealType: meal, ids: chosen.map((e) => e._id), edits: chosen.map((e) => ({ id: e._id, quantity: Number(qty[e._id]) })) }) });
       const j = await res.json();
       if (!res.ok) throw new Error(j.message || "Could not copy");
-      notify(`Added ${j.logs.length} item${j.logs.length === 1 ? "" : "s"} to ${meal}.`, "success");
+      const added = (j.logs || []).length;
+      if (!added && j.skipped) notify(`That ${meal} is already there, so nothing was added twice.`, "success");
+      else notify(`Added ${added} item${added === 1 ? "" : "s"} to ${meal}.`, "success");
       onDone?.();
     } catch (e) { notify(e.message, "error"); } finally { setBusy(false); }
   };

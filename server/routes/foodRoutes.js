@@ -296,9 +296,21 @@ router.get('/:id', wrap(async (req, res) => {
   res.json({ success: true, food: present(food, req.user.id) });
 }));
 
+// A food of mine with exactly the same name, brand, serving and numbers (name compared without caring about capitals).
+// Saving it again (a second tap, a retry after a timeout) hands back the one I already have instead of making a twin.
+const SAME_KEYS = ['servingSize', 'calories', 'protein', 'carbohydrates', 'fat', 'fiber', 'sugar', 'sodium'];
+async function findSameFood(uid, data) {
+  const q = { userId: uid, hidden: { $ne: true }, name: data.name, brand: data.brand || '', servingUnit: data.servingUnit };
+  for (const k of SAME_KEYS) q[k] = data[k];
+  return Food.findOne(q).collation({ locale: 'en', strength: 2 });
+}
+
 router.post('/', wrap(async (req, res) => {
+  const data = parseFood(req.body);
+  const same = await findSameFood(req.user.id, data);
+  if (same) return res.status(200).json({ success: true, duplicate: true, food: present(same, req.user.id) });
   if ((await Food.countDocuments({ userId: req.user.id })) >= 2000) throw new HttpError(400, 'You can save up to 2000 custom foods');
-  const food = await Food.create({ ...parseFood(req.body), userId: req.user.id });
+  const food = await Food.create({ ...data, userId: req.user.id });
   res.status(201).json({ success: true, food: present(food, req.user.id) });
 }));
 
@@ -307,7 +319,18 @@ router.post('/:id/duplicate', wrap(async (req, res) => {
   const src = await Food.findOne({ _id: v.objectId(req.params.id), ...visibleTo(req.user.id) }).lean();
   if (!src) throw new HttpError(404, 'Food not found');
   const { _id, createdAt, updatedAt, __v, favoriteBy, userId, isFavorite, ...rest } = src;
-  const copy = await Food.create({ ...rest, name: `${src.name} (copy)`.slice(0, 120), userId: req.user.id });
+  // "Name (copy)" if that is free; the same copy twice (a second tap) returns the first; a different food already
+  // called "(copy)" gets a number ("(copy 2)").
+  let name = `${src.name} (copy)`.slice(0, 120);
+  for (let n = 2; n < 50; n += 1) {
+    const clash = await Food.findOne({ userId: req.user.id, name }).collation({ locale: 'en', strength: 2 });
+    if (!clash) break;
+    if (SAME_KEYS.every((k) => Number(clash[k]) === Number(src[k])) && clash.servingUnit === src.servingUnit && (clash.brand || '') === (src.brand || '')) {
+      return res.status(200).json({ success: true, duplicate: true, food: present(clash, req.user.id) });
+    }
+    name = `${src.name} (copy ${n})`.slice(0, 120);
+  }
+  const copy = await Food.create({ ...rest, name, userId: req.user.id });
   res.status(201).json({ success: true, food: present(copy, req.user.id) });
 }));
 

@@ -390,3 +390,7 @@
 .pp2-steps-line { font-size: .78rem; }
 .pp2-copy select { min-height: 44px; border-radius: 12px; border: 1px solid var(--border); background: var(--surface); color: var(--text); font: inherit; padding: 0 10px; }
 @media (max-width: 520px) { .pp2-tpls { grid-template-columns: 1fr; } .pp2-kit input { width: 96px; } }
+
+/* a finished workout the server refused: say so, with a way to try again */
+.wp-sync-warn { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin: 2px 0 6px; padding: 8px 12px; border-radius: 12px; font-size: .85rem; color: var(--text); background: color-mix(in srgb, var(--danger, #d64545) 12%, var(--surface)); border: 1px solid color-mix(in srgb, var(--danger, #d64545) 35%, var(--border)); }
+.wp-sync-warn .wp-link { flex: none; }

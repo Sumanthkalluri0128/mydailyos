@@ -148,7 +148,7 @@ export default function FoodForm({ food, initialName = "", onSaved, onCancel }) 
         return;
       }
 
-      notify(isEditing ? "Food updated" : "Food saved to your database", "success");
+      notify(isEditing ? "Food updated" : data.duplicate ? "You already have this exact food, so it was not saved twice." : "Food saved to your database", "success");
       onSaved?.(data.food);
     } catch (error) {
       console.error("Failed to save food:", error);

@@ -8,7 +8,7 @@ const v = require('../lib/validate');
 const { pickRepeat, applyEdits } = require('../lib/repeatMeal');
 const { chaiNutrition, weeklyChai } = require('../lib/chaiCounter');
 const { catalogueFoods } = require('../lib/foodCache');
-const { addDays } = require('../lib/dates');
+const { addDays, todayUtc } = require('../lib/dates');
 const Profile = require('../models/Profile');
 const { eventExtraMap } = require('../lib/eventExtra');
 
@@ -20,11 +20,19 @@ const TRIGGERS = ['', 'stress', 'social', 'bored', 'late-night', 'hungry', 'cele
 const KEYS = ['calories', 'protein', 'carbohydrates', 'fat', 'fiber', 'sugar', 'sodium'];
 
 const perServing = (f) => Object.fromEntries(KEYS.map((k) => [k, Number(f[k] || 0)]));
-const scale = (per, servings) => Object.fromEntries(KEYS.map((k) => [k, Number(per[k] || 0) * servings]));
+// Two decimals: 1.5 x 40.8 is stored as 61.2, not 61.199999999999996 (the screens round for display anyway; this keeps stored totals and day sums clean).
+const r2 = (x) => Math.round(x * 100) / 100;
+const scale = (per, servings) => Object.fromEntries(KEYS.map((k) => [k, r2(Number(per[k] || 0) * servings)]));
 
 router.get('/', wrap(async (req, res) => {
   const date = v.date(req.query.date);
-  res.json({ success: true, logs: await FoodLog.find({ userId: req.user.id, date }).sort({ createdAt: -1 }).lean() });
+  const [logs, quick] = await Promise.all([
+    FoodLog.find({ userId: req.user.id, date }).sort({ createdAt: -1 }).lean(),
+    Food.findOne({ userId: req.user.id, hidden: true, name: 'Quick add' }).select('_id').lean(),
+  ]);
+  // quick: true = an estimate ("eating out"), so the apps can offer "Correct the estimate" instead of the portion editor
+  const qid = quick ? String(quick._id) : '';
+  res.json({ success: true, logs: qid ? logs.map((l) => (String(l.foodId && l.foodId._id ? l.foodId._id : l.foodId) === qid ? { ...l, quick: true } : l)) : logs });
 }));
 
 router.get('/summary', wrap(async (req, res) => {
@@ -107,8 +115,31 @@ router.patch('/:id', wrap(async (req, res) => {
     log.servings = q / Number(log.baseServingSize || 1);
     log.nutritionTotal = scale(log.nutritionPerServing || {}, log.servings);
   }
+  // Move it to another day (forgot to log yesterday, logged on the wrong day) and edit the note.
+  if (req.body?.date !== undefined) {
+    const date = v.date(req.body.date, 'date');
+    if (date > addDays(todayUtc(), 2)) throw new HttpError(400, 'Food cannot be logged for a day that far ahead');
+    log.date = date;
+  }
+  if (req.body?.notes !== undefined) log.notes = v.string(req.body.notes, 'notes', { max: 300 });
+  // A quick-add estimate ("eating out") can be corrected: its name and its numbers. A real food's numbers come from the food and are never edited here.
+  const wantsNumbers = KEYS.some((k) => req.body?.[k] !== undefined) || req.body?.foodName !== undefined;
+  if (wantsNumbers) {
+    const base = await Food.findOne({ _id: log.foodId, userId: req.user.id, hidden: true, name: 'Quick add' }).select('_id').lean();
+    if (!base) throw new HttpError(400, 'Only a quick-add estimate can be edited this way. Change the amount instead.');
+    if (req.body.foodName !== undefined) log.foodName = v.string(req.body.foodName, 'foodName', { max: 80, required: true });
+    const total = { ...(log.nutritionPerServing || {}) };
+    for (const k of KEYS) if (req.body[k] !== undefined) total[k] = v.number(req.body[k], k, { min: 0, max: 10000 });
+    if (!(Number(total.calories) > 0)) throw new HttpError(400, 'Enter an estimated calorie amount');
+    // The note written at logging time ("Estimate 600–900 kcal +10% buffer") describes the OLD number: once the calories are corrected it would sit next to a figure
+    // it no longer matches, so it is replaced. A note the person wrote themselves is never touched.
+    const was = Number(log.nutritionPerServing?.calories) || 0;
+    if (req.body.notes === undefined && /^Estimate\b/.test(String(log.notes || '')) && Math.round(Number(total.calories)) !== Math.round(was)) log.notes = `Corrected estimate (was ${Math.round(was)} kcal)`;
+    log.nutritionPerServing = total; log.nutritionTotal = scale(total, log.servings || 1);
+    log.markModified('nutritionPerServing'); log.markModified('nutritionTotal');
+  }
   await log.save();
-  res.json({ success: true, log });
+  res.json({ success: true, log: wantsNumbers ? { ...log.toObject(), quick: true } : log });
 }));
 
 // Preview for "Copy yesterday's lunch" / "Same as last time": nothing is saved here.
@@ -185,16 +216,31 @@ router.post('/copy', wrap(async (req, res) => {
   const filter = { userId: req.user.id, date: from };
   if (req.body?.mealType) filter.mealType = v.oneOf(req.body.mealType, 'mealType', MEALS);
   if (Array.isArray(req.body?.ids)) filter._id = { $in: req.body.ids.slice(0, 100).map((x) => v.objectId(String(x), 'id')) };
-  let source = await FoodLog.find(filter).lean();
-  if (!source.length) return res.json({ success: true, logs: [] });
+  // Copying a day onto itself would just double it (the copy keeps each entry's own meal), so it is refused.
+  if (from === to) throw new HttpError(400, 'Choose a different day to copy into');
+  const baseId = v.clientId(req.body?.clientId);
+  // A stable order, so entry number N is the same entry on a replay (the replay id below is built from N).
+  let source = (await FoodLog.find(filter).lean()).sort((a, b) => (new Date(a.createdAt) - new Date(b.createdAt)) || String(a._id).localeCompare(String(b._id)));
+  if (!source.length) return res.json({ success: true, logs: [], skipped: 0 });
   // Quantities edited in the preview: nutrition is rescaled from the stored per-serving snapshot.
   source = applyEdits(source, req.body?.edits).map((l) => { const servings = l.consumedQuantity / Number(l.baseServingSize || 1); return { ...l, servings, nutritionTotal: scale(l.nutritionPerServing || {}, servings) }; });
   if (source.length > 100) throw new HttpError(400, 'Too many entries to copy at once');
-  const logs = await FoodLog.insertMany(source.map((l) => {
-    const { _id, createdAt, updatedAt, __v, clientId, ...rest } = l;
-    return { ...rest, date: to };
-  }));
-  res.status(201).json({ success: true, logs });
+  // Entries already copied to that day from the same source entry (a second tap, a retry whose first try did get through).
+  const already = new Set((await FoodLog.find({ userId: req.user.id, date: to, copiedFrom: { $in: source.map((l) => l._id) } }).select('copiedFrom').lean()).map((l) => String(l.copiedFrom)));
+  const logs = []; let skipped = 0; let created = 0;
+  for (let i = 0; i < source.length; i += 1) {
+    const { _id, createdAt, updatedAt, __v, clientId, copiedFrom, ...rest } = source[i];
+    const cid = baseId ? `${baseId}:${i}` : undefined;
+    if (cid) { // a replay of this same request: hand back what it created the first time
+      const prior = await FoodLog.findOne({ userId: req.user.id, clientId: cid }).lean();
+      if (prior) { logs.push(prior); continue; }
+    }
+    if (already.has(String(_id))) { skipped += 1; continue; }
+    const { doc, duplicate } = await createOnce(FoodLog, req.user.id, cid, { ...rest, date: to, copiedFrom: _id });
+    logs.push(doc);
+    if (!duplicate) created += 1;
+  }
+  res.status(created ? 201 : 200).json({ success: true, logs, skipped });
 }));
 
 router.delete('/:id', wrap(async (req, res) => {

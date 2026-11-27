@@ -84,7 +84,7 @@ test("personal bests need a history and a higher estimated 1RM", () => {
   assert.deepEqual(personalBests(now, [prev, now]).map((p) => p.id), ["lat-pulldown"]);
 });
 test("kcal, summary, ranges, pause clock", () => {
-  assert.equal(estimateKcal(DAYS[0], 60, 78), Math.round(5 * 3.5 * 78 / 200 * 60));
+  assert.equal(estimateKcal(DAYS[0], 60, 78), Math.round((5 - 1) * 3.5 * 78 / 200 * 60)); // lifting MET 5, net of the 1 MET of resting energy
   const list = [sess(MON, "d1", [ex("a", [[10, 10]])]), sess("2026-10-20", "d2")];
   assert.deepEqual(summarize(list), { workouts: 2, minutes: 100, kcal: 600, volume: 100 });
   assert.equal(inRange(list, "week", "2026-11-04").length, 1); assert.equal(inRange(list, "month", "2026-11-04").length, 1); assert.equal(inRange(list, "all", MON).length, 2);
@@ -92,4 +92,68 @@ test("kcal, summary, ranges, pause clock", () => {
   assert.equal(elapsedSec({ startedAt: 0, pausedMs: 10000, pausedAt: 0 }, 70000), 60);
   assert.equal(elapsedSec({ startedAt: 0, pausedMs: 0, pausedAt: 30000 }, 90000), 30);
   assert.equal(mondayOf("2026-11-08"), MON);
+});
+
+test("storage: the list of deletes still waiting for the server is kept, and an older saved state without it loads fine", async () => {
+  const mem = new Map();
+  globalThis.localStorage = { getItem: (k) => (mem.has(k) ? mem.get(k) : null), setItem: (k, v) => mem.set(k, String(v)), removeItem: (k) => mem.delete(k) };
+  const { loadState, saveState, emptyState } = await import("./workoutStore.js");
+  assert.deepEqual(emptyState().pendingDeletes, []);
+  assert.deepEqual(loadState("a@x.com").pendingDeletes, [], "nothing saved yet");
+  mem.set("ff-wp-v1:old@x.com", JSON.stringify({ sessions: [], synced: {} }));          // saved before this list existed
+  assert.deepEqual(loadState("old@x.com").pendingDeletes, []);
+  const st = { ...emptyState(), pendingDeletes: [{ clientId: "wp-ws-1", kind: "smart", at: Date.now() }] };
+  assert.equal(saveState("a@x.com", st), true);
+  assert.deepEqual(loadState("a@x.com").pendingDeletes.map((x) => x.clientId), ["wp-ws-1"]);
+  mem.set("ff-wp-v1:bad@x.com", JSON.stringify({ pendingDeletes: "garbage" }));
+  assert.deepEqual(loadState("bad@x.com").pendingDeletes, [], "a damaged list is ignored, not a crash");
+});
+
+// ---- two workouts on one day, and a workout done on a different day than planned (the Workout tab)
+test("week strip, classic plan: a plan day counts as done wherever in the week it was trained (a catch-up on Wednesday fills Monday's slot)", async () => {
+  const { weekStrip } = await import("./workoutStore.js");
+  const WED = "2026-11-04";                       // Wednesday
+  const s = (date, dayId) => ({ id: `${date}-${dayId}-${Math.random()}`, date, dayId, minutes: 40, kcal: 200, exercises: [] });
+  const status = (list) => weekStrip(list, WED).map((c) => c.status);
+  assert.deepEqual(status([]), ["missed", "missed", "today", "upcoming", "upcoming", "upcoming", "upcoming"], "nothing trained yet");
+  // Day 1 (Monday's workout) made up on Wednesday: Monday's slot is done, today's own slot (Day 3) is still waiting
+  const st = status([s(WED, "d1")]);
+  assert.equal(st[0], "done"); assert.equal(st[2], "today"); assert.equal(st[1], "missed");
+});
+
+test("week strip: two workouts on one day: the same plan day twice is one done slot; two different plan days fill two slots", async () => {
+  const { weekStrip } = await import("./workoutStore.js");
+  const WED = "2026-11-04";
+  const s = (date, dayId) => ({ id: `${date}-${dayId}-${Math.random()}`, date, dayId, minutes: 40, kcal: 200, exercises: [] });
+  const twice = weekStrip([s(WED, "d3"), s(WED, "d3")], WED);
+  assert.equal(twice.filter((c) => c.status === "done").length, 1, "the same day done twice is one day");
+  const both = weekStrip([s(WED, "d1"), s(WED, "d2")], WED);
+  assert.deepEqual(both.slice(0, 3).map((c) => c.status), ["done", "done", "today"], "Day 1 and Day 2 both made up today; today's own Day 3 still waits");
+  const early = weekStrip([s(WED, "d4")], WED);
+  assert.equal(early[3].status, "done", "Thursday's workout done early shows done before its date");
+});
+
+test("week strip: only THIS week counts", async () => {
+  const { weekStrip } = await import("./workoutStore.js");
+  const s = (date, dayId) => ({ id: `${date}-${dayId}`, date, dayId, minutes: 40, kcal: 200, exercises: [] });
+  assert.equal(weekStrip([s("2026-10-28", "d1")], "2026-11-04")[0].status, "missed", "last week's Day 1 does not fill this week's slot");
+});
+
+test("smart strip: by DATE (any Smart session that day = done), one or two; another plan's session does not count", async () => {
+  const { smartStrip } = await import("./unifiedPlan.js");
+  const days = Array.from({ length: 7 }, (_, i) => ({ id: `sm-${i}`, kind: i === 6 ? "rest" : "strength", title: "t" }));
+  const program = { week: [] };
+  const s = (date, planId) => ({ id: `${date}-${planId}-${Math.random()}`, date, planId, dayId: "x" });
+  const strip = (list) => smartStrip(program, days, list, "2026-11-04").map((c) => c.status);
+  assert.equal(strip([s("2026-11-04", "smart")])[2], "done");
+  assert.equal(strip([s("2026-11-04", "smart"), s("2026-11-04", "smart")])[2], "done", "two Smart workouts on one day: still one done day");
+  assert.notEqual(strip([s("2026-11-04", "lean-toned-7")])[2], "done", "a classic-plan session does not mark a Smart day done");
+  assert.notEqual(strip([s("2026-11-03", "smart")])[2], "done", "yesterday's does not mark today done");
+});
+
+test("the Done chip adds up several workouts of the day", async () => {
+  const { totalsOfDay } = await import("./workoutStore.js");
+  assert.deepEqual(totalsOfDay([{ minutes: 25, kcal: 120 }, { minutes: 35.4, kcal: 180.6 }]), { count: 2, minutes: 60, kcal: 301 });
+  assert.deepEqual(totalsOfDay([{ minutes: "x" }]), { count: 1, minutes: 0, kcal: 0 });
+  assert.deepEqual(totalsOfDay(undefined), { count: 0, minutes: 0, kcal: 0 });
 });

@@ -12,6 +12,7 @@ const { GOAL_METRICS } = require('../lib/journey');
 const { todayUtc } = require('../lib/dates');
 
 const { s, body } = require('../lib/schema');
+const { createUnlessSame } = require('../lib/idempotent');
 const router = express.Router();
 router.use(requireAuth);
 
@@ -67,8 +68,8 @@ router.post('/', wrap(async (req, res) => {
     data.startValue = profile?.currentWeightKg || null;
     if (!data.startValue) throw new HttpError(400, 'Add your current weight first so we can measure progress');
   }
-  const goal = await Goal.create({ userId: req.user.id, ...data });
-  res.status(201).json({ success: true, goal });
+  const { doc: goal, duplicate } = await createUnlessSame(Goal, req.user.id, data, 'title');
+  res.status(duplicate ? 200 : 201).json({ success: true, goal, duplicate });
 }));
 
 router.patch('/:id', wrap(async (req, res) => {

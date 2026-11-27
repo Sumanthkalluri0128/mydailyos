@@ -9,7 +9,7 @@
 //   6. A heavy day right after a very light day (restrict -> overeat) gets "eat regular meals", not another cut.
 //   7. If the weight trend is NOT rising after a heavy week, the numbers (target or log) are probably off: review, do not cut.
 const { addDays } = require('./dates');
-const { dayBalance, expectedEnergy, goalDirection, KCAL_PER_KG } = require('./energy');
+const { dayBalance, expectedEnergy, goalDirection, KCAL_PER_KG, estimateBurn } = require('./energy');
 
 const n = (v) => (Number.isFinite(Number(v)) ? Number(v) : 0);
 const r10 = (v) => Math.round(v / 10) * 10;
@@ -144,7 +144,7 @@ function analyseOverDays({ profile = null, days = [], today, target: targetIn = 
     headline, detail, cause, needsEasierPace, ledger: ledgerOf({ recovered, leftover, delayDays }) };
 }
 
-/** Kcal burned by a brisk walk (MET 3.5) at this body weight, rounded to 5. */
-function walkKcal(weightKg, minutes = 15) { const w = n(weightKg) > 0 ? n(weightKg) : 70; return Math.round((((3.5 * 3.5 * w) / 200) * minutes) / 5) * 5; }
+/** Kcal a brisk walk (MET 3.5) burns beyond resting, at this body weight, rounded to 5. */
+function walkKcal(weightKg, minutes = 15) { const w = n(weightKg) > 0 ? n(weightKg) : 70; return Math.round(estimateBurn(3.5, w, minutes) / 5) * 5; }
 
 module.exports = { analyseOverDays, walkKcal, RULES };

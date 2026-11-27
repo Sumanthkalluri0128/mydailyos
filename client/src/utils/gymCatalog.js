@@ -1,5 +1,5 @@
 // GENERATED from MyDailyOSMobile/src/utils/gymCatalog.ts (the typed source of truth). Edit that file, then re-run the generator; do not edit this copy.
-export const GYM_CATS = ['Chest', 'Back', 'Shoulders', 'Arms', 'Legs', 'Glutes', 'Core', 'Cardio', 'Mobility', 'Full body'];
+export const GYM_CATS = ['Chest', 'Back', 'Shoulders', 'Arms', 'Legs', 'Glutes', 'Core', 'Cardio', 'Full body'];
 const RAW = `
 Chest|Barbell|Flat Barbell Bench Press
 Chest|Barbell|Incline Barbell Bench Press
@@ -178,7 +178,6 @@ Cardio|Machine|Incline Treadmill Walk|min
 Cardio|Machine|Stationary Bike|min
 Cardio|Machine|Assault Bike|min
 Cardio|Machine|Elliptical Trainer|min
-Cardio|Machine|Cross Trainer|min
 Cardio|Machine|Rowing Machine|min
 Cardio|Machine|Stair Climber|min
 Cardio|Bodyweight|Outdoor Run|min
@@ -203,11 +202,7 @@ Full body|Dumbbell|Dumbbell Snatch
 Full body|Kettlebell|Kettlebell Swing
 Full body|Kettlebell|Kettlebell Goblet Squat
 Full body|Kettlebell|Turkish Get-Up
-Full body|Dumbbell|Farmer's Carry
-Full body|Dumbbell|Farmer's Walk
-Mobility|Bodyweight|Mobility Flow|min
-Mobility|Bodyweight|Dynamic Mobility|min
-Mobility|Bodyweight|Stretching Routine|min
+Full body|Dumbbell|Farmer's Carry|sec
 Full body|Other|Medicine Ball Slam
 Full body|Other|Wall Ball
 `.trim();

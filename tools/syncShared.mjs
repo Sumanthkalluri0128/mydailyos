@@ -20,6 +20,13 @@ const FILES = [
   ['energy.js', 'utils/energy.js', 'utils/energy.ts', NOCHECK + BANNER + '__TYPES__', BANNER, 'lib/energy.js'],
   ['netActivity.js', 'utils/netActivity.js', 'utils/netActivity.ts', NOCHECK],
   ['training.js', 'utils/training.js', 'utils/training.js', ''],
+  ['recordSync.js', 'utils/recordSync.js', 'utils/recordSync.ts', NOCHECK],
+  ['workoutPlanView.js', 'utils/workoutPlanView.js', 'utils/workoutPlanView.ts', NOCHECK],
+  ['logEdit.js', 'utils/logEdit.js', 'utils/logEdit.ts', NOCHECK],
+  ['quickEdit.js', 'utils/quickEdit.js', 'utils/quickEdit.ts', NOCHECK],
+  ['syncRun.js', 'utils/syncRun.js', 'utils/syncRun.ts', NOCHECK],
+  ['planStart.js', 'utils/planStart.js', 'utils/planStart.ts', NOCHECK],
+  ['sessionDelete.js', 'utils/sessionDelete.js', 'utils/sessionDelete.ts', NOCHECK],
   ['coneGeometry.js', 'utils/coneGeometry.js', 'utils/coneGeometry.ts', NOCHECK],
   ...['en', 'hi', 'ta', 'te'].map((l) => [`i18n/${l}.json`, `i18n/${l}.json`, `i18n/${l}.json`, '']),
 ];

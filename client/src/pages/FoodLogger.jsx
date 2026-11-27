@@ -2,9 +2,11 @@ import { confirmAction } from "../utils/confirm";
 import { LoggerCard } from "../components/foodlogger/LoggerCard";
 import { TodayLogCard } from "../components/foodlogger/TodayLogCard";
 import { undoGate, undoNotice } from "../utils/undo";
+import { quickSummary, quickUndoBody } from "../utils/quickEdit";
 import Buddy, { BuddyEmpty } from "../motion/Buddy";
 import { notify } from "../utils/notify";
 import { apiFetch } from "../config/api";
+import { attemptId, attemptDone } from "../utils/attemptId";
 import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import PortionEdit from "../components/PortionEdit";
 import { API_URL } from "../config";
@@ -88,17 +90,23 @@ function FoodLogger({ date, onBack, goTo }) {
     if (p[food._id]) { const { [food._id]: _drop, ...rest } = p; return rest; } // eslint-disable-line no-unused-vars
     return { ...p, [food._id]: { food, quantity: String(food.servingSize || 1) } };
   });
+  const addingRef = useRef(false); // set at once (state would update too late to stop two taps in the same instant)
   const addPicked = async () => {
     const items = Object.values(picked).map((x) => ({ foodId: x.food._id, quantity: Number(x.quantity) || x.food.servingSize || 1 }));
-    if (!items.length) return;
+    if (!items.length || addingRef.current) return;
+    addingRef.current = true; setSaving(true);
+    // The same selection retried (a second tap, a retry after a timeout) keeps the same id, so the server adds it once.
+    const same = { date, meal: selectedMeal, items };
     try {
-      const response = await apiFetch(`${API_URL}/api/food-logs/bulk`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ date, mealType: selectedMeal, items, clientId: `multi-${Date.now()}-${Math.random().toString(36).slice(2, 8)}` }) });
+      const response = await apiFetch(`${API_URL}/api/food-logs/bulk`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ date, mealType: selectedMeal, items, clientId: attemptId("multi", same) }) });
       const data = await response.json();
       if (!response.ok) throw new Error(data.message || "Could not add those");
+      attemptDone("multi", same);
       notify(`Added ${items.length} food${items.length === 1 ? "" : "s"} to ${selectedMeal}.`, "success");
       setPicked({}); setMulti(false);
       await fetchFoodLogs();
     } catch (error) { notify(error.message || "Could not add those", "error"); }
+    finally { addingRef.current = false; setSaving(false); }
   };
 
   const [search, setSearch] = useState("");
@@ -409,19 +417,38 @@ function FoodLogger({ date, onBack, goTo }) {
     } catch { notify("Could not connect to the backend.", "error"); } finally { setEditBusy(false); }
   };
 
-  const handleMoveLog = async (id, mealType) => {
+  // ---- correct a quick-add estimate (name and numbers). `body` is only what changed (utils/quickEdit.js); Undo sends the old values back.
+  const handleCorrectQuick = async (log, body) => {
+    setEditBusy(true);
+    const send = (b) => apiFetch(`${API_URL}/api/food-logs/${log._id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(b) });
+    try {
+      const response = await send(body);
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) { notify(data.message || "Could not correct the estimate.", "error"); return; }
+      setFoodLogs((cur) => cur.map((l) => (l._id === log._id ? { ...l, ...data.log } : l)));
+      setEditId(null);
+      undoNotice({ message: quickSummary(log, body), onUndo: async () => { await send(quickUndoBody(log, body)); try { await fetchFoodLogs(); } catch { /* ignore */ } } });
+      try { await fetchFoodLogs(); } catch { /* the list already shows the saved value */ }
+    } catch { notify("Could not connect to the backend.", "error"); } finally { setEditBusy(false); }
+  };
+
+  // `target` is a meal id, or "day:YYYY-MM-DD" to move the entry to another day (forgot to log it, logged it on the wrong day).
+  const handleMoveLog = async (id, target) => {
+    const toDay = String(target).startsWith("day:") ? String(target).slice(4) : null;
     const before = foodLogs;
-    setFoodLogs((cur) => cur.map((l) => (l._id === id ? { ...l, mealType } : l))); // instant: it appears in the new meal right away
+    setFoodLogs((cur) => (toDay ? cur.filter((l) => l._id !== id) : cur.map((l) => (l._id === id ? { ...l, mealType: target } : l)))); // instant: it appears in the new meal (or leaves this day) right away
     try {
       const response = await apiFetch(`${API_URL}/api/food-logs/${id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ mealType }),
+        body: JSON.stringify(toDay ? { date: toDay } : { mealType: target }),
       });
       if (!response.ok) {
         const data = await response.json().catch(() => ({}));
         setFoodLogs(before);
         notify(data.message || "Could not move this food.", "error");
+      } else if (toDay) {
+        notify(`Moved to ${toDay}.`, "success");
       }
     } catch (error) {
       console.error("Failed to move food log:", error);
@@ -533,7 +560,7 @@ function FoodLogger({ date, onBack, goTo }) {
       {/* TODAY'S LOG */}
       {/* ====================================================== */}
 
-      <TodayLogCard MEALS={MEALS} date={date} dragId={dragId} dropMeal={dropMeal} editBusy={editBusy} editId={editId} foodLogs={foodLogs} getMealCalories={getMealCalories} getMealLogs={getMealLogs} handleDeleteLog={handleDeleteLog} handleEditQty={handleEditQty} handleMoveLog={handleMoveLog} openMeals={openMeals} selectedMeal={selectedMeal} setDragId={setDragId} setDropMeal={setDropMeal} setEditId={setEditId} setOpenMeals={setOpenMeals} />
+      <TodayLogCard MEALS={MEALS} date={date} dragId={dragId} dropMeal={dropMeal} editBusy={editBusy} editId={editId} foodLogs={foodLogs} getMealCalories={getMealCalories} getMealLogs={getMealLogs} handleDeleteLog={handleDeleteLog} handleCorrectQuick={handleCorrectQuick} handleEditQty={handleEditQty} handleMoveLog={handleMoveLog} openMeals={openMeals} selectedMeal={selectedMeal} setDragId={setDragId} setDropMeal={setDropMeal} setEditId={setEditId} setOpenMeals={setOpenMeals} />
 
 
       {showAddFood && (

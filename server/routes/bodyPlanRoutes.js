@@ -21,6 +21,8 @@ const { addDays, todayUtc } = require('../lib/dates');
 const { refreshAutoActivity } = require('../lib/dailyCoachData');
 const { refreshStoredTarget } = require('../lib/profileEnergy');
 const { resolveStart } = require('../lib/planStart');
+const { estimateBurn } = require('../lib/energy');
+const { reconcileHealthConnect } = require('../lib/hcReconcile');
 
 const router = express.Router();
 router.use(requireAuth);
@@ -212,7 +214,8 @@ router.post('/session', wrap(async (req, res) => {
       const kg = Number(prof?.currentWeightKg) || 70;
       const setsDone = exercises.reduce((t, e) => t + e.sets.length, 0);
       const minutes = Math.max(1, doc.minutes || Math.round(setsDone * 1.5));
-      if (act) await ActivityLog.create({ userId: req.user.id, clientId: clientId ? `bp-${clientId}` : undefined, activityId: act._id, date, activityName: act.name, category: act.category, durationMinutes: minutes, weightKg: kg, met: act.met, caloriesBurned: (act.met * 3.5 * kg / 200) * minutes, notes: `Body plan: ${doc.title || 'workout'}` });
+      if (act) await ActivityLog.create({ userId: req.user.id, clientId: clientId ? `bp-${clientId}` : undefined, activityId: act._id, date, activityName: act.name, category: act.category, durationMinutes: minutes, weightKg: kg, met: act.met, caloriesBurned: estimateBurn(act.met, kg, minutes), notes: `Body plan: ${doc.title || 'workout'}` });
+      if (act) await reconcileHealthConnect(req.user.id, [date]);
     } catch (e) { /* the session itself is saved; only the calorie entry is skipped */ }
   }
   await markCoachDirty(CoachState, req.user.id);                      // effort (RPE) taps and new sessions can flip the strength trend
@@ -225,6 +228,19 @@ router.get('/sessions', wrap(async (req, res) => {
   const today = req.query.date ? v.date(req.query.date) : todayUtc();
   const rows = await BodyPlanSession.find({ userId: req.user.id, date: { $gte: addDays(today, -days), $lte: today } }).sort({ date: -1, createdAt: -1 }).limit(120).lean();
   res.json({ success: true, sessions: rows });
+}));
+
+// Remove a finished smart-plan session by the id the app gave it (its calorie entry goes with it). Safe to repeat: a second call finds nothing and still answers 200,
+// which is what lets an app retry a delete that was cut off. The plan is rebuilt without the session, so the effort / strength history it learns from is right again.
+router.delete('/session', wrap(async (req, res) => {
+  const clientId = v.clientId(req.query.clientId);
+  if (!clientId) throw new HttpError(400, 'clientId is required');
+  const asOf = req.query.date ? v.date(req.query.date) : undefined;
+  const row = await BodyPlanSession.findOneAndDelete({ userId: req.user.id, clientId }).lean();
+  await ActivityLog.deleteMany({ userId: req.user.id, clientId: { $in: [clientId, `bp-${clientId}`] } });
+  if (row) await markCoachDirty(CoachState, req.user.id);          // a removed session can flip the strength trend, like a new one can
+  const built = await build(req.user.id, '', undefined, asOf);
+  res.json({ success: true, deleted: row ? 1 : 0, plan: built.plan });
 }));
 
 router.delete('/session/:id', wrap(async (req, res) => {

@@ -21,7 +21,7 @@ router.use(requireAuth);
 
 const PERSONAL_MODELS = [
   'Profile', 'WeightLog', 'WaterLog', 'Task', 'Habit', 'HabitLog', 'FoodLog', 'ActivityLog', 'WorkoutTemplate',
-  'HealthLog', 'Fast', 'SavedMeal', 'MealPlan', 'Recipe', 'Goal', 'Collection', 'FoodPreference', 'PlanTemplate', 'FoodReport', 'CoachState', 'Medicine', 'MedLog', 'ShareLink', 'TrainingProgram', 'BodyPlanSession', 'Readiness',
+  'HealthLog', 'Fast', 'SavedMeal', 'MealPlan', 'Recipe', 'Goal', 'Collection', 'FoodPreference', 'PlanTemplate', 'FoodReport', 'CoachState', 'Medicine', 'MedLog', 'ShareLink', 'TrainingProgram', 'BodyPlanSession', 'Readiness', 'SyncRecord', 'SyncCounter', 'WorkoutPlanItem',
 ];
 
 const passwordLimiter = rateLimit({
@@ -74,7 +74,9 @@ async function collectExport(userId) {
     load('Recipe', { createdAt: 1 }), load('SavedMeal', { createdAt: 1 }), load('MealPlan', { createdAt: 1 }),   // were missing from backups before v62
   ]);
   const readiness = await load('Readiness');
-  return { user, profile: profile[0] || null, foodLogs, activityLogs, waterLogs, weightLogs, tasks, habits, habitLogs, templates, customFoods, healthLogs, fasts, goals, foodPreferences: foodPrefs[0] || null, planTemplates, coachState: coachState[0] || null, medicines, medLogs, shareLink: shareLinks[0] || null, trainingProgram: trainingPrograms[0] || null, bodyPlanSessions, recipes, savedMeals, mealPlans, readiness };
+  const workoutPlan = (await load('WorkoutPlanItem', { date: 1 })).map(({ date, kind, title, minutes, exercises, note, status, movedFrom }) => ({ date, kind, title, minutes, exercises, note, status, movedFrom }));   // planned workouts
+  const syncRecords = (await load('SyncRecord', { seq: 1 })).map(({ space, kind, rid, data, changedAt, deleted }) => ({ space, kind, rid, data, updatedAt: changedAt, deleted }));   // Gym log synced from the person's devices
+  return { user, profile: profile[0] || null, foodLogs, activityLogs, waterLogs, weightLogs, tasks, habits, habitLogs, templates, customFoods, healthLogs, fasts, goals, foodPreferences: foodPrefs[0] || null, planTemplates, coachState: coachState[0] || null, medicines, medLogs, shareLink: shareLinks[0] || null, trainingProgram: trainingPrograms[0] || null, bodyPlanSessions, recipes, savedMeals, mealPlans, readiness, syncRecords, workoutPlan };
 }
 
 const CSV_HEADERS = ['type', 'date', 'name', 'quantity', 'unit', 'calories', 'protein_g', 'carbs_g', 'fat_g', 'details', 'notes'];

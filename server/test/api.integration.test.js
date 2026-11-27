@@ -126,6 +126,7 @@ test('custom foods: create, list, edit, favourite, duplicate, delete — and iso
   const Food = require('../models/Food');
   const shared = await Food.create({ name: 'Shared Rice', servingSize: 100, servingUnit: 'g', calories: 130, protein: 2.7 });
   ctx.shared = String(shared._id);
+  require('../lib/foodCache').clearFoodCache();   // the shared catalogue is cached; a food added straight to the database needs the cache cleared (the seed scripts run before the server starts)
   assert.equal((await call('GET', '/api/foods?search=shared', { token: ctx.bob })).foods.length, 1);
   assert.equal((await call('PUT', `/api/foods/${ctx.shared}`, { token: ctx.alice, body: { name: 'x', servingSize: 1, calories: 1 } })).status, 403);
   assert.equal((await call('DELETE', `/api/foods/${ctx.shared}`, { token: ctx.alice })).status, 403);
@@ -203,6 +204,7 @@ test('weight scales: a second scale keeps its own entry, is learned from a same-
 });
 
 test('weight: one entry per day (update), profile sync, delete resyncs', { skip }, async () => {
+  await require('../models/WeightLog').deleteMany({});   // the test before this one (a second scale) left weigh-ins behind; this one counts them
   const a = await call('POST', '/api/weight', { token: ctx.alice, body: { date: today(), weightKg: 70.5 } });
   assert.equal(a.status, 201);
   const b = await call('POST', '/api/weight', { token: ctx.alice, body: { date: today(), weightKg: 70.2 } });
@@ -217,6 +219,7 @@ test('weight: one entry per day (update), profile sync, delete resyncs', { skip 
   assert.equal((await call('GET', '/api/profile', { token: ctx.alice })).profile.currentWeightKg, 71.4, 'falls back to the latest remaining entry');
   assert.equal((await call('POST', '/api/weight', { token: ctx.alice, body: { date: today(), weightKg: 0 } })).status, 400);
   await call('POST', '/api/weight', { token: ctx.alice, body: { date: today(), weightKg: 70 } });
+  await require('../models/WeightLog').deleteMany({ date: { $in: [plus(-3), plus(-6)] } });   // leave no weigh-ins on the days later tests use (steps x body weight)
 });
 
 test('tasks: due time, priority order, toggle (explicit + flip), edit, delete', { skip }, async () => {
@@ -315,7 +318,7 @@ test('exercise: catalogue, log with calories, templates (create, log in one tap,
   assert.equal((await call('GET', '/api/activities?search=run', { token: ctx.alice })).activities.length, 1);
   const log = await call('POST', '/api/activities/logs', { token: ctx.alice, body: { activityId: run._id, date: today(), durationMinutes: 30, weightKg: 70, clientId: 'a-1' } });
   assert.equal(log.status, 201);
-  assert.equal(Math.round(log.log.caloriesBurned), Math.round((9.8 * 3.5 * 70 / 200) * 30));
+  assert.equal(Math.round(log.log.caloriesBurned), Math.round(((9.8 - 1) * 3.5 * 70 / 200) * 30)); // net of resting: (MET - 1)
   const replay = await call('POST', '/api/activities/logs', { token: ctx.alice, body: { activityId: run._id, date: today(), durationMinutes: 30, weightKg: 70, clientId: 'a-1' } });
   assert.equal(replay.duplicate, true);
   assert.equal((await call('POST', '/api/activities/logs', { token: ctx.alice, body: { activityId: run._id, date: today(), durationMinutes: 0 } })).status, 400);
@@ -361,6 +364,9 @@ test('progress: history rows, combined /day payload, achievements, weekly summar
   assert.equal((await call('GET', `/api/progress/history?from=${today()}&to=${plus(-6)}`, { token: ctx.alice })).status, 400);
   assert.equal((await call('GET', `/api/progress/history?from=2020-01-01&to=2026-12-31`, { token: ctx.alice })).status, 400, 'range cap');
 
+  // this test makes its own weigh-ins (two recent days) instead of relying on what earlier tests left behind
+  await call('POST', '/api/weight', { token: ctx.alice, body: { date: plus(-1), weightKg: 70.9 } });
+  await call('POST', '/api/weight', { token: ctx.alice, body: { date: plus(-2), weightKg: 71.2 } });
   const day = await call('GET', `/api/progress/day?date=${today()}&include=profile,habits,weights`, { token: ctx.alice });
   assert.equal(day.summary.waterMl, 750);
   assert.ok(day.tasks.length >= 2);
@@ -428,9 +434,13 @@ test('security: malformed input is rejected cleanly, headers present, login is r
   // regex injection attempt in search must not blow up
   assert.equal((await call('GET', '/api/foods?search=' + encodeURIComponent('(((.*+'), { token: ctx.alice })).status, 200);
 
+  // Wrong passwords are refused cleanly. This file runs with AUTH_LIMITS_SCALE=100 (many sign-ups from one address), so the login limit that trips at
+  // 6 attempts in production (5 per email per 15 minutes) is 500 here; the real numbers and the 429 are tested in authLimits.unit.test.js. What is
+  // checked here is that the login route really sits behind that limiter: it advertises the per-email size, which is exactly 5 x the scale.
   let last;
-  for (let i = 0; i < 12; i++) last = await call('POST', '/api/auth/login', { body: { email: 'victim@test.dev', password: 'guess' + i } });
-  assert.equal(last.status, 429);
+  for (let i = 0; i < 12; i++) last = await call('POST', '/api/auth/login', { raw: true, body: { email: 'victim@test.dev', password: 'guess' + i } });
+  assert.equal(last.status, 401);
+  assert.equal(last.headers.get('ratelimit-limit'), String(5 * Number(process.env.AUTH_LIMITS_SCALE)), 'the login route is behind the per-email limiter');
 });
 
 test('steps count toward calories burned automatically; health logs validate; one steps value per day', { skip }, async () => {

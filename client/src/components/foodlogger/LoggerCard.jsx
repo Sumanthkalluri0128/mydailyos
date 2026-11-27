@@ -68,7 +68,7 @@ export function LoggerCard(props) {
               <input type="number" min="0.01" step="any" value={q} aria-label={`Amount of ${food.name}`} onChange={(e) => setPicked({ ...picked, [food._id]: { food, quantity: e.target.value } })} />
               <small>{food.servingUnit}</small></span>
           ))}
-          <button type="button" className="primary-button" onClick={addPicked}>Add {Object.keys(picked).length} to {selectedMeal}</button>
+          <button type="button" className="primary-button" disabled={saving} onClick={addPicked}>{saving ? "Adding…" : `Add ${Object.keys(picked).length} to ${selectedMeal}`}</button>
         </div>
       )}
 

@@ -14,9 +14,12 @@ import { currentOwner } from "../utils/cacheOwner";
 import { notify } from "../utils/notify";
 import { confirmAction } from "../utils/confirm";
 import { DAYS, GUIDE, PLAN, SMART_ID, FILTERS, MUSCLE_LABEL, dayById, findExercise, libraryList } from "../data/workoutPlan";
-import { addDays, fromStr, inRange, loadState, mondayOf, newActive, phaseFor, saveState, streak, summarize, volumeOf, weekNumber, weekStrip, elapsedSec } from "../utils/workoutStore";
+import { addDays, fromStr, inRange, loadState, mondayOf, newActive, phaseFor, saveState, streak, summarize, totalsOfDay, volumeOf, weekNumber, weekStrip, elapsedSec } from "../utils/workoutStore";
 import { findInDays, mergeLibrary, programToDays, sessionPayload, smartPhase, smartProgression, smartStrip, variantDay } from "../utils/unifiedPlan";
 import useSmartPlan, { smartUsable } from "../utils/useSmartPlan";
+import { dropQueued } from "../offline/offlineApi";
+import { addPending, deletePath, deleteRequest, queuedCreateOf, runPending } from "../utils/sessionDelete";
+import { outcomeOf, pickToSync, reasonFor, runSync } from "../utils/syncRun";
 import { useFlag } from "../utils/flagStore";
 import ExSheet, { Chip, FigThumb, fmtClock } from "../components/workout/bits";
 import SessionView from "../components/workout/SessionView";
@@ -37,28 +40,34 @@ const prettyDate = (s) => fromStr(s).toLocaleDateString(undefined, { weekday: "s
 const countItems = (day) => { const sets = day.blocks.filter((b) => b.type === "sets").reduce((n, b) => n + b.items.length, 0); return sets || day.blocks.reduce((n, b) => n + (b.items ? b.items.length : 0), 0); };
 
 // ---------------------------------------------------------------------------------------------------------------- sending finished workouts
-/** Classic plan: the finished workout becomes an entry in the Exercise log (so its calories count in the day's totals). */
+/** What the server said, in words (an empty string when it said nothing useful). */
+const messageOf = async (r) => { try { const j = await r.json(); return String(j.message || j.error || ""); } catch { return ""; } };
+/** An answer that was not a success, as { outcome: "offline" | "rejected", reason }: see utils/syncRun.js. */
+const failure = async (r) => ({ outcome: outcomeOf(r.status), reason: reasonFor(r.status, await messageOf(r)) });
+
+/** Classic plan: the finished workout becomes an entry in the Exercise log (so its calories count in the day's totals). Answers { outcome, reason? }. */
 async function logToExercise(rec, day, weightKg) {
   const name = KCAL_ACTIVITY[day.kind];
-  if (!name) return true; // rest day: nothing to log
+  if (!name) return { outcome: "ok" }; // rest day: nothing to log
   const r = await apiFetch(`${API_URL}/api/activities?search=${encodeURIComponent(name)}`);
-  if (!r.ok) return false;
-  const j = await r.json();
+  if (!r.ok) return failure(r);
+  const j = await r.json().catch(() => ({}));
   const act = (j.activities || []).find((a) => a.name === name);
-  if (!act) return false;
+  if (!act) return { outcome: "rejected", reason: "The exercise type for this workout is missing on the server." };
   const body = { date: rec.date, activityId: act._id, durationMinutes: Math.max(1, rec.minutes), weightKg, caloriesBurned: rec.kcal, notes: `${rec.title} (Workout Plans)`, clientId: `wp-${rec.id}` };
   const w = await apiFetch(`${API_URL}/api/activities/logs`, { method: "POST", body: JSON.stringify(body) });
-  return w.ok;
+  return w.ok ? { outcome: "ok" } : failure(w);
 }
 
-/** Smart plan: the session goes to the body-plan engine, which also counts it in the day's exercise totals. Returns { plan, highlights } or null. */
+/** Smart plan: the session goes to the body-plan engine, which also counts it in the day's exercise totals. Answers { outcome, reason?, plan?, highlights? }. */
 async function sendSmart(rec, today, phase) {
   const body = sessionPayload(rec, { today, phase });
-  if (!body.exercises.length) return {}; // nothing was ticked: there is nothing for the plan to learn from
+  if (!body.exercises.length) return { outcome: "ok" }; // nothing was ticked: there is nothing for the plan to learn from
   const r = await apiFetch("/api/body-plan/session", { method: "POST", body: JSON.stringify(body) });
-  if (r.status === 202) return {};      // offline: kept on this device and sent automatically later
-  if (!r.ok) return r.status >= 400 && r.status < 500 && r.status !== 401 && r.status !== 429 ? {} : null; // a rejected session is not retried for ever
-  return r.json().catch(() => ({}));
+  if (r.status === 202) return { outcome: "ok" };      // offline: kept on this device by the offline queue and sent automatically later
+  if (!r.ok) return failure(r);                        // a refused session is no longer reported as sent: it is remembered, shown in History, and can be tried again
+  const j = await r.json().catch(() => ({}));
+  return { outcome: "ok", plan: j.plan, highlights: j.highlights };
 }
 
 export default function WorkoutPlanPage({ startView, profile }) {
@@ -145,33 +154,102 @@ export default function WorkoutPlanPage({ startView, profile }) {
 
   // send workouts that were not sent yet (offline, or the server was asleep). One at a time, last 14 days only.
   const syncing = useRef(false);
+  // Deleting a finished workout also has to remove what it left on the server, or the day's burn stays inflated. See utils/sessionDelete.js.
+  const stRef = useRef(st); stRef.current = st;
+  const todayRef = useRef(today); todayRef.current = today;
+  const inflight = useRef(new Map());   // clientId -> how many sends of it are running right now (sync runs can overlap): its delete waits until they are all over
+  const deleting = useRef(false);
+  const offlineToast = useRef(false);
+  const flushDeletes = useCallback(async () => {
+    if (deleting.current) return;
+    const all = stRef.current.pendingDeletes || [];
+    const list = all.filter((d) => !(inflight.current.get(d.clientId) > 0));
+    if (!list.length) return;
+    deleting.current = true;
+    try {
+      const ids = new Set(list.map((d) => d.clientId));
+      await dropQueued((op) => queuedCreateOf(op, ids));   // a create still waiting offline would bring the workout back
+      const r = await runPending(list, async (entry) => {
+        const res = await apiFetch(deletePath(entry, todayRef.current), { method: "DELETE" });
+        let plan;
+        if (res.ok && entry.kind === "smart") { try { plan = (await res.json()).plan; } catch { /* the delete worked; the plan refreshes on its own */ } }
+        return { ok: res.ok, status: res.status, plan };
+      });
+      const finished = new Set([...r.done, ...r.dropped]);
+      if (finished.size) setSt((x) => ({ ...x, pendingDeletes: (x.pendingDeletes || []).filter((d) => !finished.has(d.clientId)) }));
+      if (r.plan) smart.setPlan(r.plan);
+      if (r.done.length) { offlineToast.current = false; window.dispatchEvent(new Event("ff:refresh")); }
+      if (r.remaining.length && !offlineToast.current) { offlineToast.current = true; notify("Deleted here. Its calories will be removed from your Exercise log as soon as you are back online.", "info"); }
+      // something was deleted while this was running: go again
+      if ((stRef.current.pendingDeletes || []).some((d) => !ids.has(d.clientId))) setTimeout(() => flushDeletes(), 100);
+    } catch { /* kept on the list, tried again later */ } finally { deleting.current = false; }
+  }, [smart.setPlan]); // eslint-disable-line react-hooks/exhaustive-deps
+  const deleteSession = useCallback((s) => {
+    const request = deleteRequest(s.id, { smart: s.planId === SMART_ID });
+    setSt((x) => { const synced = { ...(x.synced || {}) }; delete synced[s.id]; const failed = { ...(x.failed || {}) }; delete failed[s.id]; return { ...x, sessions: x.sessions.filter((y) => y.id !== s.id), synced, failed, pendingDeletes: addPending(x.pendingDeletes, request) }; });
+  }, []);
+  // send the waiting deletes now, when the connection is back, when the tab returns, and every 30 s while any wait
+  const waiting = (st.pendingDeletes || []).length;
   useEffect(() => {
-    if (syncing.current) return undefined;
-    const todo = st.sessions.filter((s) => !st.synced[s.id] && s.date >= addDays(today, -14));
-    if (!todo.length) return undefined;
+    if (!waiting) return undefined;
+    flushDeletes();
+    const again = () => { if (document.visibilityState !== "hidden" && navigator.onLine) flushDeletes(); };
+    window.addEventListener("online", again);
+    document.addEventListener("visibilitychange", again);
+    const t = setInterval(again, 30000);
+    return () => { window.removeEventListener("online", again); document.removeEventListener("visibilitychange", again); clearInterval(t); };
+  }, [waiting, flushDeletes]);
+
+  // Sending finished workouts. One run at a time; a workout the server refuses is remembered (st.failed) and shown in History, and the others still go;
+  // no connection stops the run and it starts again by itself (back online, tab visible again, every minute while anything waits).
+  const mounted = useRef(true);
+  useEffect(() => () => { mounted.current = false; }, []);
+  const [retryTick, setRetryTick] = useState(0);
+  const failedMap = st.failed || {};
+  const toSend = pickToSync(st.sessions, { today, skip: (s) => st.synced[s.id] || failedMap[s.id] });
+  const failedCount = Object.keys(failedMap).length;
+  useEffect(() => {
+    if (syncing.current) return;
+    const todo = toSend;
+    if (!todo.length) return;
     syncing.current = true;
-    let alive = true;
     (async () => {
-      const ok = {}; let newest = null; let first = null;
-      for (const s of todo) {
-        try {
-          if (s.planId === SMART_ID) {
-            const r = await sendSmart(s, today, phaseKey);
-            if (r) { ok[s.id] = true; if (r.plan) newest = r.plan; if (!first && r.highlights && r.highlights.length) first = r.highlights[0]; }
-          } else if (await logToExercise(s, dayById(s.dayId) || DAYS[0], weightKg)) ok[s.id] = true;
-        } catch { /* try again next time */ }
-      }
+      const r = await runSync(todo, async (s) => {
+        const cid = `wp-${s.id}`;
+        inflight.current.set(cid, (inflight.current.get(cid) || 0) + 1);
+        try { return s.planId === SMART_ID ? await sendSmart(s, today, phaseKey) : await logToExercise(s, dayById(s.dayId) || DAYS[0], weightKg); }
+        finally { const n = (inflight.current.get(cid) || 1) - 1; if (n > 0) inflight.current.set(cid, n); else inflight.current.delete(cid); }
+      }, { stillWanted: (s) => (stRef.current.sessions || []).some((x) => x.id === s.id) }); // deleted while this was running: never send it now
       syncing.current = false;
-      if (!alive) return;
-      if (Object.keys(ok).length) {
-        setSt((x) => ({ ...x, synced: { ...x.synced, ...ok } }));
-        if (newest) smart.setPlan(newest);
-        if (first) notify(`${first.name}: ${first.text}`, "success");
-        window.dispatchEvent(new Event("ff:refresh"));
+      flushDeletes();   // anything deleted while this was sending can go now
+      if (!mounted.current) return;
+      const okIds = Object.fromEntries(r.done.map((id) => [id, true]));
+      const nFailed = Object.keys(r.failed).length;
+      if (r.done.length || nFailed) {
+        setSt((x) => { const failed = { ...(x.failed || {}), ...r.failed }; for (const id of r.done) delete failed[id]; return { ...x, synced: { ...x.synced, ...okIds }, failed }; });
       }
+      let newest = null, first = null;
+      for (const id of r.done) { const e = r.extras[id] || {}; if (e.plan) newest = e.plan; if (!first && e.highlights && e.highlights.length) first = e.highlights[0]; }
+      if (newest) smart.setPlan(newest);
+      if (first) notify(`${first.name}: ${first.text}`, "success");
+      if (r.done.length) window.dispatchEvent(new Event("ff:refresh"));
+      if (nFailed) notify(nFailed === 1 ? "A workout could not be saved to your Exercise log. See History to try again." : `${nFailed} workouts could not be saved to your Exercise log. See History to try again.`, "error");
+      // a workout finished while this was running is picked up now, not at the next minute
+      const ids = new Set(todo.map((x) => x.id));
+      const after = stRef.current;
+      if (!r.stopped && pickToSync(after.sessions, { today, skip: (x) => ids.has(x.id) || after.synced[x.id] || (after.failed || {})[x.id] }).length) setRetryTick((n) => n + 1);
     })();
-    return () => { alive = false; syncing.current = false; };
-  }, [st.sessions.length, smart.status]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [st.sessions.length, smart.status, retryTick, failedCount]); // eslint-disable-line react-hooks/exhaustive-deps
+  const unsent = toSend.length;
+  useEffect(() => {
+    if (!unsent) return undefined;
+    const again = () => { if (document.visibilityState !== "hidden" && navigator.onLine) setRetryTick((n) => n + 1); };
+    window.addEventListener("online", again);
+    document.addEventListener("visibilitychange", again);
+    const t = setInterval(again, 60000);
+    return () => { window.removeEventListener("online", again); document.removeEventListener("visibilitychange", again); clearInterval(t); };
+  }, [unsent]);
+  const retrySession = useCallback((s) => setSt((x) => { const failed = { ...(x.failed || {}) }; delete failed[s.id]; return { ...x, failed }; }), []);
 
   const setActive = useCallback((fn) => setSt((s) => (s.active ? { ...s, active: typeof fn === "function" ? fn(s.active) : fn } : s)), []);
   const swaps = st.swaps;
@@ -276,7 +354,7 @@ export default function WorkoutPlanPage({ startView, profile }) {
       {view === "plan" && <PlanView plan={plan} smart={smart} smartOn={smartOn} st={st} setSt={setSt} today={today} onOpen={(id) => setDayOpen(id)} onSource={setSource} customPlan={customPlan} weightKg={weightKg} weightFromBody={!!(body && body.plan.body)} profile={profile} onSetup={() => { setBodyTab("me"); setView("body"); }} />}
       {view === "body" && <div className="wp-body"><BodyPlanPage embedded seed={smart.data} startTab={bodyTab} onSaved={() => { window.dispatchEvent(new Event("ff:refresh")); smart.reload(); }} /></div>}
       {view === "library" && <LibraryView list={library} favs={st.favs} onFav={onFav} openSheet={openSheet} />}
-      {view === "history" && <HistoryView st={st} setSt={setSt} today={today} go={setView} />}
+      {view === "history" && <HistoryView st={st} onDelete={deleteSession} onRetry={retrySession} today={today} go={setView} />}
       {sheetEl}
     </div>
   );
@@ -300,7 +378,9 @@ function WayChips({ day, onWay }) {
 // ================================================================================================================ Today
 function TodayView({ plan, body, cell, shownDay, selected, onPick, st, busy, onStart, onResume, onDiscard, onOpen, go, today, activeDay, onWay, onSkip, onApply }) {
   const [asking, setAsking] = useState(false);
-  const doneRec = st.sessions.find((s) => s.date === cell.date && (plan.smart ? s.planId === SMART_ID : s.dayId === shownDay.id));
+  const doneList = st.sessions.filter((s) => s.date === cell.date && (plan.smart ? s.planId === SMART_ID : s.dayId === shownDay.id)); // two workouts of this day on this date both count
+  const doneRec = doneList[0];
+  const doneTotals = totalsOfDay(doneList);
   const isDone = cell.status === "done" || !!doneRec;
   const total = summarize(st.sessions);
   const isRest = shownDay.kind === "rest";
@@ -345,7 +425,7 @@ function TodayView({ plan, body, cell, shownDay, selected, onPick, st, busy, onS
           {cell.note && <p className="wp-way-note">{cell.note}</p>}
           <div className="wp-hero-cta">
             {isDone ? (
-              <><Chip tone="ok">✓ Done{doneRec ? ` · ${doneRec.minutes} min` : ""}</Chip><button type="button" className="wp-btn glass" onClick={() => onStart(shownDay)}>Do it again</button></>
+              <><Chip tone="ok">✓ Done{doneRec ? ` · ${doneTotals.minutes} min${doneTotals.count > 1 ? ` · ${doneTotals.count} workouts` : ""}` : ""}</Chip><button type="button" className="wp-btn glass" onClick={() => onStart(shownDay)}>Do it again</button></>
             ) : (
               <button type="button" className="wp-btn hot big" onClick={() => onStart(shownDay)}>{st.active && st.active.dayId === shownDay.id ? "Continue workout" : isRest ? "Open rest-day checklist" : shownDay.kind === "recovery" ? "Start activity" : "Start workout"}</button>
             )}
@@ -399,6 +479,7 @@ function TodayView({ plan, body, cell, shownDay, selected, onPick, st, busy, onS
           <div className="wp-quick">
             <button type="button" onClick={() => window.dispatchEvent(new CustomEvent("ff:goto", { detail: { page: "progress" } }))}><span aria-hidden="true">📈</span>Progress</button>
             <button type="button" onClick={() => window.dispatchEvent(new CustomEvent("ff:goto", { detail: { page: "exercise" } }))}><span aria-hidden="true">🧮</span>Routines &amp; plate calculator</button>
+            <button type="button" onClick={() => window.dispatchEvent(new CustomEvent("ff:goto", { detail: { page: "wplanner" } }))}><span aria-hidden="true">🗓️</span>Workout planner (week &amp; month)</button>
             <button type="button" onClick={() => window.dispatchEvent(new CustomEvent("ff:goto", { detail: { page: "gymlog" } }))}><span aria-hidden="true">📓</span>Gym log &amp; body tracker</button>
           </div>
         </section>
@@ -668,7 +749,7 @@ function LibraryView({ list, favs, onFav, openSheet }) {
 }
 
 // ================================================================================================================ History
-function HistoryView({ st, setSt, today, go }) {
+function HistoryView({ st, onDelete, onRetry, today, go }) {
   const [range, setRange] = useState("week");
   const [anchor, setAnchor] = useState(today);
   const [open, setOpen] = useState(null);
@@ -676,7 +757,7 @@ function HistoryView({ st, setSt, today, go }) {
   const sum = summarize(list);
   const shift = (n) => setAnchor((a) => (range === "week" ? addDays(a, n * 7) : (() => { const d = fromStr(a); d.setMonth(d.getMonth() + n, 1); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-01`; })()));
   const label = range === "all" ? "All time" : range === "month" ? fromStr(anchor).toLocaleDateString(undefined, { month: "long", year: "numeric" }) : mondayOf(anchor) === mondayOf(today) ? "This week" : `${prettyDate(mondayOf(anchor))} – ${prettyDate(addDays(mondayOf(anchor), 6))}`;
-  const del = async (s) => { if (await confirmAction(`Delete ${s.title} on ${prettyDate(s.date)}?`, { title: "Delete workout", confirmText: "Delete", cancelText: "Keep" })) setSt((x) => ({ ...x, sessions: x.sessions.filter((y) => y.id !== s.id) })); };
+  const del = async (s) => { if (await confirmAction(`Delete ${s.title} on ${prettyDate(s.date)}? Its calories are removed from your Exercise log too.`, { title: "Delete workout", confirmText: "Delete", cancelText: "Keep" })) onDelete(s); };
 
   return (
     <div>
@@ -706,6 +787,12 @@ function HistoryView({ st, setSt, today, go }) {
                 <span className="wp-item-t"><b>{prettyDate(s.date)} · {s.title}</b><small>{s.minutes} min · ~{s.kcal} kcal{s.feel ? ` · ${FEEL_LABEL[s.feel] || s.feel}` : ""}</small></span>
                 <span className="wp-go" aria-hidden="true">{open === s.id ? "⌄" : "›"}</span>
               </button>
+              {st.failed && st.failed[s.id] && (
+                <div className="wp-sync-warn" role="alert">
+                  <span>⚠ Not in your Exercise log yet: {st.failed[s.id].reason}</span>
+                  <button type="button" className="wp-link" onClick={() => onRetry(s)}>Try again</button>
+                </div>
+              )}
               {open === s.id && (
                 <div className="wp-hist-body">
                   {s.exercises.length ? s.exercises.map((e) => (

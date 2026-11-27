@@ -18,6 +18,8 @@ const { recordsBroken } = require('../lib/trainingData');
 const { computeRecords } = require('../lib/records');
 const { parseWorkoutText } = require('../lib/setText');
 const { LIB } = require('../lib/exerciseLibrary');
+const { estimateBurn } = require('../lib/energy');
+const { reconcileHealthConnect } = require('../lib/hcReconcile');
 
 const router = express.Router();
 router.use(requireAuth);
@@ -202,6 +204,7 @@ router.post('/workout/log', wrap(async (req, res) => {
   const built = buildLogs({ userId: req.user.id, items, date, weightKg: weight, label: `Workout: ${name}`, clientId });
   const records = await recordsBroken(req.user.id, built.map((b) => ({ activityName: b.activityName, sets: b.sets })));
   const logs = await ActivityLog.insertMany(built);
+  await reconcileHealthConnect(req.user.id, built.map((b) => b.date));
   res.status(201).json({
     success: true, logs, records,
     totals: { minutes: logs.reduce((s, l) => s + l.durationMinutes, 0), caloriesBurned: Math.round(logs.reduce((s, l) => s + l.caloriesBurned, 0)) },
@@ -227,8 +230,9 @@ router.post('/guided/log', wrap(async (req, res) => {
   const weight = weightOf(await profileOf(req.user.id));
   const log = await ActivityLog.create({
     userId: req.user.id, activityId: a._id, date, activityName: a.name, category: a.category, durationMinutes: minutes, weightKg: weight,
-    met: a.met, caloriesBurned: (a.met * 3.5 * weight / 200) * minutes, notes: `Guided ${kind}`, clientId,
+    met: a.met, caloriesBurned: estimateBurn(a.met, weight, minutes), notes: `Guided ${kind}`, clientId,
   });
+  await reconcileHealthConnect(req.user.id, [date]);
   res.status(201).json({ success: true, log });
 }));
 

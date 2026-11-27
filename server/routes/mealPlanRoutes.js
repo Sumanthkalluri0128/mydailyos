@@ -158,9 +158,15 @@ router.post('/copy-week', wrap(async (req, res) => {
   const shift = diffDays(from, to);
   const pc = await loadPlanContext(uid, {});
   const bad = new Set(findViolations(src, pc.excluder).map((b) => b.item));        // a food you now keep out is not copied
-  const docs = src.filter((i) => !bad.has(i)).map(({ _id, createdAt, updatedAt, __v, clientId, logId, ...rest }) => ({ ...rest, date: addDays(rest.date, shift), logged: false, logId: null }));
+  const wanted = src.filter((i) => !bad.has(i)).map(({ _id, createdAt, updatedAt, __v, clientId, logId, ...rest }) => ({ ...rest, date: addDays(rest.date, shift), logged: false, logId: null }));
+  // What the destination week already has (same day + meal + food) is not added again: copying twice, or onto a week that was
+  // planned already, must not double the plan (or the shopping list built from it).
+  const have = await MealPlan.find({ userId: uid, date: { $gte: to, $lte: addDays(to, 6) } }).select('date mealType foodId').lean();
+  const keyOf = (i) => `${i.date}|${i.mealType}|${String(i.foodId)}`;
+  const taken = new Set(have.map(keyOf));
+  const docs = wanted.filter((d) => !taken.has(keyOf(d)));
   if (docs.length) await MealPlan.insertMany(docs);
-  res.status(201).json({ success: true, copied: docs.length, skipped: bad.size });
+  res.status(docs.length ? 201 : 200).json({ success: true, copied: docs.length, skipped: bad.size, alreadyThere: wanted.length - docs.length });
 }));
 
 // Everything needed for the plan, grouped by food: "Paneer – 600 g (6 servings)".

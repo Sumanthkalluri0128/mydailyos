@@ -25,6 +25,9 @@ const schema = new mongoose.Schema(
     nutritionPerServing: nutrition,
     nutritionTotal: nutrition,
     notes: { type: String, default: '' },
+    // Set when this entry was made by "Copy" / "Repeat": the entry it was copied from. Lets the server notice
+    // that the same entry was already copied to the same day (a double tap, a retry) and not add it twice.
+    copiedFrom: { type: mongoose.Schema.Types.ObjectId, default: null },
     // Optional "why did I eat this?" tag, used only to surface patterns (never to judge).
     // Chai / coffee counter entries keep their parts so the weekly "hidden calories" note can be worked out.
     // How it was logged, for first-time stickers only: 'voice' (spoken), 'pot' (shared pot), 'import' (from a CSV).

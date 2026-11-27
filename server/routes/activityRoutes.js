@@ -8,12 +8,15 @@ const { createOnce } = require('../lib/idempotent');
 const v = require('../lib/validate');
 const { stepCalories, stepDistanceKm, stepsByDate, profileWeight } = require('../lib/steps');
 const { computeRecords } = require('../lib/records');
-const { planImport, FALLBACK } = require('../lib/hcImport');
+const { planImport, partitionHc, FALLBACK } = require('../lib/hcImport');
+const { reconcileHealthConnect } = require('../lib/hcReconcile');
 const { planSync } = require('../lib/gymSync');
 
 const mongoose = require('mongoose');
 const { parseCursor, applyCursor, pageSize, finishPage } = require('../lib/paginate');
 const { s, body } = require('../lib/schema');
+const { estimateBurn } = require('../lib/energy');
+const { addDays, todayUtc } = require('../lib/dates');
 const router = express.Router();
 router.use(requireAuth);
 
@@ -98,11 +101,12 @@ router.post('/logs', wrap(async (req, res) => {
   const { doc, duplicate } = await createOnce(ActivityLog, req.user.id, clientId, {
     activityId: activity._id, date, activityName: activity.name, category: activity.category,
     durationMinutes: duration, weightKg: weight, met: activity.met,
-    caloriesBurned: hasManual ? manual : (activity.met * 3.5 * weight / 200) * duration,
+    caloriesBurned: hasManual ? manual : estimateBurn(activity.met, weight, duration),
     caloriesSource: hasManual ? 'manual' : 'estimated',
     sets: parseSets(req.body?.sets),
     notes: v.string(req.body?.notes, 'notes', { max: 300 }),
   });
+  await reconcileHealthConnect(req.user.id, [date]);   // the same workout already imported from the watch is not counted twice
   res.status(duplicate ? 200 : 201).json({ success: true, log: doc, duplicate });
 }));
 
@@ -112,19 +116,35 @@ router.post('/import', body(s.object({ sessions: s.array(s.object({}, { passthro
   if (!raw.length) return res.json({ success: true, imported: 0, skipped: [], logs: [] });
   const dates = raw.map((r) => String(r?.date || '')).filter((d) => /^\d{4}-\d{2}-\d{2}$/.test(d)).sort();
   const existing = dates.length
-    ? await ActivityLog.find({ userId: req.user.id, source: 'healthconnect', date: { $gte: dates[0], $lte: dates[dates.length - 1] } }).select('clientId startMs endMs').lean()
+    ? await ActivityLog.find({ userId: req.user.id, source: 'healthconnect', date: { $gte: dates[0], $lte: dates[dates.length - 1] } }).select('clientId startMs endMs date category durationMinutes').lean()
     : [];
   const { fresh, skipped } = planImport(raw, existing);
+  // What the person logged themselves on those days (Exercise page, Gym log, plans): a watch session that is the same workout is not counted twice.
+  const mine = dates.length
+    ? await ActivityLog.find({ userId: req.user.id, source: { $ne: 'healthconnect' }, date: { $gte: dates[0], $lte: dates[dates.length - 1] } }).select('date category durationMinutes').lean()
+    : [];
+  fresh.sort((x, y) => (y.durationMinutes - x.durationMinutes) || (x.startMs - y.startMs));
   const weight = Number((await Profile.findOne({ userId: req.user.id }).lean())?.currentWeightKg || 70);
   const acts = await Activity.find({ name: { $in: [...new Set(fresh.map((f) => f.activityName))] } }).lean();
   const byName = new Map(acts.map((a) => [a.name, a]));
+  // Your own entries cover the LONGEST matching watch session first, looking at the sessions already imported and the new ones together, so the result is the
+  // same whichever arrived first. A new session they cover is not imported; an imported one they now cover is removed. Same answer on every sync
+  // (the phone sends the whole last week each time).
+  const category = (f) => (byName.get(f.activityName) || byName.get(FALLBACK) || {}).category;
+  const { skipFresh, dropExisting } = partitionHc({
+    manualRows: mine,
+    existing: existing.filter((e) => e.date).map((e) => ({ _id: e._id, date: e.date, category: e.category, durationMinutes: e.durationMinutes, startMs: e.startMs })),
+    fresh: fresh.filter((f) => category(f)).map((f) => ({ clientId: f.clientId, date: f.date, category: category(f), durationMinutes: f.durationMinutes, startMs: f.startMs })),
+  });
+  if (dropExisting.length) await ActivityLog.deleteMany({ _id: { $in: dropExisting }, userId: req.user.id, source: 'healthconnect' });
   const logs = [];
   for (const f of fresh) {
     const a = byName.get(f.activityName) || byName.get(FALLBACK);
     if (!a) { skipped.push({ clientId: f.clientId, reason: 'no-activity' }); continue; }
+    if (skipFresh.has(f.clientId)) { skipped.push({ clientId: f.clientId, reason: 'logged-by-you' }); continue; }
     const { doc, duplicate } = await createOnce(ActivityLog, req.user.id, f.clientId, {
       activityId: a._id, date: f.date, activityName: a.name, category: a.category, durationMinutes: f.durationMinutes, weightKg: weight, met: a.met,
-      caloriesBurned: (a.met * 3.5 * weight / 200) * f.durationMinutes, caloriesSource: 'estimated',
+      caloriesBurned: estimateBurn(a.met, weight, f.durationMinutes), caloriesSource: 'estimated',
       source: 'healthconnect', sourceApp: f.sourceApp, startMs: f.startMs, endMs: f.endMs, avgHeartRate: f.avgHeartRate ?? undefined, maxHeartRate: f.maxHeartRate ?? undefined,
       notes: f.title ? `Imported: ${f.title}` : 'Imported from Health Connect',
     });
@@ -156,14 +176,46 @@ router.post('/gym-sync', wrap(async (req, res) => {
     try { await write(); } catch (err) { if (err && err.code === 11000) await write(); else throw err; } // two syncs racing: the second just updates
     synced.push(e.clientId.slice(4));
   }
+  await reconcileHealthConnect(req.user.id, entries.map((e) => e.date));
   let removed = 0;
   if (removeIds.length) removed = (await ActivityLog.deleteMany({ userId: req.user.id, source: 'gymlog', clientId: { $in: removeIds } })).deletedCount || 0;
   res.json({ success: true, synced, removed });
 }));
 
+// Fix a logged workout: how long, which day, a note, or the calories. Calories follow the new duration unless a calorie number is sent. Entries that come from the
+// Gym log are edited in the Gym log (its next sync would overwrite an edit made here).
+router.patch('/logs/:id', wrap(async (req, res) => {
+  const log = await ActivityLog.findOne({ _id: v.objectId(req.params.id), userId: req.user.id });
+  if (!log) throw new HttpError(404, 'Entry not found');
+  if (log.source === 'gymlog') throw new HttpError(400, 'This entry comes from your Gym log. Edit it there.');
+  const oldDate = log.date;
+  if (req.body?.durationMinutes !== undefined) {
+    log.durationMinutes = v.number(req.body.durationMinutes, 'durationMinutes', { min: 1, max: 1440 });
+    if (req.body.caloriesBurned === undefined) { log.caloriesBurned = estimateBurn(log.met, log.weightKg, log.durationMinutes); log.caloriesSource = 'estimated'; } // the number follows the minutes again
+  }
+  if (req.body?.caloriesBurned !== undefined) { log.caloriesBurned = v.number(req.body.caloriesBurned, 'caloriesBurned', { min: 0, max: 20000 }); log.caloriesSource = 'manual'; } // typed by the person: say so, and keep it
+  if (req.body?.date !== undefined) {
+    const date = v.date(req.body.date, 'date');
+    if (date > addDays(todayUtc(), 1)) throw new HttpError(400, 'A workout cannot be logged for a day that has not happened');
+    log.date = date;
+  }
+  if (req.body?.notes !== undefined) log.notes = v.string(req.body.notes, 'notes', { max: 300 });
+  await log.save();
+  await reconcileHealthConnect(req.user.id, [oldDate, log.date]);   // a longer or moved entry may now cover (or stop covering) a watch session
+  res.json({ success: true, log });
+}));
+
 router.delete('/logs/:id', wrap(async (req, res) => {
   await ActivityLog.deleteOne({ _id: v.objectId(req.params.id), userId: req.user.id });
   res.json({ success: true });
+}));
+
+// Remove the entry made for a finished workout by the id the app gave it (the Workout tab deletes a session and its entry together).
+router.delete('/logs', wrap(async (req, res) => {
+  const clientId = v.clientId(req.query.clientId);
+  if (!clientId) throw new HttpError(400, 'clientId is required');
+  const r = await ActivityLog.deleteMany({ userId: req.user.id, clientId: { $in: [clientId, `bp-${clientId}`] } });
+  res.json({ success: true, deleted: r.deletedCount });
 }));
 
 module.exports = router;

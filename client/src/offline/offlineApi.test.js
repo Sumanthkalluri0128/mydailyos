@@ -102,3 +102,54 @@ test("coach check-in and Apply taps are queued offline; undo, offers and the cyc
   assert.equal(isQueueable("POST", "/api/coach/offer/apply"), false);
   assert.equal(isQueueable("GET", "/api/coach/readiness"), false);
 });
+
+test("dropQueued: cancels only the matching waiting creates of the signed-in person", async () => {
+  await reset(); signIn("a@x.com");
+  const add = (url, clientId, extra = {}) => api.enqueue({ method: "POST", url, body: JSON.stringify({ clientId, ...extra }) });
+  await add("/api/body-plan/session", "wp-ws-1");
+  await add("/api/activities/logs", "wp-ws-2");
+  await add("/api/water", "w-keep", { amountMl: 250 });
+  signIn("b@x.com"); await add("/api/body-plan/session", "wp-ws-1");   // someone else's change with the same id must survive
+  signIn("a@x.com");
+  const gone = new Set(["wp-ws-1"]);
+  const removed = await api.dropQueued((op) => { try { return gone.has(JSON.parse(op.body).clientId); } catch { return false; } });
+  assert.equal(removed, 1);
+  const mine = await api.pendingOps();
+  assert.deepEqual(mine.map((o) => JSON.parse(o.body).clientId).sort(), ["w-keep", "wp-ws-2"]);
+  assert.equal(api.getOfflineState().pending, 2);
+  signIn("b@x.com");
+  assert.equal((await api.pendingOps()).length, 1, "the other person's queued change is still waiting");
+});
+
+test("dropQueued: nothing matches, nobody signed in, or an empty queue: a quiet zero", async () => {
+  await reset(); signIn("a@x.com");
+  assert.equal(await api.dropQueued(() => true), 0, "empty queue");
+  await api.enqueue({ method: "POST", url: "/api/water", body: JSON.stringify({ amountMl: 1 }) });
+  assert.equal(await api.dropQueued(() => false), 0);
+  assert.equal((await api.pendingOps()).length, 1);
+  localStorage.removeItem("mydailyos_user");
+  assert.equal(await api.dropQueued(() => true), 0, "nobody signed in: nothing is removed");
+});
+
+test("dropQueued: waits for a replay in progress, and a replay that starts while it works sends nothing", async () => {
+  await reset(); signIn("a@x.com");
+  await api.enqueue({ method: "POST", url: "/api/water", body: JSON.stringify({ clientId: "c1", amountMl: 1 }) });
+  let release; const gate = new Promise((r) => { release = r; });
+  const sentIds = [];
+  const flush = api.flushQueue(async (op) => { await gate; sentIds.push(JSON.parse(op.body).clientId); return { ok: true, status: 201 }; });
+  let dropped = false;
+  const drop = api.dropQueued(() => true).then((n) => { dropped = true; return n; });
+  await new Promise((r) => setTimeout(r, 20));
+  assert.equal(dropped, false, "waits while the replay is running");
+  release(); await flush; await drop;
+  assert.deepEqual(sentIds, ["c1"], "the replay finished its own work first");
+  // now the reverse: a replay asked for while dropQueued is working must not send what is about to be cancelled
+  await api.enqueue({ method: "POST", url: "/api/water", body: JSON.stringify({ clientId: "c2", amountMl: 1 }) });
+  const sent2 = [];
+  const d2 = api.dropQueued((op) => JSON.parse(op.body).clientId === "c2");
+  const f2 = await api.flushQueue(async (op) => { sent2.push(op); return { ok: true, status: 201 }; });
+  assert.equal(await d2, 1);
+  assert.deepEqual(f2, { sent: 0, dropped: 0 });
+  assert.deepEqual(sent2, [], "the cancelled create was never sent");
+  assert.equal((await api.pendingOps()).length, 0);
+});

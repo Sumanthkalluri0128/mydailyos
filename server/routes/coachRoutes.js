@@ -853,8 +853,8 @@ async function buildBody(uid, today) {
   const comp = compositionChange({ measures: x.measures, weights: d.weights, sex: profile.sex, heightCm: profile.heightCm, today });
   const fatLean = B.fatLeanEstimate({ comp, strengthStatus, rateKgWk });
   const waist = lastOf(x.measures && x.measures.waist), hips = lastOf(x.measures && x.measures.hips);
-  const days35 = d.days.filter((r) => r.date <= today).slice(-35).map((r) => ({ date: r.date, calories: r.calories, weightKg: r.weightKg }));
-  const maintenance = e ? B.calibratedMaintenance(days35, e.tdee) : { ready: false };
+  const days35 = d.days.filter((r) => r.date <= today).slice(-36).map((r) => ({ date: r.date, calories: r.calories, weightKg: r.weightKg, weighIn: !!r.weighIn })); // 35 finished days
+  const maintenance = e ? B.calibratedMaintenance(days35, e.tdee, { target: e.calorieTarget, today }) : { ready: false };
   const gap = e && maintenance.ready ? B.loggingGap({ avgIntake: maintenance.avgIntake, expectedTdee: e.tdee, kgPerWeek: maintenance.kgPerWeek, loggedShare: maintenance.loggedShare }) : null;
   const drop = B.activityDrop({ days: d.days, today });
   const lose = e && e.direction === 'lose';

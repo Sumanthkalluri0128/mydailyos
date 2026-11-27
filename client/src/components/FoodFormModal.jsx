@@ -82,7 +82,7 @@ function FoodFormModal({ initialName = "", onClose, onSaved }) {
         notify(data.message || "Failed to save food", "error");
         return;
       }
-      notify(`"${data.food.name}" saved to your foods.`, "success");
+      notify(data.duplicate ? `You already have "${data.food.name}" with these exact numbers, so it was not saved twice.` : `"${data.food.name}" saved to your foods.`, "success");
       onSaved(data.food);
     } catch (error) {
       console.error("Failed to save food:", error);

@@ -1,7 +1,7 @@
 // Outcome-based achievements in tiers (bronze / silver / gold) that celebrate real body change and healthy habits, not activity counts.
 const { addDays, weekday } = require('./dates');
 
-const KCAL_PER_KG = 7700;
+const { KCAL_PER_KG } = require('./energy'); // one shared constant (7700 kcal per kg)
 const r1 = (x) => Math.round(x * 10) / 10;
 const TIERS = ['bronze', 'silver', 'gold'];
 

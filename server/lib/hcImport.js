@@ -61,4 +61,52 @@ function planImport(rawSessions, existing = []) {
   return { fresh, skipped };
 }
 
-module.exports = { mapExercise, normalizeSession, overlapRatio, planImport, appLabel, FALLBACK, TYPE_TO_ACTIVITY };
+// ---- The same workout logged by hand (or in the Gym log) AND recorded by a watch -------------------------------------------------
+// Manual and Gym log entries have no clock times, so "the same session" is judged by day, kind of activity and minutes. A watch session is
+// skipped (the person's own entry wins) when what they logged that day in the same kind of activity covers at least COVER of its minutes.
+// COVER is 40 %, not 100 %, because the Gym log counts only the time spent on sets and rest, which is less than the whole visit.
+// Minutes are shared out: 30 logged minutes cover one 60-minute watch session once, never two. Nothing is stored for a skipped session,
+// so deleting your entry and syncing again imports the watch session. The caller offers the longest sessions first, and expects a request to carry
+// whole days (the phone sends the last 7 days on every sync), so the same sync always gives the same answer.
+const COVER = 0.4;
+const groupOf = (category) => (String(category || '').toLowerCase() === 'strength' ? 'strength' : String(category || 'other').toLowerCase());
+
+/** manualRows: [{date, category, durationMinutes}] of everything the person logged themselves (not from Health Connect). */
+function manualBudget(manualRows) {
+  const left = new Map();
+  for (const r of manualRows || []) {
+    const k = `${r.date}|${groupOf(r.category)}`;
+    left.set(k, (left.get(k) || 0) + Math.max(0, Number(r.durationMinutes) || 0));
+  }
+  return {
+    /** true when the person's own entries already account for this watch session (and uses those minutes up). */
+    covers(date, category, minutes) {
+      const k = `${date}|${groupOf(category)}`, have = left.get(k) || 0;
+      if (!(minutes > 0) || have < COVER * minutes) return false;
+      left.set(k, Math.max(0, have - minutes));
+      return true;
+    },
+  };
+}
+
+/**
+ * The same rule applied to ALL of a day's watch sessions together: the ones already imported and the ones about to be, so the result does not depend on
+ * which arrived first (the watch import or the person's own entry). Longest session first; an imported one wins a tie over a new one.
+ *   manualRows: [{date, category, durationMinutes}]    existing: [{_id, date, category, durationMinutes}]    fresh: [{clientId, date, category, durationMinutes}]
+ * Returns { skipFresh: Set of clientIds not to import, dropExisting: [_id of imported sessions the person's own entries now cover] }.
+ */
+function partitionHc({ manualRows, existing = [], fresh = [] }) {
+  const items = [
+    ...existing.map((e) => ({ ...e, isExisting: true })),
+    ...fresh.map((f) => ({ ...f, isExisting: false })),
+  ].sort((a, b) => (b.durationMinutes - a.durationMinutes) || (Number(b.isExisting) - Number(a.isExisting)) || ((a.startMs || 0) - (b.startMs || 0)));
+  const budget = manualBudget(manualRows);
+  const skipFresh = new Set(), dropExisting = [];
+  for (const it of items) {
+    if (!budget.covers(it.date, it.category, it.durationMinutes)) continue;
+    if (it.isExisting) dropExisting.push(it._id); else skipFresh.add(it.clientId);
+  }
+  return { skipFresh, dropExisting };
+}
+
+module.exports = { mapExercise, normalizeSession, overlapRatio, planImport, manualBudget, partitionHc, groupOf, COVER, appLabel, FALLBACK, TYPE_TO_ACTIVITY };

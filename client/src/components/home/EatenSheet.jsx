@@ -5,6 +5,8 @@ import { apiFetch } from "../../config/api";
 import { notify } from "../../utils/notify";
 import { undoNotice } from "../../utils/undo";
 import PortionEdit from "../PortionEdit";
+import QuickCorrect from "../QuickCorrect";
+import { quickSummary, quickUndoBody } from "../../utils/quickEdit";
 
 const MEALS = [["breakfast", "🌅 Breakfast"], ["lunch", "☀️ Lunch"], ["dinner", "🌙 Dinner"], ["snacks", "🍎 Snacks"]];
 const kcal = (l) => Math.round(Number(l.nutritionTotal?.calories) || 0);
@@ -21,6 +23,19 @@ export default function EatenSheet({ date, onChanged, onClose }) {
   useEffect(() => { load(); }, [load]);
 
   const patch = (id, quantity) => apiFetch(`/api/food-logs/${id}`, { method: "PATCH", body: JSON.stringify({ quantity }) });
+  const patchBody = (id, body) => apiFetch(`/api/food-logs/${id}`, { method: "PATCH", body: JSON.stringify(body) });
+  // A quick-add estimate is corrected (name and numbers) instead of "how much of it"; `body` is only what changed, Undo sends the old values back.
+  const correct = async (log, body) => {
+    setBusy(true);
+    try {
+      const r = await patchBody(log._id, body);
+      if (!r.ok) { const d = await r.json().catch(() => ({})); notify(d.message || "Could not correct the estimate.", "error"); return; }
+      setEditId(null);
+      onClose?.();   // so the Undo toast is not hidden behind the open sheet
+      undoNotice({ message: quickSummary(log, body), onUndo: async () => { await patchBody(log._id, quickUndoBody(log, body)); await load(); onChanged?.(); } });
+      await load(); onChanged?.();
+    } catch { notify("Could not correct the estimate.", "error"); } finally { setBusy(false); }
+  };
   const save = async (log, quantity) => {
     setBusy(true);
     try {
@@ -48,9 +63,10 @@ export default function EatenSheet({ date, onChanged, onClose }) {
               <div key={l._id}>
                 <div className="es-row">
                   <span><strong>{l.foodName}</strong><small>{l.consumedQuantity} {l.servingUnit} · {kcal(l)} kcal</small></span>
-                  <button type="button" className="edit-log-button" aria-expanded={editId === l._id} aria-label={`Edit amount of ${l.foodName}`} onClick={() => setEditId(editId === l._id ? null : l._id)}>✏️ Edit</button>
+                  <button type="button" className="edit-log-button" aria-expanded={editId === l._id} aria-label={l.quick ? `Correct the estimate of ${l.foodName}` : `Edit amount of ${l.foodName}`} onClick={() => setEditId(editId === l._id ? null : l._id)}>✏️ Edit</button>
                 </div>
-                {editId === l._id && <PortionEdit name={l.foodName} foodId={l.foodId?._id || l.foodId} quantity={l.consumedQuantity} unit={l.servingUnit} calories={l.nutritionTotal?.calories || 0} protein={l.nutritionTotal?.protein || 0} busy={busy} onCancel={() => setEditId(null)} onSave={(q) => save(l, q)} />}
+                {editId === l._id && l.quick && <QuickCorrect entry={l} busy={busy} onCancel={() => setEditId(null)} onSave={(body) => correct(l, body)} />}
+                {editId === l._id && !l.quick && <PortionEdit name={l.foodName} foodId={l.foodId?._id || l.foodId} quantity={l.consumedQuantity} unit={l.servingUnit} calories={l.nutritionTotal?.calories || 0} protein={l.nutritionTotal?.protein || 0} busy={busy} onCancel={() => setEditId(null)} onSave={(q) => save(l, q)} />}
               </div>
             ))}
           </section>

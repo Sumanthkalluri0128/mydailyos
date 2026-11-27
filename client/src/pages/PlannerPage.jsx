@@ -201,7 +201,10 @@ export default function PlannerPage({ onBack, goTo }) {
   const copyWeek = async () => {
     if (!(await confirmAction("Everything planned last week is added to this week.", { title: "Copy last week's plan here?", confirmText: "Copy", danger: false }))) return;
     const d = await call("/copy-week", "POST", { fromStart: addDays(start, -7), toStart: start });
-    if (d) notify(d.copied ? `Copied ${d.copied} planned items.` : "Last week had nothing planned.", d.copied ? "success" : "info");
+    if (d) {
+      const there = d.alreadyThere ? ` (${d.alreadyThere} already planned, not added twice)` : "";
+      notify(d.copied ? `Copied ${d.copied} planned items${there}.` : d.alreadyThere ? "This week already has everything from last week." : "Last week had nothing planned.", d.copied ? "success" : "info");
+    }
   };
 
   return (

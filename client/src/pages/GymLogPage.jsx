@@ -9,6 +9,7 @@ import { notify } from "../utils/notify";
 import { confirmAction } from "../utils/confirm";
 import * as G from "../utils/gymMath";
 import { backupJson, bodyCsv, parseBackup, workoutsCsv } from "../utils/gymExport";
+import { useRecordSyncStatus, setRecordSync, syncRecordsNow } from "../utils/gymRecordRunner";
 import { clearGym, gymId, removeBody, removeEntry, replaceGym, saveBody, saveEntry, saveGoal, saveProfile, useGymStore } from "../utils/gymStore";
 import { downloadText, gymFileName, gymMime } from "../utils/gymDownload";
 
@@ -89,7 +90,7 @@ export default function GymLogPage({ onBack }) {
     <div className="gl-page">
       {onBack && <button type="button" className="gl-back" onClick={onBack}>‹ Back</button>}
       <h2 className="gl-title">Gym log</h2>
-      <p className="gl-muted gl-private">🔒 Body measurements and goals stay in this browser. Each exercise you log (name, sets, minutes, calories) is also sent so Exercise and Home can count it.</p>
+      <p className="gl-muted gl-private">🔒 Body measurements and goals stay in this browser unless you turn on sync (Export tab). Each exercise you log (name, sets, minutes, calories) is also sent so Exercise and Home can count it.</p>
       <div className="gl-tabs" role="tablist">
         {TABS.map(([k, l]) => <button key={k} type="button" role="tab" aria-selected={tab === k} className={`gl-tab ${tab === k ? "is-on" : ""}`} onClick={() => setTab(k)}>{l}</button>)}
       </div>
@@ -149,7 +150,7 @@ function BodyTab() {
         <Field label="Note (optional)" value={note} onChange={setNote} placeholder="Morning, fasted…" inputMode="text" />
         <Btn kind="primary" onClick={save}>{dayRec ? "Update this day" : "Save measurements"}</Btn>
       </Card>
-      <Card title="About you" sub="Used for BMI and the body-fat estimate. Stays in this browser.">
+      <Card title="About you" sub="Used for BMI and the body-fat estimate. Stays in this browser unless you turn on sync (Export tab).">
         <span className="gl-label">Weight unit</span>
         <div className="gl-chips"><Chip active={unit === "kg"} onClick={() => saveProfile({ unit: "kg" })}>Kilograms (kg)</Chip><Chip active={unit === "lb"} onClick={() => saveProfile({ unit: "lb" })}>Pounds (lb)</Chip></div>
         <span className="gl-label">Sex (for the body-fat estimate)</span>
@@ -310,7 +311,8 @@ function ExportTab() {
     if (!(await confirmAction(`This replaces what is in this browser with the backup (${b.entries.length} exercises, ${b.body.length} body entries).`, { title: "Replace your gym log?", confirmText: "Restore" }))) return;
     replaceGym(b); setPaste(""); notify("Your gym log was restored from the backup.", "success");
   };
-  const wipe = async () => { if (await confirmAction("This removes every logged exercise, measurement and goal from this browser. Download a backup first if you want to keep it.", { title: "Delete all gym log data?", confirmText: "Delete everything" })) { clearGym(); notify("The gym log is empty.", "success"); } };
+  const sync = useRecordSyncStatus();
+  const wipe = async () => { if (await confirmAction(sync.on ? "Sync is on, so this removes every logged exercise, measurement and goal from this browser, from your phone and from your account. Download a backup first if you want to keep it." : "This removes every logged exercise, measurement and goal from this browser. Download a backup first if you want to keep it.", { title: "Delete all gym log data?", confirmText: "Delete everything" })) { clearGym(); notify("The gym log is empty.", "success"); } };
   const none = !gym.entries.length && !gym.body.length;
   return (
     <>
@@ -327,8 +329,22 @@ function ExportTab() {
         <textarea className="gl-paste" aria-label="Backup text" value={paste} onChange={(e) => setPaste(e.target.value)} placeholder='{"app":"flexfit-gymlog", …}' rows={5} />
         <Btn kind="primary" disabled={!paste.trim()} onClick={restore}>Restore</Btn>
       </Card>
+      <Card title="Sync across my devices" sub={sync.on ? "On for this account" : "Off: your gym log stays in this browser only"}>
+        {sync.on ? (
+          <>
+            <p className="gl-muted">{sync.state === "syncing" ? "Syncing…" : sync.state === "error" ? sync.message : sync.last ? `Up to date · last synced ${new Date(sync.last).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}` : "Waiting for the first sync…"}{sync.state === "ok" && sync.message ? ` ${sync.message}` : ""}</p>
+            <p className="gl-muted">Your exercises, body measurements and goal are saved to your FlexFit account, so the phone and other browsers show the same log. Deleting something on one device deletes it everywhere. Turn sync on in the phone app too.</p>
+            <div className="gl-col"><Btn kind="primary" onClick={syncRecordsNow}>Sync now</Btn><Btn onClick={() => setRecordSync(false)}>Turn off sync</Btn></div>
+          </>
+        ) : (
+          <>
+            <p className="gl-muted">Turn this on to keep the same gym log on this browser and on your phone. Your exercises, body measurements and goal are then saved to your FlexFit account (and included in your account export). Nothing is deleted when you turn it on: what is on each device is combined. Turn it on in the phone app too.</p>
+            <Btn kind="primary" onClick={() => setRecordSync(true)}>Turn on sync</Btn>
+          </>
+        )}
+      </Card>
       <Card title="Privacy">
-        <p className="gl-muted">Your gym log is stored only in this browser. It isn’t sent to the FlexFit server, isn’t in your account export and isn’t in server backups, so download a backup now and then. Clearing the site’s data erases it.</p>
+        <p className="gl-muted">{sync.on ? "With sync on, your gym log is kept in this browser and in your FlexFit account (it is in your account export). Clearing the site’s data here no longer loses it: the next sync brings it back." : "Your gym log is stored only in this browser. It isn’t sent to the FlexFit server, isn’t in your account export and isn’t in server backups, so download a backup now and then. Clearing the site’s data erases it. Turn on sync above if you want it on your phone too."} It is kept separately for each account that signs in here.</p>
         <Btn kind="danger" onClick={wipe}>Delete all gym log data</Btn>
       </Card>
     </>

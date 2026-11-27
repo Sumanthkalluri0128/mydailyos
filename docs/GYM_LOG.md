@@ -2,7 +2,8 @@
 
 Log exercises (sets x reps x weight), body weight and tape measurements, set a body goal, see progress, and download everything.
 
-**Privacy:** all data stays on the device (phone: AsyncStorage key `flexfit_gymlog_v1`; web: localStorage, same key). There is no API call in any gym-log file, it is not in the server backup or account export. Data leaves only via the Export tab.
+**Privacy:** by default all data stays on the device, in a copy that belongs to the signed-in account (phone: AsyncStorage key `flexfit_gymlog_v2:<email>`; web: localStorage, same key; the old shared `flexfit_gymlog_v1` is adopted once by the first account that opens the log and then removed). The log files themselves make no API call. Two things can leave the device, each from its own runner: (1) `gymSyncRunner`: each exercise's minutes and estimated calories, so Exercise and Home count them (always on); (2) `gymRecordRunner`: the log itself (exercises, body measurements, goal, profile) to the person's own account, **only after the person turns on Gym log > Export > "Sync across my devices"** (off by default, per account, per device). With it on the log is in the account export and is deleted with the account. Otherwise data leaves only via the Export buttons.
+
 
 ## Where
 - Phone: Workout tab -> "Gym log & body tracker" card -> `src/app/gym-log.tsx`
@@ -45,3 +46,8 @@ Leave the weight blank on a rep-counted exercise and the set is a **body weight*
 - Calories already used your body weight per minute, so they are unchanged.
 - Workouts CSV: new last column `weight_type` (`weight` / `bodyweight`), and `set_volume_kg` is filled for body weight sets. `weight_kg` stays blank for them.
 - Helpers in `gymMath`: `isBodyweightSet`, `setLoadKg`, `bodyKgFn`, `entryVolume(e, bodyKg)`; `dayStats`, `rangeStats`, `weeklyDays`, `exerciseSeries` take an optional `bwOf`. Without it they behave as before.
+
+
+## Sync across devices (opt-in)
+
+See `GYM_SYNC.md`.

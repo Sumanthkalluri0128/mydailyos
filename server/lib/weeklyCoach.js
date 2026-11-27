@@ -92,7 +92,7 @@ function buildCoach({ days, meals = [], foods = [], targets = {}, today, expecte
     const perDay = Math.round((budget - used) / daysLeft);
     weekBudget = { budget: r(budget), usedBeforeToday: r(used), daysLeft, perDayLeft: perDay, dailyTarget: r(targets.calories), diffPerDay: perDay - r(targets.calories) };
   }
-  const maintenance = adaptiveMaintenance(days, expectedTdee, { target: targetKcal || targets.calories });
+  const maintenance = adaptiveMaintenance(days.filter((d) => d.date <= today).slice(-36), expectedTdee, { target: targetKcal || targets.calories, today });
   return { tips: tips.slice(0, 2), tipIds: tips.map((t) => t.id), challenge, review, weekBudget, maintenance };
 }
 

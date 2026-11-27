@@ -9,6 +9,8 @@ const { wrap, HttpError } = require('../lib/http');
 const v = require('../lib/validate');
 const { buildLogs, cleanSets } = require('../lib/workoutBuild');
 const { recordsBroken } = require('../lib/trainingData');
+const { reconcileHealthConnect } = require('../lib/hcReconcile');
+const { createUnlessSame } = require('../lib/idempotent');
 
 const router = express.Router();
 router.use(requireAuth);
@@ -47,8 +49,8 @@ router.get('/', wrap(async (req, res) => {
 
 router.post('/', wrap(async (req, res) => {
   if ((await WorkoutTemplate.countDocuments({ userId: req.user.id })) >= 50) throw new HttpError(400, 'You can save up to 50 templates');
-  const t = await WorkoutTemplate.create({ userId: req.user.id, ...(await parseTemplate(req.body || {})) });
-  res.status(201).json({ success: true, template: t });
+  const { doc: t, duplicate } = await createUnlessSame(WorkoutTemplate, req.user.id, await parseTemplate(req.body || {}), 'name');
+  res.status(duplicate ? 200 : 201).json({ success: true, template: t, duplicate });
 }));
 
 router.put('/:id', wrap(async (req, res) => {
@@ -90,6 +92,7 @@ router.post('/:id/log', wrap(async (req, res) => {
   // a planned (not performed) template does not log sets, so records only come from real results
   const records = results ? await recordsBroken(req.user.id, items.map((i) => ({ activityName: i.activityName, sets: i.sets }))) : [];
   const logs = await ActivityLog.insertMany(buildLogs({ userId: req.user.id, items, date, weightKg: weight, label: `From template: ${t.name}`, clientId }));
+  await reconcileHealthConnect(req.user.id, [date]);
   res.status(201).json({
     success: true, logs, records,
     totals: { minutes: logs.reduce((s, l) => s + l.durationMinutes, 0), caloriesBurned: Math.round(logs.reduce((s, l) => s + l.caloriesBurned, 0)) },

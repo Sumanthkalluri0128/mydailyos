@@ -14,7 +14,7 @@ const v = require('../lib/validate');
 const { addDays, diffDays, todayUtc } = require('../lib/dates');
 const { catalogueFoods } = require('../lib/foodCache');
 const { loadCore, corridorPlan } = require('../lib/planData');
-const { weightProgress } = require('../lib/energy');
+const { weightProgress, KCAL_PER_KG } = require('../lib/energy');
 const { smoothTrend, buildTrend, trendRate, maxSafeWeeklyLossKg, planTrendKg } = require('../lib/trendWeight');
 const { resolveStart, startChoice } = require('../lib/planStart');
 const { estimateWeight, analysisRate, estimateNote } = require('../lib/weightEstimate');
@@ -232,7 +232,7 @@ router.get('/over-days', wrap(async (req, res) => {
     causes = rootCauses({ rows: rows.map((r) => ({ date: r.date, mealType: r.mealType, foodName: r.foodName, createdAt: r.createdAt, trigger: r.trigger, calories: Number(r.nutritionTotal?.calories || 0) })), days: core.days.map((d) => ({ date: d.date, calories: d.calories })).filter((d) => d.date > addDays(today, -28)), target: core.target, tzOffsetMin: tz });
   }
   const easierPace = adv.needsEasierPace && paceKg > 0.25 ? (paceKg > 0.5 ? 0.5 : Math.max(0.25, Math.round((paceKg - 0.25) * 100) / 100)) : (status.easierPace || null);
-  const easierTarget = easierPace && core.energy ? Math.max(core.floor, Math.round((core.energy.tdee - (easierPace * 7700) / 7) / 10) * 10) : null;
+  const easierTarget = easierPace && core.energy ? Math.max(core.floor, Math.round((core.energy.tdee - (easierPace * KCAL_PER_KG) / 7) / 10) * 10) : null;
   const advice = adv.level === 'none' ? null : { level: adv.level, headline: adv.headline, detail: adv.detail, perDay: adv.perDay, days: adv.days, startDate: adv.startDate, skipCut: adv.skipCut, todayTarget: adv.todayTarget, tomorrowTarget: adv.tomorrowTarget, runDays: adv.runDays, weekExcess: adv.weekExcess, lastExcess: adv.lastExcess, ledger: adv.ledger };
   // `correction` kept for older app builds: derived from the same advice, so nothing contradicts.
   const correction = advice ? { perDay: adv.perDay, days: adv.days, newTarget: core.target - adv.perDay, recovers: adv.ledger.recovered, safe: !adv.skipCut, note: adv.skipCut ? adv.headline : adv.detail } : null;

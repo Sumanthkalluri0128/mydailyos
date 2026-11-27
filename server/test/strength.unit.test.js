@@ -211,6 +211,6 @@ test('workout logs: duration estimated from sets, calories from MET, bad sets dr
   ] });
   assert.strictEqual(logs[0].sets.length, 3); assert.strictEqual(logs[0].sets[2].weightKg, 0);
   assert.strictEqual(logs[0].durationMinutes, 5); // 3 sets x 90 s = 4.5 min, rounded
-  assert.strictEqual(Math.round(logs[0].caloriesBurned), Math.round(5 * 3.5 * 70 / 200 * 5));
+  assert.strictEqual(Math.round(logs[0].caloriesBurned), Math.round((5 - 1) * 3.5 * 70 / 200 * 5)); // net of resting: (MET - 1)
   assert.strictEqual(logs[1].durationMinutes, 4); assert.strictEqual(logs[1].clientId, 'c1#1');
 });

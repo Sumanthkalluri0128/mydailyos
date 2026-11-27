@@ -30,6 +30,15 @@ const matches = (u, f) => Object.entries(f).every(([k, want]) => {
 });
 User.findOne = (f) => chain([...users.values()].find((u) => matches(u, f)) || null);
 User.findById = (id) => chain(users.get(String(id)) || null);
+// The Google callback also looks for another spelling of the same Gmail mailbox: User.find({ email: /regex/ }).sort().limit(n)
+User.find = (f) => {
+  let rows = [...users.values()].filter((u) => (f && f.email instanceof RegExp ? f.email.test(u.email) : matches(u, f || {})));
+  const q = Promise.resolve(rows);
+  q.sort = () => { rows = rows.sort((a, b) => new Date(a.createdAt || 0) - new Date(b.createdAt || 0)); return q; };
+  q.limit = (n) => { rows = rows.slice(0, n); return Promise.resolve(rows); };
+  q.select = () => q; q.lean = () => q;
+  return q;
+};
 User.exists = (f) => chain([...users.values()].some((u) => matches(u, f)) ? { _id: 1 } : null);
 User.create = async (d) => { const u = new User(d); users.set(String(u._id), u); return u; };
 User.prototype.save = async function save() { users.set(String(this._id), this); return this; };

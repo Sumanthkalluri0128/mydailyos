@@ -2,9 +2,11 @@
 import { BuddyEmpty } from "../../motion/Buddy";
 import { Fragment } from "react";
 import PortionEdit from "../PortionEdit";
+import QuickCorrect from "../QuickCorrect";
+import { addDaysIso as shiftDay } from "../../utils/mealView";   // "Day before" / "Day after" in the move menu
 
 export function TodayLogCard(props) {
-  const { MEALS, date, dragId, dropMeal, editBusy, editId, foodLogs, getMealCalories, getMealLogs, handleDeleteLog, handleEditQty, handleMoveLog, openMeals, selectedMeal, setDragId, setDropMeal, setEditId, setOpenMeals } = props;
+  const { MEALS, date, dragId, dropMeal, editBusy, editId, foodLogs, getMealCalories, getMealLogs, handleCorrectQuick, handleDeleteLog, handleEditQty, handleMoveLog, openMeals, selectedMeal, setDragId, setDropMeal, setEditId, setOpenMeals } = props;
   return (
     <>
     <div className="today-log-card">
@@ -118,7 +120,7 @@ export function TodayLogCard(props) {
                     </small>
                   </div>
 
-                  <button type="button" className="edit-log-button" aria-expanded={editId === log._id} aria-label={`Edit amount of ${log.foodName}`} onClick={() => setEditId(editId === log._id ? null : log._id)}>✏️ Edit</button>
+                  <button type="button" className="edit-log-button" aria-expanded={editId === log._id} aria-label={log.quick ? `Correct the estimate of ${log.foodName}` : `Edit amount of ${log.foodName}`} onClick={() => setEditId(editId === log._id ? null : log._id)}>✏️ Edit</button>
 
                   <select
                     className="move-log-select"
@@ -130,6 +132,10 @@ export function TodayLogCard(props) {
                     {MEALS.filter((m) => m.id !== log.mealType).map((m) => (
                       <option key={m.id} value={m.id}>{m.emoji} {m.label}</option>
                     ))}
+                    <optgroup label="Another day">
+                      <option value={`day:${shiftDay(date, -1)}`}>Day before</option>
+                      <option value={`day:${shiftDay(date, 1)}`}>Day after</option>
+                    </optgroup>
                   </select>
 
                   <button
@@ -145,7 +151,8 @@ export function TodayLogCard(props) {
                   </button>
 
                 </div>
-                {editId === log._id && (
+                {editId === log._id && log.quick && <QuickCorrect entry={log} busy={editBusy} onCancel={() => setEditId(null)} onSave={(body) => handleCorrectQuick(log, body)} />}
+                {editId === log._id && !log.quick && (
                   <PortionEdit name={log.foodName} foodId={log.foodId?._id || log.foodId} quantity={log.consumedQuantity} unit={log.servingUnit} calories={log.nutritionTotal?.calories || 0} protein={log.nutritionTotal?.protein || 0}
                     busy={editBusy} onCancel={() => setEditId(null)} onSave={(q) => handleEditQty(log, q)} />
                 )}

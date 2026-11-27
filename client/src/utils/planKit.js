@@ -6,6 +6,7 @@
 //   * suggestWarmCool(): picks warm-up and cool-down moves that match the muscles in the main workout.
 //   * TEMPLATES: ready-made plans built the way a coach would: every training day = warm-up, main workout, cool-down.
 import { entryKcal, setMinutes } from "./gymMath.js";
+import { estimateBurn } from "./energy";
 
 const slug = (s) => String(s).toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
 const num = (v, d = 0) => (Number.isFinite(Number(v)) ? Number(v) : d);
@@ -68,7 +69,7 @@ export const kitMinutes = (item) => doseMinutes(item && item.dose);
 export function kitKcal(item, bodyKg = 70) {
   const lib = KIT_BY_ID.get(item && item.id);
   const met = lib ? lib.met : 3; // a move you typed yourself counts as light activity
-  return Math.round(met * 3.5 * num(bodyKg, 70) / 200 * kitMinutes(item));
+  return Math.round(estimateBurn(met, num(bodyKg, 70), kitMinutes(item)));
 }
 
 // ---------------------------------------------------------------------------------------------------------------- the main workout

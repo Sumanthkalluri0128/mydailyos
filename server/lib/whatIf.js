@@ -1,6 +1,6 @@
 // What-if simulator: "If I have this biryani, when do I reach my goal?" with a projection cone.
 const { addDays } = require('./dates');
-const KCAL_PER_KG = 7700;
+const { KCAL_PER_KG } = require('./energy'); // one shared constant (7700 kcal per kg)
 const r1 = (x) => Math.round(x * 10) / 10;
 
 /**

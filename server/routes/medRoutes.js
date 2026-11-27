@@ -9,6 +9,7 @@ const { wrap, HttpError } = require('../lib/http');
 const v = require('../lib/validate');
 const { todayUtc } = require('../lib/dates');
 const M = require('../lib/medicines');
+const { createUnlessSame } = require('../lib/idempotent');
 
 const router = express.Router();
 router.use(requireAuth);
@@ -34,8 +35,8 @@ router.get('/reminders', wrap(async (req, res) => {
 }));
 router.post('/', wrap(async (req, res) => {
   if ((await Medicine.countDocuments({ userId: req.user.id })) >= MAX_MEDS) throw new HttpError(400, `You can keep up to ${MAX_MEDS} items`);
-  const med = await Medicine.create({ userId: req.user.id, ...clean(req.body) });
-  res.status(201).json({ success: true, med });
+  const { doc: med, duplicate } = await createUnlessSame(Medicine, req.user.id, clean(req.body), 'name');
+  res.status(duplicate ? 200 : 201).json({ success: true, med, duplicate });
 }));
 router.put('/:id', wrap(async (req, res) => {
   const med = await Medicine.findOneAndUpdate({ _id: oid(req.params.id), userId: req.user.id }, clean({ active: true, ...req.body }), { new: true });

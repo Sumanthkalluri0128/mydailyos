@@ -112,6 +112,28 @@ export function flushQueue(sender) {
   return flushing;
 }
 
+/**
+ * Cancels waiting changes of the signed-in person that `match(op)` accepts, e.g. the creation of a workout that was deleted in the meantime (left alone
+ * it would replay later and bring the workout back). Waits for a replay that is running, and holds the next replay off while it works, so the queue is
+ * never rewritten from a stale copy. Resolves to how many were removed.
+ */
+export async function dropQueued(match) {
+  while (flushing) { try { await flushing; } catch { /* ignore */ } }
+  let removed = 0;
+  const guard = (async () => {
+    const owner = currentOwner();
+    if (!owner) return { sent: 0, dropped: 0 };
+    const q = await readQueue();
+    const keep = q.filter((op) => !(op.owner === owner && match(op)));
+    removed = q.length - keep.length;
+    if (removed) await writeQueue(keep);
+    return { sent: 0, dropped: 0 };
+  })().finally(() => { if (flushing === guard) flushing = null; });
+  flushing = guard;   // a replay that starts now simply joins this, and sends nothing; the next tick sends
+  await guard;
+  return removed;
+}
+
 /** Changes of the signed-in person that are still waiting to be sent (oldest first), for showing them before they sync. */
 export async function pendingOps() {
   const owner = currentOwner();

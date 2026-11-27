@@ -1,4 +1,5 @@
 // Turns a finished workout (sets per exercise) into ActivityLog rows. Pure: no database.
+const { estimateBurn } = require('./energy');
 const SECONDS_PER_SET = 90; // a set plus its rest, used only when the person did not give a duration
 
 const cleanSets = (raw) => (Array.isArray(raw) ? raw : []).slice(0, 40)
@@ -7,7 +8,7 @@ const cleanSets = (raw) => (Array.isArray(raw) ? raw : []).slice(0, 40)
 
 /**
  * items: [{activityId, activityName, category, met, durationMinutes?, sets}]
- * Returns log rows. Duration is the given one, else ~90 s a set (at least 1 minute). Calories = MET x 3.5 x kg / 200 x minutes.
+ * Returns log rows. Duration is the given one, else ~90 s a set (at least 1 minute). Calories = (MET - 1) x 3.5 x kg / 200 x minutes (energy.estimateBurn: only what the exercise itself burns).
  */
 function buildLogs({ userId, items, date, weightKg, label, clientId }) {
   return items.map((i, idx) => {
@@ -16,7 +17,7 @@ function buildLogs({ userId, items, date, weightKg, label, clientId }) {
     const met = Number(i.met) || 4;
     return {
       userId, activityId: i.activityId, date, activityName: i.activityName, category: i.category || 'Strength',
-      durationMinutes: minutes, weightKg, met, caloriesBurned: (met * 3.5 * weightKg / 200) * minutes,
+      durationMinutes: minutes, weightKg, met, caloriesBurned: estimateBurn(met, weightKg, minutes),
       sets, notes: label || '', clientId: clientId ? `${clientId}#${idx}` : undefined,
     };
   });

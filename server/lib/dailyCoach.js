@@ -142,9 +142,9 @@ function suggestActivityLevel({ profile, days = [], strengthDates = null, today 
   const bPal = 1.2 + 0.012 * Math.max(0, stepsAvg / 1000 - 3) + 0.03 * Math.min(sessions, 6);
   Object.assign(out, { behaviourLevel: bLevel, stepsAvg: Math.round(stepsAvg), sessionsPerWeek: Math.round(sessions * 10) / 10 });
 
-  const hist = days.filter((d) => d.date <= today).slice(-35);
+  const hist = days.filter((d) => d.date <= today).slice(-36); // 35 finished days: the estimator leaves today out
   const e = E.expectedEnergy(profile);
-  const ad = e ? adaptiveMaintenance(hist.map((d) => ({ date: d.date, calories: d.calories, weightKg: d.weighIn ? d.weightKg : null })), e.formulaTdee, { target: e.calorieTarget }) : null;
+  const ad = e ? adaptiveMaintenance(hist.map((d) => ({ date: d.date, calories: d.calories, weightKg: d.weighIn ? d.weightKg : null, weighIn: !!d.weighIn })), e.formulaTdee, { target: e.calorieTarget, today }) : null;
   let sLevel = null;
   if (ad && e) {
     const pal = ad.estimate / e.bmr;

@@ -298,8 +298,18 @@ function weeksToGoal(currentKg, targetKg, pace = 0.5) {
   return diff < 0.4 ? null : Math.ceil(diff / pace);
 }
 
-/** MET-based estimate, same formula the server uses. */
-const estimateBurn = (met, weightKg, minutes) => ((met * 3.5 * weightKg) / 200) * minutes;
+/**
+ * Calories burned BY the exercise, from its MET value: (MET - 1) x 3.5 x kg / 200 per minute.
+ * A MET value counts everything the body spends, and 1 MET of that is what it spends lying still. That resting part is
+ * already inside your daily maintenance, so counting it again inside a workout would earn food you did not burn.
+ * (The step calories use the same idea: only the cost of moving.) The ONE burn formula: the server, the web and the phone all use it.
+ */
+const REST_MET = 1;
+const estimateBurn = (met, weightKg, minutes) => (Math.max(0, Number(met) - REST_MET) * 3.5 * weightKg) / 200 * minutes;
+
+/** MET for a planned session by its type (Compendium-style, for the whole session including rests). 'active' is the phone's name for recovery. */
+const SESSION_MET = { strength: 5, conditioning: 6, recovery: 3.5, rest: 2.5 };
+const sessionMet = (kind) => SESSION_MET[kind === 'active' ? 'recovery' : kind] || SESSION_MET.strength;
 
 /** Old name kept so existing imports keep working; it now uses the shared plan (pace, manual target, activity already counted). */
 function calorieBalance(energy, eaten, burned) {
@@ -396,6 +406,6 @@ export {
   activityLevelOf, autoMultiplierOf, calorieFloorOf,
   EXERCISE_CREDIT, ACTIVITY_MULTIPLIER, KCAL_PER_KG, KCAL_PER_STEP_PER_KG, DEFAULT_TARGET,
   bmr, goalDirection, expectedEnergy, dailyTarget, dayBalance,
-  stepCalories, stepDistanceKm, waterTargetMl, macroTargets, BODY_TYPES, BODY_LABELS, macroRanges, rangeStatus, limitTargets, weeksToGoal, estimateBurn, calorieBalance,
+  stepCalories, stepDistanceKm, waterTargetMl, macroTargets, BODY_TYPES, BODY_LABELS, macroRanges, rangeStatus, limitTargets, weeksToGoal, estimateBurn, REST_MET, SESSION_MET, sessionMet, calorieBalance,
   resolveTargets, weightProgress, kcalFromMacros, macroMismatch,
 };

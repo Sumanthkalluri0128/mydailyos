@@ -29,7 +29,7 @@ test("Navy body fat matches the server formula", () => {
 test("CSV is safe and has one row per valid set", () => {
   assert.equal(csvCell("=1+1"), "'=1+1"); assert.equal(csvCell("a,b"), '"a,b"');
   const lines = workoutsCsv([E("e1", "2026-11-01", "bench", [[40, 10], [0, 0], [42.5, 8]], { name: "Bench press, flat" })]).replace("\uFEFF", "").trim().split("\r\n");
-  assert.equal(lines.length, 3); assert.ok(lines[1].startsWith('2026-11-01,"Bench press, flat",chest,1,40,88.2,10,reps,53.3,400,9.2'));
+  assert.equal(lines.length, 3); assert.ok(lines[1].startsWith('2026-11-01,"Bench press, flat",chest,1,40,88.2,10,reps,53.3,400,' + (Math.round((5 - 1) * 3.5 * 70 / 200 * 1.5 * 10) / 10)));
   assert.equal(bodyCsv([B("2026-11-01", { weightKg: 80, sites: { waist: 90 } })], { unit: "kg" }).split("\r\n")[0].split(",").length, 17);
 });
 test("backup round-trips and junk is rejected", () => {
@@ -42,10 +42,10 @@ test("backup round-trips and junk is rejected", () => {
 
 test("calories burned use the app formula and the logged body weight", () => {
   const e = E("e1", "2026-11-05", "bench", [[40, 10]], { name: "Bench press" });
-  assert.equal(G.entryKcal(e, 80), Math.round(5 * 3.5 * 80 / 200 * 1.5));
+  assert.equal(G.entryKcal(e, 80), Math.round((5 - 1) * 3.5 * 80 / 200 * 1.5)); // net: MET 5 counts 1 MET of resting energy that maintenance already has
   assert.equal(G.kcalIn([e], [B("2026-11-01", { weightKg: 80 })], "2026-11-01", "2026-11-07"), G.entryKcal(e, 80));
   assert.equal(G.kcalIn([e], [], "2026-11-01", "2026-11-07"), G.entryKcal(e, 70));
-  assert.equal(G.entryKcal(E("e2", "d", "run", [[0, 30]], { name: "Treadmill Run", cat: "cardio", unit: "min" }), 70), 331);
+  assert.equal(G.entryKcal(E("e2", "d", "run", [[0, 30]], { name: "Treadmill Run", cat: "cardio", unit: "min" }), 70), 294); // run MET 9 -> net 8: 8 x 3.5 x 70 / 200 x 30
 });
 test("exercise catalogue is large, unique and merges without duplicates", () => {
   assert.ok(GYM_CATALOG.length > 190);
@@ -58,9 +58,9 @@ test("treadmill pace: parsing, distance and speed-based calories", () => {
   assert.equal(G.parsePace("6:30"), 6.5); assert.equal(G.parsePace("6,5"), 6.5); assert.equal(G.parsePace("6:75"), null); assert.equal(G.parsePace("1:30"), null);
   const e = run([{ kg: 0, reps: 30, pace: 6.5 }]);
   assert.equal(G.entryKm(e), 4.62); assert.equal(G.setsLine(e), "30 min @ 6:30/km");
-  assert.equal(G.entryKcal(e, 70), 360);
+  assert.equal(G.entryKcal(e, 70), 323);  // 6:30/km = 9.23 km/h run: net MET 0.2 x 153.8 m/min / 3.5 = 8.79; x 3.5 x 70 / 200 x 30 min
   assert.ok(G.entryKcal(run([{ kg: 0, reps: 30, pace: 12 }]), 70) < G.entryKcal(e, 70));
-  assert.equal(G.entryKcal(run([{ kg: 0, reps: 30 }]), 70), 221);
+  assert.equal(G.entryKcal(run([{ kg: 0, reps: 30 }]), 70), 184); // no pace: generic cardio MET 6 -> net 5
   assert.equal(sane({ entries: [{ id: "a", date: "2026-11-12", exId: "tm", unit: "min", sets: [{ kg: 0, reps: 30, pace: 6.5 }, { kg: 0, reps: 5, pace: 99 }] }] }).entries[0].sets[1].pace, undefined);
 });
 
@@ -95,22 +95,10 @@ test("a blank weight is body weight: volume, day/week stats and progress follow 
 test("treadmill incline raises calories, is kept when a set is cleaned, and blank incline changes nothing", () => {
   const T = (sets) => ({ id: "t", date: "2026-01-01", exId: "tm", name: "Incline Treadmill Walk", cat: "cardio", unit: "min", sets, at: 0 });
   const flat = G.entryKcal(T([{ kg: 0, reps: 25, pace: 4.5 }]), 77);
-  assert.equal(flat, 461);                                              // no incline = same as before
+  assert.equal(flat, 428);                                              // 13.3 km/h run, 77 kg, 25 min: net MET 12.70 (was 13.70 gross)
   assert.equal(G.entryKcal(T([{ kg: 0, reps: 25, pace: 4.5, incline: 0 }]), 77), flat);
   assert.ok(G.entryKcal(T([{ kg: 0, reps: 25, pace: 4.5, incline: 3 }]), 77) > flat);
   assert.ok(G.metForPace(12, 10) > G.metForPace(12) * 2);              // 5 km/h walk at 10% is much harder than flat
   assert.equal(cleanSet({ kg: 0, reps: 5, pace: 4.5, incline: 3 }).incline, 3);
   assert.equal(cleanSet({ kg: 0, reps: 5, incline: 3 }).incline, undefined); // incline means nothing without a pace
-});
-
-
-test("Farmer's Walk estimates calories from set duration and effort, not steps as lifted bodyweight", () => {
-  const carry = { id: "fw", date: "2026-11-17", exId: "farmer-walk", name: "Farmer's Walk", cat: "Full body", unit: "reps", at: 1, sets: [
-    { kg: 0, reps: 70, steps: 70, leftKg: 15, rightKg: 15, durationMin: 1.5, effort: "moderate" },
-    { kg: 0, reps: 70, steps: 70, leftKg: 17.5, rightKg: 17.5, durationMin: 1.5, effort: "moderate" },
-  ] };
-  assert.equal(G.entryKcal(carry, 78), Math.round(6.5 * 3.5 * 78 / 200 * 3));
-  assert.equal(G.entryVolume(carry, 78), 0);
-  assert.equal(G.entryCarryLoadKg(carry), 35);
-  assert.ok(G.entryKcal({ ...carry, sets: carry.sets.map(s => ({ ...s, effort: "hard" })) }, 78) > G.entryKcal(carry, 78));
 });

@@ -12,9 +12,9 @@
 //    far more than fat does over a few days, and an estimate must not claim more than a week of food can really add.
 //  - Safety checks (rapid-loss alerts, rewards) do NOT use it: those need real measurements.
 const { addDays, diffDays } = require('./dates');
-const { expectedEnergy, dayBalance } = require('./energy');
+const { expectedEnergy, dayBalance, KCAL_PER_KG } = require('./energy');
 
-const KCAL_PER_KG = 7700;
+// KCAL_PER_KG comes from energy.js: one shared constant (7700 kcal per kg)
 const r1 = (x) => Math.round(x * 10) / 10;
 const r2 = (x) => Math.round(x * 100) / 100;
 const num = (x) => { const v = Number(x); return Number.isFinite(v) ? v : 0; };

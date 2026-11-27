@@ -3,7 +3,7 @@
 | What | How it is calculated | Standard / source | Verdict |
 |---|---|---|---|
 | Resting energy (BMR) | Mifflin-St Jeor: 10·kg + 6.25·cm − 5·age + 5 (men) / − 161 (women); "other" uses the midpoint (−78) | The equation most often recommended for healthy adults (ADA review, 2005) | ✅ Correct |
-| Daily energy (TDEE) | BMR × 1.2 / 1.375 / 1.55 / 1.725 / 1.9 (the formula). Once the food log and weight trend give a reading (35-day window, 10+ properly logged days, 4+ weigh-ins over 14+ days), maintenance is moved toward what you **measurably** burn: 60 % of the gap at high confidence, 35 % at medium, 0 % at low, measured/formula ratio clamped to ±20 % | Standard physical-activity-level factors; adaptive TDEE (intake minus weight trend × 7,700) | ✅ Correct. The target now follows your real progress, not only the formula |
+| Daily energy (TDEE) | BMR × 1.2 / 1.375 / 1.55 / 1.725 / 1.9 (the formula). Once the food log and weight trend give a reading (last 35 finished days — today is left out because it is still being logged; 10+ properly logged days, 4+ real weigh-ins over 14+ days; days carried forward on charts are not weigh-ins), maintenance is moved toward what you **measurably** burn: 60 % of the gap at high confidence, 35 % at medium, 0 % at low (confidence comes from how many days were logged **and** how noisy the weigh-ins were: high = ±250 kcal or less, medium = ±400 or less, wider than that is too noisy to steer), measured/formula ratio clamped to ±20 % | Standard physical-activity-level factors; adaptive TDEE (intake minus weight trend × 7,700) | ✅ Correct. The target now follows your real progress, not only the formula |
 | Weight change | 7,700 kcal ≈ 1 kg | The usual rule of thumb. It slightly overstates long-term loss (metabolism adapts), so expect real progress to slow over months | ✅ Accepted simplification |
 | Calorie floor | 1,200 kcal (women) / 1,500 kcal (men) | Common minimums for unsupervised dieting | ✅ Correct. **New:** a *lose* goal is never set above maintenance (the floor could previously push a small, low-activity person into a surplus) |
 | Pace | 0.1–1 kg/week, and **never above 1 % of body weight a week** (80 kg → 0.8). A faster pace that was typed or saved is lowered when the target is worked out | ≈0.5 kg/week is the usual recommendation; ≤1 %/week protects muscle | ✅ |
@@ -46,3 +46,24 @@ to restore. The plan screen and the weekly coach start, show and end the same wi
 ## Where the numbers live
 `packages/shared/src/energy.js` is the single source. `node tools/syncShared.mjs` writes the server, web and phone copies and CI runs
 `node tools/syncShared.mjs --check`, so a copy that was edited by hand (or a source that was not synced) fails the build.
+
+## One maintenance estimator
+
+`server/lib/adaptiveTdee.js` is the only place that turns a food log and weigh-ins into a maintenance reading. The calorie target (`measuredMaintenance`), the daily and weekly coach and the body view (`bodyAnalysis.calibratedMaintenance`, a thin wrapper) all call it, so every screen shows the same number for the same data. It also returns a 90 % range (`low`–`high`) from the noise in the weigh-ins plus ~5 % food-logging error. `7700` kcal/kg is defined once, in `energy.js`.
+
+## Workout calories (one formula everywhere)
+
+`estimateBurn(met, kg, minutes) = (MET − 1) × 3.5 × kg / 200 × minutes`, defined once in `energy.js` and used by the server, the web and the phone (Gym log, Workout tab, Exercise page, smart plan, Health Connect import, "walk it off" suggestions).
+
+* **Why MET − 1:** a MET value counts everything the body spends, and 1 MET of that is what it spends lying still. That part is already inside your daily maintenance, so counting it again inside a workout would earn food you did not burn. Step calories already work this way.
+* **Session types (Workout tab):** strength 5, conditioning 6, recovery 3.5, rest 2.5 (`SESSION_MET`; the phone's "active" day means recovery). A 60-minute strength session at 80 kg is 336 kcal on every screen.
+* **Minutes still differ by how you log:** the Workout tab and smart plan count the time on the clock; the Gym log counts only set time plus rest (about 90 s for a 10-rep set), because it has no clock. The same visit can therefore show fewer minutes, and fewer kcal, in the Gym log. That is a difference in minutes, not in the formula.
+* **Already-saved entries keep the number they were saved with.** Nothing is recalculated.
+
+### Same workout logged by hand and recorded by a watch
+
+Counted once, **whichever arrives first**. All of a day's watch sessions (already imported and new) are compared with what you logged yourself: your own entries cover a watch
+session when they hold at least 40 % of its minutes in the same kind of activity. Minutes are shared out, longest session first (an already-imported session wins a tie), so
+30 logged minutes cover one 60-minute session, not two. A covered new session is not imported; an already-imported one that your own entry now covers is removed
+(`lib/hcReconcile.js`, run after every route that creates your own exercise entries, and by each watch sync, which also cleans up duplicates that existed before this rule).
+Nothing is lost for good: delete your own entry and the next watch sync brings the session back.
