@@ -95,6 +95,43 @@ router.post('/copy-week', wrap(async (req, res) => {
   res.status(docs.length ? 201 : 200).json({ success: true, copied: docs.length, alreadyThere: wanted.length - docs.length, past: src.length - wanted.length });
 }));
 
+// Copy or move workouts onto one or many days at once: { ids: [..], dates: [..], mode: "copy" | "move", today }.
+// Copy: every chosen workout is added to every chosen day (what is already there, same day + kind + title, is not added twice).
+// Move: the workout goes to the first chosen day (kept as the same item, so "moved from" shows) and is copied to the others.
+router.post('/transfer', wrap(async (req, res) => {
+  const uid = req.user.id, today = todayOf(req.body?.today);
+  const mode = v.oneOf(req.body?.mode || 'copy', 'mode', ['copy', 'move']);
+  const rawIds = Array.isArray(req.body?.ids) ? req.body.ids : [], rawDates = Array.isArray(req.body?.dates) ? req.body.dates : [];
+  if (!rawIds.length || rawIds.length > 50) throw new HttpError(400, 'Choose 1–50 workouts');
+  if (!rawDates.length || rawDates.length > 62) throw new HttpError(400, 'Choose 1–62 days');
+  const ids = [...new Set(rawIds.map((x) => String(v.objectId(x, 'id'))))];
+  const dates = [...new Set(rawDates.map((d) => v.date(d, 'date')))].sort();
+  for (const d of dates) assertNotPast(d, today);
+  const src = await WorkoutPlanItem.find({ userId: uid, _id: { $in: ids } }).sort({ date: 1, createdAt: 1 });
+  if (!src.length) throw new HttpError(404, 'Workouts not found');
+  const lo = dates[0], hi = dates[dates.length - 1];
+  const have = await WorkoutPlanItem.find({ userId: uid, date: { $gte: lo, $lte: hi } }).select('date kind title').lean();
+  const keyOf = (i) => `${i.date}|${i.kind}|${i.title}`;
+  const taken = new Set(have.map(keyOf));
+  const docs = [], toMove = [];
+  let skipped = 0;
+  for (const it of src) {
+    const targets = dates.filter((d) => d !== it.date);
+    const open = targets.filter((d) => !taken.has(keyOf({ date: d, kind: it.kind, title: it.title })));
+    skipped += targets.length - open.length;
+    let rest = open;
+    if (mode === 'move' && open.length) { toMove.push({ it, date: open[0] }); taken.add(keyOf({ date: open[0], kind: it.kind, title: it.title })); rest = open.slice(1); }
+    for (const d of rest) {
+      taken.add(keyOf({ date: d, kind: it.kind, title: it.title }));
+      docs.push({ userId: uid, date: d, kind: it.kind, title: it.title, minutes: it.minutes, exercises: (it.exercises || []).map((e) => ({ name: e.name, sets: e.sets, reps: e.reps, kg: e.kg })), note: it.note || '', status: 'planned', movedFrom: '', seriesId: '' });
+    }
+  }
+  await guardCap(uid, docs.length);
+  for (const { it, date } of toMove) { if (!it.movedFrom) it.movedFrom = it.date; it.date = date; await it.save(); }
+  if (docs.length) await WorkoutPlanItem.insertMany(docs);
+  res.status(docs.length || toMove.length ? 201 : 200).json({ success: true, copied: docs.length, moved: toMove.length, skipped });
+}));
+
 // Edit, move (change `date`) or set the status (planned / done / skipped).
 router.patch('/:id', wrap(async (req, res) => {
   const item = await WorkoutPlanItem.findOne({ _id: v.objectId(req.params.id), userId: req.user.id });

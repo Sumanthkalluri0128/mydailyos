@@ -137,6 +137,27 @@ test('copy a week onto another: skips what is there, resets status, never plans 
   assert.equal((await call(alice, 'POST', '/api/workout-plan/copy-week', { fromStart: w1, toStart: w1, today: TODAY })).status, 400);
 });
 
+test('transfer: copy or move several workouts onto several days, never doubled, never the past, never someone else\'s', { skip }, async () => {
+  const add = (date, title, cid) => call(alice, 'POST', '/api/workout-plan', { date, today: TODAY, kind: 'strength', title, minutes: 30, exercises: [{ name: 'Squat', sets: 3, reps: 8 }], clientId: cid });
+  const a = (await add(plus(100), 'TA', 'tr-1')).item, b = (await add(plus(100), 'TB', 'tr-2')).item;
+  const days = [plus(101), plus(102), plus(103)];
+  const c1 = await call(alice, 'POST', '/api/workout-plan/transfer', { ids: [a._id, b._id], dates: days, mode: 'copy', today: TODAY });
+  assert.equal(c1.status, 201); assert.equal(c1.copied, 6);
+  const got = (await get(alice, plus(100), plus(103))).items;
+  assert.equal(got.length, 8); assert.ok(got.filter((i) => i.date !== plus(100)).every((i) => i.status === 'planned' && i.exercises.length === 1));
+  const c2 = await call(alice, 'POST', '/api/workout-plan/transfer', { ids: [a._id, b._id], dates: days, mode: 'copy', today: TODAY });
+  assert.equal(c2.status, 200); assert.equal(c2.copied, 0); assert.equal(c2.skipped, 6, 'a second tap does not double the plan');
+  const c3 = await call(alice, 'POST', '/api/workout-plan/transfer', { ids: [a._id], dates: [plus(110), plus(111)], mode: 'move', today: TODAY });
+  assert.equal(c3.moved, 1); assert.equal(c3.copied, 1);
+  const moved = (await get(alice, plus(110), plus(111))).items;
+  assert.equal(moved.length, 2); assert.ok(moved.some((i) => i.movedFrom === plus(100)));
+  assert.equal((await get(alice, plus(100), plus(100))).items.filter((i) => i.title === 'TA').length, 0, 'the moved workout left its day');
+  assert.equal((await call(alice, 'POST', '/api/workout-plan/transfer', { ids: [b._id], dates: [plus(-3)], today: TODAY })).status, 400, 'not into the past');
+  assert.equal((await call(alice, 'POST', '/api/workout-plan/transfer', { ids: [], dates: days, today: TODAY })).status, 400);
+  assert.equal((await call(alice, 'POST', '/api/workout-plan/transfer', { ids: [b._id], dates: days, mode: 'swap', today: TODAY })).status, 400);
+  assert.equal((await call(bob, 'POST', '/api/workout-plan/transfer', { ids: [b._id], dates: [plus(120)], today: TODAY })).status, 404, 'cannot copy another person\'s workout');
+});
+
 test('delete one workout; another person cannot see or change it', { skip }, async () => {
   const it = (await call(alice, 'POST', '/api/workout-plan', { date: plus(9), today: TODAY, kind: 'cardio', clientId: 'iso-1' })).item;
   assert.equal((await get(bob, plus(0), plus(20))).items.length, 0, 'bob sees none of alice\'s plan');

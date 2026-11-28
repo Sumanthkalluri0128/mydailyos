@@ -140,6 +140,47 @@ export const copyDay = (plans, id, from, to) => plans.map((p) => {
   return { ...p, days: p.days.map((d) => (d.dow === to ? { ...d, title: src.title, items: src.items.map((x) => ({ ...x })), warm: src.warm.map((x) => ({ ...x })), cool: src.cool.map((x) => ({ ...x })) } : d)) };
 });
 
+const uniqDows = (list, from) => [...new Set((Array.isArray(list) ? list : []).map(Number))].filter((n) => n >= 1 && n <= 7 && n !== from);
+
+/**
+ * Copies or moves SOME exercises of one day onto one or many other days of the same plan.
+ *   itemIds  the main-workout exercises to take; toDows  the days that receive them; mode  "copy" | "move"
+ * A day never holds the same exercise twice, so one already there is skipped (not doubled). A day that is full stops at MAX_ITEMS.
+ * An empty target day also gets the source day's warm-up and cool-down, so it becomes a complete training day.
+ * "move" takes an exercise off the source only when it now sits on every chosen day. Returns { plans, added, skipped }.
+ */
+export function transferItems(plans, id, fromDow, itemIds, toDows, mode = "copy") {
+  const plan = plans.find((p) => p.id === id), src = plan && plan.days.find((d) => d.dow === fromDow);
+  const targets = uniqDows(toDows, fromDow), wanted = new Set(itemIds || []);
+  const take = src ? src.items.filter((x) => wanted.has(x.id)) : [];
+  if (!plan || !src || !take.length || !targets.length) return { plans, added: 0, skipped: 0 };
+  let added = 0, skipped = 0;
+  const landed = new Set(take.map((x) => x.id));
+  const days = plan.days.map((d) => {
+    if (!targets.includes(d.dow)) return d;
+    const empty = !d.items.length && !d.warm.length && !d.cool.length;
+    const items = d.items.slice();
+    for (const it of take) {
+      if (items.some((x) => x.id === it.id)) { skipped += 1; continue; }
+      if (items.length >= MAX_ITEMS) { skipped += 1; landed.delete(it.id); continue; }
+      items.push({ ...it }); added += 1;
+    }
+    return { ...d, items, ...(empty && items.length ? { title: d.title || src.title, warm: src.warm.map((x) => ({ ...x })), cool: src.cool.map((x) => ({ ...x })) } : {}) };
+  });
+  const moved = mode === "move" ? landed : new Set();
+  const out = days.map((d) => (d.dow === fromDow && moved.size ? { ...d, items: d.items.filter((x) => !moved.has(x.id)), ...(d.items.every((x) => moved.has(x.id)) ? { title: "", warm: [], cool: [] } : {}) } : d));
+  return { plans: plans.map((p) => (p.id === id ? { ...p, days: out } : p)), added, skipped };
+}
+
+/** Copies or moves a WHOLE day (name, main workout, warm-up, cool-down) onto one or many days. Each target day is replaced. "move" leaves the source as a rest day. */
+export const transferDay = (plans, id, fromDow, toDows, mode = "copy") => plans.map((p) => {
+  if (p.id !== id) return p;
+  const src = p.days.find((d) => d.dow === fromDow), targets = uniqDows(toDows, fromDow);
+  if (!src || !targets.length) return p;
+  const clone = (d) => ({ ...d, title: src.title, items: src.items.map((x) => ({ ...x })), warm: src.warm.map((x) => ({ ...x })), cool: src.cool.map((x) => ({ ...x })) });
+  return { ...p, days: p.days.map((d) => (targets.includes(d.dow) ? clone(d) : mode === "move" && d.dow === fromDow ? { ...d, title: "", items: [], warm: [], cool: [] } : d)) };
+});
+
 /** A new plan from a ready-made template (utils/planKit.js TEMPLATES): every training day already has a warm-up, a main workout and a cool-down. */
 export function planFromTemplate(templateId, name, lookup = () => null, now = Date.now()) {
   const t = templateById(templateId);

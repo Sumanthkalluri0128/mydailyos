@@ -399,3 +399,40 @@
 .pp-stage { display: grid; gap: 10px; padding: 12px; border: 1px dashed var(--border, #e5e7eb); border-radius: 14px; }
 .pp-stage-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
 .pp-stage-list li { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 8px 12px; border: 1px solid var(--border, #e5e7eb); border-radius: 12px; }
+
+/* ---- plan editor, compact (v77): short exercise rows, folded warm-up / cool-down, short picker, copy / move panel ---- */
+.pp2-kit { display: grid; grid-template-columns: minmax(0, 1fr) 104px auto; align-items: center; gap: 8px; padding: 4px 2px; }
+.pp2-kit-n { min-width: 0; }
+.pp2-kit-n b { display: block; overflow-wrap: anywhere; line-height: 1.25; }
+.pp2-kit input { width: 100% !important; min-width: 0; box-sizing: border-box; min-height: 38px; }
+.pp2-sec { padding: 0; }
+.pp2-sec > summary { list-style: none; cursor: pointer; }
+.pp2-sec > summary::-webkit-details-marker { display: none; }
+.pp2-sec-h { padding: 8px 12px; }
+.pp2-sec-h > div { flex: 1; min-width: 0; }
+.pp2-sec-h small { display: block; }
+.pp2-caret { margin-left: auto; transition: transform .15s; color: var(--text-muted); font-style: normal; }
+.pp2-sec:not([open]) .pp2-caret { transform: rotate(-90deg); }
+.pp2-sec-b { gap: 6px; padding: 8px; }
+.pp2-add { min-height: 40px; }
+.pp2-ex { padding: 6px 8px; gap: 6px; }
+.pp2-ex.sel { border-color: var(--primary); background: var(--primary-soft); }
+.pp2-ex-top { gap: 8px; }
+.pp2-tick { width: 20px; height: 20px; flex: none; accent-color: var(--primary-solid, #6c4ce0); }
+.pp2-ex-n { flex: 1; min-width: 0; display: grid; text-align: left; background: none; border: 0; padding: 4px 0; font: inherit; color: inherit; cursor: pointer; }
+.pp2-ex-n b { overflow-wrap: anywhere; line-height: 1.25; }
+.pp2-ex-mv { flex: none; flex-wrap: nowrap; gap: 4px; }
+.pp2-ex-mv .secondary-button { min-width: 34px; min-height: 34px; padding: 0 6px; }
+.pp2-ex-f { padding-top: 6px; border-top: 1px dashed var(--border); }
+.pp2-selbar { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
+.pp2-link { background: none; border: 0; padding: 6px 4px; font: inherit; font-size: .85rem; font-weight: 700; color: var(--primary); cursor: pointer; text-decoration: underline; }
+.pp2-xfer { display: grid; gap: 8px; }
+.pp2-xfer-b { display: grid; gap: 8px; padding: 10px; border: 1px solid var(--primary); border-radius: 14px; background: var(--primary-soft); }
+.pp2-xfer-b p { margin: 0; }
+.pp-chips-row { flex-wrap: nowrap; overflow-x: auto; padding-bottom: 4px; scrollbar-width: thin; }
+.pp-chips-row .chip { flex: none; }
+.pp-pick-scroll { max-height: min(46vh, 380px); overflow-y: auto; overscroll-behavior: contain; padding-right: 2px; }
+.pp-pick-row small { display: block; }
+.pp-pick-info { padding: 6px 10px !important; min-height: 48px !important; }
+.pp-pick-add { width: 46px !important; }
+@media (max-width: 520px) { .pp2-kit { grid-template-columns: minmax(0, 1fr) 88px auto; } }
