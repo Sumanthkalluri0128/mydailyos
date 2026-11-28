@@ -28,6 +28,8 @@ const FILES = [
   ['planStart.js', 'utils/planStart.js', 'utils/planStart.ts', NOCHECK],
   ['sessionDelete.js', 'utils/sessionDelete.js', 'utils/sessionDelete.ts', NOCHECK],
   ['coneGeometry.js', 'utils/coneGeometry.js', 'utils/coneGeometry.ts', NOCHECK],
+  ['exerciseLoad.js', 'utils/exerciseLoad.js', 'utils/exerciseLoad.ts', NOCHECK],
+  ['muscleMap.js', 'utils/muscleMap.js', 'utils/muscleMap.ts', NOCHECK],
   ...['en', 'hi', 'ta', 'te'].map((l) => [`i18n/${l}.json`, `i18n/${l}.json`, `i18n/${l}.json`, '']),
 ];
 // Safety: a translation copy that has keys the shared source lacks is NEWER than the source. Never overwrite it (that would delete translations).

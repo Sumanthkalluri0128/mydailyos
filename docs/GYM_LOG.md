@@ -2,7 +2,8 @@
 
 Log exercises (sets x reps x weight), body weight and tape measurements, set a body goal, see progress, and download everything.
 
-**Privacy:** all data stays on the device (phone: AsyncStorage key `flexfit_gymlog_v1`; web: localStorage, same key). There is no API call in any gym-log file, it is not in the server backup or account export. Data leaves only via the Export tab.
+**Privacy:** by default all data stays on the device, in a copy that belongs to the signed-in account (phone: AsyncStorage key `flexfit_gymlog_v2:<email>`; web: localStorage, same key; the old shared `flexfit_gymlog_v1` is adopted once by the first account that opens the log and then removed). The log files themselves make no API call. Two things can leave the device, each from its own runner: (1) `gymSyncRunner`: each exercise's minutes and estimated calories, so Exercise and Home count them (always on); (2) `gymRecordRunner`: the log itself (exercises, body measurements, goal, profile) to the person's own account, **only after the person turns on Gym log > Export > "Sync across my devices"** (off by default, per account, per device). With it on the log is in the account export and is deleted with the account. Otherwise data leaves only via the Export buttons.
+
 
 ## Where
 - Phone: Workout tab -> "Gym log & body tracker" card -> `src/app/gym-log.tsx`
@@ -32,6 +33,11 @@ Tests: phone `npx jest src/utils/__tests__/gymMath.test.ts`; web `npm test`.
 ## Treadmill / run pace
 For minute-timed cardio (Treadmill, Running, Walking...) each set also takes an optional **average pace per km** (`GymSet.pace`, typed as `6:30` or `6.5`, accepted 2:00-30:00). With a pace, time x pace gives the distance, and calories come from the speed (ACSM equations, level ground: VO2 = 0.1 x speed m/min + 3.5 walking, 0.2 x speed + 3.5 running, MET = VO2 / 3.5; 6-8 km/h is blended so there is no jump). Without a pace the old per-exercise MET is used. Distance shows in the day list and as `pace_min_per_km` / `distance_km` in the workouts CSV. The synced Exercise row keeps the pace and km in its note. Helpers: `parsePace`, `fmtPace`, `speedKph`, `metForPace`, `setKm`, `entryKm` in `gymMath`.
 
+## One logger for Exercise and Gym log (web + phone)
+The Exercise page no longer has its own minutes-only form as the main way to log. It shows the same logger as the Gym log (`LogTab`, exported from `GymLogPage.jsx` / `gym-log.tsx`): the form follows the exercise you pick (lifts: sets x reps x weight, holds: seconds, cardio: minutes + pace). The old minutes form is folded under "Log by time only" for yoga, sports and anything without sets.
+Server rows with `source: "gymlog"` are the mirror of a Gym log entry, so the Exercise page's "Today's activities" list hides them (the logger already shows them with edit / delete). Totals still count each entry once.
+The Gym log's fallback body weight (used when you have not logged a weight in Body) now follows your profile weight (`setDefaultBodyKg` in `gymMath`) instead of a fixed 70 kg, so calories match the Exercise form.
+
 ## Body weight sets (v74)
 Leave the weight blank on a rep-counted exercise and the set is a **body weight** set (push-ups, pull-ups, bodyweight squats, dips). It is still stored as `kg: 0`, so every entry you logged before this change is covered with no migration. Nothing stores the body weight itself: it is looked up when the number is shown (`bodyKgFn(body)` = your latest logged weight on or before that day, else your profile weight), so volume, "lifted", weekly volume and exercise progress recalculate whenever you log or correct a weight.
 - Shown as `3 × 12 @ BW`; the weight box says "empty = body weight" and shows `BW` as its placeholder.
@@ -40,3 +46,8 @@ Leave the weight blank on a rep-counted exercise and the set is a **body weight*
 - Calories already used your body weight per minute, so they are unchanged.
 - Workouts CSV: new last column `weight_type` (`weight` / `bodyweight`), and `set_volume_kg` is filled for body weight sets. `weight_kg` stays blank for them.
 - Helpers in `gymMath`: `isBodyweightSet`, `setLoadKg`, `bodyKgFn`, `entryVolume(e, bodyKg)`; `dayStats`, `rangeStats`, `weeklyDays`, `exerciseSeries` take an optional `bwOf`. Without it they behave as before.
+
+
+## Sync across devices (opt-in)
+
+See `GYM_SYNC.md`.

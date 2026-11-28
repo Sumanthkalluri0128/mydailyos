@@ -6,6 +6,7 @@ import { FigThumb, Chip, fmtClock } from "./bits";
 import { elapsedSec, finishActive, personalBests, setsFor, suggestNext, volumeOf, setsDone, estimateKcal } from "../../utils/workoutStore";
 import { confirmAction } from "../../utils/confirm";
 import { SMART_ID } from "../../data/workoutPlan";
+import { MODES, MODE_LIST, convertWeight, loadOf, movedText } from "../../utils/exerciseLoad";
 
 const FEELS = [["easy", "😌", "Easy"], ["good", "🙂", "Good"], ["challenging", "😤", "Challenging"], ["hard", "🥵", "Hard"]];
 const PAIN = [["knee", "Knee"], ["back", "Back"], ["shoulder", "Shoulder"], ["wrist", "Wrist"], ["elbow", "Elbow"], ["dizzy", "Dizzy or chest pressure"]];
@@ -138,7 +139,7 @@ export default function SessionView({ day, st, setActive, swaps, sessions, week,
       </div>
       <p className="wp-stepcount">Step {active.step + 1} of {steps.length}{step.block.optional ? " · optional" : ""}</p>
 
-      {step.kind === "ex" && <ExStep key={step.ex.id} base={step.ex} active={active} patch={patch} swaps={swaps} sessions={sessions} week={week} setRest={setRest} openSheet={openSheet} />}
+      {step.kind === "ex" && <ExStep key={step.ex.id} base={step.ex} active={active} patch={patch} swaps={swaps} sessions={sessions} week={week} weightKg={weightKg} setRest={setRest} openSheet={openSheet} />}
       {step.kind === "check" && <CheckStep key={step.block.id} block={step.block} active={active} patch={patch} swaps={swaps} openSheet={openSheet} />}
       {step.kind === "options" && <OptionsStep key={step.block.id} block={step.block} active={active} patch={patch} swaps={swaps} openSheet={openSheet} />}
 
@@ -164,7 +165,7 @@ export default function SessionView({ day, st, setActive, swaps, sessions, week,
 }
 
 // ---------------------------------------------------------------------------------------------------------------- one exercise
-function ExStep({ base, active, patch, swaps, sessions, week, setRest, openSheet }) {
+function ExStep({ base, active, patch, swaps, sessions, week, weightKg, setRest, openSheet }) {
   const altId = swaps[base.id];
   const alt = altId ? base.alts.find((a) => a.id === altId) : null;
   const ex = alt ? { ...base, ...alt, sets: base.sets, reps: base.reps, repsMin: base.repsMin, repsMax: base.repsMax, from: base.id } : base;
@@ -175,6 +176,12 @@ function ExStep({ base, active, patch, swaps, sessions, week, setRest, openSheet
   const doneCount = rows.filter((r) => r.done).length;
   const cur = rows.findIndex((r) => !r.done);
   const unitLabel = base.timed ? "Secs" : "Reps";
+  const load = loadOf(ex, active.modes && active.modes[base.id]);   // what the weight box means for this exercise: each hand, total, body weight (+ extra) or assist
+  const pickMode = (m) => {
+    if (m === load.mode) return;
+    const to = loadOf(ex, m);
+    patch((a) => ({ ...a, modes: { ...(a.modes || {}), [base.id]: m }, sets: { ...a.sets, [base.id]: a.sets[base.id].map((r) => (r.done ? r : { ...r, w: convertWeight(load, to, r.w), addW: false })) } }));
+  };
 
   const setRow = (i, p) => patch((a) => ({ ...a, sets: { ...a.sets, [base.id]: a.sets[base.id].map((r, j) => (j === i ? { ...r, ...p } : r)) } }));
   const tick = (i) => {
@@ -206,13 +213,20 @@ function ExStep({ base, active, patch, swaps, sessions, week, setRest, openSheet
 
       {!skipped && (
         <div className="wp-table" role="group" aria-label="Sets">
-          <div className="wp-trow head"><span>Set</span><span>{base.bw || base.timed ? "Body" : "Weight (kg)"}</span><span>{unitLabel}</span><span /></div>
+          {load.asks && (
+            <div className="wp-load" role="group" aria-label="What the weight means">
+              <div className="wp-load-row">{MODE_LIST.map((m) => <button key={m} type="button" className={`wp-load-chip${load.mode === m ? " on" : ""}`} aria-pressed={load.mode === m} onClick={() => pickMode(m)}>{MODES[m].label}</button>)}</div>
+              <p className="wp-load-hint">{load.hint}{(() => { const live = rows.find((r) => !r.done) || rows[rows.length - 1]; const t = live ? movedText(load, live.w, weightKg) : ""; return t ? <b> {t}.</b> : null; })()}</p>
+            </div>
+          )}
+          <div className="wp-trow head"><span>Set</span><span>{load.asks ? load.head : ""}</span><span>{unitLabel}</span><span /></div>
           {rows.map((r, i) => (
             <div key={i} className={`wp-trow ${r.done ? "done" : i === cur ? "cur" : ""}`}>
               <span className="wp-setno">{i + 1}</span>
-              {base.bw && !(Number(r.w) > 0) && !r.addW
-                ? <button type="button" className="wp-bw" onClick={() => setRow(i, { addW: true, w: 2 })} title="Add weight">BW ＋</button>
-                : <Stepper value={r.w} step={2.5} max={500} label={`Weight, set ${i + 1}`} onChange={(v) => setRow(i, { w: v })} />}
+              {!load.asks ? <span />
+                : load.extra && !(Number(r.w) > 0) && !r.addW
+                  ? <button type="button" className="wp-bw" onClick={() => setRow(i, { addW: true, w: load.step })} title="Add extra weight (vest, belt, plate)">BW ＋</button>
+                  : <Stepper value={r.w} step={load.step} max={500} label={`${load.label} weight, set ${i + 1}`} onChange={(v) => setRow(i, { w: v })} />}
               <Stepper value={r.r} step={base.timed ? 5 : 1} max={base.timed ? 600 : 100} label={`${unitLabel}, set ${i + 1}`} onChange={(v) => setRow(i, { r: v })} />
               <button type="button" className={`wp-check ${r.done ? "on" : ""}`} aria-pressed={r.done} aria-label={`Set ${i + 1} ${r.done ? "done" : "not done"}`} onClick={() => tick(i)}>{r.done ? "✓" : ""}</button>
             </div>

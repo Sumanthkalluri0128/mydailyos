@@ -172,6 +172,8 @@ function cleanExercises(raw) {
       weightKg: Math.min(1000, Math.max(0, Math.round((Number(x?.weightKg) || 0) * 100) / 100)),
       seconds: Math.min(7200, Math.max(0, Math.round(Number(x?.seconds) || 0))),
       rpe: cleanRpe(x?.rpe),
+      mode: ['each', 'total', 'bw', 'assist', 'none'].includes(x?.mode) ? x.mode : '',
+      totalKg: Math.min(3000, Math.max(0, Math.round((Number(x?.totalKg) || 0) * 100) / 100)),
     })).filter((x) => x.reps > 0 || x.seconds > 0);
     return { id, name: String(e.name || '').slice(0, 120), slot: String(e.slot || '').slice(0, 20), done: e.done !== false && sets.length > 0, sets };
   }).filter(Boolean);

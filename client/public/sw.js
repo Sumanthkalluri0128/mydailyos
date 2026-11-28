@@ -6,9 +6,9 @@
  *  - API calls are NOT handled here: the app saves and replays them itself, per signed-in person (see src/offline).
  */
 const VERSION = "ff-shell-v3";
-const IMG = "ff-img-v1";            // exercise photos, stickers, scenes: kept at run time, capped (see trim)
-const IMG_MAX = 120;               // most images kept; the oldest go first
-const IMG_PATHS = ["/exercises/", "/stickers/", "/scenes/"];
+const IMG = "ff-img-v1";            // exercise photos, stickers, scenes, muscle pictures: kept at run time, capped (see trim)
+const IMG_MAX = 160;               // most images kept; the oldest go first
+const IMG_PATHS = ["/exercises/", "/stickers/", "/scenes/", "/muscles/"];
 const SHELL = ["/", "/favicon.svg", "/manifest.webmanifest", "/icons/icon-192.png", "/icons/icon-512.png"];
 
 async function trim(cache) {

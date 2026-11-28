@@ -7,6 +7,8 @@ import { DAYS, FILTERS, MUSCLE_LABEL, libraryList } from "../../data/workoutPlan
 import { GYM_CATALOG } from "../../utils/gymCatalog";
 import { pickerList, sortExercises } from "../../utils/exerciseDetail";
 import { lookupExercise } from "../../utils/exerciseLookup";
+import { dayExercises, groupsOf, tallyOf } from "../../utils/muscleMap";
+import MuscleWeek from "./MuscleMap";
 import { buildIndex, searchExercises } from "../../utils/exerciseSearch";
 import { FigThumb } from "./bits";
 import { confirmAction } from "../../utils/confirm";
@@ -156,6 +158,7 @@ function Editor({ plan, kg, setPlans, onDone, onUse, active }) {
   const day = plan.days.find((d) => d.dow === dow) || plan.days[0];
   const upd = (fn, ...a) => setPlans((list) => fn(list, plan.id, ...a));
   const est = dayEstimate(day, kg, lib);
+  const focus = useMemo(() => groupsOf(tallyOf(dayExercises(day))).filter((g) => g.regions.some((x) => x.level === "primary")).map((g) => g.group), [day]);   // the muscle groups this day already trains: the picker lists those first
   const goDay = (d) => { setDow(d); setPick(null); setSel([]); setOpen(null); setXfer(false); setTargets([]); };
   const clear = async () => { if (day.items.length && !(await confirmAction(`Remove every exercise from ${SHORT[dow - 1]}? It becomes a rest day.`, { title: "Clear this day?", confirmText: "Clear", cancelText: "Cancel" }))) return; upd(clearDay, dow); setSel([]); };
   const auto = () => { upd(setWarmCool, dow, suggestWarmCool(day.items, lib)); notify("Warm-up and cool-down matched to this day’s muscles.", "success"); };
@@ -193,7 +196,7 @@ function Editor({ plan, kg, setPlans, onDone, onUse, active }) {
         {plan.days.map((d) => <button key={d.dow} type="button" role="tab" aria-selected={d.dow === dow} className={d.dow === dow ? "on" : ""} onClick={() => goDay(d.dow)}>{SHORT[d.dow - 1]}{d.items.length ? ` · ${d.items.length}` : ""}</button>)}
       </div>
 
-      {pick === "main" ? <Picker have={day.items} onAdd={onAddMain} onClose={() => setPick(null)} />
+      {pick === "main" ? <Picker have={day.items} focus={focus} onAdd={onAddMain} onClose={() => setPick(null)} />
         : pick ? <KitPicker section={pick} have={day[pick]} onAdd={(k) => upd(addKit, dow, pick, k)} onClose={() => setPick(null)} />
         : (
           <>
@@ -278,6 +281,7 @@ function Editor({ plan, kg, setPlans, onDone, onUse, active }) {
               {day.items.length > 0 && <button type="button" className="secondary-button" onClick={clear}>Make rest day</button>}
               {!active && <button type="button" className="primary-button" onClick={onUse}>Use this plan</button>}
             </div>
+            <details className="mm-wrap" key={`mm${dow}`}><summary>🧍 Which muscles this plan trains</summary><MuscleWeek days={plan.days} todayDow={dow} title="Muscles in this plan" /></details>
           </>
         )}
     </section>
@@ -329,61 +333,61 @@ function KitPicker({ section, have, onAdd, onClose }) {
 
 const PAGE = 12;
 const PICK_CATS = ["all", ...FILTERS.filter((c) => c !== "all"), "full body"];
-const catName = (c) => (c === "all" ? "All" : c === "full body" ? "Full body" : MUSCLE_LABEL[c] || c);
+const catName = (c) => (c === "all" ? "All" : c === "full body" ? "Full body" : MUSCLE_LABEL[c] || (c ? c[0].toUpperCase() + c.slice(1) : ""));
 const slugOf = (s) => String(s).toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 40);
 let PICK_ALL = null, PICK_IDX = null; // built once: ~250 exercises (built-in library + wide gym catalogue), sorted by muscle group, plus the search index
 const allPickable = () => PICK_ALL || (PICK_ALL = sortExercises(pickerList(libraryList(), GYM_CATALOG), {}));
 const pickIndex = () => PICK_IDX || (PICK_IDX = buildIndex(allPickable()));
 
-// The list stays folded until you type or tap a muscle group, then shows a short scrollable list (it used to fill the whole page).
-function Picker({ have, onAdd, onClose }) {
+// The list is always open. With nothing typed it starts on the muscles this day already trains ("For this day"), or on everything when the day is empty;
+// tap another muscle group or type to change it. Rows are one line, 12 at a time, in a short scrolling box.
+function Picker({ have, focus = [], onAdd, onClose }) {
   const [q, setQ] = useState("");
-  const [cat, setCat] = useState("all");
+  const [cat, setCat] = useState(focus.length ? "day" : "all");
   const [open, setOpen] = useState(null);   // id of the row whose steps are showing
   const [pages, setPages] = useState(1);
   const all = useMemo(allPickable, []);
   const taken = new Set(have.map((x) => x.id));
   const needle = q.trim().toLowerCase();
-  const wanted = !!needle || cat !== "all";
   const found = useMemo(() => {
-    if (!wanted) return { hits: [], similar: [] };
     const r = needle ? searchExercises(all, needle, { index: pickIndex() }) : { hits: all, similar: [] };   // typos, plurals, "pushup" / "push up", "abs", "db" and more
-    const inCat = (e) => cat === "all" || e.cat === cat;
-    return { hits: r.hits.filter(inCat), similar: r.similar.filter(inCat) };
-  }, [all, cat, needle, wanted]);
+    const keep = (e) => { const c = String(e.cat || "").toLowerCase(); return cat === "all" || (cat === "day" ? focus.includes(c) : c === cat); };
+    // not-yet-added exercises come first, so the next thing to add is always at the top
+    const byTaken = (l) => [...l.filter((e) => !taken.has(e.id)), ...l.filter((e) => taken.has(e.id))];
+    return { hits: byTaken(r.hits.filter(keep)), similar: r.similar.filter(keep) };
+  }, [all, cat, needle, focus, have.length]); // eslint-disable-line react-hooks/exhaustive-deps
   const list = found.hits.length ? found.hits : found.similar;
   const shown = list.slice(0, PAGE * pages);
   const exact = found.hits.some((e) => e.name.toLowerCase() === needle);
   const add = (e) => { onAdd({ id: e.id, name: e.name, cat: e.cat, unit: e.unit, sets: e.sets, reps: e.reps }); notify(`${e.name} added.`, "success"); };
-  const addOwn = () => { const name = q.trim().slice(0, 60); add({ id: `custom:${slugOf(name)}`, name, cat: cat === "all" ? "other" : cat, unit: cat === "cardio" ? "min" : "reps", sets: cat === "cardio" ? 1 : 3, reps: cat === "cardio" ? "20" : "10-12" }); setQ(""); };
+  const addOwn = () => { const name = q.trim().slice(0, 60); add({ id: `custom:${slugOf(name)}`, name, cat: cat === "all" || cat === "day" ? "other" : cat, unit: cat === "cardio" ? "min" : "reps", sets: cat === "cardio" ? 1 : 3, reps: cat === "cardio" ? "20" : "10-12" }); setQ(""); };
+  const cats = focus.length ? ["day", ...PICK_CATS] : PICK_CATS;
   return (
     <div className="pp-pick">
-      <div className="pp-head">{onClose && <button type="button" className="secondary-button" onClick={onClose}>‹ Back to the day</button>}<span className="wp-muted wp-small">{have.length ? `${have.length} on this day · ` : ""}{all.length} exercises</span></div>
+      <div className="pp-head">{onClose && <button type="button" className="secondary-button" onClick={onClose}>‹ Back to the day</button>}<span className="wp-muted wp-small">{have.length ? `${have.length} on this day · ` : ""}{list.length} shown of {all.length}</span></div>
       <label className="pp-field"><span className="sr-only">Search exercises</span><input type="search" value={q} placeholder="Search: squat, pushup, abs, db press…" onChange={(e) => { setQ(e.target.value); setPages(1); }} /></label>
-      <div className="pp-chips pp-chips-row">{PICK_CATS.map((c) => <button key={c} type="button" className={`chip${cat === c ? " active" : ""}`} aria-pressed={cat === c} onClick={() => { setCat(c); setPages(1); }}>{catName(c)}</button>)}</div>
-      {!wanted && <p className="wp-muted wp-small">Type a name, or tap a muscle group, to see exercises.</p>}
-      {wanted && !found.hits.length && found.similar.length > 0 && <p className="wp-muted wp-small">No exact match for “{q.trim()}”. Closest matches:</p>}
-      {wanted && (
-        <ul className="pp-pick-list pp-pick-scroll">
-          {shown.map((e) => {
-            const on = taken.has(e.id), d = open === e.id ? lookupExercise(e.id, e) : null;
-            return (
-              <li key={e.id} className={`pp-pick-row${on ? " on" : ""}`}>
-                <div className="pp-pick-main">
-                  <button type="button" className="pp-pick-info" aria-expanded={open === e.id} onClick={() => setOpen(open === e.id ? null : e.id)}>
-                    <FigThumb ex={lookupExercise(e.id, e) || e} size={36} />
-                    <span><b>{e.name}</b><small> {catName(e.cat)} · {e.unit === "min" ? `${e.reps} min` : e.unit === "sec" ? `${e.sets} × ${e.reps}s` : `${e.sets} × ${e.reps}`}{e.gear ? ` · ${e.gear}` : ""}</small></span>
-                  </button>
-                  <button type="button" className="pp-pick-add" disabled={on} aria-label={on ? `${e.name} is already on this day` : `Add ${e.name}`} onClick={() => add(e)}>{on ? "✓" : "＋"}</button>
-                </div>
-                {d && <ol className="pp-steps">{(d.steps || []).map((t, i) => <li key={i}>{t}</li>)}{d.avoid ? <li className="avoid">Avoid: {d.avoid}</li> : null}</ol>}
-              </li>
-            );
-          })}
-          {list.length > shown.length && <li><button type="button" className="secondary-button" onClick={() => setPages((n) => n + 1)}>Show {Math.min(PAGE, list.length - shown.length)} more ({list.length - shown.length} left)</button></li>}
-          {!list.length && <li className="wp-muted">No exercise is close to “{q}”. You can add it as your own below.</li>}
-        </ul>
-      )}
+      <div className="pp-chips pp-chips-row">{cats.map((c) => <button key={c} type="button" className={`chip${cat === c ? " active" : ""}`} aria-pressed={cat === c} onClick={() => { setCat(c); setPages(1); }}>{c === "day" ? "For this day" : catName(c)}</button>)}</div>
+      {!needle && cat === "day" && <p className="wp-muted wp-small">Exercises for the muscles this day already trains. Tap All or another muscle for more.</p>}
+      {needle && !found.hits.length && found.similar.length > 0 && <p className="wp-muted wp-small">No exact match for “{q.trim()}”. Closest matches:</p>}
+      <ul className="pp-pick-list pp-pick-scroll">
+        {shown.map((e) => {
+          const on = taken.has(e.id), d = open === e.id ? lookupExercise(e.id, e) : null;
+          return (
+            <li key={e.id} className={`pp-pick-row${on ? " on" : ""}`}>
+              <div className="pp-pick-main">
+                <button type="button" className="pp-pick-info" aria-expanded={open === e.id} onClick={() => setOpen(open === e.id ? null : e.id)}>
+                  <FigThumb ex={lookupExercise(e.id, e) || e} size={36} />
+                  <span><b>{e.name}</b><small> {catName(String(e.cat || "").toLowerCase())} · {e.unit === "min" ? `${e.reps} min` : e.unit === "sec" ? `${e.sets} × ${e.reps}s` : `${e.sets} × ${e.reps}`}{e.gear ? ` · ${e.gear}` : ""}</small></span>
+                </button>
+                <button type="button" className="pp-pick-add" disabled={on} aria-label={on ? `${e.name} is already on this day` : `Add ${e.name}`} onClick={() => add(e)}>{on ? "✓" : "＋"}</button>
+              </div>
+              {d && <ol className="pp-steps">{(d.steps || []).map((t, i) => <li key={i}>{t}</li>)}{d.avoid ? <li className="avoid">Avoid: {d.avoid}</li> : null}</ol>}
+            </li>
+          );
+        })}
+        {list.length > shown.length && <li><button type="button" className="secondary-button" onClick={() => setPages((n) => n + 1)}>Show {Math.min(PAGE, list.length - shown.length)} more ({list.length - shown.length} left)</button></li>}
+        {!list.length && <li className="wp-muted">{needle ? `No exercise is close to “${q}”. You can add it as your own below.` : "Nothing here yet. Tap All."}</li>}
+      </ul>
       {needle && !exact && <button type="button" className="secondary-button" onClick={addOwn}>＋ Add “{q.trim()}” as my own exercise</button>}
     </div>
   );

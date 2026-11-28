@@ -26,8 +26,11 @@ import SessionView from "../components/workout/SessionView";
 import AdaptCard from "../components/workout/AdaptCard";
 import BodyPlanPage from "./BodyPlanPage";
 import PersonalPlans from "../components/workout/PersonalPlans";
+import MuscleWeek from "../components/workout/MuscleMap";
+import LiftTracker from "../components/workout/LiftTracker";
 import { customIdOf, customToDays, sourceFor } from "../utils/customPlans";
 import { lookupExercise } from "../utils/exerciseLookup";
+import { liftPayload } from "../utils/exerciseLoad";
 import { ActiveDays, Progress, Safety } from "./TrainingSections";
 import "../components/workout/workoutplan.css";
 
@@ -185,6 +188,7 @@ export default function WorkoutPlanPage({ startView, profile }) {
     } catch { /* kept on the list, tried again later */ } finally { deleting.current = false; }
   }, [smart.setPlan]); // eslint-disable-line react-hooks/exhaustive-deps
   const deleteSession = useCallback((s) => {
+    apiFetch(`/api/lifts/session/${encodeURIComponent(s.id)}`, { method: "DELETE" }).catch(() => {});   // its tracked lifts go too (best effort; safe to repeat)
     const request = deleteRequest(s.id, { smart: s.planId === SMART_ID });
     setSt((x) => { const synced = { ...(x.synced || {}) }; delete synced[s.id]; const failed = { ...(x.failed || {}) }; delete failed[s.id]; return { ...x, sessions: x.sessions.filter((y) => y.id !== s.id), synced, failed, pendingDeletes: addPending(x.pendingDeletes, request) }; });
   }, []);
@@ -205,6 +209,7 @@ export default function WorkoutPlanPage({ startView, profile }) {
   const mounted = useRef(true);
   useEffect(() => () => { mounted.current = false; }, []);
   const [retryTick, setRetryTick] = useState(0);
+  const [liftTick, setLiftTick] = useState(0);
   const failedMap = st.failed || {};
   const toSend = pickToSync(st.sessions, { today, skip: (s) => st.synced[s.id] || failedMap[s.id] });
   const failedCount = Object.keys(failedMap).length;
@@ -249,6 +254,24 @@ export default function WorkoutPlanPage({ startView, profile }) {
     const t = setInterval(again, 60000);
     return () => { window.removeEventListener("online", again); document.removeEventListener("visibilitychange", again); clearInterval(t); };
   }, [unsent]);
+  // Tracked lifts: every finished workout (any plan) also sends its sets, with what each weight means, so they can be tracked over time. One at a time; retried by itself.
+  const liftBusy = useRef(false);
+  const liftSent = st.liftSent || {};
+  const liftTodo = st.sessions.filter((x) => !liftSent[x.id] && (x.exercises || []).some((e) => e.mode)).slice(0, 6);
+  useEffect(() => {
+    if (liftBusy.current || !liftTodo.length || !navigator.onLine) return;
+    liftBusy.current = true;
+    (async () => {
+      const done = {};
+      for (const x of liftTodo) {
+        const body = liftPayload(x, weightKg);
+        if (!body) { done[x.id] = true; continue; }
+        try { const r = await apiFetch("/api/lifts", { method: "POST", body: JSON.stringify(body) }); if (r.ok || r.status === 202) done[x.id] = true; else if (r.status >= 400 && r.status < 500 && r.status !== 429 && r.status !== 408) done[x.id] = true; else break; } catch { break; }
+      }
+      liftBusy.current = false;
+      if (mounted.current && Object.keys(done).length) { setSt((y) => ({ ...y, liftSent: { ...(y.liftSent || {}), ...done } })); setLiftTick((n) => n + 1); }
+    })();
+  }, [liftTodo.length, retryTick, liftTick]); // eslint-disable-line react-hooks/exhaustive-deps
   const retrySession = useCallback((s) => setSt((x) => { const failed = { ...(x.failed || {}) }; delete failed[s.id]; return { ...x, failed }; }), []);
 
   const setActive = useCallback((fn) => setSt((s) => (s.active ? { ...s, active: typeof fn === "function" ? fn(s.active) : fn } : s)), []);
@@ -259,7 +282,7 @@ export default function WorkoutPlanPage({ startView, profile }) {
 
   const sameRun = (a, day) => a && a.dayId === day.id && ((a.day && a.day.way) || "gym") === (day.way || "gym");
   const start = (day) => {
-    setSt((s) => ({ ...s, active: sameRun(s.active, day) ? s.active : newActive(day, { week: plan.week, sessions: s.sessions, swaps: s.swaps, today }) }));
+    setSt((s) => ({ ...s, active: sameRun(s.active, day) ? s.active : newActive(day, { week: plan.week, sessions: s.sessions, swaps: s.swaps, today, modes: s.loadModes }) }));
     setDayOpen(null); setRunning(true);
   };
   const startAsk = async (day) => {
@@ -273,7 +296,7 @@ export default function WorkoutPlanPage({ startView, profile }) {
   const leave = () => { setSt((s) => (s.active && !s.active.pausedAt ? { ...s, active: { ...s.active, pausedAt: Date.now() } } : s)); setRunning(false); };
   const discard = () => { setSt((s) => ({ ...s, active: null })); setRunning(false); };
   const save = async (rec) => {
-    setSt((s) => ({ ...s, sessions: [...s.sessions, rec], active: null }));
+    setSt((s) => ({ ...s, sessions: [...s.sessions, rec], loadModes: { ...(s.loadModes || {}), ...((s.active && s.active.modes) || {}) }, active: null }));   // the weight meaning you chose (each hand / total ...) is remembered per exercise
     setRunning(false); setView("history");
     notify("Workout saved. Nice work!", "success"); // the effect above sends it to the server
   };
@@ -351,10 +374,16 @@ export default function WorkoutPlanPage({ startView, profile }) {
           onStart={startAsk} onResume={resume} onDiscard={async () => { if (await confirmAction("This deletes everything you logged in this workout.", { title: "Discard workout?", confirmText: "Discard", cancelText: "Keep it" })) discard(); }}
           onOpen={(id) => setDayOpen(id)} go={setView} today={today} activeDay={activeDay} onWay={(w) => setWay(shownBase, w)} onSkip={skipDay} onApply={applySuggestion} />
       )}
-      {view === "plan" && <PlanView plan={plan} smart={smart} smartOn={smartOn} st={st} setSt={setSt} today={today} onOpen={(id) => setDayOpen(id)} onSource={setSource} customPlan={customPlan} weightKg={weightKg} weightFromBody={!!(body && body.plan.body)} profile={profile} onSetup={() => { setBodyTab("me"); setView("body"); }} />}
+      {view === "plan" && (<>
+        <PlanView plan={plan} smart={smart} smartOn={smartOn} st={st} setSt={setSt} today={today} onOpen={(id) => setDayOpen(id)} onSource={setSource} customPlan={customPlan} weightKg={weightKg} weightFromBody={!!(body && body.plan.body)} profile={profile} onSetup={() => { setBodyTab("me"); setView("body"); }} />
+        <MuscleWeek key={plan.name} days={plan.days} todayDow={(plan.strip.find((c) => c.isToday) || {}).day ? (plan.strip.find((c) => c.isToday).day.dow || 0) : 0} />
+      </>)}
       {view === "body" && <div className="wp-body"><BodyPlanPage embedded seed={smart.data} startTab={bodyTab} onSaved={() => { window.dispatchEvent(new Event("ff:refresh")); smart.reload(); }} /></div>}
       {view === "library" && <LibraryView list={library} favs={st.favs} onFav={onFav} openSheet={openSheet} />}
-      {view === "history" && <HistoryView st={st} onDelete={deleteSession} onRetry={retrySession} today={today} go={setView} />}
+      {view === "history" && (<>
+        <HistoryView st={st} onDelete={deleteSession} onRetry={retrySession} today={today} go={setView} />
+        <LiftTracker />
+      </>)}
       {sheetEl}
     </div>
   );

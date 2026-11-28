@@ -122,6 +122,7 @@ function createApp({ allowedOrigins = [] } = {}) {
   app.use('/api/album', albumRoutes);
   app.use('/api/sync', require('./routes/syncRoutes'));
   app.use('/api/workout-plan', require('./routes/workoutPlanRoutes'));
+  app.use('/api/lifts', require('./routes/liftRoutes'));
   app.use('/api/progress', progressRoutes);
   app.use('/api/history', progressRoutes); // backward-compatible alias for older builds
 

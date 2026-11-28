@@ -6,6 +6,8 @@ import { CUSTOM_SOURCE, cleanPlans } from "./customPlans.js";
 import { estimateBurn, sessionMet } from "./energy";
 import { cleanPending } from "./sessionDelete.js";
 import { cleanFailed } from "./syncRun.js";
+import { convertWeight, loadOf, setFields } from "./exerciseLoad.js";
+import { regionsFor } from "./muscleMap.js";
 
 const round1 = (n) => Math.round(n * 10) / 10;
 
@@ -37,7 +39,7 @@ export function lastPerformance(sessions, exId) {
   const list = sorted(sessions).reverse();
   for (const s of list) {
     const e = (s.exercises || []).find((x) => x.id === exId && (x.sets || []).some((t) => t.done));
-    if (e) return { date: s.date, sets: e.sets.filter((t) => t.done) };
+    if (e) return { date: s.date, sets: e.sets.filter((t) => t.done), mode: e.mode || "", hands: e.hands || 0 };
   }
   return null;
 }
@@ -110,7 +112,8 @@ export function streak(sessions, today, days = DAYS, soft = ["rest"]) {
 }
 
 // ---------------------------------------------------------------------------------------------------------------- numbers
-export const volumeOf = (session) => Math.round((session.exercises || []).reduce((t, e) => t + (e.sets || []).reduce((s, x) => s + (x.done ? (Number(x.w) || 0) * (Number(x.r) || 0) : 0), 0), 0));
+/** Kilograms lifted in all. A set stored with what it moved (`tk`: two dumbbells, body weight + extra...) counts that; older sets count the typed weight. */
+export const volumeOf = (session) => Math.round((session.exercises || []).reduce((t, e) => t + (e.sets || []).reduce((s, x) => s + (x.done ? (x.tk != null ? Number(x.tk) || 0 : Number(x.w) || 0) * (Number(x.r) || 0) : 0), 0), 0));
 export const setsDone = (session) => (session.exercises || []).reduce((t, e) => t + (e.sets || []).filter((x) => x.done).length, 0);
 
 /** Rough burn of a session by its type (energy.sessionMet: lifting 5, conditioning 6, recovery 3.5, rest 2.5) from minutes and body weight; energy.estimateBurn counts only what the exercise burns. Same on the phone. */
@@ -151,20 +154,33 @@ export function personalBests(session, history) {
   return prs;
 }
 
+/** The weight to prefill. If the last time was logged with another meaning (per dumbbell vs total), it is converted instead of shown wrong. */
+function suggestedWeight(ex, w, sessions, pref) {
+  const last = lastPerformance(sessions, ex.id);
+  const was = last && last.mode;
+  if (!was || !(Number(w) > 0)) return w;
+  const now = loadOf(ex, pref);
+  if (was === now.mode) return w;
+  return convertWeight({ mode: was, hands: last.hands || 2 }, now, w);
+}
+
 // ---------------------------------------------------------------------------------------------------------------- the in-progress session
 /** Build the empty log for a day: sets prefilled from the progression rule, nothing ticked. */
-export function newActive(day, { week, sessions, swaps, today, now = Date.now() }) {
-  const sets = {}, checks = {}, choices = {};
+export function newActive(day, { week, sessions, swaps, today, modes, now = Date.now() }) {
+  const sets = {}, checks = {}, choices = {}, chosen = {};
   for (const b of day.blocks) {
     if (b.type !== "sets") continue;
     for (const base of b.items) {
       const ex = swaps && swaps[base.id] ? (base.alts.find((a) => a.id === swaps[base.id]) ? { ...base, ...base.alts.find((a) => a.id === swaps[base.id]), sets: base.sets, reps: base.reps, repsMin: base.repsMin, repsMax: base.repsMax, from: base.id } : base) : base;
       const n = setsFor(base, week), s = suggestNext(ex, sessions);
-      sets[base.id] = Array.from({ length: n }, () => ({ w: s.w, r: base.timed ? base.repsMin : s.r, done: false }));
+      const pref = modes && modes[base.id] ? modes[base.id] : "";
+      if (pref) chosen[base.id] = pref;                              // a weight meaning the person picked earlier (each hand / total ...) is remembered for next time
+      const w = suggestedWeight(ex, s.w, sessions, pref);
+      sets[base.id] = Array.from({ length: n }, () => ({ w, r: base.timed ? base.repsMin : s.r, done: false }));
     }
   }
   // A smart day can change under you (the week slides) and a personal plan can be edited or deleted mid-workout, so the session keeps its own copy of the day it started from.
-  return { id: `ws-${now.toString(36)}`, dayId: day.id, date: today, startedAt: now, pausedMs: 0, pausedAt: 0, sets, checks, choices, skipped: {}, step: 0, pain: [], ...(day.source === SMART_ID || day.source === CUSTOM_SOURCE ? { day } : {}) };
+  return { id: `ws-${now.toString(36)}`, dayId: day.id, date: today, startedAt: now, pausedMs: 0, pausedAt: 0, sets, checks, choices, modes: chosen, skipped: {}, step: 0, pain: [], ...(day.source === SMART_ID || day.source === CUSTOM_SOURCE ? { day } : {}) };
 }
 
 /** Seconds on the clock, excluding paused time. */
@@ -178,8 +194,13 @@ export function finishActive(active, day, { swaps, weightKg, feel, notes, now = 
     for (const base of b.items) {
       if (active.skipped[base.id]) continue;
       const alt = swaps && swaps[base.id] ? base.alts.find((x) => x.id === swaps[base.id]) : null;
-      const sets = (active.sets[base.id] || []).filter((s) => s.done).map((s) => ({ w: Number(s.w) || 0, r: Number(s.r) || 0, done: true, ...(Number(s.rpe) >= 1 && Number(s.rpe) <= 10 ? { rpe: Number(s.rpe) } : {}) }));
-      if (sets.length) exercises.push({ id: alt ? alt.id : base.id, name: alt ? alt.name : base.name, from: alt ? base.name : "", sets, ...(base.timed ? { timed: true } : {}), ...(base.slot ? { slot: base.slot } : {}) });
+      const named = alt ? { ...base, ...alt } : base;
+      const load = loadOf(named, active.modes && active.modes[base.id]);   // what the typed weight means for THIS exercise (each hand, total, body weight, assist)
+      const sets = (active.sets[base.id] || []).filter((s) => s.done).map((s) => ({ w: Number(s.w) || 0, r: Number(s.r) || 0, done: true, ...setFields(load, Number(s.w) || 0, weightKg), ...(Number(s.rpe) >= 1 && Number(s.rpe) <= 10 ? { rpe: Number(s.rpe) } : {}) }));
+      if (sets.length) {
+        const reg = regionsFor(named);
+        exercises.push({ id: alt ? alt.id : base.id, name: alt ? alt.name : base.name, from: alt ? base.name : "", sets, ...(load.asks ? { mode: load.mode, ...(load.mode === "each" ? { hands: load.hands } : {}) } : {}), muscles: reg.primary, ...(base.timed ? { timed: true } : {}), ...(base.slot ? { slot: base.slot } : {}) });
+      }
     }
   }
   const minutes = Math.max(1, Math.round(elapsedSec(active, now) / 60));

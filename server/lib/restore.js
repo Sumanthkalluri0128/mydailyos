@@ -6,7 +6,7 @@ const ORDER = [
   ['customFoods', 'Food'], ['habits', 'Habit'], ['medicines', 'Medicine'],       // things other rows point at come first
   ['foodLogs', 'FoodLog'], ['activityLogs', 'ActivityLog'], ['waterLogs', 'WaterLog'], ['weightLogs', 'WeightLog'], ['tasks', 'Task'],
   ['habitLogs', 'HabitLog'], ['medLogs', 'MedLog'], ['templates', 'WorkoutTemplate'], ['healthLogs', 'HealthLog'], ['fasts', 'Fast'], ['goals', 'Goal'],
-  ['planTemplates', 'PlanTemplate'], ['recipes', 'Recipe'], ['savedMeals', 'SavedMeal'], ['mealPlans', 'MealPlan'], ['bodyPlanSessions', 'BodyPlanSession'], ['readiness', 'Readiness'],
+  ['planTemplates', 'PlanTemplate'], ['recipes', 'Recipe'], ['savedMeals', 'SavedMeal'], ['mealPlans', 'MealPlan'], ['bodyPlanSessions', 'BodyPlanSession'], ['liftEntries', 'LiftEntry'], ['readiness', 'Readiness'],
 ];
 const SINGLE = [['profile', 'Profile'], ['foodPreferences', 'FoodPreference'], ['coachState', 'CoachState'], ['trainingProgram', 'TrainingProgram']];   // one row per person
 const HEX = /^[0-9a-f]{24}$/i;

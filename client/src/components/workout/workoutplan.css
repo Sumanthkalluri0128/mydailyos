@@ -436,3 +436,64 @@
 .pp-pick-info { padding: 6px 10px !important; min-height: 48px !important; }
 .pp-pick-add { width: 46px !important; }
 @media (max-width: 520px) { .pp2-kit { grid-template-columns: minmax(0, 1fr) 88px auto; } }
+
+/* ---- weight meaning chooser in the live workout (each hand / total / body weight / assist) */
+.wp-load { display: grid; gap: 4px; margin: 2px 0 8px; }
+.wp-load-row { display: flex; flex-wrap: wrap; gap: 6px; }
+.wp-load-chip { min-height: 34px; padding: 0 12px; border-radius: 999px; border: 1.5px solid var(--wp-line); background: var(--surface); color: var(--text-muted); font-weight: 800; font-size: .8rem; }
+.wp-load-chip.on { border-color: var(--wp-hot-fill); background: var(--wp-hot-soft); color: var(--text); }
+.wp-load-hint { margin: 0; font-size: .78rem; color: var(--text-muted); line-height: 1.35; }
+.wp-load-hint b { color: var(--text); }
+
+/* ---- muscle map */
+.mm-card { display: grid; gap: 10px; }
+.mm-strip { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 4px; scroll-snap-type: x proximity; }
+.mm-day { flex: 0 0 76px; scroll-snap-align: start; display: grid; gap: 2px; justify-items: center; padding: 6px 4px; border-radius: 14px; border: 1.5px solid var(--wp-line); background: var(--surface); color: var(--text); font-weight: 800; font-size: .76rem; }
+.mm-day.on { border-color: var(--wp-hot-fill); background: var(--wp-hot-soft); }
+.mm-day.rest { opacity: .6; }
+.mm-pic { display: block; width: 100%; height: auto; border-radius: 10px; background: #05070d; user-select: none; }
+.mm-mini { width: 64px; aspect-ratio: 1.3; object-fit: contain; }
+.mm-restpic { display: grid; place-items: center; border-radius: 10px; border: 1.5px dashed var(--wp-line); color: var(--text-muted); font-weight: 800; }
+.mm-mosaic { display: grid; grid-template-columns: 1fr 1fr; gap: 2px; width: 64px; border-radius: 10px; overflow: hidden; background: #05070d; }
+.mm-mosaic .mm-pic { border-radius: 0; aspect-ratio: 1.3; object-fit: cover; object-position: center 20%; }
+.mm-pics { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; max-width: 460px; margin: 0 auto; width: 100%; }
+.mm-weekgrid { grid-template-columns: 1fr 1fr; max-width: 560px; }
+.mm-shot { margin: 0; display: grid; gap: 4px; align-content: start; }
+.mm-shot .mm-pic { aspect-ratio: 1.3; object-fit: contain; }
+.mm-shot.hero { grid-column: 1 / -1; }
+.mm-shot figcaption { display: flex; justify-content: space-between; align-items: center; gap: 6px; font-size: .78rem; font-weight: 800; color: var(--text); }
+.mm-shot figcaption b { font-size: .7rem; padding: 1px 8px; border-radius: 999px; color: #fff; }
+.mm-shot figcaption b.p { background: #e11d48; }
+.mm-shot figcaption b.s { background: #f59e0b; color: #1a1205; }
+.mm-none { text-align: center; }
+.mm-title { margin: 0; font-weight: 800; text-align: center; }
+.mm-line { margin: 0; text-align: center; }
+.mm-legend { display: flex; justify-content: center; gap: 14px; flex-wrap: wrap; font-size: .76rem; color: var(--text-muted); }
+.mm-sw { display: inline-block; width: 12px; height: 12px; border-radius: 4px; margin-right: 5px; vertical-align: -1px; border: 1px solid color-mix(in srgb, var(--text-muted) 55%, transparent); }
+.mm-sw.p { background: #e11d48; border-color: #e11d48; }
+.mm-sw.s { background: #f59e0b; border-color: #f59e0b; }
+.mm-groups { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.mm-groups li { display: grid; gap: 4px; }
+.mm-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.mm-chip { padding: 3px 10px; border-radius: 999px; font-size: .78rem; font-weight: 700; border: 1.5px solid var(--wp-line); color: var(--text-muted); }
+.mm-chip.p { background: #e11d48; border-color: #e11d48; color: #fff; }
+.mm-chip.s { background: color-mix(in srgb, #f59e0b 25%, var(--surface)); border-color: #f59e0b; color: var(--text); }
+.mm-chip i { font-style: normal; margin-left: 6px; opacity: .85; font-size: .72rem; }
+.mm-ex summary { cursor: pointer; font-weight: 700; font-size: .85rem; }
+.mm-ex ul { margin: 6px 0 0; padding-left: 18px; font-size: .85rem; }
+.mm-wrap { margin-top: 10px; }
+.mm-wrap > summary { cursor: pointer; font-weight: 800; padding: 8px 0; }
+
+/* ---- my lifts */
+.lt-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.lt-row { border: 1.5px solid var(--wp-line); border-radius: 14px; background: var(--surface); }
+.lt-head { width: 100%; display: flex; justify-content: space-between; gap: 10px; align-items: center; padding: 10px 12px; background: none; border: 0; text-align: left; color: var(--text); }
+.lt-n, .lt-v { display: grid; gap: 2px; }
+.lt-v { text-align: right; }
+.lt-head small { color: var(--text-muted); font-size: .74rem; font-weight: 600; }
+.lt-v small.up { color: var(--wp-ok, #16a34a); font-weight: 800; }
+.lt-v small.down { color: #d97706; font-weight: 800; }
+.lt-body { padding: 0 12px 12px; display: grid; gap: 8px; }
+.lt-spark { width: 100%; max-width: 320px; height: 54px; }
+.lt-table { width: 100%; border-collapse: collapse; font-size: .8rem; }
+.lt-table th, .lt-table td { padding: 4px 6px; text-align: left; border-bottom: 1px solid var(--wp-line); }

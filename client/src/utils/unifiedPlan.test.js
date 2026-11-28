@@ -135,7 +135,7 @@ test("the finished record becomes the body-plan session the server expects (and 
   assert.equal(body.status, "done"); assert.equal(body.feel, "hard"); assert.deepEqual(body.pain, ["knee"]);
   assert.equal(body.clientId, `wp-${rec.id}`);
   assert.equal(body.exercises.length, 1);
-  assert.deepEqual(body.exercises[0].sets, [{ reps: 8, weightKg: 40, seconds: 0 }, { reps: 9, weightKg: 40, seconds: 0 }]);
+  assert.deepEqual(body.exercises[0].sets, [{ reps: 8, weightKg: 40, seconds: 0, mode: "total", totalKg: 40 }, { reps: 9, weightKg: 40, seconds: 0, mode: "total", totalKg: 40 }]);   // the weight keeps what was typed, plus what it meant
   assert.equal(body.phase, "build"); assert.ok(body.minutes >= 39);
   assert.equal(sessionPayload({ ...rec, feel: "" }, {}).feel, "");
   assert.equal(sessionPayload({ ...rec }, { phase: "weird" }).phase, "");
