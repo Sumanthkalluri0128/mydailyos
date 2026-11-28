@@ -4,6 +4,7 @@ import { beginPlannedStart } from "../utils/plannedStart";
 import { apiFetch } from "../config/api";
 import { notify } from "../utils/notify";
 import { confirmAction } from "../utils/confirm";
+import PlanExercisePicker from "../components/workout/PlanExercisePicker";
 import { getLocalDate } from "../utils/date";
 import { KINDS, WEEKDAYS, addDays, dayState, exercisesToText, itemState, itemsOn, kindMeta, monthGrid, mondayOf, parseExercises, patternFromRows, shiftMonth, weekDays, weekTotals } from "../utils/workoutPlanView";
 import "./gymlog.css";
@@ -114,7 +115,7 @@ export default function WorkoutPlannerPage({ onBack, onStart }) {
       {form.kind !== "rest" && <>
         <label className="gl-field"><span>Name (optional)</span><input value={form.title} maxLength={80} placeholder={kindMeta(form.kind).label} onChange={(e) => setForm({ ...form, title: e.target.value })} /></label>
         <label className="gl-field"><span>Minutes (optional)</span><input type="number" inputMode="numeric" min="0" max="300" value={form.minutes} onChange={(e) => setForm({ ...form, minutes: e.target.value })} /></label>
-        <label className="gl-field"><span>Exercises (optional, one per line, e.g. “Squat 3x8 @60”)</span><textarea rows={4} value={form.exercises} onChange={(e) => setForm({ ...form, exercises: e.target.value })} /></label>
+        <PlanExercisePicker key={form.id || `new-${form.date}`} value={form.exercises} onChange={(t) => setForm((f) => ({ ...f, exercises: t }))} />
         <label className="gl-field"><span>Note (optional)</span><input value={form.note} maxLength={300} onChange={(e) => setForm({ ...form, note: e.target.value })} /></label>
       </>}
       <div className="gl-row"><button type="button" className="gl-btn gl-primary" disabled={busy} onClick={saveForm}>{form.id ? "Save changes" : "Add to plan"}</button><button type="button" className="gl-btn gl-soft" onClick={() => setForm(null)}>Cancel</button></div>

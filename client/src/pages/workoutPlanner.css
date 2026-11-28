@@ -40,3 +40,20 @@
 .wpl-dot.rest { border-color: var(--text-muted); }
 .wpl-legend { display: flex; gap: 12px; flex-wrap: wrap; font-size: 12px; color: var(--text-muted); margin-top: 10px; align-items: center; }
 .wpl-legend span { display: inline-flex; align-items: center; gap: 5px; }
+
+/* exercise picker inside the planner form */
+.wpx { display: grid; gap: 8px; }
+.wpx-lab { font-size: 13px; color: var(--text-muted); }
+.wpx-rows, .wpx-results { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.wpx-rows li { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; border: 1px solid var(--border, rgba(128,128,128,.3)); border-radius: 12px; padding: 8px 10px; }
+.wpx-rows li b { flex: 1 1 140px; min-width: 0; }
+.wpx-rows label { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; color: var(--text-muted); }
+.wpx-rows input { width: 58px; }
+.wpx-search { display: flex; align-items: center; gap: 8px; border: 1.5px solid var(--border, rgba(128,128,128,.3)); border-radius: 12px; padding: 8px 10px; }
+.wpx-search input { flex: 1; border: 0; background: transparent; color: inherit; font: inherit; min-width: 0; outline: none; }
+.wpx-search button { background: none; border: 0; color: inherit; cursor: pointer; }
+.wpx-chips { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 2px; }
+.wpx-chips .gl-chip { flex: none; }
+.wpx-results button { display: flex; width: 100%; align-items: center; justify-content: space-between; gap: 8px; text-align: left; background: none; color: inherit; border: 1px solid var(--border, rgba(128,128,128,.3)); border-radius: 12px; padding: 10px 12px; cursor: pointer; font: inherit; }
+.wpx-results small { display: block; color: var(--text-muted); }
+.wpx-none { color: var(--text-muted); font-size: 13px; }

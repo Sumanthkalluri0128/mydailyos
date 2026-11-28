@@ -22,6 +22,8 @@ const mounts = {};
 for (const m of app.matchAll(/app\.use\(\s*['"`](\/api\/[^'"`]+)['"`]\s*,\s*(?:[\w.()]+\s*,\s*)*(\w+)\s*\)/g)) (mounts[m[2]] ||= []).push(m[1]);
 const imports = {};
 for (const m of app.matchAll(/(?:const|import)\s+(\w+)\s*(?:=\s*require\(|from\s*)['"]\.\/routes\/(\w+)/g)) imports[m[1]] = m[2];
+// mounted with an inline require: app.use('/api/x', require('./routes/name'))
+for (const m of app.matchAll(/app\.use\(\s*['"`](\/api\/[^'"`]+)['"`]\s*,\s*(?:[\w.()]+\s*,\s*)*require\(\s*['"]\.\/routes\/(\w+)['"]\s*\)\s*\)/g)) { (mounts[m[2]] ||= []).push(m[1]); imports[m[2]] = m[2]; }
 const toRe = (p) => new RegExp('^' + p.replace(/\/+$/, '').replace(/[.+?^${}()|[\]\\]/g, '\\$&').replace(/:\w+/g, '[^/]+').replace(/\*/g, '.*') + '/?$');
 const routes = []; // { method, re, text }
 for (const [name, bases] of Object.entries(mounts)) {
