@@ -25,6 +25,8 @@ export default function PersonalPlans({ st, setSt, activeId, onUse, weightKg }) 
   const [name, setName] = useState("");
   const [tpl, setTpl] = useState("t-fb");        // a template id, "blank", or "classic"
   const [chosen, setChosen] = useState(false);   // true once the person taps a card themselves
+  const [staged, setStaged] = useState({});       // blank plan: exercises picked while creating, by weekday { 1: [item], 3: [item] }
+  const [stageDow, setStageDow] = useState(1);    // the weekday the next picked exercise goes on
   const editing = plans.find((p) => p.id === editId) || null;
   const setPlans = (fn) => setSt((s) => ({ ...s, plans: fn(s.plans || []) }));
 
@@ -42,7 +44,16 @@ export default function PersonalPlans({ st, setSt, activeId, onUse, weightKg }) 
     const t = TEMPLATES.find((x) => x.id === tpl);
     const nm = name.trim() || (t ? t.name : "My plan");
     const p = t ? planFromTemplate(t.id, nm, lib) : tpl === "classic" ? planFromDays(nm, DAYS) : newPlan(nm);
-    setPlans((list) => addPlan(list, p));
+    const picked = !t && tpl === "blank" ? Object.entries(staged).filter(([, l]) => l.length) : [];
+    setPlans((list) => {
+      let next = addPlan(list, p);
+      for (const [dow, items] of picked) {
+        for (const it of items) next = addItem(next, p.id, Number(dow), it);
+        next = setWarmCool(next, p.id, Number(dow), suggestWarmCool(items, lib));   // a warm-up and cool-down matched to the muscles picked
+      }
+      return next;
+    });
+    setStaged({}); setStageDow(1);
     setName(""); setChosen(false); setTpl("t-fb"); setEditId(p.id);
     if (t) notify(`${t.name} is ready. Change anything you like.`, "success");
   };
@@ -97,6 +108,21 @@ export default function PersonalPlans({ st, setSt, activeId, onUse, weightKg }) 
             <span className="pp2-tpl-ic" aria-hidden="true">📅</span><b>Copy of Classic 7-day</b><small>Beginner</small><span className="pp2-tpl-b">The fixed beginner plan as an editable copy, with its own warm-ups and cool-downs.</span>
           </button>
         </div>
+        {tpl === "blank" && (
+          <div className="pp-stage">
+            <h4 className="pp2-h">Pick your exercises</h4>
+            <p className="wp-muted wp-small">Choose a day, then tap ＋ on every exercise you want that day. Same list as when you log a workout.</p>
+            <div className="pp-chips" role="group" aria-label="Day to add to">
+              {SHORT.map((d, i) => <button key={d} type="button" className={`chip${stageDow === i + 1 ? " active" : ""}`} aria-pressed={stageDow === i + 1} onClick={() => setStageDow(i + 1)}>{d}{(staged[i + 1] || []).length ? ` · ${staged[i + 1].length}` : ""}</button>)}
+            </div>
+            {(staged[stageDow] || []).length > 0 && (
+              <ul className="pp-stage-list" aria-label={`${SHORT[stageDow - 1]} exercises`}>
+                {staged[stageDow].map((it) => <li key={it.id}><span>{it.name}</span><button type="button" className="secondary-button pp-del" aria-label={`Remove ${it.name}`} onClick={() => setStaged((m) => ({ ...m, [stageDow]: m[stageDow].filter((x) => x.id !== it.id) }))}>✕</button></li>)}
+              </ul>
+            )}
+            <Picker key={stageDow} have={staged[stageDow] || []} onAdd={(it) => setStaged((m) => ((m[stageDow] || []).length >= MAX_ITEMS || (m[stageDow] || []).some((x) => x.id === it.id) ? m : { ...m, [stageDow]: [...(m[stageDow] || []), it] }))} />
+          </div>
+        )}
         <button type="button" className="primary-button" onClick={create}>＋ Create {selected ? selected.name : tpl === "classic" ? "copy of Classic" : "blank plan"}</button>
       </div>
     </section>
@@ -270,7 +296,7 @@ function Picker({ have, onAdd, onClose }) {
   const addOwn = () => { const name = q.trim().slice(0, 60); add({ id: `custom:${slugOf(name)}`, name, cat: cat === "all" ? "other" : cat, unit: cat === "cardio" ? "min" : "reps", sets: cat === "cardio" ? 1 : 3, reps: cat === "cardio" ? "20" : "10-12" }); setQ(""); };
   return (
     <div className="pp-pick">
-      <div className="pp-head"><button type="button" className="secondary-button" onClick={onClose}>‹ Back to the day</button><span className="wp-muted wp-small">{all.length} exercises</span></div>
+      <div className="pp-head">{onClose && <button type="button" className="secondary-button" onClick={onClose}>‹ Back to the day</button>}<span className="wp-muted wp-small">{all.length} exercises</span></div>
       <label className="pp-field"><span>Search exercises</span><input value={q} placeholder="Squat, row, plank…" onChange={(e) => { setQ(e.target.value); setPages(1); }} /></label>
       <div className="pp-chips">{PICK_CATS.map((c) => <button key={c} type="button" className={`chip${cat === c ? " active" : ""}`} aria-pressed={cat === c} onClick={() => { setCat(c); setPages(1); }}>{catName(c)}</button>)}</div>
       <ul className="pp-pick-list">

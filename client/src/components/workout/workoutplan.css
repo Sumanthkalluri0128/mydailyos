@@ -394,3 +394,8 @@
 /* a finished workout the server refused: say so, with a way to try again */
 .wp-sync-warn { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin: 2px 0 6px; padding: 8px 12px; border-radius: 12px; font-size: .85rem; color: var(--text); background: color-mix(in srgb, var(--danger, #d64545) 12%, var(--surface)); border: 1px solid color-mix(in srgb, var(--danger, #d64545) 35%, var(--border)); }
 .wp-sync-warn .wp-link { flex: none; }
+
+/* exercise picking while creating a blank plan */
+.pp-stage { display: grid; gap: 10px; padding: 12px; border: 1px dashed var(--border, #e5e7eb); border-radius: 14px; }
+.pp-stage-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.pp-stage-list li { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 8px 12px; border: 1px solid var(--border, #e5e7eb); border-radius: 12px; }
