@@ -1,0 +1,12 @@
+{
+  "extends": "expo/tsconfig.base",
+  "compilerOptions": {
+    "strict": false,
+    "noEmit": true
+  },
+  "exclude": [
+    "src/utils/__tests__/**/*",
+    "src/widgets/__tests__/**/*",
+    "src/data/__tests__/**/*"
+  ]
+}

@@ -1,0 +1,4 @@
+<resources>
+  <string name="app_name">FlexFit</string>
+  <string name="widget_flexfitwidget_description" translatable="false">FlexFit calories and water tracker</string>
+</resources>

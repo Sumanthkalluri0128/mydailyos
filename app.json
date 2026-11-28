@@ -1,0 +1,118 @@
+{
+  "expo": {
+    "name": "FlexFit",
+    "slug": "flexfit",
+    "version": "62.0.0",
+    "scheme": "flexfit",
+    "orientation": "portrait",
+    "userInterfaceStyle": "automatic",
+    "icon": "./assets/images/icon.png",
+    "plugins": [
+      "expo-router",
+      "expo-local-authentication",
+      "expo-secure-store",
+      [
+        "expo-notifications",
+        {
+          "color": "#6847E8"
+        }
+      ],
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "FlexFit uses the camera to scan food barcodes."
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "FlexFit lets you pick progress photos. They stay on your phone.",
+          "cameraPermission": "FlexFit uses the camera to take progress photos. They stay on your phone."
+        }
+      ],
+      [
+        "expo-sensors",
+        {
+          "motionPermission": "FlexFit counts your daily steps and adds the calories they burn."
+        }
+      ],
+      [
+        "expo-local-authentication",
+        {
+          "faceIDPermission": "FlexFit can use Face ID to unlock the app if you turn the app lock on."
+        }
+      ],
+      "react-native-health-connect",
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "compileSdkVersion": 36,
+            "targetSdkVersion": 36,
+            "minSdkVersion": 26
+          }
+        }
+      ],
+      "@react-native-community/datetimepicker",
+      [
+        "react-native-android-widget",
+        {
+          "widgets": [
+            {
+              "name": "FlexFitWidget",
+              "label": "FlexFit",
+              "minWidth": "250dp",
+              "minHeight": "125dp",
+              "targetCellWidth": 4,
+              "targetCellHeight": 2,
+              "resizeMode": "horizontal|vertical",
+              "description": "FlexFit daily status with a new anime artwork every day",
+              "updatePeriodMillis": 1800000
+            }
+          ]
+        }
+      ]
+    ],
+    "android": {
+      "package": "com.flexfit.app",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/images/android-icon-foreground.png",
+        "backgroundImage": "./assets/images/android-icon-background.png",
+        "monochromeImage": "./assets/images/android-icon-monochrome.png"
+      },
+      "versionCode": 4,
+      "softwareKeyboardLayoutMode": "resize",
+      "permissions": [
+        "android.permission.ACTIVITY_RECOGNITION",
+        "android.permission.CAMERA",
+        "android.permission.SCHEDULE_EXACT_ALARM",
+        "android.permission.POST_NOTIFICATIONS",
+        "android.permission.RECEIVE_BOOT_COMPLETED",
+        "android.permission.VIBRATE",
+        "android.permission.health.READ_STEPS",
+        "android.permission.health.READ_WEIGHT",
+        "android.permission.health.READ_SLEEP",
+        "android.permission.health.READ_HEART_RATE",
+        "android.permission.health.READ_RESTING_HEART_RATE",
+        "android.permission.health.READ_EXERCISE",
+        "android.permission.USE_BIOMETRIC",
+        "android.permission.USE_FINGERPRINT",
+        "android.permission.RECORD_AUDIO"
+      ],
+      "intentFilters": []
+    },
+    "ios": {
+      "bundleIdentifier": "com.flexfit.app",
+      "buildNumber": "2"
+    },
+    "web": {
+      "favicon": "./assets/images/favicon.png"
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "26ca1059-c4f2-465c-bfd1-e261c4fc9a2f"
+      }
+    }
+  }
+}

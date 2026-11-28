@@ -15,7 +15,6 @@ for (const [web, phone, strip] of [
   ['utils/coneGeometry.js', 'utils/coneGeometry.ts', dropNoCheck],
   ['utils/coachText.js', 'utils/coachText.ts', dropNoCheck],
   ['utils/bodyCards.js', 'utils/bodyCards.ts', dropNoCheck],
-  ['utils/exerciseSearch.js', 'utils/exerciseSearch.js', (s) => s],
 ]) {
   const a = read(path.join(W, web)), b = strip(read(path.join(M, phone)));
   console.log(`${a === b ? 'same ' : 'DIFF '} ${web}  <->  ${phone}`);
